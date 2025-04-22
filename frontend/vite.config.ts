@@ -1,7 +1,23 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite';
+import {PrimeVueResolver} from '@primevue/auto-import-resolver';
+import * as path from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  publicDir: './public',
+  base: './',
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src')
+    }
+  },
+  plugins: [
+    vue(),
+    Components({
+      dts: true,
+      dirs: ['src/components'],
+      resolvers: [PrimeVueResolver()],
+    })
+  ]
 })
