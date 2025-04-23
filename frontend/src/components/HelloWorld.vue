@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue';
 import {GreetService} from "../../bindings/voidraft";
 import {Events} from "@wailsio/runtime";
 
-defineProps<{ msg: string }>()
+defineProps<{ msg: string }>();
 
-const name = ref('')
-const result = ref('Please enter your name below 👇')
-const time = ref('Listening for Time event...')
+const name = ref('');
+const result = ref('Please enter your name below 👇');
+const time = ref('Listening for Time event...');
 
 const doGreet = () => {
   let localName = name.value;
@@ -19,13 +19,13 @@ const doGreet = () => {
   }).catch((err: Error) => {
     console.log(err);
   });
-}
+};
 
 onMounted(() => {
   Events.On('time', (timeValue: { data: string }) => {
     time.value = timeValue.data;
   });
-})
+});
 
 </script>
 

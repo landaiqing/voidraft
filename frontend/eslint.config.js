@@ -50,6 +50,7 @@ export default defineConfig([
             '.local',
             '/bin',
             'Dockerfile',
+            '**/bindings/'
         ],
     }
 ]);
