@@ -5,6 +5,7 @@ import {
   drawSelection,
   dropCursor,
   EditorView,
+  highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
@@ -12,22 +13,17 @@ import {
   rectangularSelection,
 } from '@codemirror/view';
 import {Compartment, EditorState, Extension} from '@codemirror/state';
-import {baseDark} from "@/editor/theme/base-dark";
+import {baseDark, customHighlightActiveLine} from "@/editor/theme/base-dark";
 import {
   bracketMatching,
   defaultHighlightStyle,
   foldGutter,
   foldKeymap,
   indentOnInput,
-  syntaxHighlighting,
-  indentUnit
+  indentUnit,
+  syntaxHighlighting
 } from '@codemirror/language';
-import {
-  defaultKeymap, 
-  history, 
-  historyKeymap, 
-  indentSelection,
-} from '@codemirror/commands';
+import {defaultKeymap, history, historyKeymap, indentSelection,} from '@codemirror/commands';
 import {highlightSelectionMatches, searchKeymap} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
@@ -55,7 +51,7 @@ const handleWheel = (event: WheelEvent) => {
   if (event.ctrlKey) {
     // 阻止默认行为（防止页面缩放）
     event.preventDefault();
-    
+
     // 根据滚轮方向增大或减小字体
     if (event.deltaY < 0) {
       // 向上滚动，增大字体
@@ -73,26 +69,26 @@ const tabHandler = (view: EditorView): boolean => {
   if (!view.state.selection.main.empty) {
     return indentSelection(view);
   }
-  
+
   // 获取当前的tabSize值
   const currentTabSize = editorStore.tabSize;
   // 创建相应数量的空格
   const spaces = ' '.repeat(currentTabSize);
-  
+
   // 在光标位置插入空格
-  const { state, dispatch } = view;
-  dispatch(state.update(state.replaceSelection(spaces), { scrollIntoView: true }));
+  const {state, dispatch} = view;
+  dispatch(state.update(state.replaceSelection(spaces), {scrollIntoView: true}));
   return true;
 };
 
 // 获取Tab相关的扩展
 const getTabExtensions = (): Extension[] => {
   const extensions: Extension[] = [];
-  
+
   // 设置缩进单位
   const tabSize = editorStore.tabSize;
   extensions.push(tabSizeCompartment.of(indentUnit.of(' '.repeat(tabSize))));
-  
+
   // 如果启用了Tab缩进，添加自定义Tab键映射
   if (editorStore.enableTabIndent) {
     extensions.push(tabKeyCompartment.of(keymap.of([{
@@ -102,7 +98,7 @@ const getTabExtensions = (): Extension[] => {
   } else {
     extensions.push(tabKeyCompartment.of([]));
   }
-  
+
   return extensions;
 };
 
@@ -130,6 +126,8 @@ const createEditor = () => {
     rectangularSelection(),
     crosshairCursor(),
     highlightSelectionMatches(),
+    customHighlightActiveLine,
+    highlightActiveLine(),
     keymap.of([
       ...closeBracketsKeymap,
       ...defaultKeymap,
@@ -156,13 +154,13 @@ const createEditor = () => {
     state,
     parent: editorElement.value
   });
-  
+
   // 将编辑器实例保存到store
   editorStore.setEditorView(view);
-  
+
   // 初始化统计
   updateStats();
-  
+
   // 应用初始字体大小
   editorStore.applyFontSize();
 };
@@ -170,12 +168,12 @@ const createEditor = () => {
 // 更新统计信息
 const updateStats = () => {
   if (!editorStore.editorView) return;
-  
+
   const view = editorStore.editorView;
   const state = view.state;
   const doc = state.doc;
   const text = doc.toString();
-  
+
   // 计算选中的字符数
   let selectedChars = 0;
   const selections = state.selection;
@@ -185,7 +183,7 @@ const updateStats = () => {
       selectedChars += range.to - range.from;
     }
   }
-  
+
   editorStore.updateDocumentStats({
     lines: doc.lines,
     characters: text.length,
@@ -196,22 +194,22 @@ const updateStats = () => {
 // 动态更新Tab配置，不需要重建编辑器
 const updateTabConfig = () => {
   if (!editorStore.editorView) return;
-  
+
   // 更新Tab大小配置
   const tabSize = editorStore.tabSize;
-  
+
   const view = editorStore.editorView;
-  
+
   // 更新indentUnit配置
   view.dispatch({
     effects: tabSizeCompartment.reconfigure(indentUnit.of(' '.repeat(tabSize)))
   });
-  
+
   // 更新Tab键映射
-  const tabKeymap = editorStore.enableTabIndent 
-    ? keymap.of([{ key: "Tab", run: tabHandler }])
-    : [];
-    
+  const tabKeymap = editorStore.enableTabIndent
+      ? keymap.of([{key: "Tab", run: tabHandler}])
+      : [];
+
   view.dispatch({
     effects: tabKeyCompartment.reconfigure(tabKeymap)
   });
@@ -220,7 +218,7 @@ const updateTabConfig = () => {
 // 重新配置编辑器（仅在必要时完全重建）
 const reconfigureEditor = () => {
   if (!editorStore.editorView) return;
-  
+
   // 尝试动态更新配置
   updateTabConfig();
 };
@@ -237,10 +235,10 @@ watch(() => editorStore.enableTabIndent, () => {
 onMounted(() => {
   // 创建编辑器
   createEditor();
-  
+
   // 添加滚轮事件监听
   if (editorElement.value) {
-    editorElement.value.addEventListener('wheel', handleWheel, { passive: false });
+    editorElement.value.addEventListener('wheel', handleWheel, {passive: false});
   }
 });
 
@@ -249,7 +247,7 @@ onBeforeUnmount(() => {
   if (editorElement.value) {
     editorElement.value.removeEventListener('wheel', handleWheel);
   }
-  
+
   if (editorStore.editorView) {
     editorStore.editorView.destroy();
     editorStore.setEditorView(null);

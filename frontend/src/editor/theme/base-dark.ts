@@ -9,10 +9,11 @@ export const config = {
     background: '#252B37',
     foreground: '#9BB586',
     selection: '#1A5888',
+    selectionMatch: 'rgba(26, 88, 136, 0.5)',
     cursor: '#F8F8F2',
     dropdownBackground: '#282A36',
     dropdownBorder: '#191A21',
-    activeLine: '#2E333F',
+    activeLine: 'rgba(46, 51, 63, 0.6)',
     lineNumber: '#676d7c',
     lineNumberActive: '#F8F8F2',
     lineNumberBackground: '#212731',
@@ -42,7 +43,10 @@ export const draculaTheme = EditorView.theme({
     '.cm-content': {caretColor: config.cursor},
 
     '.cm-cursor, .cm-dropCursor': {borderLeftColor: config.cursor},
-    '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {backgroundColor: config.selection},
+    
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+        backgroundColor: `${config.selection} !important`
+    },
 
     '.cm-panels': {backgroundColor: config.dropdownBackground, color: config.foreground},
     '.cm-panels.cm-panels-top': {borderBottom: '2px solid black'},
@@ -57,7 +61,11 @@ export const draculaTheme = EditorView.theme({
     },
 
     '.cm-activeLine': {backgroundColor: config.activeLine},
-    '.cm-selectionMatch': {backgroundColor: config.selection},
+    
+    '.cm-selectionMatch': {
+        backgroundColor: `${config.selectionMatch} !important`,
+        borderRadius: '2px'
+    },
 
     '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
         backgroundColor: config.matchingBracket,
@@ -122,6 +130,12 @@ export const draculaHighlightStyle = HighlightStyle.define([
     {tag: t.invalid, color: config.invalid},
     {tag: t.strikethrough, textDecoration: 'line-through'},
 ])
+
+export const customHighlightActiveLine = EditorView.theme({
+  '.cm-activeLine': {
+    backgroundColor: config.activeLine,
+  }
+})
 
 export const baseDark: Extension = [
     draculaTheme,
