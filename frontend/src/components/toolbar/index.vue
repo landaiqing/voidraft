@@ -18,7 +18,7 @@ const editorStore = useEditorStore();
       </span>
     </div>
     <div class="actions">
-      <span class="font-size" title="字体大小 (Ctrl+滚轮调整)">
+      <span class="font-size" title="字体大小 (Ctrl+滚轮调整)" @click="editorStore.resetFontSize">
         {{ editorStore.fontSize }}px
       </span>
       <span class="tab-settings">

@@ -118,7 +118,6 @@ export const useEditorStore = defineStore('editor', () => {
         increaseFontSize,
         decreaseFontSize,
         resetFontSize,
-        applyFontSize,
         toggleTabIndent,
         increaseTabSize,
         decreaseTabSize
