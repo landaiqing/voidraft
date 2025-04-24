@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import {
   crosshairCursor,
   drawSelection,
@@ -11,7 +11,7 @@ import {
   lineNumbers,
   rectangularSelection,
 } from '@codemirror/view';
-import {EditorState} from '@codemirror/state';
+import {Compartment, EditorState, Extension} from '@codemirror/state';
 import {baseDark} from "@/editor/theme/base-dark";
 import {
   bracketMatching,
@@ -19,16 +19,21 @@ import {
   foldGutter,
   foldKeymap,
   indentOnInput,
-  syntaxHighlighting
+  syntaxHighlighting,
+  indentUnit
 } from '@codemirror/language';
-import {defaultKeymap, history, historyKeymap} from '@codemirror/commands';
+import {
+  defaultKeymap, 
+  history, 
+  historyKeymap, 
+  indentSelection,
+} from '@codemirror/commands';
 import {highlightSelectionMatches, searchKeymap} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
 import {fontTheme} from "@/editor/font/font";
-import { useEditorStore } from '@/stores/editor';
+import {useEditorStore} from '@/stores/editor';
 
-// 使用Pinia store
 const editorStore = useEditorStore();
 
 const props = defineProps({
@@ -37,6 +42,10 @@ const props = defineProps({
     default: '// 在此处编写代码'
   }
 });
+
+// 使用Compartment可以动态更新特定的配置而不重建整个编辑器
+const tabSizeCompartment = new Compartment();
+const tabKeyCompartment = new Compartment();
 
 const editorElement = ref<HTMLElement | null>(null);
 
@@ -56,6 +65,106 @@ const handleWheel = (event: WheelEvent) => {
       editorStore.decreaseFontSize();
     }
   }
+};
+
+// 自定义Tab键处理函数
+const tabHandler = (view: EditorView): boolean => {
+  // 如果有选中文本，使用indentSelection
+  if (!view.state.selection.main.empty) {
+    return indentSelection(view);
+  }
+  
+  // 获取当前的tabSize值
+  const currentTabSize = editorStore.tabSize;
+  // 创建相应数量的空格
+  const spaces = ' '.repeat(currentTabSize);
+  
+  // 在光标位置插入空格
+  const { state, dispatch } = view;
+  dispatch(state.update(state.replaceSelection(spaces), { scrollIntoView: true }));
+  return true;
+};
+
+// 获取Tab相关的扩展
+const getTabExtensions = (): Extension[] => {
+  const extensions: Extension[] = [];
+  
+  // 设置缩进单位
+  const tabSize = editorStore.tabSize;
+  extensions.push(tabSizeCompartment.of(indentUnit.of(' '.repeat(tabSize))));
+  
+  // 如果启用了Tab缩进，添加自定义Tab键映射
+  if (editorStore.enableTabIndent) {
+    extensions.push(tabKeyCompartment.of(keymap.of([{
+      key: "Tab",
+      run: tabHandler
+    }])));
+  } else {
+    extensions.push(tabKeyCompartment.of([]));
+  }
+  
+  return extensions;
+};
+
+// 创建编辑器
+const createEditor = () => {
+  if (!editorElement.value) return;
+
+  const extensions = [
+    baseDark,
+    fontTheme,
+    lineNumbers(),
+    highlightActiveLineGutter(),
+    highlightSpecialChars(),
+    history(),
+    foldGutter(),
+    drawSelection(),
+    dropCursor(),
+    EditorView.lineWrapping,
+    EditorState.allowMultipleSelections.of(true),
+    indentOnInput(),
+    syntaxHighlighting(defaultHighlightStyle, {fallback: true}),
+    bracketMatching(),
+    closeBrackets(),
+    autocompletion(),
+    rectangularSelection(),
+    crosshairCursor(),
+    highlightSelectionMatches(),
+    keymap.of([
+      ...closeBracketsKeymap,
+      ...defaultKeymap,
+      ...searchKeymap,
+      ...historyKeymap,
+      ...foldKeymap,
+      ...completionKeymap,
+      ...lintKeymap
+    ]),
+    EditorView.updateListener.of(update => {
+      if (update.docChanged || update.selectionSet) {
+        updateStats();
+      }
+    }),
+    ...getTabExtensions()
+  ];
+
+  const state = EditorState.create({
+    doc: props.initialDoc,
+    extensions
+  });
+
+  const view = new EditorView({
+    state,
+    parent: editorElement.value
+  });
+  
+  // 将编辑器实例保存到store
+  editorStore.setEditorView(view);
+  
+  // 初始化统计
+  updateStats();
+  
+  // 应用初始字体大小
+  editorStore.applyFontSize();
 };
 
 // 更新统计信息
@@ -84,64 +193,55 @@ const updateStats = () => {
   });
 };
 
+// 动态更新Tab配置，不需要重建编辑器
+const updateTabConfig = () => {
+  if (!editorStore.editorView) return;
+  
+  // 更新Tab大小配置
+  const tabSize = editorStore.tabSize;
+  
+  const view = editorStore.editorView;
+  
+  // 更新indentUnit配置
+  view.dispatch({
+    effects: tabSizeCompartment.reconfigure(indentUnit.of(' '.repeat(tabSize)))
+  });
+  
+  // 更新Tab键映射
+  const tabKeymap = editorStore.enableTabIndent 
+    ? keymap.of([{ key: "Tab", run: tabHandler }])
+    : [];
+    
+  view.dispatch({
+    effects: tabKeyCompartment.reconfigure(tabKeymap)
+  });
+};
+
+// 重新配置编辑器（仅在必要时完全重建）
+const reconfigureEditor = () => {
+  if (!editorStore.editorView) return;
+  
+  // 尝试动态更新配置
+  updateTabConfig();
+};
+
+// 监听Tab设置变化
+watch(() => editorStore.tabSize, () => {
+  reconfigureEditor();
+});
+// 监听Tab缩进设置变化
+watch(() => editorStore.enableTabIndent, () => {
+  reconfigureEditor();
+});
+
 onMounted(() => {
-  if (!editorElement.value) return;
-
-  const state = EditorState.create({
-    doc: props.initialDoc,
-    extensions: [
-      baseDark,
-      fontTheme,
-      lineNumbers(),
-      highlightActiveLineGutter(),
-      highlightSpecialChars(),
-      history(),
-      foldGutter(),
-      drawSelection(),
-      dropCursor(),
-      EditorView.lineWrapping,
-      EditorState.allowMultipleSelections.of(true),
-      indentOnInput(),
-      syntaxHighlighting(defaultHighlightStyle, {fallback: true}),
-      bracketMatching(),
-      closeBrackets(),
-      autocompletion(),
-      rectangularSelection(),
-      crosshairCursor(),
-      highlightSelectionMatches(),
-      keymap.of([
-        ...closeBracketsKeymap,
-        ...defaultKeymap,
-        ...searchKeymap,
-        ...historyKeymap,
-        ...foldKeymap,
-        ...completionKeymap,
-        ...lintKeymap
-      ]),
-      EditorView.updateListener.of(update => {
-        if (update.docChanged || update.selectionSet) {
-          updateStats();
-        }
-      })
-    ]
-  });
-
-  const view = new EditorView({
-    state,
-    parent: editorElement.value
-  });
-  
-  // 将编辑器实例保存到store
-  editorStore.setEditorView(view);
-  
-  // 初始化统计
-  updateStats();
-  
-  // 应用初始字体大小
-  editorStore.applyFontSize();
+  // 创建编辑器
+  createEditor();
   
   // 添加滚轮事件监听
-  editorElement.value.addEventListener('wheel', handleWheel, { passive: false });
+  if (editorElement.value) {
+    editorElement.value.addEventListener('wheel', handleWheel, { passive: false });
+  }
 });
 
 onBeforeUnmount(() => {

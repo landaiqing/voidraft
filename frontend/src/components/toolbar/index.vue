@@ -21,6 +21,17 @@ const editorStore = useEditorStore();
       <span class="font-size" title="字体大小 (Ctrl+滚轮调整)">
         {{ editorStore.fontSize }}px
       </span>
+      <span class="tab-settings">
+        <label title="启用Tab键缩进" class="tab-toggle">
+          <input type="checkbox" :checked="editorStore.enableTabIndent" @change="editorStore.toggleTabIndent"/>
+          <span>Tab</span>
+        </label>
+        <span class="tab-size" title="Tab大小">
+          <button class="tab-btn" @click="editorStore.decreaseTabSize" :disabled="editorStore.tabSize <= 2">-</button>
+          <span>{{ editorStore.tabSize }}</span>
+          <button class="tab-btn" @click="editorStore.increaseTabSize" :disabled="editorStore.tabSize >= 8">+</button>
+        </span>
+      </span>
       <span class="encoding">{{ editorStore.encoding }}</span>
       <button class="settings-btn" @click="editorStore.openSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -68,6 +79,47 @@ const editorStore = useEditorStore();
       color: var(--text-muted);
       font-size: 11px;
       cursor: help;
+    }
+
+    .tab-settings {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+      font-size: 11px;
+
+      .tab-toggle {
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        cursor: pointer;
+
+        input {
+          cursor: pointer;
+        }
+      }
+
+      .tab-size {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+
+        .tab-btn {
+          background: none;
+          border: none;
+          color: var(--text-primary);
+          cursor: pointer;
+          padding: 0 3px;
+          font-size: 12px;
+          line-height: 1;
+
+          &:disabled {
+            color: var(--text-muted);
+            opacity: 0.5;
+            cursor: not-allowed;
+          }
+        }
+      }
     }
 
     .encoding {
