@@ -40,6 +40,24 @@ const props = defineProps({
 
 const editorElement = ref<HTMLElement | null>(null);
 
+// 处理滚轮缩放字体
+const handleWheel = (event: WheelEvent) => {
+  // 检查是否按住了Ctrl键
+  if (event.ctrlKey) {
+    // 阻止默认行为（防止页面缩放）
+    event.preventDefault();
+    
+    // 根据滚轮方向增大或减小字体
+    if (event.deltaY < 0) {
+      // 向上滚动，增大字体
+      editorStore.increaseFontSize();
+    } else {
+      // 向下滚动，减小字体
+      editorStore.decreaseFontSize();
+    }
+  }
+};
+
 // 更新统计信息
 const updateStats = () => {
   if (!editorStore.editorView) return;
@@ -118,9 +136,20 @@ onMounted(() => {
   
   // 初始化统计
   updateStats();
+  
+  // 应用初始字体大小
+  editorStore.applyFontSize();
+  
+  // 添加滚轮事件监听
+  editorElement.value.addEventListener('wheel', handleWheel, { passive: false });
 });
 
 onBeforeUnmount(() => {
+  // 移除滚轮事件监听
+  if (editorElement.value) {
+    editorElement.value.removeEventListener('wheel', handleWheel);
+  }
+  
   if (editorStore.editorView) {
     editorStore.editorView.destroy();
     editorStore.setEditorView(null);
