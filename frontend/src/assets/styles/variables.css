@@ -1,0 +1,12 @@
+:root {
+  /* 主题颜色 */
+  --bg-secondary: #0E1217; /* 工具栏背景 */
+
+  /* 文本颜色 */
+  --text-primary: #9BB586; /* 内容区域字体颜色 */
+  --text-secondary: #a0aec0;
+  --text-muted: #666;
+
+  /* 边框颜色 */
+  --border-color: #2d3748;
+}

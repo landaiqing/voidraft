@@ -1,31 +1,29 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue';
+import Editor from '@/editor/index.vue';
+import Toolbar from '@/components/toolbar/index.vue';
 </script>
 
 <template>
-  <div class="container">
-    <div>
-      <a wml-openURL="https://wails.io">
-        <img src="/appicon.png" class="logo" alt="Wails logo"/>
-      </a>
-      <a wml-openURL="https://vuejs.org/">
-        <img src="/appicon.png" class="logo vue" alt="Vue logo"/>
-      </a>
+  <div class="app-container">
+    <div class="editor-wrapper">
+      <Editor />
     </div>
-    <HelloWorld msg="Wails + Vue" />
+    <Toolbar />
   </div>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #e80000aa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+<style scoped lang="scss">
+.app-container {
+  width: 100%;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  
+  .editor-wrapper {
+    flex: 1;
+    overflow: hidden;
+  }
 }
 </style>

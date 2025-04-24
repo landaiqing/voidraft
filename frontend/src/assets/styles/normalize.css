@@ -346,3 +346,18 @@ template {
 [hidden] {
     display: none;
 }
+
+/* 添加全局样式，确保编辑器可以全屏显示 */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* 确保所有容器都能继承高度 */
+#app {
+  width: 100%;
+  height: 100%;
+}
