@@ -13,6 +13,9 @@ const DEFAULT_TAB_SIZE = 4;
 const MIN_TAB_SIZE = 2;
 const MAX_TAB_SIZE = 8;
 
+// Tab类型
+export type TabType = 'spaces' | 'tab';
+
 export const useEditorStore = defineStore('editor', () => {
     // 状态
     const documentStats = ref<DocumentStats>({
@@ -30,6 +33,8 @@ export const useEditorStore = defineStore('editor', () => {
     const enableTabIndent = ref(true);
     // Tab键大小
     const tabSize = ref(DEFAULT_TAB_SIZE);
+    // Tab类型：空格或制表符
+    const tabType = ref<TabType>('spaces');
 
     // 方法
     function setEditorView(view: EditorView | null) {
@@ -94,6 +99,11 @@ export const useEditorStore = defineStore('editor', () => {
             tabSize.value -= 1;
         }
     }
+    
+    // 切换Tab类型（空格或制表符）
+    function toggleTabType() {
+        tabType.value = tabType.value === 'spaces' ? 'tab' : 'spaces';
+    }
 
     // 设置按钮操作
     function openSettings() {
@@ -109,6 +119,7 @@ export const useEditorStore = defineStore('editor', () => {
         fontSize,
         enableTabIndent,
         tabSize,
+        tabType,
 
         // 方法
         setEditorView,
@@ -120,12 +131,13 @@ export const useEditorStore = defineStore('editor', () => {
         resetFontSize,
         toggleTabIndent,
         increaseTabSize,
-        decreaseTabSize
+        decreaseTabSize,
+        toggleTabType
     };
 }, {
     persist: {
         key: 'editor',
         storage: localStorage,
-        pick: ['fontSize', 'encoding', 'enableTabIndent', 'tabSize']
+        pick: ['fontSize', 'encoding', 'enableTabIndent', 'tabSize', 'tabType']
     }
 });

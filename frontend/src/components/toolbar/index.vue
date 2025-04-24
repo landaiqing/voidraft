@@ -26,7 +26,10 @@ const editorStore = useEditorStore();
           <input type="checkbox" :checked="editorStore.enableTabIndent" @change="editorStore.toggleTabIndent"/>
           <span>Tab</span>
         </label>
-        <span class="tab-size" title="Tab大小">
+        <span class="tab-type" title="Tab类型切换" @click="editorStore.toggleTabType">
+          {{ editorStore.tabType === 'spaces' ? '空格' : '制表符' }}
+        </span>
+        <span class="tab-size" title="Tab大小" v-if="editorStore.tabType === 'spaces'">
           <button class="tab-btn" @click="editorStore.decreaseTabSize" :disabled="editorStore.tabSize <= 2">-</button>
           <span>{{ editorStore.tabSize }}</span>
           <button class="tab-btn" @click="editorStore.increaseTabSize" :disabled="editorStore.tabSize >= 8">+</button>
@@ -96,6 +99,17 @@ const editorStore = useEditorStore();
 
         input {
           cursor: pointer;
+        }
+      }
+      
+      .tab-type {
+        cursor: pointer;
+        padding: 0 3px;
+        border-radius: 3px;
+        background-color: rgba(255, 255, 255, 0.05);
+        
+        &:hover {
+          background-color: rgba(255, 255, 255, 0.1);
         }
       }
 

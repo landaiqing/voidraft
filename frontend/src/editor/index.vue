@@ -34,7 +34,8 @@ const createEditor = () => {
   // 获取Tab相关扩展
   const tabExtensions = getTabExtensions(
     editorStore.tabSize,
-    editorStore.enableTabIndent
+    editorStore.enableTabIndent,
+    editorStore.tabType
   );
   
   // 创建统计信息更新扩展
@@ -83,13 +84,15 @@ const reconfigureTabSettings = () => {
   updateTabConfig(
     editorStore.editorView as EditorView,
     editorStore.tabSize,
-    editorStore.enableTabIndent
+    editorStore.enableTabIndent,
+    editorStore.tabType
   );
 };
 
 // 监听Tab设置变化
 watch(() => editorStore.tabSize, reconfigureTabSettings);
 watch(() => editorStore.enableTabIndent, reconfigureTabSettings);
+watch(() => editorStore.tabType, reconfigureTabSettings);
 
 onMounted(() => {
   // 创建编辑器
