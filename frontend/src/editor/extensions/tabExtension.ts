@@ -2,7 +2,7 @@ import {Compartment, Extension} from '@codemirror/state';
 import {EditorView, keymap} from '@codemirror/view';
 import {indentSelection} from '@codemirror/commands';
 import {indentUnit} from '@codemirror/language';
-import {TabType} from '@/stores/editor';
+import {TabType} from "@/types/config";
 
 // Tab设置相关的compartment
 export const tabSizeCompartment = new Compartment();

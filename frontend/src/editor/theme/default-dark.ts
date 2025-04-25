@@ -137,7 +137,7 @@ export const customHighlightActiveLine = EditorView.theme({
   }
 })
 
-export const baseDark: Extension = [
+export const defaultDark: Extension = [
     draculaTheme,
     syntaxHighlighting(draculaHighlightStyle),
 ]

@@ -2,7 +2,8 @@
 import {onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import {EditorState, Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
-import {useEditorStore} from '@/stores/editor';
+import {useEditorStore} from '@/stores/editorStore';
+import {useConfigStore} from '@/stores/configStore';
 import {createBasicSetup} from './extensions/basicSetup';
 import {
   createStatsUpdateExtension,
@@ -14,6 +15,7 @@ import {
 } from './extensions';
 
 const editorStore = useEditorStore();
+const configStore = useConfigStore();
 
 const props = defineProps({
   initialDoc: {
@@ -33,9 +35,9 @@ const createEditor = () => {
   
   // 获取Tab相关扩展
   const tabExtensions = getTabExtensions(
-    editorStore.tabSize,
-    editorStore.enableTabIndent,
-    editorStore.tabType
+    configStore.config.tabSize,
+    configStore.config.enableTabIndent,
+    configStore.config.tabType
   );
   
   // 创建统计信息更新扩展
@@ -66,7 +68,7 @@ const createEditor = () => {
   editorStore.setEditorView(view);
   
   // 应用初始字体大小
-  applyFontSize(view, editorStore.fontSize);
+  applyFontSize(view, configStore.config.fontSize);
   
   // 立即更新统计信息，不等待用户交互
   updateStats(view, editorStore.updateDocumentStats);
@@ -74,8 +76,8 @@ const createEditor = () => {
 
 // 创建滚轮事件处理器
 const handleWheel = createWheelZoomHandler(
-  editorStore.increaseFontSize,
-  editorStore.decreaseFontSize
+  configStore.increaseFontSize,
+  configStore.decreaseFontSize
 );
 
 // 重新配置编辑器（仅在必要时）
@@ -83,16 +85,23 @@ const reconfigureTabSettings = () => {
   if (!editorStore.editorView) return;
   updateTabConfig(
     editorStore.editorView as EditorView,
-    editorStore.tabSize,
-    editorStore.enableTabIndent,
-    editorStore.tabType
+    configStore.config.tabSize,
+    configStore.config.enableTabIndent,
+    configStore.config.tabType
   );
 };
 
 // 监听Tab设置变化
-watch(() => editorStore.tabSize, reconfigureTabSettings);
-watch(() => editorStore.enableTabIndent, reconfigureTabSettings);
-watch(() => editorStore.tabType, reconfigureTabSettings);
+watch(() => configStore.config.tabSize, reconfigureTabSettings);
+watch(() => configStore.config.enableTabIndent, reconfigureTabSettings);
+watch(() => configStore.config.tabType, reconfigureTabSettings);
+
+// 监听字体大小变化
+watch(() => configStore.config.fontSize, () => {
+  if (editorStore.editorView) {
+    applyFontSize(editorStore.editorView as EditorView, configStore.config.fontSize);
+  }
+});
 
 onMounted(() => {
   // 创建编辑器

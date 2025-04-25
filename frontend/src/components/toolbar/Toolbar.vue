@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import {useEditorStore} from '@/stores/editor';
+import {useEditorStore} from '@/stores/editorStore';
+import {useConfigStore} from '@/stores/configStore';
 
 const editorStore = useEditorStore();
+const configStore = useConfigStore();
 </script>
 
 <template>
@@ -18,25 +20,25 @@ const editorStore = useEditorStore();
       </span>
     </div>
     <div class="actions">
-      <span class="font-size" title="字体大小 (Ctrl+滚轮调整)" @click="editorStore.resetFontSize">
-        {{ editorStore.fontSize }}px
+      <span class="font-size" title="字体大小 (Ctrl+滚轮调整)" @click="configStore.resetFontSize">
+        {{ configStore.config.fontSize }}px
       </span>
       <span class="tab-settings">
         <label title="启用Tab键缩进" class="tab-toggle">
-          <input type="checkbox" :checked="editorStore.enableTabIndent" @change="editorStore.toggleTabIndent"/>
+          <input type="checkbox" :checked="configStore.config.enableTabIndent" @change="configStore.toggleTabIndent"/>
           <span>Tab</span>
         </label>
-        <span class="tab-type" title="Tab类型切换" @click="editorStore.toggleTabType">
-          {{ editorStore.tabType === 'spaces' ? '空格' : '制表符' }}
+        <span class="tab-type" title="Tab类型切换" @click="configStore.toggleTabType">
+          {{ configStore.config.tabType === 'spaces' ? '空格' : '制表符' }}
         </span>
-        <span class="tab-size" title="Tab大小" v-if="editorStore.tabType === 'spaces'">
-          <button class="tab-btn" @click="editorStore.decreaseTabSize" :disabled="editorStore.tabSize <= 2">-</button>
-          <span>{{ editorStore.tabSize }}</span>
-          <button class="tab-btn" @click="editorStore.increaseTabSize" :disabled="editorStore.tabSize >= 8">+</button>
+        <span class="tab-size" title="Tab大小" v-if="configStore.config.tabType === 'spaces'">
+          <button class="tab-btn" @click="configStore.decreaseTabSize" :disabled="configStore.config.tabSize <= configStore.MIN_TAB_SIZE">-</button>
+          <span>{{ configStore.config.tabSize }}</span>
+          <button class="tab-btn" @click="configStore.increaseTabSize" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
         </span>
       </span>
-      <span class="encoding">{{ editorStore.encoding }}</span>
-      <button class="settings-btn" @click="editorStore.openSettings">
+      <span class="encoding">{{ configStore.config.encoding }}</span>
+      <button class="settings-btn" @click="configStore.openSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
