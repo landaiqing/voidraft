@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import Editor from '@/editor/index.vue';
-import Toolbar from '@/components/toolbar/index.vue';
+import Editor from '@/editor/Editor.vue';
+import Toolbar from '@/components/toolbar/Toolbar.vue';
 </script>
 
 <template>
