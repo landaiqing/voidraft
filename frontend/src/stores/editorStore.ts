@@ -34,6 +34,7 @@ export const useEditorStore = defineStore('editor', () => {
         const editorDOM = editorView.value.dom;
         if (editorDOM) {
             editorDOM.style.fontSize = `${configStore.config.fontSize}px`;
+            editorView.value?.requestMeasure();
         }
     }
 

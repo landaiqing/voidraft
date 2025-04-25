@@ -1,5 +1,3 @@
-import {EditorView} from '@codemirror/view';
-
 // 处理滚轮缩放字体的事件处理函数
 export const createWheelZoomHandler = (
   increaseFontSize: () => void,
@@ -21,15 +19,4 @@ export const createWheelZoomHandler = (
       }
     }
   };
-};
-
-// 应用字体大小到编辑器
-export const applyFontSize = (view: EditorView, fontSize: number) => {
-  if (!view) return;
-  
-  // 更新编辑器的字体大小
-  const editorDOM = view.dom;
-  if (editorDOM) {
-    editorDOM.style.fontSize = `${fontSize}px`;
-  }
 }; 

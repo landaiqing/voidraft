@@ -10,7 +10,6 @@ import {
   getTabExtensions,
   updateTabConfig,
   createWheelZoomHandler,
-  applyFontSize,
   updateStats
 } from './extensions';
 
@@ -68,7 +67,7 @@ const createEditor = () => {
   editorStore.setEditorView(view);
   
   // 应用初始字体大小
-  applyFontSize(view, configStore.config.fontSize);
+  editorStore.applyFontSize();
   
   // 立即更新统计信息，不等待用户交互
   updateStats(view, editorStore.updateDocumentStats);
@@ -98,9 +97,7 @@ watch(() => configStore.config.tabType, reconfigureTabSettings);
 
 // 监听字体大小变化
 watch(() => configStore.config.fontSize, () => {
-  if (editorStore.editorView) {
-    applyFontSize(editorStore.editorView as EditorView, configStore.config.fontSize);
-  }
+  editorStore.applyFontSize();
 });
 
 onMounted(() => {
