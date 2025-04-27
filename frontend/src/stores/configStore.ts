@@ -1,6 +1,12 @@
 import {defineStore} from 'pinia';
-import {ref} from 'vue';
-import {EditorConfig} from '@/types/config';
+import {ref, watch} from 'vue';
+import {useDebounceFn} from '@vueuse/core';
+import {
+    GetEditorConfig,
+    ResetToDefault,
+    UpdateEditorConfig
+} from '@/../bindings/voidraft/internal/services/configservice';
+import {EditorConfig, TabType} from '@/../bindings/voidraft/internal/models/models';
 
 // 字体大小范围
 const MIN_FONT_SIZE = 12;
@@ -14,13 +20,43 @@ const MAX_TAB_SIZE = 8;
 
 export const useConfigStore = defineStore('config', () => {
     // 配置状态
-    const config = ref<EditorConfig>({
+    const config = ref<EditorConfig>(new EditorConfig({
         fontSize: DEFAULT_FONT_SIZE,
         encoding: 'UTF-8',
         enableTabIndent: true,
         tabSize: DEFAULT_TAB_SIZE,
-        tabType: 'spaces'
-    });
+        tabType: TabType.TabTypeSpaces
+    }));
+
+    // 配置是否已从后端加载
+    const configLoaded = ref(false);
+
+    // 从后端加载配置
+    async function loadConfigFromBackend() {
+        try {
+            const editorConfig = await GetEditorConfig();
+            config.value = editorConfig;
+            configLoaded.value = true;
+        } catch (error) {
+            console.error('Failed to load configuration:', error);
+        }
+    }
+
+    // 使用防抖保存配置到后端
+    const saveConfigToBackend = useDebounceFn(async () => {
+        try {
+            await UpdateEditorConfig(config.value);
+        } catch (error) {
+            console.error('Failed to save configuration:', error);
+        }
+    }, 500); // 500ms防抖
+
+    // 监听配置变化，自动保存到后端
+    watch(() => config.value, async () => {
+        if (configLoaded.value) {
+            await saveConfigToBackend();
+        }
+    }, {deep: true});
 
     // 字体缩放
     function increaseFontSize() {
@@ -67,18 +103,20 @@ export const useConfigStore = defineStore('config', () => {
 
     // 切换Tab类型（空格或制表符）
     function toggleTabType() {
-        config.value.tabType = config.value.tabType === 'spaces' ? 'tab' : 'spaces';
+        config.value.tabType = config.value.tabType === TabType.TabTypeSpaces
+            ? TabType.TabTypeTab
+            : TabType.TabTypeSpaces;
     }
 
-    // 设置按钮操作
-    function openSettings() {
-        console.log('打开设置面板');
-        // 此处可以实现设置面板的逻辑
+    // 重置为默认配置
+    async function resetToDefaults() {
+        await ResetToDefault();
+        await loadConfigFromBackend();
     }
-
     return {
         // 状态
         config,
+        configLoaded,
 
         // 常量
         MIN_FONT_SIZE,
@@ -88,19 +126,16 @@ export const useConfigStore = defineStore('config', () => {
         MAX_TAB_SIZE,
 
         // 方法
+        loadConfigFromBackend,
+        saveConfigToBackend,
         setEncoding,
-        openSettings,
         increaseFontSize,
         decreaseFontSize,
         resetFontSize,
         toggleTabIndent,
         increaseTabSize,
         decreaseTabSize,
-        toggleTabType
+        toggleTabType,
+        resetToDefaults
     };
-}, {
-    persist: {
-        key: 'editor-config',
-        storage: localStorage
-    }
 }); 

@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"log"
 	"time"
+	"voidraft/internal/services"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -21,16 +22,17 @@ var assets embed.FS
 // and starts a goroutine that emits a time-based event every second. It subsequently runs the application and
 // logs any error that might occur.
 func main() {
-
+	serviceManager := services.NewServiceManager()
 	// Create a new Wails application by providing the necessary options.
 	// Variables 'Name' and 'Description' are for application metadata.
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
+	log.Println("Creating Wails application...")
 	app := application.New(application.Options{
 		Name:        "voidraft",
 		Description: "voidraft",
-		Services:    []application.Service{},
+		Services:    serviceManager.GetServices(),
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
@@ -44,6 +46,7 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
+	log.Println("Creating main window...")
 	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:  "voidraft",
 		Width:  700,
@@ -68,10 +71,13 @@ func main() {
 	}()
 
 	// Run the application. This blocks until the application has been exited.
+	log.Println("Starting application event loop...")
 	err := app.Run()
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	log.Println("Application exiting...")
 }

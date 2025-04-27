@@ -7,10 +7,10 @@ import {useConfigStore} from '@/stores/configStore';
 import {createBasicSetup} from './extensions/basicSetup';
 import {
   createStatsUpdateExtension,
-  getTabExtensions,
-  updateTabConfig,
   createWheelZoomHandler,
-  updateStats
+  getTabExtensions,
+  updateStats,
+  updateTabConfig
 } from './extensions';
 
 const editorStore = useEditorStore();
@@ -19,7 +19,7 @@ const configStore = useConfigStore();
 const props = defineProps({
   initialDoc: {
     type: String,
-    default: '// 在此处编写代码'
+    default: '// 在此处编写文本...'
   }
 });
 
@@ -31,17 +31,17 @@ const createEditor = () => {
 
   // 获取基本扩展
   const basicExtensions = createBasicSetup();
-  
+
   // 获取Tab相关扩展
   const tabExtensions = getTabExtensions(
-    configStore.config.tabSize,
-    configStore.config.enableTabIndent,
-    configStore.config.tabType
+      configStore.config.tabSize,
+      configStore.config.enableTabIndent,
+      configStore.config.tabType
   );
-  
+
   // 创建统计信息更新扩展
   const statsExtension = createStatsUpdateExtension(
-    editorStore.updateDocumentStats
+      editorStore.updateDocumentStats
   );
 
   // 组合所有扩展
@@ -62,31 +62,31 @@ const createEditor = () => {
     state,
     parent: editorElement.value
   });
-  
+
   // 将编辑器实例保存到store
   editorStore.setEditorView(view);
-  
+
   // 应用初始字体大小
   editorStore.applyFontSize();
-  
+
   // 立即更新统计信息，不等待用户交互
   updateStats(view, editorStore.updateDocumentStats);
 };
 
 // 创建滚轮事件处理器
 const handleWheel = createWheelZoomHandler(
-  configStore.increaseFontSize,
-  configStore.decreaseFontSize
+    configStore.increaseFontSize,
+    configStore.decreaseFontSize
 );
 
 // 重新配置编辑器（仅在必要时）
 const reconfigureTabSettings = () => {
   if (!editorStore.editorView) return;
   updateTabConfig(
-    editorStore.editorView as EditorView,
-    configStore.config.tabSize,
-    configStore.config.enableTabIndent,
-    configStore.config.tabType
+      editorStore.editorView as EditorView,
+      configStore.config.tabSize,
+      configStore.config.enableTabIndent,
+      configStore.config.tabType
   );
 };
 
@@ -103,12 +103,12 @@ watch(() => configStore.config.fontSize, () => {
 onMounted(() => {
   // 创建编辑器
   createEditor();
-  
+
   // 添加滚轮事件监听
   if (editorElement.value) {
     editorElement.value.addEventListener('wheel', handleWheel, {passive: false});
   }
-  
+
   // 确保统计信息已更新
   if (editorStore.editorView) {
     setTimeout(() => {
@@ -122,7 +122,7 @@ onBeforeUnmount(() => {
   if (editorElement.value) {
     editorElement.value.removeEventListener('wheel', handleWheel);
   }
-  
+
   // 销毁编辑器
   if (editorStore.editorView) {
     editorStore.editorView.destroy();
