@@ -1,5 +1,5 @@
 import {defineStore} from 'pinia';
-import {ref, watch, inject} from 'vue';
+import {ref, watch} from 'vue';
 import {useDebounceFn} from '@vueuse/core';
 import {
     GetEditorConfig,
@@ -174,8 +174,8 @@ export const useConfigStore = defineStore('config', () => {
     // 重置为默认配置
     async function resetToDefaults() {
         try {
-            await ResetToDefault();
-            await loadConfigFromBackend();
+        await ResetToDefault();
+        await loadConfigFromBackend();
             logStore.info(t('config.resetSuccess'));
         } catch (error) {
             console.error('Failed to reset configuration:', error);

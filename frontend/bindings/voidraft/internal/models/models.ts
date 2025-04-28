@@ -28,6 +28,11 @@ export class AppConfig {
      */
     "metadata": ConfigMetadata;
 
+    /**
+     * 界面语言
+     */
+    "language": LanguageType;
+
     /** Creates a new AppConfig instance. */
     constructor($$source: Partial<AppConfig> = {}) {
         if (!("editor" in $$source)) {
@@ -38,6 +43,9 @@ export class AppConfig {
         }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
+        }
+        if (!("language" in $$source)) {
+            this["language"] = ("" as LanguageType);
         }
 
         Object.assign(this, $$source);
@@ -157,6 +165,26 @@ export class EditorConfig {
         return new EditorConfig($$parsedSource as Partial<EditorConfig>);
     }
 }
+
+/**
+ * LanguageType 语言类型定义
+ */
+export enum LanguageType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * LangZhCN 中文简体
+     */
+    LangZhCN = "zh-CN",
+
+    /**
+     * LangEnUS 英文-美国
+     */
+    LangEnUS = "en-US",
+};
 
 /**
  * PathConfig 定义配置文件路径相关配置

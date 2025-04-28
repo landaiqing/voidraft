@@ -23,6 +23,16 @@ type EditorConfig struct {
 	TabType         TabType `json:"tabType"`         // Tab类型（空格或Tab）
 }
 
+// LanguageType 语言类型定义
+type LanguageType string
+
+const (
+	// LangZhCN 中文简体
+	LangZhCN LanguageType = "zh-CN"
+	// LangEnUS 英文-美国
+	LangEnUS LanguageType = "en-US"
+)
+
 // PathConfig 定义配置文件路径相关配置
 type PathConfig struct {
 	RootDir    string `json:"rootDir"`    // 根目录
@@ -34,6 +44,7 @@ type AppConfig struct {
 	Editor   EditorConfig   `json:"editor"`   // 编辑器配置
 	Paths    PathConfig     `json:"paths"`    // 路径配置
 	Metadata ConfigMetadata `json:"metadata"` // 配置元数据
+	Language LanguageType   `json:"language"` // 界面语言
 }
 
 // ConfigMetadata 配置元数据
@@ -60,5 +71,6 @@ func NewDefaultAppConfig() *AppConfig {
 			Version:     "1.0.0",
 			LastUpdated: time.Now(),
 		},
+		Language: LangZhCN,
 	}
 }

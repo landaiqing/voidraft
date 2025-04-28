@@ -1,6 +1,7 @@
 import {createI18n} from 'vue-i18n';
-import {useStorage} from '@vueuse/core';
 import messages from './locales';
+import { GetLanguage, SetLanguage } from '@/../bindings/voidraft/internal/services/configservice';
+import { LanguageType } from '@/../bindings/voidraft/internal/models';
 
 // 定义支持的语言类型
 export type SupportedLocaleType = 'zh-CN' | 'en-US';
@@ -27,29 +28,44 @@ const getBrowserLanguage = (): SupportedLocaleType => {
         locale.code.startsWith(langCode) || locale.code.split('-')[0] === langCode
     );
 
-    return supportedLang?.code || 'zh-CN'; // 默认为中文
+    return supportedLang?.code || 'zh-CN';
 };
-
-const storedLocale = useStorage<SupportedLocaleType>('voidraft-language', getBrowserLanguage());
 
 // 创建i18n实例
 const i18n = createI18n({
-    lobalInjection: true,
-    locale: storedLocale.value,
+    globalInjection: true,
+    locale: 'zh-CN',
     fallbackLocale: 'zh-CN' as SupportedLocaleType,
     messages
+});
+
+// 立即从后端获取语言设置
+GetLanguage().then(lang => {
+    if (lang) {
+        i18n.global.locale = lang as any;
+        document.documentElement.setAttribute('lang', lang);
+    }
+}).catch(error => {
+    console.error('Failed to get language from backend:', error);
+    // 如果获取失败，使用浏览器语言作为后备
+    const browserLang = getBrowserLanguage();
+    i18n.global.locale = browserLang as any;
+    document.documentElement.setAttribute('lang', browserLang);
 });
 
 // 切换语言的方法
 export const setLocale = (locale: SupportedLocaleType) => {
     if (SUPPORTED_LOCALES.some(l => l.code === locale)) {
-        storedLocale.value = locale;
-        i18n.global.locale = locale;
-        document.documentElement.setAttribute('lang', locale);
+        // 更新后端配置
+        SetLanguage(locale as LanguageType)
+            .then(() => {
+                i18n.global.locale = locale;
+                document.documentElement.setAttribute('lang', locale);
+            })
+            .catch(error => {
+                console.error('Failed to set language:', error);
+            });
     }
 };
-
-// 初始设置html lang属性
-document.documentElement.setAttribute('lang', storedLocale.value);
 
 export default i18n; 

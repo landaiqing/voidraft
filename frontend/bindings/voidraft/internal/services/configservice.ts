@@ -47,6 +47,14 @@ export function GetFullConfigPath(): Promise<string> & { cancel(): void } {
 }
 
 /**
+ * GetLanguage 获取当前语言设置
+ */
+export function GetLanguage(): Promise<models$0.LanguageType> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3409375894) as any;
+    return $resultPromise;
+}
+
+/**
  * ResetToDefault 重置为默认配置
  */
 export function ResetToDefault(): Promise<void> & { cancel(): void } {
@@ -59,6 +67,14 @@ export function ResetToDefault(): Promise<void> & { cancel(): void } {
  */
 export function SaveAppConfig(config: models$0.AppConfig | null): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2077587650, config) as any;
+    return $resultPromise;
+}
+
+/**
+ * SetLanguage 设置语言
+ */
+export function SetLanguage(language: models$0.LanguageType): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(814725002, language) as any;
     return $resultPromise;
 }
 

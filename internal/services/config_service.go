@@ -314,6 +314,58 @@ func (cs *ConfigService) SaveAppConfig(config *models.AppConfig) error {
 	return cs.saveAppConfig(config)
 }
 
+// GetLanguage 获取当前语言设置
+func (cs *ConfigService) GetLanguage() (models.LanguageType, error) {
+	// 如果内存中已有配置，直接返回
+	if cs.config != nil {
+		return cs.config.Language, nil
+	}
+
+	// 否则从文件加载
+	config, err := cs.loadAppConfig()
+	if err != nil {
+		log.Printf("GetLanguage: Failed to load config: %v", err)
+		// 使用默认配置
+		defaultConfig := models.NewDefaultAppConfig()
+		cs.config = defaultConfig
+		return defaultConfig.Language, nil
+	}
+
+	// 更新内存中的配置
+	cs.config = config
+	log.Printf("GetLanguage: Retrieved language: %s", config.Language)
+	return config.Language, nil
+}
+
+// SetLanguage 设置语言
+func (cs *ConfigService) SetLanguage(language models.LanguageType) error {
+	// 验证语言类型有效
+	if language != models.LangZhCN && language != models.LangEnUS {
+		return fmt.Errorf("unsupported language: %s", language)
+	}
+
+	// 如果内存中已有配置，直接更新
+	if cs.config != nil {
+		log.Printf("SetLanguage: Updating language to: %s", language)
+		cs.config.Language = language
+		return cs.saveAppConfig(cs.config)
+	}
+
+	// 没有内存中的配置，需要先加载
+	config, err := cs.loadAppConfig()
+	if err != nil {
+		log.Printf("SetLanguage: Failed to load config: %v", err)
+		// 使用默认配置
+		config = models.NewDefaultAppConfig()
+	}
+
+	// 更新语言配置
+	config.Language = language
+
+	// 保存到文件
+	return cs.saveAppConfig(config)
+}
+
 // UpdateEditorConfig 更新编辑器配置
 func (cs *ConfigService) UpdateEditorConfig(editorConfig models.EditorConfig) error {
 	// 如果内存中已有配置，直接更新
