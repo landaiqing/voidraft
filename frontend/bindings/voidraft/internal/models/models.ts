@@ -28,11 +28,6 @@ export class AppConfig {
      */
     "metadata": ConfigMetadata;
 
-    /**
-     * 界面语言
-     */
-    "language": LanguageType;
-
     /** Creates a new AppConfig instance. */
     constructor($$source: Partial<AppConfig> = {}) {
         if (!("editor" in $$source)) {
@@ -43,9 +38,6 @@ export class AppConfig {
         }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
-        }
-        if (!("language" in $$source)) {
-            this["language"] = ("" as LanguageType);
         }
 
         Object.assign(this, $$source);
@@ -119,7 +111,7 @@ export class EditorConfig {
     /**
      * 文件保存的编码
      */
-    "encoding": string;
+    "encoding": EncodingType;
 
     /**
      * 是否启用Tab缩进
@@ -136,13 +128,18 @@ export class EditorConfig {
      */
     "tabType": TabType;
 
+    /**
+     * 界面语言
+     */
+    "language": LanguageType;
+
     /** Creates a new EditorConfig instance. */
     constructor($$source: Partial<EditorConfig> = {}) {
         if (!("fontSize" in $$source)) {
             this["fontSize"] = 0;
         }
         if (!("encoding" in $$source)) {
-            this["encoding"] = "";
+            this["encoding"] = ("" as EncodingType);
         }
         if (!("enableTabIndent" in $$source)) {
             this["enableTabIndent"] = false;
@@ -152,6 +149,9 @@ export class EditorConfig {
         }
         if (!("tabType" in $$source)) {
             this["tabType"] = ("" as TabType);
+        }
+        if (!("language" in $$source)) {
+            this["language"] = ("" as LanguageType);
         }
 
         Object.assign(this, $$source);
@@ -165,6 +165,56 @@ export class EditorConfig {
         return new EditorConfig($$parsedSource as Partial<EditorConfig>);
     }
 }
+
+/**
+ * EncodingType 定义文件编码格式类型
+ */
+export enum EncodingType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * EncodingUTF8 UTF-8编码
+     */
+    EncodingUTF8 = "UTF-8",
+
+    /**
+     * EncodingUTF8BOM UTF-8带BOM编码
+     */
+    EncodingUTF8BOM = "UTF-8-BOM",
+
+    /**
+     * EncodingUTF16LE UTF-16小端编码
+     */
+    EncodingUTF16LE = "UTF-16 LE",
+
+    /**
+     * EncodingUTF16BE UTF-16大端编码
+     */
+    EncodingUTF16BE = "UTF-16 BE",
+
+    /**
+     * EncodingISO88591 ISO-8859-1编码
+     */
+    EncodingISO88591 = "ISO-8859-1",
+
+    /**
+     * EncodingGB18030 GB18030编码
+     */
+    EncodingGB18030 = "GB18030",
+
+    /**
+     * EncodingGBK GBK编码
+     */
+    EncodingGBK = "GBK",
+
+    /**
+     * EncodingBig5 Big5编码
+     */
+    EncodingBig5 = "Big5",
+};
 
 /**
  * LanguageType 语言类型定义

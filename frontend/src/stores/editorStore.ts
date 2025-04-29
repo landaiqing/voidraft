@@ -43,9 +43,6 @@ export const useEditorStore = defineStore('editor', () => {
         documentStats,
         editorView,
 
-        // 配置引用
-        config: configStore.config,
-
         // 方法
         setEditorView,
         updateDocumentStats,

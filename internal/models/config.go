@@ -14,13 +14,36 @@ const (
 	TabTypeTab TabType = "tab"
 )
 
+// EncodingType 定义文件编码格式类型
+type EncodingType string
+
+const (
+	// EncodingUTF8 UTF-8编码
+	EncodingUTF8 EncodingType = "UTF-8"
+	// EncodingUTF8BOM UTF-8带BOM编码
+	EncodingUTF8BOM EncodingType = "UTF-8-BOM"
+	// EncodingUTF16LE UTF-16小端编码
+	EncodingUTF16LE EncodingType = "UTF-16 LE"
+	// EncodingUTF16BE UTF-16大端编码
+	EncodingUTF16BE EncodingType = "UTF-16 BE"
+	// EncodingISO88591 ISO-8859-1编码
+	EncodingISO88591 EncodingType = "ISO-8859-1"
+	// EncodingGB18030 GB18030编码
+	EncodingGB18030 EncodingType = "GB18030"
+	// EncodingGBK GBK编码
+	EncodingGBK EncodingType = "GBK"
+	// EncodingBig5 Big5编码
+	EncodingBig5 EncodingType = "Big5"
+)
+
 // EditorConfig 定义编辑器配置
 type EditorConfig struct {
-	FontSize        int     `json:"fontSize"`        // 字体大小
-	Encoding        string  `json:"encoding"`        // 文件保存的编码
-	EnableTabIndent bool    `json:"enableTabIndent"` // 是否启用Tab缩进
-	TabSize         int     `json:"tabSize"`         // Tab大小
-	TabType         TabType `json:"tabType"`         // Tab类型（空格或Tab）
+	FontSize        int          `json:"fontSize"`        // 字体大小
+	Encoding        EncodingType `json:"encoding"`        // 文件保存的编码
+	EnableTabIndent bool         `json:"enableTabIndent"` // 是否启用Tab缩进
+	TabSize         int          `json:"tabSize"`         // Tab大小
+	TabType         TabType      `json:"tabType"`         // Tab类型（空格或Tab）
+	Language        LanguageType `json:"language"`        // 界面语言
 }
 
 // LanguageType 语言类型定义
@@ -44,7 +67,6 @@ type AppConfig struct {
 	Editor   EditorConfig   `json:"editor"`   // 编辑器配置
 	Paths    PathConfig     `json:"paths"`    // 路径配置
 	Metadata ConfigMetadata `json:"metadata"` // 配置元数据
-	Language LanguageType   `json:"language"` // 界面语言
 }
 
 // ConfigMetadata 配置元数据
@@ -58,10 +80,11 @@ func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		Editor: EditorConfig{
 			FontSize:        13,
-			Encoding:        "UTF-8",
+			Encoding:        EncodingUTF8,
 			EnableTabIndent: true,
 			TabSize:         4,
 			TabType:         TabTypeSpaces,
+			Language:        LangZhCN,
 		},
 		Paths: PathConfig{
 			RootDir:    ".voidraft",
@@ -71,6 +94,5 @@ func NewDefaultAppConfig() *AppConfig {
 			Version:     "1.0.0",
 			LastUpdated: time.Now(),
 		},
-		Language: LangZhCN,
 	}
 }

@@ -43,14 +43,12 @@ const i18n = createI18n({
 GetLanguage().then(lang => {
     if (lang) {
         i18n.global.locale = lang as any;
-        document.documentElement.setAttribute('lang', lang);
     }
 }).catch(error => {
     console.error('Failed to get language from backend:', error);
     // 如果获取失败，使用浏览器语言作为后备
     const browserLang = getBrowserLanguage();
     i18n.global.locale = browserLang as any;
-    document.documentElement.setAttribute('lang', browserLang);
 });
 
 // 切换语言的方法

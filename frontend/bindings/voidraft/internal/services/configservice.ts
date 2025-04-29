@@ -15,10 +15,10 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as models$0 from "../models/models.js";
 
 /**
- * GetAppConfig 获取应用配置
+ * GetConfig 获取完整应用配置
  */
-export function GetAppConfig(): Promise<models$0.AppConfig | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3361428829) as any;
+export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1013336538) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;
@@ -39,14 +39,6 @@ export function GetEditorConfig(): Promise<models$0.EditorConfig> & { cancel(): 
 }
 
 /**
- * GetFullConfigPath 获取完整的配置文件路径
- */
-export function GetFullConfigPath(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(38527092) as any;
-    return $resultPromise;
-}
-
-/**
  * GetLanguage 获取当前语言设置
  */
 export function GetLanguage(): Promise<models$0.LanguageType> & { cancel(): void } {
@@ -55,18 +47,42 @@ export function GetLanguage(): Promise<models$0.LanguageType> & { cancel(): void
 }
 
 /**
- * ResetToDefault 重置为默认配置
+ * GetMetadata 获取配置元数据
  */
-export function ResetToDefault(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4057687351) as any;
+export function GetMetadata(): Promise<models$0.ConfigMetadata> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3276720617) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType3($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * GetPathConfig 获取路径配置
+ */
+export function GetPathConfig(): Promise<models$0.PathConfig> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2053285689) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType4($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * ResetConfig 重置为默认配置
+ */
+export function ResetConfig(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3593047389) as any;
     return $resultPromise;
 }
 
 /**
- * SaveAppConfig 保存应用配置
+ * SaveConfig 保存完整应用配置
  */
-export function SaveAppConfig(config: models$0.AppConfig | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2077587650, config) as any;
+export function SaveConfig(config: models$0.AppConfig | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(616684383, config) as any;
     return $resultPromise;
 }
 
@@ -86,7 +102,25 @@ export function UpdateEditorConfig(editorConfig: models$0.EditorConfig): Promise
     return $resultPromise;
 }
 
+/**
+ * UpdateMetadata 更新配置元数据
+ */
+export function UpdateMetadata(metadata: models$0.ConfigMetadata): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3353893284, metadata) as any;
+    return $resultPromise;
+}
+
+/**
+ * UpdatePathConfig 更新路径配置
+ */
+export function UpdatePathConfig(pathConfig: models$0.PathConfig): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1492772004, pathConfig) as any;
+    return $resultPromise;
+}
+
 // Private type creation functions
 const $$createType0 = models$0.AppConfig.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = models$0.EditorConfig.createFrom;
+const $$createType3 = models$0.ConfigMetadata.createFrom;
+const $$createType4 = models$0.PathConfig.createFrom;

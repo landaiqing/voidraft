@@ -5,6 +5,7 @@ import {useLogStore} from '@/stores/logStore';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import {SUPPORTED_LOCALES, setLocale, SupportedLocaleType} from '@/i18n';
+import { EncodingType } from '@/../bindings/voidraft/internal/models/models';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
@@ -13,6 +14,20 @@ const { t, locale } = useI18n();
 
 // 语言下拉菜单
 const showLanguageMenu = ref(false);
+// 编码下拉菜单
+const showEncodingMenu = ref(false);
+
+// 支持的编码格式
+const SUPPORTED_ENCODINGS = [
+  { code: EncodingType.EncodingUTF8, name: 'UTF-8' },
+  { code: EncodingType.EncodingUTF8BOM, name: 'UTF-8 with BOM' },
+  { code: EncodingType.EncodingUTF16LE, name: 'UTF-16 LE' },
+  { code: EncodingType.EncodingUTF16BE, name: 'UTF-16 BE' },
+  { code: EncodingType.EncodingISO88591, name: 'ISO-8859-1' },
+  { code: EncodingType.EncodingGB18030, name: 'GB18030' },
+  { code: EncodingType.EncodingGBK, name: 'GBK' },
+  { code: EncodingType.EncodingBig5, name: 'Big5' }
+];
 
 // 切换语言
 const changeLanguage = (localeCode: SupportedLocaleType) => {
@@ -23,6 +38,29 @@ const changeLanguage = (localeCode: SupportedLocaleType) => {
 // 切换语言菜单显示
 const toggleLanguageMenu = () => {
   showLanguageMenu.value = !showLanguageMenu.value;
+  if (showLanguageMenu.value) {
+    showEncodingMenu.value = false;
+  }
+};
+
+// 切换编码
+const changeEncoding = (encoding: EncodingType) => {
+  configStore.setEncoding(encoding);
+  showEncodingMenu.value = false;
+};
+
+// 切换编码菜单显示
+const toggleEncodingMenu = () => {
+  showEncodingMenu.value = !showEncodingMenu.value;
+  if (showEncodingMenu.value) {
+    showLanguageMenu.value = false;
+  }
+};
+
+// 获取编码名称
+const getEncodingDisplayName = (encoding: EncodingType) => {
+  const encodingItem = SUPPORTED_ENCODINGS.find(item => item.code === encoding);
+  return encodingItem ? encodingItem.name : encoding;
 };
 </script>
 
@@ -61,19 +99,37 @@ const toggleLanguageMenu = () => {
           <button class="tab-btn" @click="configStore.increaseTabSize" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
         </span>
       </span>
-      <span class="encoding">{{ t('toolbar.encoding') }}</span>
+      
+      <!-- 编码选择按钮 -->
+      <div class="selector-dropdown">
+        <button class="selector-btn" @click="toggleEncodingMenu">
+          {{ getEncodingDisplayName(configStore.config.encoding) }}
+          <span class="arrow">▲</span>
+        </button>
+        <div class="selector-menu" v-if="showEncodingMenu">
+          <div 
+            v-for="encoding in SUPPORTED_ENCODINGS" 
+            :key="encoding.code" 
+            class="selector-option"
+            :class="{ active: configStore.config.encoding === encoding.code }"
+            @click="changeEncoding(encoding.code)"
+          >
+            {{ encoding.name }}
+          </div>
+        </div>
+      </div>
       
       <!-- 语言切换按钮 -->
-      <div class="language-selector">
-        <button class="language-btn" @click="toggleLanguageMenu">
+      <div class="selector-dropdown">
+        <button class="selector-btn" @click="toggleLanguageMenu">
           {{ locale }}
-          <span class="arrow-up">▲</span>
+          <span class="arrow">▲</span>
         </button>
-        <div class="language-menu" v-if="showLanguageMenu">
+        <div class="selector-menu" v-if="showLanguageMenu">
           <div 
             v-for="lang in SUPPORTED_LOCALES" 
             :key="lang.code" 
-            class="language-option"
+            class="selector-option"
             :class="{ active: locale === lang.code }"
             @click="changeLanguage(lang.code)"
           >
@@ -200,17 +256,12 @@ const toggleLanguageMenu = () => {
         }
       }
     }
-
-    .encoding {
-      color: var(--text-muted);
-      font-size: 11px;
-    }
     
-    /* 语言切换样式 */
-    .language-selector {
+    /* 通用下拉选择器样式 */
+    .selector-dropdown {
       position: relative;
       
-      .language-btn {
+      .selector-btn {
         background: none;
         border: none;
         color: var(--text-muted);
@@ -226,13 +277,13 @@ const toggleLanguageMenu = () => {
           background-color: rgba(255, 255, 255, 0.05);
         }
         
-        .arrow-up {
+        .arrow {
           font-size: 8px;
           margin-left: 2px;
         }
       }
       
-      .language-menu {
+      .selector-menu {
         position: absolute;
         bottom: 100%;
         right: 0;
@@ -240,11 +291,13 @@ const toggleLanguageMenu = () => {
         border: 1px solid var(--border-color);
         border-radius: 3px;
         margin-bottom: 4px;
-        min-width: 100px;
+        min-width: 120px;
+        max-height: 200px;
+        overflow-y: auto;
         z-index: 1000;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
         
-        .language-option {
+        .selector-option {
           padding: 4px 8px;
           cursor: pointer;
           font-size: 11px;

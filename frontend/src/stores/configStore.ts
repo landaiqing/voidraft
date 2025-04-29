@@ -3,10 +3,10 @@ import {ref, watch} from 'vue';
 import {useDebounceFn} from '@vueuse/core';
 import {
     GetEditorConfig,
-    ResetToDefault,
+    ResetConfig,
     UpdateEditorConfig
 } from '@/../bindings/voidraft/internal/services/configservice';
-import {EditorConfig, TabType} from '@/../bindings/voidraft/internal/models/models';
+import {EditorConfig, TabType, EncodingType} from '@/../bindings/voidraft/internal/models/models';
 import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';
 
@@ -20,6 +20,26 @@ const DEFAULT_TAB_SIZE = 4;
 const MIN_TAB_SIZE = 2;
 const MAX_TAB_SIZE = 8;
 
+// 支持的编码
+const SUPPORTED_ENCODINGS = [
+    EncodingType.EncodingUTF8,
+    EncodingType.EncodingUTF8BOM,
+    EncodingType.EncodingUTF16LE,
+    EncodingType.EncodingUTF16BE,
+    EncodingType.EncodingISO88591,
+    EncodingType.EncodingGB18030,
+    EncodingType.EncodingGBK,
+    EncodingType.EncodingBig5
+];
+
+// 配置项限制定义
+const CONFIG_LIMITS = {
+    fontSize: { min: MIN_FONT_SIZE, max: MAX_FONT_SIZE, default: DEFAULT_FONT_SIZE },
+    tabSize: { min: MIN_TAB_SIZE, max: MAX_TAB_SIZE, default: DEFAULT_TAB_SIZE },
+    tabType: { values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces },
+    encoding: { values: SUPPORTED_ENCODINGS, default: EncodingType.EncodingUTF8 }
+};
+
 export const useConfigStore = defineStore('config', () => {
     // 获取日志store
     const logStore = useLogStore();
@@ -28,7 +48,7 @@ export const useConfigStore = defineStore('config', () => {
     // 配置状态
     const config = ref<EditorConfig>(new EditorConfig({
         fontSize: DEFAULT_FONT_SIZE,
-        encoding: 'UTF-8',
+        encoding: EncodingType.EncodingUTF8,
         enableTabIndent: true,
         tabSize: DEFAULT_TAB_SIZE,
         tabType: TabType.TabTypeSpaces
@@ -58,42 +78,44 @@ export const useConfigStore = defineStore('config', () => {
         let hasChanges = false;
         
         // 验证字体大小
-        if (config.value.fontSize < MIN_FONT_SIZE || config.value.fontSize > MAX_FONT_SIZE) {
+        if (config.value.fontSize < CONFIG_LIMITS.fontSize.min || config.value.fontSize > CONFIG_LIMITS.fontSize.max) {
             const oldValue = config.value.fontSize;
-            config.value.fontSize = oldValue < MIN_FONT_SIZE ? MIN_FONT_SIZE : 
-                                   oldValue > MAX_FONT_SIZE ? MAX_FONT_SIZE : 
-                                   DEFAULT_FONT_SIZE;
+            config.value.fontSize = oldValue < CONFIG_LIMITS.fontSize.min ? CONFIG_LIMITS.fontSize.min : 
+                                   oldValue > CONFIG_LIMITS.fontSize.max ? CONFIG_LIMITS.fontSize.max : 
+                                   CONFIG_LIMITS.fontSize.default;
             
-            logStore.warning(t('config.fontSizeFixed', {
-                value: oldValue,
-                fixed: config.value.fontSize
-            }));
+            logStore.warning(t('config.fontSizeFixed'));
             
             hasChanges = true;
         }
         
         // 验证Tab大小
-        if (config.value.tabSize < MIN_TAB_SIZE || config.value.tabSize > MAX_TAB_SIZE) {
+        if (config.value.tabSize < CONFIG_LIMITS.tabSize.min || config.value.tabSize > CONFIG_LIMITS.tabSize.max) {
             const oldValue = config.value.tabSize;
-            config.value.tabSize = oldValue < MIN_TAB_SIZE ? MIN_TAB_SIZE : 
-                                  oldValue > MAX_TAB_SIZE ? MAX_TAB_SIZE : 
-                                  DEFAULT_TAB_SIZE;
+            config.value.tabSize = oldValue < CONFIG_LIMITS.tabSize.min ? CONFIG_LIMITS.tabSize.min : 
+                                  oldValue > CONFIG_LIMITS.tabSize.max ? CONFIG_LIMITS.tabSize.max : 
+                                  CONFIG_LIMITS.tabSize.default;
             
-            logStore.warning(t('config.tabSizeFixed', {
-                value: oldValue,
-                fixed: config.value.tabSize
-            }));
+            logStore.warning(t('config.tabSizeFixed'));
             
             hasChanges = true;
         }
         
         // 验证TabType是否合法
-        const validTabTypes = [TabType.TabTypeSpaces, TabType.TabTypeTab];
-        if (!validTabTypes.includes(config.value.tabType)) {
+        if (!CONFIG_LIMITS.tabType.values.includes(config.value.tabType)) {
             const oldValue = config.value.tabType;
-            config.value.tabType = TabType.TabTypeSpaces;
+            config.value.tabType = CONFIG_LIMITS.tabType.default;
             
-            logStore.warning(t('config.tabTypeFixed', { value: oldValue }));
+            logStore.warning(t('config.tabTypeFixed'));
+            hasChanges = true;
+        }
+        
+        // 验证编码类型是否合法
+        if (!CONFIG_LIMITS.encoding.values.includes(config.value.encoding)) {
+            const oldValue = config.value.encoding;
+            config.value.encoding = CONFIG_LIMITS.encoding.default;
+            
+            logStore.warning(t('config.encodingFixed'));
             hasChanges = true;
         }
         
@@ -121,67 +143,69 @@ export const useConfigStore = defineStore('config', () => {
         }
     }, {deep: true});
 
-    // 字体缩放
-    function increaseFontSize() {
-        if (config.value.fontSize < MAX_FONT_SIZE) {
-            config.value.fontSize += 1;
+    // 更新特定配置项的类型安全方法
+    function updateConfig<K extends keyof EditorConfig>(
+        key: K, 
+        value: EditorConfig[K] | ((currentValue: EditorConfig[K]) => EditorConfig[K])
+    ) {
+        if (typeof value === 'function') {
+            const currentValue = config.value[key];
+            const fn = value as (val: EditorConfig[K]) => EditorConfig[K];
+            config.value[key] = fn(currentValue);
+        } else {
+            config.value[key] = value;
         }
     }
 
-    // 字体缩小
-    function decreaseFontSize() {
-        if (config.value.fontSize > MIN_FONT_SIZE) {
-            config.value.fontSize -= 1;
-        }
+    // 用于数字类型配置的增减方法
+    function adjustFontSize(amount: number) {
+        let newValue = config.value.fontSize + amount;
+        
+        if (newValue < MIN_FONT_SIZE) newValue = MIN_FONT_SIZE;
+        if (newValue > MAX_FONT_SIZE) newValue = MAX_FONT_SIZE;
+        
+        config.value.fontSize = newValue;
     }
 
-    // 重置字体大小
-    function resetFontSize() {
-        config.value.fontSize = DEFAULT_FONT_SIZE;
+    function adjustTabSize(amount: number) {
+        let newValue = config.value.tabSize + amount;
+        
+        if (newValue < MIN_TAB_SIZE) newValue = MIN_TAB_SIZE;
+        if (newValue > MAX_TAB_SIZE) newValue = MAX_TAB_SIZE;
+        
+        config.value.tabSize = newValue;
     }
 
-    // 设置编码
-    function setEncoding(newEncoding: string) {
-        config.value.encoding = newEncoding;
-    }
-
-    // Tab相关方法
-    function toggleTabIndent() {
-        config.value.enableTabIndent = !config.value.enableTabIndent;
-    }
-
-    // 增加Tab大小
-    function increaseTabSize() {
-        if (config.value.tabSize < MAX_TAB_SIZE) {
-            config.value.tabSize += 1;
-        }
-    }
-
-    // 减少Tab大小
-    function decreaseTabSize() {
-        if (config.value.tabSize > MIN_TAB_SIZE) {
-            config.value.tabSize -= 1;
-        }
-    }
-
-    // 切换Tab类型（空格或制表符）
+    // Tab相关类型安全的配置切换
     function toggleTabType() {
-        config.value.tabType = config.value.tabType === TabType.TabTypeSpaces
-            ? TabType.TabTypeTab
+        config.value.tabType = config.value.tabType === TabType.TabTypeSpaces 
+            ? TabType.TabTypeTab 
             : TabType.TabTypeSpaces;
+    }
+    
+    // 设置编码类型
+    function setEncoding(encoding: string) {
+        // 验证编码是否有效的EncodingType
+        const encodingType = encoding as EncodingType;
+        if (SUPPORTED_ENCODINGS.includes(encodingType)) {
+            config.value.encoding = encodingType;
+        } else {
+            logStore.warning(t('config.invalidEncoding'));
+        }
     }
 
     // 重置为默认配置
     async function resetToDefaults() {
         try {
-        await ResetToDefault();
-        await loadConfigFromBackend();
+            await ResetConfig();
+            await loadConfigFromBackend();
             logStore.info(t('config.resetSuccess'));
         } catch (error) {
             console.error('Failed to reset configuration:', error);
             logStore.error(t('config.resetFailed'));
         }
     }
+    
     return {
         // 状态
         config,
@@ -193,18 +217,26 @@ export const useConfigStore = defineStore('config', () => {
         DEFAULT_FONT_SIZE,
         MIN_TAB_SIZE,
         MAX_TAB_SIZE,
+        SUPPORTED_ENCODINGS,
 
-        // 方法
+        // 核心方法
         loadConfigFromBackend,
         saveConfigToBackend,
+        updateConfig,
+        resetToDefaults,
+        
+        // 字体大小方法
+        increaseFontSize: () => adjustFontSize(1),
+        decreaseFontSize: () => adjustFontSize(-1),
+        resetFontSize: () => updateConfig('fontSize', DEFAULT_FONT_SIZE),
+        
+        // 编码操作
         setEncoding,
-        increaseFontSize,
-        decreaseFontSize,
-        resetFontSize,
-        toggleTabIndent,
-        increaseTabSize,
-        decreaseTabSize,
-        toggleTabType,
-        resetToDefaults
+        
+        // Tab操作
+        toggleTabIndent: () => updateConfig('enableTabIndent', val => !val),
+        increaseTabSize: () => adjustTabSize(1),
+        decreaseTabSize: () => adjustTabSize(-1),
+        toggleTabType
     };
 }); 

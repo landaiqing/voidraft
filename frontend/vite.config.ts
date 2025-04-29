@@ -1,7 +1,6 @@
 import {defineConfig, loadEnv} from 'vite';
 import vue from '@vitejs/plugin-vue';
 import Components from 'unplugin-vue-components/vite';
-import {PrimeVueResolver} from '@primevue/auto-import-resolver';
 import * as path from 'path';
 
 export default defineConfig(({mode}: { mode: string }): object => {
@@ -19,7 +18,7 @@ export default defineConfig(({mode}: { mode: string }): object => {
             Components({
                 dts: true,
                 dirs: ['src/components'],
-                resolvers: [PrimeVueResolver()],
+                resolvers: [],
             })
         ],
         esbuild: {
