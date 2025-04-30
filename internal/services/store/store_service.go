@@ -1,4 +1,4 @@
-package services
+package store
 
 import (
 	"encoding/json"
@@ -125,10 +125,10 @@ func (s *Store[T]) saveInternal() error {
 	}
 	tempFilePath := tempFile.Name()
 	defer func() {
-		tempFile.Close()
+		_ = tempFile.Close()
 		// 如果出错，删除临时文件
 		if err != nil {
-			os.Remove(tempFilePath)
+			_ = os.Remove(tempFilePath)
 		}
 	}()
 

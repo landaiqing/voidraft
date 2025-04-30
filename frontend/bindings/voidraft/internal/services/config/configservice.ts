@@ -12,13 +12,13 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as models$0 from "../models/models.js";
+import * as models$0 from "../../models/models.js";
 
 /**
  * GetConfig 获取完整应用配置
  */
 export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1013336538) as any;
+    let $resultPromise = $Call.ByID(3332910023) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;
@@ -27,10 +27,18 @@ export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): vo
 }
 
 /**
+ * GetConfigPath 获取当前配置文件路径
+ */
+export function GetConfigPath(): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2145796624) as any;
+    return $resultPromise;
+}
+
+/**
  * GetEditorConfig 获取编辑器配置
  */
 export function GetEditorConfig(): Promise<models$0.EditorConfig> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3648153351) as any;
+    let $resultPromise = $Call.ByID(3738882774) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType2($result);
     }) as any;
@@ -42,7 +50,7 @@ export function GetEditorConfig(): Promise<models$0.EditorConfig> & { cancel(): 
  * GetLanguage 获取当前语言设置
  */
 export function GetLanguage(): Promise<models$0.LanguageType> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3409375894) as any;
+    let $resultPromise = $Call.ByID(1762264443) as any;
     return $resultPromise;
 }
 
@@ -50,7 +58,7 @@ export function GetLanguage(): Promise<models$0.LanguageType> & { cancel(): void
  * GetMetadata 获取配置元数据
  */
 export function GetMetadata(): Promise<models$0.ConfigMetadata> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3276720617) as any;
+    let $resultPromise = $Call.ByID(356327488) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType3($result);
     }) as any;
@@ -59,10 +67,10 @@ export function GetMetadata(): Promise<models$0.ConfigMetadata> & { cancel(): vo
 }
 
 /**
- * GetPathConfig 获取路径配置
+ * GetPaths 获取路径配置
  */
-export function GetPathConfig(): Promise<models$0.PathConfig> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2053285689) as any;
+export function GetPaths(): Promise<models$0.PathsConfig> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1115810463) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType4($result);
     }) as any;
@@ -74,7 +82,7 @@ export function GetPathConfig(): Promise<models$0.PathConfig> & { cancel(): void
  * ResetConfig 重置为默认配置
  */
 export function ResetConfig(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3593047389) as any;
+    let $resultPromise = $Call.ByID(2265390548) as any;
     return $resultPromise;
 }
 
@@ -82,7 +90,7 @@ export function ResetConfig(): Promise<void> & { cancel(): void } {
  * SaveConfig 保存完整应用配置
  */
 export function SaveConfig(config: models$0.AppConfig | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(616684383, config) as any;
+    let $resultPromise = $Call.ByID(2710445504, config) as any;
     return $resultPromise;
 }
 
@@ -90,7 +98,15 @@ export function SaveConfig(config: models$0.AppConfig | null): Promise<void> & {
  * SetLanguage 设置语言
  */
 export function SetLanguage(language: models$0.LanguageType): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(814725002, language) as any;
+    let $resultPromise = $Call.ByID(2553541807, language) as any;
+    return $resultPromise;
+}
+
+/**
+ * UpdateConfigPath 更新配置文件路径
+ */
+export function UpdateConfigPath(newPath: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(251712339, newPath) as any;
     return $resultPromise;
 }
 
@@ -98,7 +114,7 @@ export function SetLanguage(language: models$0.LanguageType): Promise<void> & { 
  * UpdateEditorConfig 更新编辑器配置
  */
 export function UpdateEditorConfig(editorConfig: models$0.EditorConfig): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1237949666, editorConfig) as any;
+    let $resultPromise = $Call.ByID(420530601, editorConfig) as any;
     return $resultPromise;
 }
 
@@ -106,15 +122,15 @@ export function UpdateEditorConfig(editorConfig: models$0.EditorConfig): Promise
  * UpdateMetadata 更新配置元数据
  */
 export function UpdateMetadata(metadata: models$0.ConfigMetadata): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3353893284, metadata) as any;
+    let $resultPromise = $Call.ByID(1687760751, metadata) as any;
     return $resultPromise;
 }
 
 /**
- * UpdatePathConfig 更新路径配置
+ * UpdatePaths 更新路径配置
  */
-export function UpdatePathConfig(pathConfig: models$0.PathConfig): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1492772004, pathConfig) as any;
+export function UpdatePaths(paths: models$0.PathsConfig): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3466187518, paths) as any;
     return $resultPromise;
 }
 
@@ -123,4 +139,4 @@ const $$createType0 = models$0.AppConfig.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = models$0.EditorConfig.createFrom;
 const $$createType3 = models$0.ConfigMetadata.createFrom;
-const $$createType4 = models$0.PathConfig.createFrom;
+const $$createType4 = models$0.PathsConfig.createFrom;

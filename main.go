@@ -28,7 +28,6 @@ func main() {
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
-	log.Println("Creating Wails application...")
 	app := application.New(application.Options{
 		Name:        "voidraft",
 		Description: "voidraft",
@@ -47,10 +46,11 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	log.Println("Creating main window...")
-	app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	mainWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:  "voidraft",
 		Width:  700,
 		Height: 800,
+		Hidden: false,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
@@ -59,6 +59,22 @@ func main() {
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/",
 	})
+
+	systray := app.NewSystemTray()
+	iconBytes, _ := assets.ReadFile("appicon.png")
+	systray.SetIcon(iconBytes)
+	systray.SetLabel("VoidRaft")
+	menu := app.NewMenu()
+	menu.Add("显示主窗口").OnClick(func(data *application.Context) {
+		mainWindow.Show()
+	})
+	menu.AddSeparator()
+	menu.Add("退出").OnClick(func(data *application.Context) {
+		app.Quit()
+	})
+	systray.SetMenu(menu)
+	systray.AttachWindow(mainWindow)
+	systray.WindowDebounce(200 * time.Millisecond)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.
@@ -71,13 +87,10 @@ func main() {
 	}()
 
 	// Run the application. This blocks until the application has been exited.
-	log.Println("Starting application event loop...")
 	err := app.Run()
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	log.Println("Application exiting...")
 }

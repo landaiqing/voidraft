@@ -10,7 +10,7 @@ import {Create as $Create} from "@wailsio/runtime";
 import * as time$0 from "../../../time/models.js";
 
 /**
- * AppConfig 应用配置
+ * AppConfig 应用配置 - 包含业务配置和路径配置
  */
 export class AppConfig {
     /**
@@ -21,7 +21,7 @@ export class AppConfig {
     /**
      * 路径配置
      */
-    "paths": PathConfig;
+    "paths": PathsConfig;
 
     /**
      * 配置元数据
@@ -34,7 +34,7 @@ export class AppConfig {
             this["editor"] = (new EditorConfig());
         }
         if (!("paths" in $$source)) {
-            this["paths"] = (new PathConfig());
+            this["paths"] = (new PathsConfig());
         }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
@@ -109,11 +109,6 @@ export class EditorConfig {
     "fontSize": number;
 
     /**
-     * 文件保存的编码
-     */
-    "encoding": EncodingType;
-
-    /**
      * 是否启用Tab缩进
      */
     "enableTabIndent": boolean;
@@ -137,9 +132,6 @@ export class EditorConfig {
     constructor($$source: Partial<EditorConfig> = {}) {
         if (!("fontSize" in $$source)) {
             this["fontSize"] = 0;
-        }
-        if (!("encoding" in $$source)) {
-            this["encoding"] = ("" as EncodingType);
         }
         if (!("enableTabIndent" in $$source)) {
             this["enableTabIndent"] = false;
@@ -167,56 +159,6 @@ export class EditorConfig {
 }
 
 /**
- * EncodingType 定义文件编码格式类型
- */
-export enum EncodingType {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * EncodingUTF8 UTF-8编码
-     */
-    EncodingUTF8 = "UTF-8",
-
-    /**
-     * EncodingUTF8BOM UTF-8带BOM编码
-     */
-    EncodingUTF8BOM = "UTF-8-BOM",
-
-    /**
-     * EncodingUTF16LE UTF-16小端编码
-     */
-    EncodingUTF16LE = "UTF-16 LE",
-
-    /**
-     * EncodingUTF16BE UTF-16大端编码
-     */
-    EncodingUTF16BE = "UTF-16 BE",
-
-    /**
-     * EncodingISO88591 ISO-8859-1编码
-     */
-    EncodingISO88591 = "ISO-8859-1",
-
-    /**
-     * EncodingGB18030 GB18030编码
-     */
-    EncodingGB18030 = "GB18030",
-
-    /**
-     * EncodingGBK GBK编码
-     */
-    EncodingGBK = "GBK",
-
-    /**
-     * EncodingBig5 Big5编码
-     */
-    EncodingBig5 = "Big5",
-};
-
-/**
  * LanguageType 语言类型定义
  */
 export enum LanguageType {
@@ -237,37 +179,45 @@ export enum LanguageType {
 };
 
 /**
- * PathConfig 定义配置文件路径相关配置
+ * PathsConfig 路径配置集合
  */
-export class PathConfig {
-    /**
-     * 根目录
-     */
-    "rootDir": string;
-
+export class PathsConfig {
     /**
      * 配置文件路径
      */
     "configPath": string;
 
-    /** Creates a new PathConfig instance. */
-    constructor($$source: Partial<PathConfig> = {}) {
-        if (!("rootDir" in $$source)) {
-            this["rootDir"] = "";
-        }
+    /**
+     * 日志文件路径
+     */
+    "logPath": string;
+
+    /**
+     * 数据存储路径
+     */
+    "dataPath": string;
+
+    /** Creates a new PathsConfig instance. */
+    constructor($$source: Partial<PathsConfig> = {}) {
         if (!("configPath" in $$source)) {
             this["configPath"] = "";
+        }
+        if (!("logPath" in $$source)) {
+            this["logPath"] = "";
+        }
+        if (!("dataPath" in $$source)) {
+            this["dataPath"] = "";
         }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new PathConfig instance from a string or object.
+     * Creates a new PathsConfig instance from a string or object.
      */
-    static createFrom($$source: any = {}): PathConfig {
+    static createFrom($$source: any = {}): PathsConfig {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new PathConfig($$parsedSource as Partial<PathConfig>);
+        return new PathsConfig($$parsedSource as Partial<PathsConfig>);
     }
 }
 
@@ -293,5 +243,5 @@ export enum TabType {
 
 // Private type creation functions
 const $$createType0 = EditorConfig.createFrom;
-const $$createType1 = PathConfig.createFrom;
+const $$createType1 = PathsConfig.createFrom;
 const $$createType2 = ConfigMetadata.createFrom;

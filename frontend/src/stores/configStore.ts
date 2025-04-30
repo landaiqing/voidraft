@@ -2,11 +2,9 @@ import {defineStore} from 'pinia';
 import {ref, watch} from 'vue';
 import {useDebounceFn} from '@vueuse/core';
 import {
-    GetEditorConfig,
-    ResetConfig,
-    UpdateEditorConfig
-} from '@/../bindings/voidraft/internal/services/configservice';
-import {EditorConfig, TabType, EncodingType} from '@/../bindings/voidraft/internal/models/models';
+    ConfigService
+} from '@/../bindings/voidraft/internal/services/config';
+import {EditorConfig, TabType} from '@/../bindings/voidraft/internal/models/models';
 import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';
 
@@ -20,24 +18,11 @@ const DEFAULT_TAB_SIZE = 4;
 const MIN_TAB_SIZE = 2;
 const MAX_TAB_SIZE = 8;
 
-// 支持的编码
-const SUPPORTED_ENCODINGS = [
-    EncodingType.EncodingUTF8,
-    EncodingType.EncodingUTF8BOM,
-    EncodingType.EncodingUTF16LE,
-    EncodingType.EncodingUTF16BE,
-    EncodingType.EncodingISO88591,
-    EncodingType.EncodingGB18030,
-    EncodingType.EncodingGBK,
-    EncodingType.EncodingBig5
-];
-
 // 配置项限制定义
 const CONFIG_LIMITS = {
     fontSize: { min: MIN_FONT_SIZE, max: MAX_FONT_SIZE, default: DEFAULT_FONT_SIZE },
     tabSize: { min: MIN_TAB_SIZE, max: MAX_TAB_SIZE, default: DEFAULT_TAB_SIZE },
     tabType: { values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces },
-    encoding: { values: SUPPORTED_ENCODINGS, default: EncodingType.EncodingUTF8 }
 };
 
 export const useConfigStore = defineStore('config', () => {
@@ -48,7 +33,6 @@ export const useConfigStore = defineStore('config', () => {
     // 配置状态
     const config = ref<EditorConfig>(new EditorConfig({
         fontSize: DEFAULT_FONT_SIZE,
-        encoding: EncodingType.EncodingUTF8,
         enableTabIndent: true,
         tabSize: DEFAULT_TAB_SIZE,
         tabType: TabType.TabTypeSpaces
@@ -60,7 +44,7 @@ export const useConfigStore = defineStore('config', () => {
     // 从后端加载配置
     async function loadConfigFromBackend() {
         try {
-            config.value = await GetEditorConfig();
+            config.value = await ConfigService.GetEditorConfig();
             
             // 验证并纠正配置
             validateAndFixConfig();
@@ -110,15 +94,6 @@ export const useConfigStore = defineStore('config', () => {
             hasChanges = true;
         }
         
-        // 验证编码类型是否合法
-        if (!CONFIG_LIMITS.encoding.values.includes(config.value.encoding)) {
-            const oldValue = config.value.encoding;
-            config.value.encoding = CONFIG_LIMITS.encoding.default;
-            
-            logStore.warning(t('config.encodingFixed'));
-            hasChanges = true;
-        }
-        
         // 如果配置被修正，保存回后端
         if (hasChanges && configLoaded.value) {
             saveConfigToBackend();
@@ -128,7 +103,7 @@ export const useConfigStore = defineStore('config', () => {
     // 使用防抖保存配置到后端
     const saveConfigToBackend = useDebounceFn(async () => {
         try {
-            await UpdateEditorConfig(config.value);
+            await ConfigService.UpdateEditorConfig(config.value);
             logStore.info(t('config.saveSuccess'));
         } catch (error) {
             console.error('Failed to save configuration:', error);
@@ -182,22 +157,11 @@ export const useConfigStore = defineStore('config', () => {
             ? TabType.TabTypeTab 
             : TabType.TabTypeSpaces;
     }
-    
-    // 设置编码类型
-    function setEncoding(encoding: string) {
-        // 验证编码是否有效的EncodingType
-        const encodingType = encoding as EncodingType;
-        if (SUPPORTED_ENCODINGS.includes(encodingType)) {
-            config.value.encoding = encodingType;
-        } else {
-            logStore.warning(t('config.invalidEncoding'));
-        }
-    }
 
     // 重置为默认配置
     async function resetToDefaults() {
         try {
-            await ResetConfig();
+            await ConfigService.ResetConfig();
             await loadConfigFromBackend();
             logStore.info(t('config.resetSuccess'));
         } catch (error) {
@@ -217,7 +181,6 @@ export const useConfigStore = defineStore('config', () => {
         DEFAULT_FONT_SIZE,
         MIN_TAB_SIZE,
         MAX_TAB_SIZE,
-        SUPPORTED_ENCODINGS,
 
         // 核心方法
         loadConfigFromBackend,
@@ -229,9 +192,6 @@ export const useConfigStore = defineStore('config', () => {
         increaseFontSize: () => adjustFontSize(1),
         decreaseFontSize: () => adjustFontSize(-1),
         resetFontSize: () => updateConfig('fontSize', DEFAULT_FONT_SIZE),
-        
-        // 编码操作
-        setEncoding,
         
         // Tab操作
         toggleTabIndent: () => updateConfig('enableTabIndent', val => !val),

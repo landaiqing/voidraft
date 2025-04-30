@@ -1,6 +1,6 @@
 import {createI18n} from 'vue-i18n';
 import messages from './locales';
-import { GetLanguage, SetLanguage } from '@/../bindings/voidraft/internal/services/configservice';
+import { ConfigService } from '@/../bindings/voidraft/internal/services/config';
 import { LanguageType } from '@/../bindings/voidraft/internal/models';
 
 // 定义支持的语言类型
@@ -40,7 +40,7 @@ const i18n = createI18n({
 });
 
 // 立即从后端获取语言设置
-GetLanguage().then(lang => {
+ConfigService.GetLanguage().then(lang => {
     if (lang) {
         i18n.global.locale = lang as any;
     }
@@ -55,7 +55,7 @@ GetLanguage().then(lang => {
 export const setLocale = (locale: SupportedLocaleType) => {
     if (SUPPORTED_LOCALES.some(l => l.code === locale)) {
         // 更新后端配置
-        SetLanguage(locale as LanguageType)
+        ConfigService.SetLanguage(locale as LanguageType)
             .then(() => {
                 i18n.global.locale = locale;
                 document.documentElement.setAttribute('lang', locale);

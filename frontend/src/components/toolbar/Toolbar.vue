@@ -5,7 +5,6 @@ import {useLogStore} from '@/stores/logStore';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import {SUPPORTED_LOCALES, setLocale, SupportedLocaleType} from '@/i18n';
-import { EncodingType } from '@/../bindings/voidraft/internal/models/models';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
@@ -14,20 +13,6 @@ const { t, locale } = useI18n();
 
 // 语言下拉菜单
 const showLanguageMenu = ref(false);
-// 编码下拉菜单
-const showEncodingMenu = ref(false);
-
-// 支持的编码格式
-const SUPPORTED_ENCODINGS = [
-  { code: EncodingType.EncodingUTF8, name: 'UTF-8' },
-  { code: EncodingType.EncodingUTF8BOM, name: 'UTF-8 with BOM' },
-  { code: EncodingType.EncodingUTF16LE, name: 'UTF-16 LE' },
-  { code: EncodingType.EncodingUTF16BE, name: 'UTF-16 BE' },
-  { code: EncodingType.EncodingISO88591, name: 'ISO-8859-1' },
-  { code: EncodingType.EncodingGB18030, name: 'GB18030' },
-  { code: EncodingType.EncodingGBK, name: 'GBK' },
-  { code: EncodingType.EncodingBig5, name: 'Big5' }
-];
 
 // 切换语言
 const changeLanguage = (localeCode: SupportedLocaleType) => {
@@ -38,30 +23,10 @@ const changeLanguage = (localeCode: SupportedLocaleType) => {
 // 切换语言菜单显示
 const toggleLanguageMenu = () => {
   showLanguageMenu.value = !showLanguageMenu.value;
-  if (showLanguageMenu.value) {
-    showEncodingMenu.value = false;
-  }
 };
 
-// 切换编码
-const changeEncoding = (encoding: EncodingType) => {
-  configStore.setEncoding(encoding);
-  showEncodingMenu.value = false;
-};
 
-// 切换编码菜单显示
-const toggleEncodingMenu = () => {
-  showEncodingMenu.value = !showEncodingMenu.value;
-  if (showEncodingMenu.value) {
-    showLanguageMenu.value = false;
-  }
-};
 
-// 获取编码名称
-const getEncodingDisplayName = (encoding: EncodingType) => {
-  const encodingItem = SUPPORTED_ENCODINGS.find(item => item.code === encoding);
-  return encodingItem ? encodingItem.name : encoding;
-};
 </script>
 
 <template>
@@ -99,25 +64,6 @@ const getEncodingDisplayName = (encoding: EncodingType) => {
           <button class="tab-btn" @click="configStore.increaseTabSize" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
         </span>
       </span>
-      
-      <!-- 编码选择按钮 -->
-      <div class="selector-dropdown">
-        <button class="selector-btn" @click="toggleEncodingMenu">
-          {{ getEncodingDisplayName(configStore.config.encoding) }}
-          <span class="arrow">▲</span>
-        </button>
-        <div class="selector-menu" v-if="showEncodingMenu">
-          <div 
-            v-for="encoding in SUPPORTED_ENCODINGS" 
-            :key="encoding.code" 
-            class="selector-option"
-            :class="{ active: configStore.config.encoding === encoding.code }"
-            @click="changeEncoding(encoding.code)"
-          >
-            {{ encoding.name }}
-          </div>
-        </div>
-      </div>
       
       <!-- 语言切换按钮 -->
       <div class="selector-dropdown">

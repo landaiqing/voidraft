@@ -1,6 +1,8 @@
 package models
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -14,32 +16,9 @@ const (
 	TabTypeTab TabType = "tab"
 )
 
-// EncodingType 定义文件编码格式类型
-type EncodingType string
-
-const (
-	// EncodingUTF8 UTF-8编码
-	EncodingUTF8 EncodingType = "UTF-8"
-	// EncodingUTF8BOM UTF-8带BOM编码
-	EncodingUTF8BOM EncodingType = "UTF-8-BOM"
-	// EncodingUTF16LE UTF-16小端编码
-	EncodingUTF16LE EncodingType = "UTF-16 LE"
-	// EncodingUTF16BE UTF-16大端编码
-	EncodingUTF16BE EncodingType = "UTF-16 BE"
-	// EncodingISO88591 ISO-8859-1编码
-	EncodingISO88591 EncodingType = "ISO-8859-1"
-	// EncodingGB18030 GB18030编码
-	EncodingGB18030 EncodingType = "GB18030"
-	// EncodingGBK GBK编码
-	EncodingGBK EncodingType = "GBK"
-	// EncodingBig5 Big5编码
-	EncodingBig5 EncodingType = "Big5"
-)
-
 // EditorConfig 定义编辑器配置
 type EditorConfig struct {
 	FontSize        int          `json:"fontSize"`        // 字体大小
-	Encoding        EncodingType `json:"encoding"`        // 文件保存的编码
 	EnableTabIndent bool         `json:"enableTabIndent"` // 是否启用Tab缩进
 	TabSize         int          `json:"tabSize"`         // Tab大小
 	TabType         TabType      `json:"tabType"`         // Tab类型（空格或Tab）
@@ -56,16 +35,17 @@ const (
 	LangEnUS LanguageType = "en-US"
 )
 
-// PathConfig 定义配置文件路径相关配置
-type PathConfig struct {
-	RootDir    string `json:"rootDir"`    // 根目录
+// PathsConfig 路径配置集合
+type PathsConfig struct {
 	ConfigPath string `json:"configPath"` // 配置文件路径
+	LogPath    string `json:"logPath"`    // 日志文件路径
+	DataPath   string `json:"dataPath"`   // 数据存储路径
 }
 
-// AppConfig 应用配置
+// AppConfig 应用配置 - 包含业务配置和路径配置
 type AppConfig struct {
 	Editor   EditorConfig   `json:"editor"`   // 编辑器配置
-	Paths    PathConfig     `json:"paths"`    // 路径配置
+	Paths    PathsConfig    `json:"paths"`    // 路径配置
 	Metadata ConfigMetadata `json:"metadata"` // 配置元数据
 }
 
@@ -77,18 +57,27 @@ type ConfigMetadata struct {
 
 // NewDefaultAppConfig 创建默认应用配置
 func NewDefaultAppConfig() *AppConfig {
+	// 获取用户主目录
+	homePath, err := os.UserHomeDir()
+	if err != nil {
+		homePath = "."
+	}
+
+	// 默认路径配置
+	rootDir := filepath.Join(homePath, ".voidraft")
+
 	return &AppConfig{
 		Editor: EditorConfig{
 			FontSize:        13,
-			Encoding:        EncodingUTF8,
 			EnableTabIndent: true,
 			TabSize:         4,
 			TabType:         TabTypeSpaces,
 			Language:        LangZhCN,
 		},
-		Paths: PathConfig{
-			RootDir:    ".voidraft",
-			ConfigPath: "config/config.json",
+		Paths: PathsConfig{
+			ConfigPath: filepath.Join(rootDir, "config", "config.json"),
+			LogPath:    filepath.Join(rootDir, "logs"),
+			DataPath:   filepath.Join(rootDir, "data"),
 		},
 		Metadata: ConfigMetadata{
 			Version:     "1.0.0",
