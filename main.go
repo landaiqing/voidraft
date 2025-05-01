@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 	"voidraft/internal/services"
+	"voidraft/internal/systray"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -60,21 +61,8 @@ func main() {
 		URL:              "/",
 	})
 
-	systray := app.NewSystemTray()
-	iconBytes, _ := assets.ReadFile("appicon.png")
-	systray.SetIcon(iconBytes)
-	systray.SetLabel("VoidRaft")
-	menu := app.NewMenu()
-	menu.Add("显示主窗口").OnClick(func(data *application.Context) {
-		mainWindow.Show()
-	})
-	menu.AddSeparator()
-	menu.Add("退出").OnClick(func(data *application.Context) {
-		app.Quit()
-	})
-	systray.SetMenu(menu)
-	systray.AttachWindow(mainWindow)
-	systray.WindowDebounce(200 * time.Millisecond)
+	// 设置系统托盘
+	systray.SetupSystemTray(app, mainWindow, assets)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.
