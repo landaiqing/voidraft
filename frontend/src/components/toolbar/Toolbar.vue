@@ -96,11 +96,17 @@ watch(() => configStore.configLoaded, (isLoaded) => {
         </span>
       </span>
 
-      <!-- 窗口置顶选择框 -->
-      <label class="always-on-top-toggle" :title="t('toolbar.alwaysOnTop')">
-        <input type="checkbox" :checked="configStore.config.alwaysOnTop" @change="toggleAlwaysOnTop" />
-        <span>{{ t('toolbar.alwaysOnTop') }}</span>
-      </label>
+      <!-- 窗口置顶图标按钮 -->
+      <div 
+        class="pin-button" 
+        :class="{ 'active': configStore.config.alwaysOnTop }"
+        :title="t('toolbar.alwaysOnTop')"
+        @click="toggleAlwaysOnTop"
+      >
+        <svg class="pin-icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg">
+          <path d="M557.44 104.96l361.6 361.6-60.16 64-26.88-33.92-181.12 181.12L617.6 832l-60.16 60.16-181.12-184.32-211.2 211.2-60.16-60.16 211.2-211.2-181.12-181.12 60.16-60.16 151.04-30.08 181.12-181.12-30.72-30.08 64-60.16zM587.52 256L387.84 455.04l-120.32 23.68 277.76 277.76 23.68-120.32L768 436.48z" />
+        </svg>
+      </div>
       
       <!-- 语言切换按钮 -->
       <div class="selector-dropdown">
@@ -240,21 +246,35 @@ watch(() => configStore.configLoaded, (isLoaded) => {
       }
     }
     
-    /* 窗口置顶选择框样式 */
-    .always-on-top-toggle {
+    /* 窗口置顶图标按钮样式 */
+    .pin-button {
+      cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 3px;
-      cursor: pointer;
-      color: var(--text-muted);
-      font-size: 11px;
-      
-      input {
-        cursor: pointer;
-      }
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      padding: 2px;
+      border-radius: 3px;
+      transition: all 0.2s ease;
       
       &:hover {
-        color: var(--text-primary);
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+      
+      &.active {
+        background-color: rgba(181, 206, 168, 0.2);
+        
+        .pin-icon {
+          fill: #b5cea8;
+        }
+      }
+      
+      .pin-icon {
+        width: 14px;
+        height: 14px;
+        fill: var(--text-muted);
+        transition: fill 0.2s ease;
       }
     }
     
