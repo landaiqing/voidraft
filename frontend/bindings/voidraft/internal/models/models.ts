@@ -191,11 +191,6 @@ export enum LanguageType {
  */
 export class PathsConfig {
     /**
-     * 配置文件路径
-     */
-    "configPath": string;
-
-    /**
      * 日志文件路径
      */
     "logPath": string;
@@ -207,9 +202,6 @@ export class PathsConfig {
 
     /** Creates a new PathsConfig instance. */
     constructor($$source: Partial<PathsConfig> = {}) {
-        if (!("configPath" in $$source)) {
-            this["configPath"] = "";
-        }
         if (!("logPath" in $$source)) {
             this["logPath"] = "";
         }

@@ -38,9 +38,8 @@ const (
 
 // PathsConfig 路径配置集合
 type PathsConfig struct {
-	ConfigPath string `json:"configPath"` // 配置文件路径
-	LogPath    string `json:"logPath"`    // 日志文件路径
-	DataPath   string `json:"dataPath"`   // 数据存储路径
+	LogPath  string `json:"logPath"`  // 日志文件路径
+	DataPath string `json:"dataPath"` // 数据存储路径
 }
 
 // AppConfig 应用配置 - 包含业务配置和路径配置
@@ -77,9 +76,8 @@ func NewDefaultAppConfig() *AppConfig {
 			AlwaysOnTop:     false,
 		},
 		Paths: PathsConfig{
-			ConfigPath: filepath.Join(rootDir, "config", "config.json"),
-			LogPath:    filepath.Join(rootDir, "logs"),
-			DataPath:   filepath.Join(rootDir, "data"),
+			LogPath:  filepath.Join(rootDir, "logs"),
+			DataPath: filepath.Join(rootDir, "data"),
 		},
 		Metadata: ConfigMetadata{
 			Version:     "1.0.0",

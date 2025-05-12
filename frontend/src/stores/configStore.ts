@@ -3,7 +3,7 @@ import {ref, watch} from 'vue';
 import {useDebounceFn} from '@vueuse/core';
 import {
     ConfigService
-} from '@/../bindings/voidraft/internal/services/config';
+} from '@/../bindings/voidraft/internal/services';
 import {EditorConfig, TabType} from '@/../bindings/voidraft/internal/models/models';
 import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';

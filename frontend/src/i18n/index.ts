@@ -1,6 +1,6 @@
 import {createI18n} from 'vue-i18n';
 import messages from './locales';
-import { ConfigService } from '@/../bindings/voidraft/internal/services/config';
+import { ConfigService } from '@/../bindings/voidraft/internal/services';
 import { LanguageType } from '@/../bindings/voidraft/internal/models';
 
 // 定义支持的语言类型

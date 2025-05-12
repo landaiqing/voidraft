@@ -2,18 +2,17 @@ package services
 
 import (
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"voidraft/internal/services/config"
 )
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	configService *config.ConfigService
+	configService *ConfigService
 }
 
 // NewServiceManager 创建新的服务管理器实例
 func NewServiceManager() *ServiceManager {
 	// 初始化配置服务
-	configService := config.NewConfigService()
+	configService := NewConfigService()
 
 	return &ServiceManager{
 		configService: configService,
@@ -28,6 +27,6 @@ func (sm *ServiceManager) GetServices() []application.Service {
 }
 
 // GetConfigService 获取配置服务实例
-func (sm *ServiceManager) GetConfigService() *config.ConfigService {
+func (sm *ServiceManager) GetConfigService() *ConfigService {
 	return sm.configService
 }
