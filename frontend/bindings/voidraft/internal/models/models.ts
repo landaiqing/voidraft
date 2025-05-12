@@ -128,6 +128,11 @@ export class EditorConfig {
      */
     "language": LanguageType;
 
+    /**
+     * 窗口是否置顶
+     */
+    "alwaysOnTop": boolean;
+
     /** Creates a new EditorConfig instance. */
     constructor($$source: Partial<EditorConfig> = {}) {
         if (!("fontSize" in $$source)) {
@@ -144,6 +149,9 @@ export class EditorConfig {
         }
         if (!("language" in $$source)) {
             this["language"] = ("" as LanguageType);
+        }
+        if (!("alwaysOnTop" in $$source)) {
+            this["alwaysOnTop"] = false;
         }
 
         Object.assign(this, $$source);

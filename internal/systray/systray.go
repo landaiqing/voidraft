@@ -2,6 +2,7 @@ package systray
 
 import (
 	"embed"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"time"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -36,9 +37,18 @@ func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow
 		mainWindow.Show()
 	})
 
-	// 将窗口附加到系统托盘
-	systray.AttachWindow(mainWindow)
+	// 不再附加窗口到系统托盘，避免失去焦点自动缩小
+	// systray.AttachWindow(mainWindow)
 
 	// 设置窗口防抖时间
 	systray.WindowDebounce(200 * time.Millisecond)
+
+	// 使用关闭前的事件处理
+	mainWindow.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+		// 取消默认关闭行为
+		event.Cancel()
+		// 隐藏窗口
+		mainWindow.Hide()
+	})
+
 }

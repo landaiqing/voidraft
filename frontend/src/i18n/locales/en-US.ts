@@ -13,7 +13,8 @@ export default {
       tab: 'Tab'
     },
     encoding: 'UTF-8',
-    settings: 'Settings'
+    settings: 'Settings',
+    alwaysOnTop: 'Always on Top'
   },
   config: {
     loadSuccess: 'Configuration loaded successfully',
@@ -24,7 +25,8 @@ export default {
     resetFailed: 'Failed to reset configuration',
     fontSizeFixed: 'Font size ({value}) has been corrected to {fixed}',
     tabSizeFixed: 'Tab size ({value}) has been corrected to {fixed}',
-    tabTypeFixed: 'Tab type ({value}) is invalid, corrected to spaces'
+    tabTypeFixed: 'Tab type ({value}) is invalid, corrected to spaces',
+    alwaysOnTopFailed: 'Failed to set window always on top'
   },
   languages: {
     'zh-CN': '简体中文',

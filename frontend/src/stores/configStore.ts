@@ -158,6 +158,11 @@ export const useConfigStore = defineStore('config', () => {
             : TabType.TabTypeSpaces;
     }
 
+    // 切换窗口置顶状态
+    function toggleAlwaysOnTop() {
+        updateConfig('alwaysOnTop', val => !val);
+    }
+
     // 重置为默认配置
     async function resetToDefaults() {
         try {
@@ -197,6 +202,9 @@ export const useConfigStore = defineStore('config', () => {
         toggleTabIndent: () => updateConfig('enableTabIndent', val => !val),
         increaseTabSize: () => adjustTabSize(1),
         decreaseTabSize: () => adjustTabSize(-1),
-        toggleTabType
+        toggleTabType,
+        
+        // 窗口置顶操作
+        toggleAlwaysOnTop
     };
 }); 

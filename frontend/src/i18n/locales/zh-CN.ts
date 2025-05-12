@@ -13,7 +13,8 @@ export default {
       tab: '制表符'
     },
     encoding: 'UTF-8',
-    settings: '设置'
+    settings: '设置',
+    alwaysOnTop: '窗口置顶'
   },
   config: {
     loadSuccess: '配置加载成功',
@@ -24,7 +25,8 @@ export default {
     resetFailed: '重置配置失败',
     fontSizeFixed: '字体大小值({value})已被修正为{fixed}',
     tabSizeFixed: 'Tab大小值({value})已被修正为{fixed}',
-    tabTypeFixed: 'Tab类型({value})不合法，已修正为空格'
+    tabTypeFixed: 'Tab类型({value})不合法，已修正为空格',
+    alwaysOnTopFailed: '无法设置窗口置顶状态'
   },
   languages: {
     'zh-CN': '简体中文',

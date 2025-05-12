@@ -3,9 +3,9 @@ import {useEditorStore} from '@/stores/editorStore';
 import {useConfigStore} from '@/stores/configStore';
 import {useLogStore} from '@/stores/logStore';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import {SUPPORTED_LOCALES, setLocale, SupportedLocaleType} from '@/i18n';
-
+import * as wails from '@wailsio/runtime';
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const logStore = useLogStore();
@@ -25,8 +25,39 @@ const toggleLanguageMenu = () => {
   showLanguageMenu.value = !showLanguageMenu.value;
 };
 
+// 窗口置顶控制
+const toggleAlwaysOnTop = () => {
+  configStore.toggleAlwaysOnTop();
+  // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
+  try {
+    wails.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
+  } catch (error) {
+    console.error('Failed to set window always on top:', error);
+    logStore.error(t('config.alwaysOnTopFailed'));
+  }
+};
 
+// 在组件挂载时根据配置设置窗口置顶状态
+onMounted(() => {
+  if (configStore.configLoaded && configStore.config.alwaysOnTop) {
+    try {
+      wails.Window.SetAlwaysOnTop(true);
+    } catch (error) {
+      console.error('Failed to set window always on top:', error);
+    }
+  }
+});
 
+// 监听配置加载完成，加载后检查并设置窗口置顶状态
+watch(() => configStore.configLoaded, (isLoaded) => {
+  if (isLoaded && configStore.config.alwaysOnTop) {
+    try {
+      wails.Window.SetAlwaysOnTop(true);
+    } catch (error) {
+      console.error('Failed to set window always on top:', error);
+    }
+  }
+});
 </script>
 
 <template>
@@ -64,6 +95,12 @@ const toggleLanguageMenu = () => {
           <button class="tab-btn" @click="configStore.increaseTabSize" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
         </span>
       </span>
+
+      <!-- 窗口置顶选择框 -->
+      <label class="always-on-top-toggle" :title="t('toolbar.alwaysOnTop')">
+        <input type="checkbox" :checked="configStore.config.alwaysOnTop" @change="toggleAlwaysOnTop" />
+        <span>{{ t('toolbar.alwaysOnTop') }}</span>
+      </label>
       
       <!-- 语言切换按钮 -->
       <div class="selector-dropdown">
@@ -200,6 +237,24 @@ const toggleLanguageMenu = () => {
             cursor: not-allowed;
           }
         }
+      }
+    }
+    
+    /* 窗口置顶选择框样式 */
+    .always-on-top-toggle {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 11px;
+      
+      input {
+        cursor: pointer;
+      }
+      
+      &:hover {
+        color: var(--text-primary);
       }
     }
     

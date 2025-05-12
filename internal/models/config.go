@@ -23,6 +23,7 @@ type EditorConfig struct {
 	TabSize         int          `json:"tabSize"`         // Tab大小
 	TabType         TabType      `json:"tabType"`         // Tab类型（空格或Tab）
 	Language        LanguageType `json:"language"`        // 界面语言
+	AlwaysOnTop     bool         `json:"alwaysOnTop"`     // 窗口是否置顶
 }
 
 // LanguageType 语言类型定义
@@ -73,6 +74,7 @@ func NewDefaultAppConfig() *AppConfig {
 			TabSize:         4,
 			TabType:         TabTypeSpaces,
 			Language:        LangZhCN,
+			AlwaysOnTop:     false,
 		},
 		Paths: PathsConfig{
 			ConfigPath: filepath.Join(rootDir, "config", "config.json"),
