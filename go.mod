@@ -4,10 +4,12 @@ go 1.23.0
 
 toolchain go1.24.2
 
-require github.com/wailsapp/wails/v3 v3.0.0-alpha.9
+require (
+	dario.cat/mergo v1.0.2
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.9
+)
 
 require (
-	dario.cat/mergo v1.0.2 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/ProtonMail/go-crypto v1.2.0 // indirect
 	github.com/adrg/xdg v0.5.3 // indirect
