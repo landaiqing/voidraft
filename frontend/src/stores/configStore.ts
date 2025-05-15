@@ -40,80 +40,98 @@ export const useConfigStore = defineStore('config', () => {
 
     // 配置是否已从后端加载
     const configLoaded = ref(false);
+    
+    // 配置是否正在从后端加载
+    const isLoading = ref(false);
 
     // 从后端加载配置
     async function loadConfigFromBackend() {
+        if (isLoading.value) return;
+        
+        isLoading.value = true;
         try {
-            config.value = await ConfigService.GetEditorConfig();
+            const loadedConfig = await ConfigService.GetEditorConfig();
             
-            // 验证并纠正配置
-            validateAndFixConfig();
+            // 深拷贝配置以避免直接引用
+            config.value = new EditorConfig(JSON.parse(JSON.stringify(loadedConfig)));
             
-            configLoaded.value = true;
-            logStore.info(t('config.loadSuccess'));
+            // 验证并纠正配置，不自动保存
+            validateAndFixConfig(false);
+            
+            // 等待下一个事件循环，确保watch不会在初始加载时触发
+            setTimeout(() => {
+                configLoaded.value = true;
+                isLoading.value = false;
+                logStore.info(t('config.loadSuccess'));
+            }, 0);
         } catch (error) {
             console.error('Failed to load configuration:', error);
             logStore.error(t('config.loadFailed'));
+            isLoading.value = false;
         }
     }
     
     // 验证配置是否在合理范围内，并修正无效值
-    function validateAndFixConfig() {
+    function validateAndFixConfig(autoSave = true) {
         let hasChanges = false;
         
         // 验证字体大小
         if (config.value.fontSize < CONFIG_LIMITS.fontSize.min || config.value.fontSize > CONFIG_LIMITS.fontSize.max) {
-            const oldValue = config.value.fontSize;
-            config.value.fontSize = oldValue < CONFIG_LIMITS.fontSize.min ? CONFIG_LIMITS.fontSize.min : 
-                                   oldValue > CONFIG_LIMITS.fontSize.max ? CONFIG_LIMITS.fontSize.max : 
-                                   CONFIG_LIMITS.fontSize.default;
+            config.value.fontSize = config.value.fontSize < CONFIG_LIMITS.fontSize.min 
+                ? CONFIG_LIMITS.fontSize.min 
+                : CONFIG_LIMITS.fontSize.max;
             
             logStore.warning(t('config.fontSizeFixed'));
-            
             hasChanges = true;
         }
         
         // 验证Tab大小
         if (config.value.tabSize < CONFIG_LIMITS.tabSize.min || config.value.tabSize > CONFIG_LIMITS.tabSize.max) {
-            const oldValue = config.value.tabSize;
-            config.value.tabSize = oldValue < CONFIG_LIMITS.tabSize.min ? CONFIG_LIMITS.tabSize.min : 
-                                  oldValue > CONFIG_LIMITS.tabSize.max ? CONFIG_LIMITS.tabSize.max : 
-                                  CONFIG_LIMITS.tabSize.default;
+            config.value.tabSize = config.value.tabSize < CONFIG_LIMITS.tabSize.min 
+                ? CONFIG_LIMITS.tabSize.min 
+                : CONFIG_LIMITS.tabSize.max;
             
             logStore.warning(t('config.tabSizeFixed'));
-            
             hasChanges = true;
         }
         
         // 验证TabType是否合法
         if (!CONFIG_LIMITS.tabType.values.includes(config.value.tabType)) {
-            const oldValue = config.value.tabType;
             config.value.tabType = CONFIG_LIMITS.tabType.default;
-            
             logStore.warning(t('config.tabTypeFixed'));
             hasChanges = true;
         }
         
-        // 如果配置被修正，保存回后端
-        if (hasChanges && configLoaded.value) {
+        // 如果配置被修正且需要自动保存，保存回后端
+        if (hasChanges && autoSave && configLoaded.value) {
             saveConfigToBackend();
         }
     }
 
     // 使用防抖保存配置到后端
     const saveConfigToBackend = useDebounceFn(async () => {
+        if (!configLoaded.value || isLoading.value) return;
+        
         try {
+            // 首先获取后端当前的语言设置
+            const currentLanguage = await ConfigService.GetLanguage();
+            
+            // 确保我们使用当前的语言设置，避免被默认值覆盖
+            if (currentLanguage && currentLanguage !== config.value.language) {
+                config.value.language = currentLanguage;
+            }
+            
             await ConfigService.UpdateEditorConfig(config.value);
             logStore.info(t('config.saveSuccess'));
         } catch (error) {
             console.error('Failed to save configuration:', error);
             logStore.error(t('config.saveFailed'));
         }
-    }, 500); // 500ms防抖
+    }, 500);
 
     // 监听配置变化，自动保存到后端
     watch(() => config.value, async () => {
-        if (configLoaded.value) {
+        if (configLoaded.value && !isLoading.value) {
             await saveConfigToBackend();
         }
     }, {deep: true});
@@ -165,13 +183,17 @@ export const useConfigStore = defineStore('config', () => {
 
     // 重置为默认配置
     async function resetToDefaults() {
+        if (isLoading.value) return;
+        
         try {
+            isLoading.value = true;
             await ConfigService.ResetConfig();
             await loadConfigFromBackend();
             logStore.info(t('config.resetSuccess'));
         } catch (error) {
             console.error('Failed to reset configuration:', error);
             logStore.error(t('config.resetFailed'));
+            isLoading.value = false;
         }
     }
     
@@ -179,6 +201,7 @@ export const useConfigStore = defineStore('config', () => {
         // 状态
         config,
         configLoaded,
+        isLoading,
 
         // 常量
         MIN_FONT_SIZE,

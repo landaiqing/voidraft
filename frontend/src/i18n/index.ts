@@ -2,6 +2,7 @@ import {createI18n} from 'vue-i18n';
 import messages from './locales';
 import { ConfigService } from '@/../bindings/voidraft/internal/services';
 import { LanguageType } from '@/../bindings/voidraft/internal/models';
+import { useConfigStore } from '@/stores/configStore';
 
 // 定义支持的语言类型
 export type SupportedLocaleType = 'zh-CN' | 'en-US';
@@ -59,6 +60,16 @@ export const setLocale = (locale: SupportedLocaleType) => {
             .then(() => {
                 i18n.global.locale = locale;
                 document.documentElement.setAttribute('lang', locale);
+                
+                // 同时更新configStore中的语言设置
+                try {
+                    const configStore = useConfigStore();
+                    if (configStore.configLoaded) {
+                        configStore.config.language = locale as LanguageType;
+                    }
+                } catch (error) {
+                    console.error('Failed to update configStore language:', error);
+                }
             })
             .catch(error => {
                 console.error('Failed to set language:', error);

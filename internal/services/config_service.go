@@ -146,7 +146,7 @@ func (cs *ConfigService) mergeWithDefaults(config *models.AppConfig) error {
 	defaultConfig := models.NewDefaultAppConfig()
 
 	// 使用mergo库合并配置
-	if err := mergo.Merge(config, defaultConfig, mergo.WithOverrideEmptySlice, mergo.WithOverwriteWithEmptyValue); err != nil {
+	if err := mergo.Merge(config, defaultConfig, mergo.WithOverrideEmptySlice); err != nil {
 		return err
 	}
 
@@ -182,9 +182,7 @@ func (cs *ConfigService) loadConfig() (models.AppConfig, error) {
 // isValidConfig 检查配置是否有效
 func isValidConfig(config models.AppConfig) bool {
 	// 检查关键字段
-	if config.Metadata.Version == "" ||
-		config.Metadata.LastUpdated.IsZero() ||
-		config.Paths.DataPath == "" {
+	if config.Metadata.Version == "" {
 		return false
 	}
 	return true
@@ -230,12 +228,6 @@ func (cs *ConfigService) GetConfig() (*models.AppConfig, error) {
 
 		return defaultConfig, nil
 	}
-
-	// 合并默认配置
-	if err := cs.mergeWithDefaults(&config); err != nil {
-		return &config, &ConfigError{Operation: "get_merge_defaults", Err: err}
-	}
-
 	return &config, nil
 }
 
@@ -259,7 +251,17 @@ func (cs *ConfigService) UpdateEditorConfig(editorConfig models.EditorConfig) er
 		return err
 	}
 
+	// 保存当前的语言设置
+	currentLanguage := config.Editor.Language
+
+	// 更新编辑器配置
 	config.Editor = editorConfig
+
+	// 如果更新后的语言设置为空，则使用之前的语言设置
+	if editorConfig.Language == "" {
+		config.Editor.Language = currentLanguage
+	}
+
 	return cs.SaveConfig(config)
 }
 
