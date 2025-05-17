@@ -25,10 +25,10 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
     class {
       private isActive: boolean = true;
       private isSaving: boolean = false;
-      private contentUpdateFn: (view: EditorView) => void;
+      private readonly contentUpdateFn: (view: EditorView) => void;
 
       constructor(private view: EditorView) {
-        // 创建内容更新函数
+        // 创建内容更新函数，简单传递内容给后端
         this.contentUpdateFn = this.createDebouncedUpdateFn(debounceDelay);
       }
 
@@ -45,6 +45,7 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
           const content = view.state.doc.toString();
           
           try {
+            // 简单将内容传递给后端，让后端处理保存策略
             await DocumentService.UpdateActiveDocumentContent(content);
             onSave(true);
           } catch (err) {
@@ -96,22 +97,3 @@ export function createSaveShortcutPlugin(onSave: () => void) {
     }
   });
 }
-
-/**
- * 手动触发文档保存
- * @param view 编辑器视图
- * @returns Promise<boolean>
- */
-export async function saveDocument(view: EditorView): Promise<boolean> {
-  try {
-    const content = view.state.doc.toString();
-    // 更新内容
-    await DocumentService.UpdateActiveDocumentContent(content);
-    // 强制保存到磁盘
-    await DocumentService.ForceSave();
-    return true;
-  } catch (err) {
-    console.error('Failed to save document:', err);
-    return false;
-  }
-} 

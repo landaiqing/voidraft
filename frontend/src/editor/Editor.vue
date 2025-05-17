@@ -122,8 +122,10 @@ const handleManualSave = async () => {
   const view = editorStore.editorView as EditorView;
   const content = view.state.doc.toString();
 
-  // 使用文档存储的强制保存方法
-  const success = await documentStore.forceSaveDocument(content);
+  // 先更新内容
+  await DocumentService.UpdateActiveDocumentContent(content);
+  // 然后调用强制保存方法（不再传递content参数）
+  const success = await documentStore.forceSaveDocument();
   if (success) {
     logStore.info(t('document.manualSaveSuccess'));
   }

@@ -48,7 +48,7 @@ export const useDocumentStore = defineStore('document', () => {
       await DocumentService.UpdateActiveDocumentContent(content);
       lastSaved.value = new Date();
       
-      // 如果我们有活动文档，更新本地副本
+      // 更新本地副本
       if (activeDocument.value) {
         activeDocument.value.content = content;
         activeDocument.value.meta.lastUpdated = lastSaved.value;
@@ -66,21 +66,18 @@ export const useDocumentStore = defineStore('document', () => {
   }
 
   // 强制保存文档到磁盘
-  async function forceSaveDocument(content: string): Promise<boolean> {
+  async function forceSaveDocument(): Promise<boolean> {
     if (isSaving.value) return false;
     
     isSaving.value = true;
     try {
-      // 先更新内容
-      await DocumentService.UpdateActiveDocumentContent(content);
-      // 然后强制保存
+      // 直接调用强制保存API
       await DocumentService.ForceSave();
       
       lastSaved.value = new Date();
       
-      // 如果我们有活动文档，更新本地副本
+      // 更新时间戳
       if (activeDocument.value) {
-        activeDocument.value.content = content;
         activeDocument.value.meta.lastUpdated = lastSaved.value;
       }
       
