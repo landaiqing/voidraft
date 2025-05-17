@@ -31,5 +31,17 @@ export default {
   languages: {
     'zh-CN': '简体中文',
     'en-US': 'English'
+  },
+  document: {
+    loadSuccess: '文档加载成功',
+    loadFailed: '文档加载失败',
+    saveSuccess: '文档保存成功',
+    saveFailed: '文档保存失败',
+    manualSaveSuccess: '手动保存成功',
+    settings: {
+      loadFailed: '加载保存设置失败',
+      saveSuccess: '保存设置已更新',
+      saveFailed: '保存设置更新失败'
+    }
   }
 }; 

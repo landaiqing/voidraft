@@ -19,6 +19,11 @@ export class AppConfig {
     "editor": EditorConfig;
 
     /**
+     * 文档配置
+     */
+    "document": DocumentConfig;
+
+    /**
      * 路径配置
      */
     "paths": PathsConfig;
@@ -32,6 +37,9 @@ export class AppConfig {
     constructor($$source: Partial<AppConfig> = {}) {
         if (!("editor" in $$source)) {
             this["editor"] = (new EditorConfig());
+        }
+        if (!("document" in $$source)) {
+            this["document"] = (new DocumentConfig());
         }
         if (!("paths" in $$source)) {
             this["paths"] = (new PathsConfig());
@@ -50,15 +58,19 @@ export class AppConfig {
         const $$createField0_0 = $$createType0;
         const $$createField1_0 = $$createType1;
         const $$createField2_0 = $$createType2;
+        const $$createField3_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("editor" in $$parsedSource) {
             $$parsedSource["editor"] = $$createField0_0($$parsedSource["editor"]);
         }
+        if ("document" in $$parsedSource) {
+            $$parsedSource["document"] = $$createField1_0($$parsedSource["document"]);
+        }
         if ("paths" in $$parsedSource) {
-            $$parsedSource["paths"] = $$createField1_0($$parsedSource["paths"]);
+            $$parsedSource["paths"] = $$createField2_0($$parsedSource["paths"]);
         }
         if ("metadata" in $$parsedSource) {
-            $$parsedSource["metadata"] = $$createField2_0($$parsedSource["metadata"]);
+            $$parsedSource["metadata"] = $$createField3_0($$parsedSource["metadata"]);
         }
         return new AppConfig($$parsedSource as Partial<AppConfig>);
     }
@@ -96,6 +108,127 @@ export class ConfigMetadata {
     static createFrom($$source: any = {}): ConfigMetadata {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new ConfigMetadata($$parsedSource as Partial<ConfigMetadata>);
+    }
+}
+
+/**
+ * Document 表示一个文档
+ */
+export class Document {
+    /**
+     * 元数据
+     */
+    "meta": DocumentMeta;
+
+    /**
+     * 文档内容
+     */
+    "content": string;
+
+    /** Creates a new Document instance. */
+    constructor($$source: Partial<Document> = {}) {
+        if (!("meta" in $$source)) {
+            this["meta"] = (new DocumentMeta());
+        }
+        if (!("content" in $$source)) {
+            this["content"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Document instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Document {
+        const $$createField0_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("meta" in $$parsedSource) {
+            $$parsedSource["meta"] = $$createField0_0($$parsedSource["meta"]);
+        }
+        return new Document($$parsedSource as Partial<Document>);
+    }
+}
+
+/**
+ * DocumentConfig 定义文档配置
+ */
+export class DocumentConfig {
+    /**
+     * 详细保存选项
+     */
+    "saveOptions": SaveOptions;
+
+    /** Creates a new DocumentConfig instance. */
+    constructor($$source: Partial<DocumentConfig> = {}) {
+        if (!("saveOptions" in $$source)) {
+            this["saveOptions"] = (new SaveOptions());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DocumentConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DocumentConfig {
+        const $$createField0_0 = $$createType5;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("saveOptions" in $$parsedSource) {
+            $$parsedSource["saveOptions"] = $$createField0_0($$parsedSource["saveOptions"]);
+        }
+        return new DocumentConfig($$parsedSource as Partial<DocumentConfig>);
+    }
+}
+
+/**
+ * DocumentMeta 文档元数据
+ */
+export class DocumentMeta {
+    /**
+     * 文档唯一标识
+     */
+    "id": string;
+
+    /**
+     * 文档标题
+     */
+    "title": string;
+
+    /**
+     * 最后更新时间
+     */
+    "lastUpdated": time$0.Time;
+
+    /**
+     * 创建时间
+     */
+    "createdAt": time$0.Time;
+
+    /** Creates a new DocumentMeta instance. */
+    constructor($$source: Partial<DocumentMeta> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("lastUpdated" in $$source)) {
+            this["lastUpdated"] = null;
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = null;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DocumentMeta instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DocumentMeta {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DocumentMeta($$parsedSource as Partial<DocumentMeta>);
     }
 }
 
@@ -222,6 +355,49 @@ export class PathsConfig {
 }
 
 /**
+ * SaveOptions 保存选项
+ */
+export class SaveOptions {
+    /**
+     * 自动保存延迟（毫秒）- 内容变更后多久自动保存
+     */
+    "autoSaveDelay": number;
+
+    /**
+     * 变更字符阈值，超过此阈值立即触发保存
+     */
+    "changeThreshold": number;
+
+    /**
+     * 最小保存间隔（毫秒）- 两次保存之间的最小时间间隔，避免频繁IO
+     */
+    "minSaveInterval": number;
+
+    /** Creates a new SaveOptions instance. */
+    constructor($$source: Partial<SaveOptions> = {}) {
+        if (!("autoSaveDelay" in $$source)) {
+            this["autoSaveDelay"] = 0;
+        }
+        if (!("changeThreshold" in $$source)) {
+            this["changeThreshold"] = 0;
+        }
+        if (!("minSaveInterval" in $$source)) {
+            this["minSaveInterval"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SaveOptions instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SaveOptions {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SaveOptions($$parsedSource as Partial<SaveOptions>);
+    }
+}
+
+/**
  * TabType 定义了制表符类型
  */
 export enum TabType {
@@ -243,5 +419,8 @@ export enum TabType {
 
 // Private type creation functions
 const $$createType0 = EditorConfig.createFrom;
-const $$createType1 = PathsConfig.createFrom;
-const $$createType2 = ConfigMetadata.createFrom;
+const $$createType1 = DocumentConfig.createFrom;
+const $$createType2 = PathsConfig.createFrom;
+const $$createType3 = ConfigMetadata.createFrom;
+const $$createType4 = DocumentMeta.createFrom;
+const $$createType5 = SaveOptions.createFrom;

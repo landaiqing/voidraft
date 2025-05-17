@@ -7,8 +7,9 @@ import (
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	configService *ConfigService
-	logger        *log.LoggerService
+	configService   *ConfigService
+	documentService *DocumentService
+	logger          *log.LoggerService
 }
 
 // NewServiceManager 创建新的服务管理器实例
@@ -18,14 +19,24 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化配置服务
 	configService := NewConfigService(ConfigOption{
-		Logger:          logger,
-		PathProvider:    nil,
-		AutoSaveEnabled: true,
+		Logger:       logger,
+		PathProvider: nil,
 	})
 
+	// 初始化文档服务
+	documentService := NewDocumentService(configService, logger)
+
+	// 初始化文档服务
+	err := documentService.Initialize()
+	if err != nil {
+		logger.Error("Failed to initialize document service", "error", err)
+		panic(err)
+	}
+
 	return &ServiceManager{
-		configService: configService,
-		logger:        logger,
+		configService:   configService,
+		documentService: documentService,
+		logger:          logger,
 	}
 }
 
@@ -33,10 +44,6 @@ func NewServiceManager() *ServiceManager {
 func (sm *ServiceManager) GetServices() []application.Service {
 	return []application.Service{
 		application.NewService(sm.configService),
+		application.NewService(sm.documentService),
 	}
-}
-
-// GetConfigService 获取配置服务实例
-func (sm *ServiceManager) GetConfigService() *ConfigService {
-	return sm.configService
 }

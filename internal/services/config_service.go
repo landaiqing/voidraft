@@ -35,9 +35,8 @@ func (p *DefaultConfigPathProvider) GetConfigPath() string {
 
 // ConfigOption 配置服务选项
 type ConfigOption struct {
-	Logger          *log.LoggerService // 日志服务
-	PathProvider    ConfigPath         // 路径提供者
-	AutoSaveEnabled bool               // 是否启用自动保存
+	Logger       *log.LoggerService // 日志服务
+	PathProvider ConfigPath         // 路径提供者
 }
 
 // ConfigService 提供配置管理功能
@@ -98,7 +97,6 @@ func NewConfigService(opt ...ConfigOption) *ConfigService {
 	// 创建存储
 	store := NewStore[models.AppConfig](StoreOption{
 		FilePath: configPath,
-		AutoSave: option.AutoSaveEnabled,
 		Logger:   logger,
 	})
 

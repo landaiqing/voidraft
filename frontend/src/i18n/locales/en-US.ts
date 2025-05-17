@@ -31,5 +31,17 @@ export default {
   languages: {
     'zh-CN': '简体中文',
     'en-US': 'English'
+  },
+  document: {
+    loadSuccess: 'Document loaded successfully',
+    loadFailed: 'Failed to load document',
+    saveSuccess: 'Document saved successfully',
+    saveFailed: 'Failed to save document',
+    manualSaveSuccess: 'Manually saved successfully',
+    settings: {
+      loadFailed: 'Failed to load save settings',
+      saveSuccess: 'Save settings updated',
+      saveFailed: 'Failed to update save settings'
+    }
   }
 }; 

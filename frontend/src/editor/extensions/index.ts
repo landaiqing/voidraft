@@ -2,3 +2,4 @@
 export * from './tabExtension';
 export * from './wheelZoomExtension';
 export * from './statsExtension'; 
+export * from './autoSaveExtension'; 
