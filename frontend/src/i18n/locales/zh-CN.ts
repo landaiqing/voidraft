@@ -43,5 +43,10 @@ export default {
       saveSuccess: '保存设置已更新',
       saveFailed: '保存设置更新失败'
     }
+  },
+  settings: {
+    title: '设置',
+    general: '通用设置',
+    comingSoon: '敬请期待更多设置选项...'
   }
 }; 

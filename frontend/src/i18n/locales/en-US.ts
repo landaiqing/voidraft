@@ -43,5 +43,10 @@ export default {
       saveSuccess: 'Save settings updated',
       saveFailed: 'Failed to update save settings'
     }
+  },
+  settings: {
+    title: 'Settings',
+    general: 'General Settings',
+    comingSoon: 'More settings coming soon...'
   }
 }; 

@@ -18,6 +18,7 @@ import {
 } from './extensions';
 import { useI18n } from 'vue-i18n';
 import { DocumentService } from '@/../bindings/voidraft/internal/services';
+import Toolbar from '@/components/toolbar/Toolbar.vue';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
@@ -188,6 +189,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="editor-container">
     <div ref="editorElement" class="editor"></div>
+    <Toolbar />
   </div>
 </template>
 
@@ -196,10 +198,13 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   .editor {
     width: 100%;
-    height: 100%;
+    flex: 1;
+    overflow: hidden;
   }
 }
 

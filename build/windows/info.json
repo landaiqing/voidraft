@@ -5,11 +5,11 @@
 	"info": {
 		"0000": {
 			"ProductVersion": "0.1.0",
-			"CompanyName": "My Company",
-			"FileDescription": "My Product Description",
-			"LegalCopyright": "© now, My Company",
-			"ProductName": "My Product",
-			"Comments": "This is a comment"
+			"CompanyName": "Voidraft",
+			"FileDescription": "Voidraft: Your Inspiration Catcher - Instant thought-capturing tool with minimalist design",
+			"LegalCopyright": "© 2025 Voidraft. All rights reserved.",
+			"ProductName": "Voidraft",
+			"Comments": "Effortlessly capture and organize fleeting ideas with minimal design"
 		}
 	}
 }

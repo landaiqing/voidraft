@@ -5,12 +5,12 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "My Company" # The name of the company
-  productName: "My Product" # The name of the application
-  productIdentifier: "com.mycompany.myproduct" # The unique product identifier
-  description: "A program that does X" # The application description
-  copyright: "(c) 2024, My Company" # Copyright text
-  comments: "Some Product Comments" # Comments
+  companyName: "Voidraft" # The name of the company
+  productName: "Voidraftt" # The name of the application
+  productIdentifier: "landaiqing" # The unique product identifier
+  description: "Your Inspiration Catcher - Instant thought-capturing tool with minimalist design" # The application description
+  copyright: "© 2025 Voidraft. All rights reserved." # Copyright text
+  comments: "Effortlessly capture and organize fleeting ideas with minimal design" # Comments
   version: "v0.0.1" # The application version
 
 # Dev mode configuration

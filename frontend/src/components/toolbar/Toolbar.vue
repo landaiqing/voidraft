@@ -5,7 +5,7 @@ import {useLogStore} from '@/stores/logStore';
 import { useI18n } from 'vue-i18n';
 import { ref, onMounted, watch } from 'vue';
 import {SUPPORTED_LOCALES, setLocale, SupportedLocaleType} from '@/i18n';
-import * as wails from '@wailsio/runtime';
+import * as runtime from '@wailsio/runtime';
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const logStore = useLogStore();
@@ -30,10 +30,24 @@ const toggleAlwaysOnTop = () => {
   configStore.toggleAlwaysOnTop();
   // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
   try {
-    wails.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
+    runtime.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
   } catch (error) {
     console.error('Failed to set window always on top:', error);
     logStore.error(t('config.alwaysOnTopFailed'));
+  }
+};
+
+// 打开设置窗口
+const openSettingsWindow = () => {
+  try {
+    // 直接操作窗口对象
+    runtime.Events.Emit({
+      name: "show_settings_window",
+      data: {},
+    });
+  } catch (error) {
+    console.error('Failed to open settings window:', error);
+    logStore.error('Failed to open settings window');
   }
 };
 
@@ -41,7 +55,7 @@ const toggleAlwaysOnTop = () => {
 onMounted(() => {
   if (configStore.configLoaded && configStore.config.alwaysOnTop) {
     try {
-      wails.Window.SetAlwaysOnTop(true);
+      runtime.Window.SetAlwaysOnTop(true);
     } catch (error) {
       console.error('Failed to set window always on top:', error);
     }
@@ -52,7 +66,7 @@ onMounted(() => {
 watch(() => configStore.configLoaded, (isLoaded) => {
   if (isLoaded && configStore.config.alwaysOnTop) {
     try {
-      wails.Window.SetAlwaysOnTop(true);
+      runtime.Window.SetAlwaysOnTop(true);
     } catch (error) {
       console.error('Failed to set window always on top:', error);
     }
@@ -127,7 +141,7 @@ watch(() => configStore.configLoaded, (isLoaded) => {
         </div>
       </div>
       
-      <button class="settings-btn" :title="t('toolbar.settings')">
+      <button class="settings-btn" :title="t('toolbar.settings')" @click="openSettingsWindow">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
