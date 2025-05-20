@@ -6,12 +6,12 @@ version: '3'
 # This information is used to generate the build assets.
 info:
   companyName: "Voidraft" # The name of the company
-  productName: "Voidraftt" # The name of the application
+  productName: "Voidraft" # The name of the application
   productIdentifier: "landaiqing" # The unique product identifier
   description: "Your Inspiration Catcher - Instant thought-capturing tool with minimalist design" # The application description
   copyright: "© 2025 Voidraft. All rights reserved." # Copyright text
   comments: "Effortlessly capture and organize fleeting ideas with minimal design" # Comments
-  version: "v0.0.1" # The application version
+  version: "0.0.1.0" # The application version
 
 # Dev mode configuration
 dev_mode:

@@ -62,11 +62,14 @@ func main() {
 	})
 	mainWindow.Center()
 	settingsWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
-		Title:       "voidraft设置",
-		Width:       500,
-		Height:      600,
-		Hidden:      true, // 初始时隐藏设置窗口
-		AlwaysOnTop: true,
+		Title:               "voidraft设置",
+		Width:               700,
+		Height:              800,
+		Hidden:              true,
+		AlwaysOnTop:         true,
+		DisableResize:       true,
+		MinimiseButtonState: application.ButtonHidden,
+		MaximiseButtonState: application.ButtonHidden,
 		Mac: application.MacWindow{
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,

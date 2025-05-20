@@ -105,7 +105,7 @@ const createEditor = async () => {
   // 应用初始字体大小
   editorStore.applyFontSize();
 
-  // 立即更新统计信息，不等待用户交互
+  // 立即更新统计信息
   updateStats(view, editorStore.updateDocumentStats);
 
 };
