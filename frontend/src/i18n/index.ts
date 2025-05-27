@@ -2,7 +2,7 @@ import {createI18n} from 'vue-i18n';
 import messages from './locales';
 import { ConfigService } from '@/../bindings/voidraft/internal/services';
 import { LanguageType } from '@/../bindings/voidraft/internal/models';
-import { useConfigStore } from '@/stores/configStore';
+import { ConfigUtils } from '@/utils/configUtils';
 
 // 定义支持的语言类型
 export type SupportedLocaleType = 'zh-CN' | 'en-US';
@@ -40,40 +40,41 @@ const i18n = createI18n({
     messages
 });
 
-// 立即从后端获取语言设置
-ConfigService.GetLanguage().then(lang => {
-    if (lang) {
-        i18n.global.locale = lang as any;
+// 从后端获取语言设置
+const initializeLanguage = async () => {
+    try {
+        // 使用新的配置服务方法获取语言设置
+        const language = await ConfigService.Get('editor.language') as LanguageType;
+        if (language) {
+            const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
+            i18n.global.locale = frontendLocale as any;
+        }
+    } catch (error) {
+        console.error('Failed to get language from backend:', error);
+        // 如果获取失败，使用浏览器语言作为后备
+        const browserLang = getBrowserLanguage();
+        i18n.global.locale = browserLang as any;
     }
-}).catch(error => {
-    console.error('Failed to get language from backend:', error);
-    // 如果获取失败，使用浏览器语言作为后备
-    const browserLang = getBrowserLanguage();
-    i18n.global.locale = browserLang as any;
-});
+};
+
+// 立即初始化语言
+initializeLanguage();
 
 // 切换语言的方法
-export const setLocale = (locale: SupportedLocaleType) => {
+export const setLocale = async (locale: SupportedLocaleType) => {
     if (SUPPORTED_LOCALES.some(l => l.code === locale)) {
-        // 更新后端配置
-        ConfigService.SetLanguage(locale as LanguageType)
-            .then(() => {
-                i18n.global.locale = locale;
-                document.documentElement.setAttribute('lang', locale);
-                
-                // 同时更新configStore中的语言设置
-                try {
-                    const configStore = useConfigStore();
-                    if (configStore.configLoaded) {
-                        configStore.config.language = locale as LanguageType;
-                    }
-                } catch (error) {
-                    console.error('Failed to update configStore language:', error);
-                }
-            })
-            .catch(error => {
-                console.error('Failed to set language:', error);
-            });
+        try {
+            // 转换为后端语言类型
+            const backendLanguage = ConfigUtils.frontendLanguageToBackend(locale);
+            
+            // 使用新的配置服务方法设置语言
+            await ConfigService.Set('editor.language', backendLanguage);
+            
+            // 更新前端语言
+            i18n.global.locale = locale;
+        } catch (error) {
+            console.error('Failed to set language:', error);
+        }
     }
 };
 

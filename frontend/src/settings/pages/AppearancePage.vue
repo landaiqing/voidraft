@@ -5,20 +5,33 @@ import { ref } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import { LanguageType } from '@/../bindings/voidraft/internal/models/models';
+import { setLocale, SupportedLocaleType } from '@/i18n';
+import { ConfigUtils } from '@/utils/configUtils';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 
 // 语言选项
 const languageOptions = [
-  { value: 'zh-CN', label: t('languages.zh-CN') },
-  { value: 'en-US', label: t('languages.en-US') },
+  { value: LanguageType.LangZhCN, label: t('languages.zh-CN') },
+  { value: LanguageType.LangEnUS, label: t('languages.en-US') },
 ];
 
 // 更新语言设置
-const updateLanguage = (event: Event) => {
+const updateLanguage = async (event: Event) => {
   const select = event.target as HTMLSelectElement;
-  configStore.updateConfig('language', select.value as LanguageType);
+  const selectedLanguage = select.value as LanguageType;
+  
+  try {
+    // 设置后端语言配置
+    await configStore.setLanguage(selectedLanguage);
+    
+    // 同步前端语言设置
+    const frontendLocale = ConfigUtils.backendLanguageToFrontend(selectedLanguage);
+    setLocale(frontendLocale);
+  } catch (error) {
+    console.error('Failed to update language:', error);
+  }
 };
 
 // 主题选择（未实际实现，仅界面展示）

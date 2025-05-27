@@ -18,11 +18,6 @@ const navItems = [
   { id: 'updates', icon: '🔄', route: '/settings/updates' }
 ];
 
-// 默认导航到常规设置
-if (route.path === '/settings') {
-  router.replace('/settings/general');
-}
-
 const activeNavItem = ref(route.path.split('/').pop() || 'general');
 
 // 处理导航点击
@@ -33,7 +28,7 @@ const handleNavClick = (item: typeof navItems[0]) => {
 
 // 重置设置
 const resetSettings = async () => {
-  await configStore.resetToDefaults();
+  await configStore.resetConfig();
 };
 </script>
 

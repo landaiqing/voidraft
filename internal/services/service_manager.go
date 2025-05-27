@@ -17,11 +17,8 @@ func NewServiceManager() *ServiceManager {
 	// 初始化日志服务
 	logger := log.New()
 
-	// 初始化配置服务
-	configService := NewConfigService(ConfigOption{
-		Logger:       logger,
-		PathProvider: nil,
-	})
+	// 初始化配置服务 - 使用固定配置（当前目录下的 config/config.yaml）
+	configService := NewConfigService(logger)
 
 	// 初始化文档服务
 	documentService := NewDocumentService(configService, logger)

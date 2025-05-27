@@ -26,7 +26,9 @@ export default {
     fontSizeFixed: '字体大小值({value})已被修正为{fixed}',
     tabSizeFixed: 'Tab大小值({value})已被修正为{fixed}',
     tabTypeFixed: 'Tab类型({value})不合法，已修正为空格',
-    alwaysOnTopFailed: '无法设置窗口置顶状态'
+    alwaysOnTopFailed: '无法设置窗口置顶状态',
+    languageChanged: '语言设置已更新',
+    languageChangeFailed: '语言设置更新失败'
   },
   languages: {
     'zh-CN': '简体中文',

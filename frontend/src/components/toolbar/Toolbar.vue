@@ -5,7 +5,10 @@ import {useLogStore} from '@/stores/logStore';
 import { useI18n } from 'vue-i18n';
 import { ref, onMounted, watch } from 'vue';
 import {SUPPORTED_LOCALES, setLocale, SupportedLocaleType} from '@/i18n';
+import {LanguageType} from '@/../bindings/voidraft/internal/models/models';
+import { ConfigUtils } from '@/utils/configUtils';
 import * as runtime from '@wailsio/runtime';
+
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const logStore = useLogStore();
@@ -15,8 +18,19 @@ const { t, locale } = useI18n();
 const showLanguageMenu = ref(false);
 
 // 切换语言
-const changeLanguage = (localeCode: SupportedLocaleType) => {
-  setLocale(localeCode);
+const changeLanguage = async (localeCode: SupportedLocaleType) => {
+  // 使用工具类转换语言类型
+  const backendLanguage = ConfigUtils.frontendLanguageToBackend(localeCode);
+  
+  try {
+    // 设置后端语言配置
+    await configStore.setLanguage(backendLanguage);
+    // 设置前端语言
+    setLocale(localeCode);
+  } catch (error) {
+    console.error('Failed to change language:', error);
+  }
+  
   showLanguageMenu.value = false;
 };
 
@@ -26,10 +40,10 @@ const toggleLanguageMenu = () => {
 };
 
 // 窗口置顶控制
-const toggleAlwaysOnTop = () => {
-  configStore.toggleAlwaysOnTop();
-  // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
+const toggleAlwaysOnTop = async () => {
   try {
+    await configStore.toggleAlwaysOnTop();
+    // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
     runtime.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
   } catch (error) {
     console.error('Failed to set window always on top:', error);
@@ -51,18 +65,30 @@ const openSettingsWindow = () => {
   }
 };
 
-// 在组件挂载时根据配置设置窗口置顶状态
-onMounted(() => {
-  if (configStore.configLoaded && configStore.config.alwaysOnTop) {
+// 初始化配置
+onMounted(async () => {
+  // 加载配置
+  if (!configStore.configLoaded) {
+    await configStore.loadConfig();
+  }
+  
+  // 设置窗口置顶状态
+  if (configStore.config.alwaysOnTop) {
     try {
       runtime.Window.SetAlwaysOnTop(true);
     } catch (error) {
       console.error('Failed to set window always on top:', error);
     }
   }
+  
+  // 同步前端语言设置
+  const frontendLocale = ConfigUtils.backendLanguageToFrontend(configStore.config.language);
+  if (locale.value !== frontendLocale) {
+    setLocale(frontendLocale);
+  }
 });
 
-// 监听配置加载完成，加载后检查并设置窗口置顶状态
+// 监听配置加载完成
 watch(() => configStore.configLoaded, (isLoaded) => {
   if (isLoaded && configStore.config.alwaysOnTop) {
     try {
@@ -92,21 +118,21 @@ watch(() => configStore.configLoaded, (isLoaded) => {
       </span>
     </div>
     <div class="actions">
-      <span class="font-size" :title="t('toolbar.fontSizeTooltip')" @click="configStore.resetFontSize">
+      <span class="font-size" :title="t('toolbar.fontSizeTooltip')" @click="() => configStore.resetFontSize()">
         {{ configStore.config.fontSize }}px
       </span>
       <span class="tab-settings">
         <label :title="t('toolbar.tabLabel')" class="tab-toggle">
-          <input type="checkbox" :checked="configStore.config.enableTabIndent" @change="configStore.toggleTabIndent"/>
+          <input type="checkbox" :checked="configStore.config.enableTabIndent" @change="() => configStore.toggleTabIndent()"/>
           <span>{{ t('toolbar.tabLabel') }}</span>
         </label>
-        <span class="tab-type" :title="t('toolbar.tabType.' + (configStore.config.tabType === 'spaces' ? 'spaces' : 'tab'))" @click="configStore.toggleTabType">
+        <span class="tab-type" :title="t('toolbar.tabType.' + (configStore.config.tabType === 'spaces' ? 'spaces' : 'tab'))" @click="() => configStore.toggleTabType()">
           {{ t('toolbar.tabType.' + (configStore.config.tabType === 'spaces' ? 'spaces' : 'tab')) }}
         </span>
         <span class="tab-size" title="Tab大小" v-if="configStore.config.tabType === 'spaces'">
-          <button class="tab-btn" @click="configStore.decreaseTabSize" :disabled="configStore.config.tabSize <= configStore.MIN_TAB_SIZE">-</button>
+          <button class="tab-btn" @click="() => configStore.decreaseTabSize()" :disabled="configStore.config.tabSize <= configStore.MIN_TAB_SIZE">-</button>
           <span>{{ configStore.config.tabSize }}</span>
-          <button class="tab-btn" @click="configStore.increaseTabSize" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
+          <button class="tab-btn" @click="() => configStore.increaseTabSize()" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
         </span>
       </span>
 

@@ -1,29 +1,29 @@
 import {defineStore} from 'pinia';
-import {ref, watch} from 'vue';
-import {useDebounceFn} from '@vueuse/core';
+import {ref, computed} from 'vue';
 import {
     ConfigService
 } from '@/../bindings/voidraft/internal/services';
-import {EditorConfig, TabType} from '@/../bindings/voidraft/internal/models/models';
+import {EditorConfig, TabType, LanguageType} from '@/../bindings/voidraft/internal/models/models';
 import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';
+import { ConfigUtils } from '@/utils/configUtils';
 
-// 字体大小范围
-const MIN_FONT_SIZE = 12;
-const MAX_FONT_SIZE = 28;
-const DEFAULT_FONT_SIZE = 13;
+// 配置键映射 - 前端字段到后端配置键的映射
+const CONFIG_KEY_MAP = {
+    fontSize: 'editor.font_size',
+    enableTabIndent: 'editor.enable_tab_indent',
+    tabSize: 'editor.tab_size',
+    tabType: 'editor.tab_type',
+    language: 'editor.language',
+    alwaysOnTop: 'editor.always_on_top'
+} as const;
 
-// Tab设置
-const DEFAULT_TAB_SIZE = 4;
-const MIN_TAB_SIZE = 2;
-const MAX_TAB_SIZE = 8;
-
-// 配置项限制定义
+// 配置限制
 const CONFIG_LIMITS = {
-    fontSize: { min: MIN_FONT_SIZE, max: MAX_FONT_SIZE, default: DEFAULT_FONT_SIZE },
-    tabSize: { min: MIN_TAB_SIZE, max: MAX_TAB_SIZE, default: DEFAULT_TAB_SIZE },
-    tabType: { values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces },
-};
+    fontSize: { min: 12, max: 28, default: 13 },
+    tabSize: { min: 2, max: 8, default: 4 },
+    tabType: { values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces }
+} as const;
 
 export const useConfigStore = defineStore('config', () => {
     // 获取日志store
@@ -32,169 +32,129 @@ export const useConfigStore = defineStore('config', () => {
     
     // 配置状态
     const config = ref<EditorConfig>(new EditorConfig({
-        fontSize: DEFAULT_FONT_SIZE,
+        fontSize: CONFIG_LIMITS.fontSize.default,
         enableTabIndent: true,
-        tabSize: DEFAULT_TAB_SIZE,
-        tabType: TabType.TabTypeSpaces
+        tabSize: CONFIG_LIMITS.tabSize.default,
+        tabType: CONFIG_LIMITS.tabType.default,
+        language: LanguageType.LangZhCN,
+        alwaysOnTop: false
     }));
 
-    // 配置是否已从后端加载
-    const configLoaded = ref(false);
-    
-    // 配置是否正在从后端加载
+    // 加载状态
     const isLoading = ref(false);
+    const configLoaded = ref(false);
+
+    // 计算属性
+    const MIN_FONT_SIZE = computed(() => CONFIG_LIMITS.fontSize.min);
+    const MAX_FONT_SIZE = computed(() => CONFIG_LIMITS.fontSize.max);
+    const MIN_TAB_SIZE = computed(() => CONFIG_LIMITS.tabSize.min);
+    const MAX_TAB_SIZE = computed(() => CONFIG_LIMITS.tabSize.max);
 
     // 从后端加载配置
-    async function loadConfigFromBackend() {
+    async function loadConfig(): Promise<void> {
         if (isLoading.value) return;
         
         isLoading.value = true;
         try {
-            const loadedConfig = await ConfigService.GetEditorConfig();
+            const appConfig = await ConfigService.GetConfig();
             
-            // 深拷贝配置以避免直接引用
-            config.value = new EditorConfig(JSON.parse(JSON.stringify(loadedConfig)));
+            if (appConfig?.editor) {
+                Object.assign(config.value, appConfig.editor);
+            }
             
-            // 验证并纠正配置，不自动保存
-            validateAndFixConfig(false);
-            
-            // 等待下一个事件循环，确保watch不会在初始加载时触发
-            setTimeout(() => {
-                configLoaded.value = true;
-                isLoading.value = false;
-                logStore.info(t('config.loadSuccess'));
-            }, 0);
+            configLoaded.value = true;
+            logStore.info(t('config.loadSuccess'));
         } catch (error) {
             console.error('Failed to load configuration:', error);
             logStore.error(t('config.loadFailed'));
+        } finally {
             isLoading.value = false;
         }
     }
-    
-    // 验证配置是否在合理范围内，并修正无效值
-    function validateAndFixConfig(autoSave = true) {
-        let hasChanges = false;
-        
-        // 验证字体大小
-        if (config.value.fontSize < CONFIG_LIMITS.fontSize.min || config.value.fontSize > CONFIG_LIMITS.fontSize.max) {
-            config.value.fontSize = config.value.fontSize < CONFIG_LIMITS.fontSize.min 
-                ? CONFIG_LIMITS.fontSize.min 
-                : CONFIG_LIMITS.fontSize.max;
-            
-            logStore.warning(t('config.fontSizeFixed'));
-            hasChanges = true;
-        }
-        
-        // 验证Tab大小
-        if (config.value.tabSize < CONFIG_LIMITS.tabSize.min || config.value.tabSize > CONFIG_LIMITS.tabSize.max) {
-            config.value.tabSize = config.value.tabSize < CONFIG_LIMITS.tabSize.min 
-                ? CONFIG_LIMITS.tabSize.min 
-                : CONFIG_LIMITS.tabSize.max;
-            
-            logStore.warning(t('config.tabSizeFixed'));
-            hasChanges = true;
-        }
-        
-        // 验证TabType是否合法
-        if (!CONFIG_LIMITS.tabType.values.includes(config.value.tabType)) {
-            config.value.tabType = CONFIG_LIMITS.tabType.default;
-            logStore.warning(t('config.tabTypeFixed'));
-            hasChanges = true;
-        }
-        
-        // 如果配置被修正且需要自动保存，保存回后端
-        if (hasChanges && autoSave && configLoaded.value) {
-            saveConfigToBackend();
-        }
-    }
 
-    // 使用防抖保存配置到后端
-    const saveConfigToBackend = useDebounceFn(async () => {
-        if (!configLoaded.value || isLoading.value) return;
+    // 更新配置项的通用方法 - 直接调用后端Set方法
+    async function updateConfig<K extends keyof EditorConfig>(key: K, value: EditorConfig[K]): Promise<void> {
+        if (!configLoaded.value) return;
         
         try {
-            // 首先获取后端当前的语言设置
-            const currentLanguage = await ConfigService.GetLanguage();
+            const backendKey = CONFIG_KEY_MAP[key];
+            await ConfigService.Set(backendKey, value);
             
-            // 确保我们使用当前的语言设置，避免被默认值覆盖
-            if (currentLanguage && currentLanguage !== config.value.language) {
-                config.value.language = currentLanguage;
-            }
+            // 更新本地状态
+            config.value[key] = value;
             
-            await ConfigService.UpdateEditorConfig(config.value);
             logStore.info(t('config.saveSuccess'));
         } catch (error) {
-            console.error('Failed to save configuration:', error);
+            console.error(`Failed to update config ${key}:`, error);
             logStore.error(t('config.saveFailed'));
-        }
-    }, 500);
-
-    // 监听配置变化，自动保存到后端
-    watch(() => config.value, async () => {
-        if (configLoaded.value && !isLoading.value) {
-            await saveConfigToBackend();
-        }
-    }, {deep: true});
-
-    // 更新特定配置项的类型安全方法
-    function updateConfig<K extends keyof EditorConfig>(
-        key: K, 
-        value: EditorConfig[K] | ((currentValue: EditorConfig[K]) => EditorConfig[K])
-    ) {
-        if (typeof value === 'function') {
-            const currentValue = config.value[key];
-            const fn = value as (val: EditorConfig[K]) => EditorConfig[K];
-            config.value[key] = fn(currentValue);
-        } else {
-            config.value[key] = value;
+            throw error;
         }
     }
 
-    // 用于数字类型配置的增减方法
-    function adjustFontSize(amount: number) {
-        let newValue = config.value.fontSize + amount;
-        
-        if (newValue < MIN_FONT_SIZE) newValue = MIN_FONT_SIZE;
-        if (newValue > MAX_FONT_SIZE) newValue = MAX_FONT_SIZE;
-        
-        config.value.fontSize = newValue;
+    // 字体大小操作
+    async function adjustFontSize(delta: number): Promise<void> {
+        const newSize = ConfigUtils.clamp(config.value.fontSize + delta, CONFIG_LIMITS.fontSize.min, CONFIG_LIMITS.fontSize.max);
+        await updateConfig('fontSize', newSize);
     }
 
-    function adjustTabSize(amount: number) {
-        let newValue = config.value.tabSize + amount;
-        
-        if (newValue < MIN_TAB_SIZE) newValue = MIN_TAB_SIZE;
-        if (newValue > MAX_TAB_SIZE) newValue = MAX_TAB_SIZE;
-        
-        config.value.tabSize = newValue;
+    // Tab大小操作
+    async function adjustTabSize(delta: number): Promise<void> {
+        const newSize = ConfigUtils.clamp(config.value.tabSize + delta, CONFIG_LIMITS.tabSize.min, CONFIG_LIMITS.tabSize.max);
+        await updateConfig('tabSize', newSize);
     }
 
-    // Tab相关类型安全的配置切换
-    function toggleTabType() {
-        config.value.tabType = config.value.tabType === TabType.TabTypeSpaces 
-            ? TabType.TabTypeTab 
-            : TabType.TabTypeSpaces;
+    // 切换操作
+    async function toggleTabIndent(): Promise<void> {
+        await updateConfig('enableTabIndent', !config.value.enableTabIndent);
     }
 
-    // 切换窗口置顶状态
-    function toggleAlwaysOnTop() {
-        updateConfig('alwaysOnTop', val => !val);
+    async function toggleTabType(): Promise<void> {
+        const newTabType = config.value.tabType === TabType.TabTypeSpaces ? TabType.TabTypeTab : TabType.TabTypeSpaces;
+        await updateConfig('tabType', newTabType);
     }
 
-    // 重置为默认配置
-    async function resetToDefaults() {
+    async function toggleAlwaysOnTop(): Promise<void> {
+        await updateConfig('alwaysOnTop', !config.value.alwaysOnTop);
+    }
+
+    // 语言设置
+    async function setLanguage(language: LanguageType): Promise<void> {
+        try {
+            await ConfigService.Set(CONFIG_KEY_MAP.language, language);
+            config.value.language = language;
+            logStore.info(t('config.languageChanged'));
+        } catch (error) {
+            console.error('Failed to set language:', error);
+            logStore.error(t('config.languageChangeFailed'));
+            throw error;
+        }
+    }
+
+    // 重置配置
+    async function resetConfig(): Promise<void> {
         if (isLoading.value) return;
         
         try {
             isLoading.value = true;
             await ConfigService.ResetConfig();
-            await loadConfigFromBackend();
+            await loadConfig();
             logStore.info(t('config.resetSuccess'));
         } catch (error) {
             console.error('Failed to reset configuration:', error);
             logStore.error(t('config.resetFailed'));
+        } finally {
             isLoading.value = false;
         }
+    }
+
+    // 设置字体大小
+    async function setFontSize(size: number): Promise<void> {
+        await updateConfig('fontSize', size);
+    }
+
+    // 设置Tab大小
+    async function setTabSize(size: number): Promise<void> {
+        await updateConfig('tabSize', size);
     }
     
     return {
@@ -203,31 +163,32 @@ export const useConfigStore = defineStore('config', () => {
         configLoaded,
         isLoading,
 
-        // 常量
+        // 计算属性
         MIN_FONT_SIZE,
         MAX_FONT_SIZE,
-        DEFAULT_FONT_SIZE,
         MIN_TAB_SIZE,
         MAX_TAB_SIZE,
 
         // 核心方法
-        loadConfigFromBackend,
-        saveConfigToBackend,
+        loadConfig,
+        resetConfig,
+        setLanguage,
         updateConfig,
-        resetToDefaults,
         
-        // 字体大小方法
+        // 字体大小操作
         increaseFontSize: () => adjustFontSize(1),
         decreaseFontSize: () => adjustFontSize(-1),
-        resetFontSize: () => updateConfig('fontSize', DEFAULT_FONT_SIZE),
+        resetFontSize: () => setFontSize(CONFIG_LIMITS.fontSize.default),
+        setFontSize,
         
         // Tab操作
-        toggleTabIndent: () => updateConfig('enableTabIndent', val => !val),
+        toggleTabIndent,
         increaseTabSize: () => adjustTabSize(1),
         decreaseTabSize: () => adjustTabSize(-1),
         toggleTabType,
+        setTabSize,
         
-        // 窗口置顶操作
+        // 窗口操作
         toggleAlwaysOnTop
     };
 }); 

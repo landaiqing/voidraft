@@ -26,7 +26,9 @@ export default {
     fontSizeFixed: 'Font size ({value}) has been corrected to {fixed}',
     tabSizeFixed: 'Tab size ({value}) has been corrected to {fixed}',
     tabTypeFixed: 'Tab type ({value}) is invalid, corrected to spaces',
-    alwaysOnTopFailed: 'Failed to set window always on top'
+    alwaysOnTopFailed: 'Failed to set window always on top',
+    languageChanged: 'Language setting updated',
+    languageChangeFailed: 'Failed to update language setting'
   },
   languages: {
     'zh-CN': '简体中文',
@@ -44,4 +46,37 @@ export default {
       saveFailed: 'Failed to update save settings'
     }
   },
+  settings: {
+    title: 'Settings',
+    general: 'General',
+    editing: 'Editor',
+    appearance: 'Appearance',
+    keyBindings: 'Key Bindings',
+    updates: 'Updates',
+    comingSoon: 'Coming Soon...',
+    save: 'Save',
+    reset: 'Reset',
+    globalHotkey: 'Global Keyboard Shortcuts',
+    enableGlobalHotkey: 'Enable Global Hotkeys',
+    window: 'Window/Application',
+    showInSystemTray: 'Show in System Tray',
+    alwaysOnTop: 'Always on Top',
+    bufferFiles: 'Buffer Files Path',
+    useCustomLocation: 'Use custom location for buffer files',
+    selectDirectory: 'Select Directory',
+    fontSize: 'Font Size',
+    fontSizeDescription: 'Editor font size',
+    tabSettings: 'Tab Settings',
+    tabSize: 'Tab Size',
+    tabType: 'Tab Type',
+    spaces: 'Spaces',
+    tabs: 'Tabs',
+    enableTabIndent: 'Enable Tab Indent',
+    language: 'Interface Language',
+    restartRequired: '(Restart required)',
+    saveOptions: 'Save Options',
+    autoSaveDelay: 'Auto Save Delay (ms)',
+    changeThreshold: 'Change Threshold',
+    minSaveInterval: 'Min Save Interval (ms)'
+  }
 }; 

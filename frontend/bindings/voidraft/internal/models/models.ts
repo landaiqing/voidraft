@@ -155,14 +155,30 @@ export class Document {
  */
 export class DocumentConfig {
     /**
-     * 详细保存选项
+     * 自动保存延迟（毫秒）- 内容变更后多久自动保存
      */
-    "saveOptions": SaveOptions;
+    "autoSaveDelay": number;
+
+    /**
+     * 变更字符阈值，超过此阈值立即触发保存
+     */
+    "changeThreshold": number;
+
+    /**
+     * 最小保存间隔（毫秒）- 两次保存之间的最小时间间隔，避免频繁IO
+     */
+    "minSaveInterval": number;
 
     /** Creates a new DocumentConfig instance. */
     constructor($$source: Partial<DocumentConfig> = {}) {
-        if (!("saveOptions" in $$source)) {
-            this["saveOptions"] = (new SaveOptions());
+        if (!("autoSaveDelay" in $$source)) {
+            this["autoSaveDelay"] = 0;
+        }
+        if (!("changeThreshold" in $$source)) {
+            this["changeThreshold"] = 0;
+        }
+        if (!("minSaveInterval" in $$source)) {
+            this["minSaveInterval"] = 0;
         }
 
         Object.assign(this, $$source);
@@ -172,11 +188,7 @@ export class DocumentConfig {
      * Creates a new DocumentConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): DocumentConfig {
-        const $$createField0_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("saveOptions" in $$parsedSource) {
-            $$parsedSource["saveOptions"] = $$createField0_0($$parsedSource["saveOptions"]);
-        }
         return new DocumentConfig($$parsedSource as Partial<DocumentConfig>);
     }
 }
@@ -324,20 +336,12 @@ export enum LanguageType {
  */
 export class PathsConfig {
     /**
-     * 日志文件路径
-     */
-    "logPath": string;
-
-    /**
      * 数据存储路径
      */
     "dataPath": string;
 
     /** Creates a new PathsConfig instance. */
     constructor($$source: Partial<PathsConfig> = {}) {
-        if (!("logPath" in $$source)) {
-            this["logPath"] = "";
-        }
         if (!("dataPath" in $$source)) {
             this["dataPath"] = "";
         }
@@ -351,49 +355,6 @@ export class PathsConfig {
     static createFrom($$source: any = {}): PathsConfig {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new PathsConfig($$parsedSource as Partial<PathsConfig>);
-    }
-}
-
-/**
- * SaveOptions 保存选项
- */
-export class SaveOptions {
-    /**
-     * 自动保存延迟（毫秒）- 内容变更后多久自动保存
-     */
-    "autoSaveDelay": number;
-
-    /**
-     * 变更字符阈值，超过此阈值立即触发保存
-     */
-    "changeThreshold": number;
-
-    /**
-     * 最小保存间隔（毫秒）- 两次保存之间的最小时间间隔，避免频繁IO
-     */
-    "minSaveInterval": number;
-
-    /** Creates a new SaveOptions instance. */
-    constructor($$source: Partial<SaveOptions> = {}) {
-        if (!("autoSaveDelay" in $$source)) {
-            this["autoSaveDelay"] = 0;
-        }
-        if (!("changeThreshold" in $$source)) {
-            this["changeThreshold"] = 0;
-        }
-        if (!("minSaveInterval" in $$source)) {
-            this["minSaveInterval"] = 0;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new SaveOptions instance from a string or object.
-     */
-    static createFrom($$source: any = {}): SaveOptions {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new SaveOptions($$parsedSource as Partial<SaveOptions>);
     }
 }
 
@@ -423,4 +384,3 @@ const $$createType1 = DocumentConfig.createFrom;
 const $$createType2 = PathsConfig.createFrom;
 const $$createType3 = ConfigMetadata.createFrom;
 const $$createType4 = DocumentMeta.createFrom;
-const $$createType5 = SaveOptions.createFrom;

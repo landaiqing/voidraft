@@ -16,6 +16,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/settings',
     name: 'Settings',
+    redirect: '/settings/general',
     component: Settings,
     children: [
       {

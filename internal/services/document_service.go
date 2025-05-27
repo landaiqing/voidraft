@@ -147,9 +147,9 @@ func (ds *DocumentService) scheduleAutoSave() {
 
 	// 打印保存设置，便于调试
 	ds.logger.Debug("Document: Auto save settings",
-		"autoSaveDelay", config.Document.SaveOptions.AutoSaveDelay,
-		"changeThreshold", config.Document.SaveOptions.ChangeThreshold,
-		"minSaveInterval", config.Document.SaveOptions.MinSaveInterval)
+		"autoSaveDelay", config.Document.AutoSaveDelay,
+		"changeThreshold", config.Document.ChangeThreshold,
+		"minSaveInterval", config.Document.MinSaveInterval)
 
 	ds.lock.Lock()
 	defer ds.lock.Unlock()
@@ -160,7 +160,7 @@ func (ds *DocumentService) scheduleAutoSave() {
 	}
 
 	// 创建新的自动保存定时器
-	autoSaveDelay := config.Document.SaveOptions.AutoSaveDelay
+	autoSaveDelay := config.Document.AutoSaveDelay
 	ds.logger.Debug("Document: Scheduling auto save", "delay", autoSaveDelay)
 	ds.scheduleTimerWithDelay(autoSaveDelay)
 }
@@ -197,7 +197,7 @@ func (ds *DocumentService) saveToStore(trigger SaveTrigger) {
 
 	// 如果成功获取了配置，使用配置值
 	if err == nil && config != nil {
-		minInterval = config.Document.SaveOptions.MinSaveInterval
+		minInterval = config.Document.MinSaveInterval
 	}
 
 	// 如果是自动保存，检查最小保存间隔
@@ -405,7 +405,7 @@ func (ds *DocumentService) UpdateActiveDocumentContent(content string) error {
 
 	// 如果成功获取了配置，使用配置值
 	if err == nil && config != nil {
-		threshold = config.Document.SaveOptions.ChangeThreshold
+		threshold = config.Document.ChangeThreshold
 	}
 
 	ds.lock.Lock()
@@ -530,22 +530,20 @@ func (ds *DocumentService) GetSaveSettings() (*models.DocumentConfig, error) {
 
 // UpdateSaveSettings 更新文档保存设置
 func (ds *DocumentService) UpdateSaveSettings(docConfig models.DocumentConfig) error {
-	// 获取当前配置
-	config, err := ds.configService.GetConfig()
-	if err != nil {
-		return &DocumentError{Operation: "update_save_settings", Err: err}
+	// 使用配置服务的 Set 方法更新文档配置
+	if err := ds.configService.Set("document.auto_save_delay", docConfig.AutoSaveDelay); err != nil {
+		return &DocumentError{Operation: "update_save_settings_auto_save_delay", Err: err}
 	}
 
-	// 更新保存设置
-	config.Document = docConfig
-
-	// 保存配置
-	err = ds.configService.SaveConfig(config)
-	if err != nil {
-		return &DocumentError{Operation: "update_save_settings_save", Err: err}
+	if err := ds.configService.Set("document.change_threshold", docConfig.ChangeThreshold); err != nil {
+		return &DocumentError{Operation: "update_save_settings_change_threshold", Err: err}
 	}
 
-	// 安排自动保存（不再需要检查保存模式）
+	if err := ds.configService.Set("document.min_save_interval", docConfig.MinSaveInterval); err != nil {
+		return &DocumentError{Operation: "update_save_settings_min_save_interval", Err: err}
+	}
+
+	// 安排自动保存
 	ds.scheduleAutoSave()
 
 	ds.logger.Info("Document: Updated save settings")

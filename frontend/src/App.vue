@@ -1,12 +1,5 @@
 <script setup lang="ts">
-import {onMounted} from 'vue';
-import {useConfigStore} from "@/stores/configStore";
 
-const configStore = useConfigStore();
-
-onMounted(async () => {
-  await configStore.loadConfigFromBackend();
-})
 </script>
 
 <template>
