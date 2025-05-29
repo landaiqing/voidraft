@@ -254,6 +254,21 @@ export class EditorConfig {
     "fontSize": number;
 
     /**
+     * 字体族
+     */
+    "fontFamily": string;
+
+    /**
+     * 字体粗细
+     */
+    "fontWeight": string;
+
+    /**
+     * 行高
+     */
+    "lineHeight": number;
+
+    /**
      * 是否启用Tab缩进
      */
     "enableTabIndent": boolean;
@@ -282,6 +297,15 @@ export class EditorConfig {
     constructor($$source: Partial<EditorConfig> = {}) {
         if (!("fontSize" in $$source)) {
             this["fontSize"] = 0;
+        }
+        if (!("fontFamily" in $$source)) {
+            this["fontFamily"] = "";
+        }
+        if (!("fontWeight" in $$source)) {
+            this["fontWeight"] = "";
+        }
+        if (!("lineHeight" in $$source)) {
+            this["lineHeight"] = 0;
         }
         if (!("enableTabIndent" in $$source)) {
             this["enableTabIndent"] = false;

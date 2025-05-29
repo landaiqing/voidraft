@@ -15,6 +15,8 @@ import {
   updateTabConfig,
   createAutoSavePlugin,
   createSaveShortcutPlugin,
+  createFontExtensionFromBackend,
+  updateFontConfig,
 } from './extensions';
 import { useI18n } from 'vue-i18n';
 import { DocumentService } from '@/../bindings/voidraft/internal/services';
@@ -56,6 +58,14 @@ const createEditor = async () => {
       configStore.config.tabType
   );
 
+  // 创建字体扩展
+  const fontExtension = createFontExtensionFromBackend({
+    fontFamily: configStore.config.fontFamily,
+    fontSize: configStore.config.fontSize,
+    lineHeight: configStore.config.lineHeight,
+    fontWeight: configStore.config.fontWeight
+  });
+
   // 创建统计信息更新扩展
   const statsExtension = createStatsUpdateExtension(
       editorStore.updateDocumentStats
@@ -82,6 +92,7 @@ const createEditor = async () => {
   const extensions: Extension[] = [
     ...basicExtensions,
     ...tabExtensions,
+    fontExtension,
     statsExtension,
     saveShortcutPlugin,
     autoSavePlugin
@@ -143,6 +154,17 @@ const reconfigureTabSettings = () => {
   );
 };
 
+// 重新配置字体设置
+const reconfigureFontSettings = () => {
+  if (!editorStore.editorView) return;
+  updateFontConfig(editorStore.editorView as EditorView, {
+    fontFamily: configStore.config.fontFamily,
+    fontSize: configStore.config.fontSize,
+    lineHeight: configStore.config.lineHeight,
+    fontWeight: configStore.config.fontWeight
+  });
+};
+
 // 监听Tab设置变化
 watch(() => configStore.config.tabSize, reconfigureTabSettings);
 watch(() => configStore.config.enableTabIndent, reconfigureTabSettings);
@@ -150,8 +172,18 @@ watch(() => configStore.config.tabType, reconfigureTabSettings);
 
 // 监听字体大小变化
 watch(() => configStore.config.fontSize, () => {
+  reconfigureFontSettings();
   editorStore.applyFontSize();
 });
+
+// 监听字体族变化
+watch(() => configStore.config.fontFamily, reconfigureFontSettings);
+
+// 监听字体粗细变化
+watch(() => configStore.config.fontWeight, reconfigureFontSettings);
+
+// 监听行高变化
+watch(() => configStore.config.lineHeight, reconfigureFontSettings);
 
 onMounted(() => {
   // 创建编辑器

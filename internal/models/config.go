@@ -29,6 +29,9 @@ type DocumentConfig struct {
 // EditorConfig 定义编辑器配置
 type EditorConfig struct {
 	FontSize        int          `json:"fontSize" yaml:"font_size" mapstructure:"font_size"`                        // 字体大小
+	FontFamily      string       `json:"fontFamily" yaml:"font_family" mapstructure:"font_family"`                  // 字体族
+	FontWeight      string       `json:"fontWeight" yaml:"font_weight" mapstructure:"font_weight"`                  // 字体粗细
+	LineHeight      float64      `json:"lineHeight" yaml:"line_height" mapstructure:"line_height"`                  // 行高
 	EnableTabIndent bool         `json:"enableTabIndent" yaml:"enable_tab_indent" mapstructure:"enable_tab_indent"` // 是否启用Tab缩进
 	TabSize         int          `json:"tabSize" yaml:"tab_size" mapstructure:"tab_size"`                           // Tab大小
 	TabType         TabType      `json:"tabType" yaml:"tab_type" mapstructure:"tab_type"`                           // Tab类型（空格或Tab）
@@ -79,6 +82,9 @@ func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		Editor: EditorConfig{
 			FontSize:        13,
+			FontFamily:      `"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
+			FontWeight:      "normal",
+			LineHeight:      1.5,
 			EnableTabIndent: true,
 			TabSize:         4,
 			TabType:         TabTypeSpaces,

@@ -282,6 +282,9 @@ func setDefaults(v *viper.Viper) {
 
 	// 编辑器配置默认值
 	v.SetDefault("editor.font_size", defaultConfig.Editor.FontSize)
+	v.SetDefault("editor.font_family", defaultConfig.Editor.FontFamily)
+	v.SetDefault("editor.font_weight", defaultConfig.Editor.FontWeight)
+	v.SetDefault("editor.line_height", defaultConfig.Editor.LineHeight)
 	v.SetDefault("editor.enable_tab_indent", defaultConfig.Editor.EnableTabIndent)
 	v.SetDefault("editor.tab_size", defaultConfig.Editor.TabSize)
 	v.SetDefault("editor.tab_type", defaultConfig.Editor.TabType)

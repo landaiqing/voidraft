@@ -1,3 +1,4 @@
 /* 导入所有CSS文件 */
 @import 'normalize.css';
 @import 'variables.css';
+@import "fonts.css";

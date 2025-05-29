@@ -7,10 +7,14 @@ import {EditorConfig, TabType, LanguageType} from '@/../bindings/voidraft/intern
 import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';
 import { ConfigUtils } from '@/utils/configUtils';
+import { FONT_PRESETS, getFontPresetOptions, type FontPresetKey } from '@/editor/extensions/fontExtension';
 
 // 配置键映射 - 前端字段到后端配置键的映射
 const CONFIG_KEY_MAP = {
     fontSize: 'editor.font_size',
+    fontFamily: 'editor.font_family',
+    fontWeight: 'editor.font_weight',
+    lineHeight: 'editor.line_height',
     enableTabIndent: 'editor.enable_tab_indent',
     tabSize: 'editor.tab_size',
     tabType: 'editor.tab_type',
@@ -33,6 +37,9 @@ export const useConfigStore = defineStore('config', () => {
     // 配置状态
     const config = ref<EditorConfig>(new EditorConfig({
         fontSize: CONFIG_LIMITS.fontSize.default,
+        fontFamily: '"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif',
+        fontWeight: 'normal',
+        lineHeight: 1.5,
         enableTabIndent: true,
         tabSize: CONFIG_LIMITS.tabSize.default,
         tabType: CONFIG_LIMITS.tabType.default,
@@ -77,7 +84,11 @@ export const useConfigStore = defineStore('config', () => {
         if (!configLoaded.value) return;
         
         try {
-            const backendKey = CONFIG_KEY_MAP[key];
+            const backendKey = CONFIG_KEY_MAP[key as keyof typeof CONFIG_KEY_MAP];
+            if (!backendKey) {
+                throw new Error(`No backend key mapping found for ${String(key)}`);
+            }
+            
             await ConfigService.Set(backendKey, value);
             
             // 更新本地状态
@@ -85,7 +96,7 @@ export const useConfigStore = defineStore('config', () => {
             
             logStore.info(t('config.saveSuccess'));
         } catch (error) {
-            console.error(`Failed to update config ${key}:`, error);
+            console.error(`Failed to update config ${String(key)}:`, error);
             logStore.error(t('config.saveFailed'));
             throw error;
         }
@@ -156,6 +167,55 @@ export const useConfigStore = defineStore('config', () => {
     async function setTabSize(size: number): Promise<void> {
         await updateConfig('tabSize', size);
     }
+
+    // 字体预设相关方法
+    async function setFontPreset(presetKey: FontPresetKey): Promise<void> {
+        const preset = FONT_PRESETS[presetKey];
+        if (!preset) {
+            throw new Error(`Unknown font preset: ${presetKey}`);
+        }
+
+        try {
+            // 批量更新字体相关配置
+            await updateConfig('fontFamily', preset.fontFamily);
+            await updateConfig('fontWeight', preset.fontWeight);
+            await updateConfig('lineHeight', preset.lineHeight);
+            // 可选择是否同时更新字体大小
+            // await updateConfig('fontSize', preset.fontSize);
+            
+            logStore.info(`字体预设已切换为: ${preset.name}`);
+        } catch (error) {
+            console.error('Failed to set font preset:', error);
+            logStore.error('字体预设设置失败');
+            throw error;
+        }
+    }
+
+    // 获取当前字体预设（如果匹配的话）
+    function getCurrentFontPreset(): FontPresetKey | null {
+        const currentFamily = config.value.fontFamily;
+        for (const [key, preset] of Object.entries(FONT_PRESETS)) {
+            if (preset.fontFamily === currentFamily) {
+                return key as FontPresetKey;
+            }
+        }
+        return null;
+    }
+
+    // 设置字体族
+    async function setFontFamily(fontFamily: string): Promise<void> {
+        await updateConfig('fontFamily', fontFamily);
+    }
+
+    // 设置字体粗细
+    async function setFontWeight(fontWeight: string): Promise<void> {
+        await updateConfig('fontWeight', fontWeight);
+    }
+
+    // 设置行高
+    async function setLineHeight(lineHeight: number): Promise<void> {
+        await updateConfig('lineHeight', lineHeight);
+    }
     
     return {
         // 状态
@@ -189,6 +249,13 @@ export const useConfigStore = defineStore('config', () => {
         setTabSize,
         
         // 窗口操作
-        toggleAlwaysOnTop
+        toggleAlwaysOnTop,
+
+        // 字体预设相关方法
+        setFontPreset,
+        getCurrentFontPreset,
+        setFontFamily,
+        setFontWeight,
+        setLineHeight
     };
 }); 
