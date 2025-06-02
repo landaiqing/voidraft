@@ -13,10 +13,28 @@ let intervalId: ReturnType<typeof setInterval> | null = null;
 const historyData = ref<number[]>([]);
 const maxDataPoints = 60;
 
+// 静默错误处理包装器
+const withSilentErrorHandling = async <T>(
+  operation: () => Promise<T>,
+  fallback?: T
+): Promise<T | undefined> => {
+  try {
+    return await operation();
+  } catch (error) {
+    // 静默处理错误，不输出到控制台
+    return fallback;
+  }
+};
+
 // 获取内存统计信息
 const fetchMemoryStats = async () => {
-  try {
-    const stats = await SystemService.GetMemoryStats();
+  const stats = await withSilentErrorHandling(() => SystemService.GetMemoryStats());
+  
+  if (!stats) {
+    isLoading.value = false;
+    return;
+  }
+  
     memoryStats.value = stats;
     
     // 格式化内存显示 - 主要显示堆内存使用量
@@ -42,10 +60,6 @@ const fetchMemoryStats = async () => {
     drawChart();
     
     isLoading.value = false;
-  } catch (error) {
-    console.error('Failed to fetch memory stats:', error);
-    isLoading.value = false;
-  }
 };
 
 // 绘制实时曲线图
@@ -199,12 +213,11 @@ const drawChart = () => {
 
 // 手动触发GC
 const triggerGC = async () => {
-  try {
-    await SystemService.TriggerGC();
+  const success = await withSilentErrorHandling(() => SystemService.TriggerGC());
+  
+  if (success) {
     // 延迟一下再获取新的统计信息
     setTimeout(fetchMemoryStats, 100);
-  } catch (error) {
-    console.error('Failed to trigger GC:', error);
   }
 };
 

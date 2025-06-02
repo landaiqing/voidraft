@@ -7,8 +7,8 @@ const configStore = useConfigStore();
 
 // 应用启动时加载配置
 onMounted(async () => {
-  await configStore.initializeLanguage();
   await configStore.initConfig();
+  await configStore.initializeLanguage();
 });
 </script>
 

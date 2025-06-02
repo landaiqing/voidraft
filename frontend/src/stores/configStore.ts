@@ -4,8 +4,8 @@ import {
     ConfigService
 } from '@/../bindings/voidraft/internal/services';
 import {EditorConfig, TabType, LanguageType} from '@/../bindings/voidraft/internal/models/models';
-import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { ConfigUtils } from '@/utils/configUtils';
 
 // 国际化相关导入
@@ -21,7 +21,7 @@ export const SUPPORTED_LOCALES = [
         code: 'en-US' as SupportedLocaleType,
         name: 'English'
     }
-];
+] as const;
 
 // 配置键映射和限制的类型定义
 type ConfigKeyMap = {
@@ -93,8 +93,8 @@ const DEFAULT_CONFIG: EditorConfig = {
 };
 
 export const useConfigStore = defineStore('config', () => {
-    const logStore = useLogStore();
-    const { t, locale } = useI18n();
+    const { locale } = useI18n();
+    const { safeCall } = useErrorHandler();
     
     // 响应式状态
     const state = reactive({
@@ -105,57 +105,32 @@ export const useConfigStore = defineStore('config', () => {
 
     // 计算属性 - 使用工厂函数简化
     const createLimitComputed = (key: NumberConfigKey) => computed(() => CONFIG_LIMITS[key]);
-    const limits = {
-        fontSize: createLimitComputed('fontSize'),
-        tabSize: createLimitComputed('tabSize'),
-        lineHeight: createLimitComputed('lineHeight')
-    };
-
-    // 错误处理装饰器
-    const withErrorHandling = <T extends any[], R>(
-        fn: (...args: T) => Promise<R>,
-        errorMsg: string,
-        successMsg?: string
-    ) => async (...args: T): Promise<R | null> => {
-        const result = await fn(...args).catch(error => {
-            console.error(errorMsg, error);
-            logStore.error(t(errorMsg));
-            return null;
-        });
-        
-        if (result !== null && successMsg) {
-            logStore.info(t(successMsg));
-        }
-        
-        return result;
-    };
+    const limits = Object.fromEntries(
+        (['fontSize', 'tabSize', 'lineHeight'] as const).map(key => [key, createLimitComputed(key)])
+    ) as Record<NumberConfigKey, ReturnType<typeof createLimitComputed>>;
 
     // 通用配置更新方法
-    const updateConfig = withErrorHandling(
-        async <K extends keyof EditorConfig>(key: K, value: EditorConfig[K]): Promise<void> => {
-            // 确保配置已加载
-            if (!state.configLoaded && !state.isLoading) {
-                await initConfig();
-            }
-            
-            const backendKey = CONFIG_KEY_MAP[key];
-            if (!backendKey) {
-                throw new Error(`No backend key mapping found for ${key.toString()}`);
-            }
-            
-            await ConfigService.Set(backendKey, value);
-            state.config[key] = value;
-        },
-        'config.saveFailed',
-        'config.saveSuccess'
-    );
+    const updateConfig = async <K extends keyof EditorConfig>(key: K, value: EditorConfig[K]): Promise<void> => {
+        // 确保配置已加载
+        if (!state.configLoaded && !state.isLoading) {
+            await initConfig();
+        }
+        
+        const backendKey = CONFIG_KEY_MAP[key];
+        if (!backendKey) {
+            throw new Error(`No backend key mapping found for ${key.toString()}`);
+        }
+        
+        await ConfigService.Set(backendKey, value);
+        state.config[key] = value;
+    };
 
     // 加载配置
-    const initConfig = withErrorHandling(
-        async (): Promise<void> => {
-            if (state.isLoading) return;
-            
-            state.isLoading = true;
+    const initConfig = async (): Promise<void> => {
+        if (state.isLoading) return;
+        
+        state.isLoading = true;
+        try {
             const appConfig = await ConfigService.GetConfig();
             
             if (appConfig?.editor) {
@@ -163,62 +138,60 @@ export const useConfigStore = defineStore('config', () => {
             }
             
             state.configLoaded = true;
+        } finally {
             state.isLoading = false;
-        },
-        'config.loadFailed',
-        'config.loadSuccess'
-    );
+        }
+    };
 
-    // 数值调整工厂函数
-    const createNumberAdjuster = (key: NumberConfigKey) => {
+    // 通用数值调整器工厂
+    const createAdjuster = <T extends NumberConfigKey>(key: T) => {
         const limit = CONFIG_LIMITS[key];
+        const clamp = (value: number) => ConfigUtils.clamp(value, limit.min, limit.max);
+        
         return {
-            increase: () => updateConfig(key, ConfigUtils.clamp(state.config[key] + 1, limit.min, limit.max)),
-            decrease: () => updateConfig(key, ConfigUtils.clamp(state.config[key] - 1, limit.min, limit.max)),
-            set: (value: number) => updateConfig(key, ConfigUtils.clamp(value, limit.min, limit.max)),
-            reset: () => updateConfig(key, limit.default)
+            increase: () => safeCall(() => updateConfig(key, clamp(state.config[key] + 1)), 'config.saveFailed', 'config.saveSuccess'),
+            decrease: () => safeCall(() => updateConfig(key, clamp(state.config[key] - 1)), 'config.saveFailed', 'config.saveSuccess'),
+            set: (value: number) => safeCall(() => updateConfig(key, clamp(value)), 'config.saveFailed', 'config.saveSuccess'),
+            reset: () => safeCall(() => updateConfig(key, limit.default), 'config.saveFailed', 'config.saveSuccess')
         };
     };
 
-    // 布尔值切换工厂函数
-    const createToggler = (key: BooleanConfigKey) => 
-        () => updateConfig(key, !state.config[key]);
+    // 通用布尔值切换器
+    const createToggler = <T extends BooleanConfigKey>(key: T) => 
+        () => safeCall(() => updateConfig(key, !state.config[key]), 'config.saveFailed', 'config.saveSuccess');
 
-    // 枚举值切换工厂函数
+    // 枚举值切换器
     const createEnumToggler = <T extends TabType>(key: 'tabType', values: readonly T[]) =>
         () => {
             const currentIndex = values.indexOf(state.config[key] as T);
             const nextIndex = (currentIndex + 1) % values.length;
-            return updateConfig(key, values[nextIndex]);
+            return safeCall(() => updateConfig(key, values[nextIndex]), 'config.saveFailed', 'config.saveSuccess');
         };
 
     // 重置配置
-    const resetConfig = withErrorHandling(
-        async (): Promise<void> => {
-            if (state.isLoading) return;
-            
-            state.isLoading = true;
-            await ConfigService.ResetConfig();
-            await initConfig();
+    const resetConfig = async (): Promise<void> => {
+        if (state.isLoading) return;
+        
+        state.isLoading = true;
+        try {
+            await safeCall(() => ConfigService.ResetConfig(), 'config.resetFailed', 'config.resetSuccess');
+            await safeCall(() => initConfig(), 'config.loadFailed', 'config.loadSuccess');
+        } finally {
             state.isLoading = false;
-        },
-        'config.resetFailed',
-        'config.resetSuccess'
-    );
+        }
+    };
 
     // 语言设置方法
-    const setLanguage = withErrorHandling(
-        async (language: LanguageType): Promise<void> => {
+    const setLanguage = async (language: LanguageType): Promise<void> => {
+        await safeCall(async () => {
             await ConfigService.Set(CONFIG_KEY_MAP.language, language);
             state.config.language = language;
             
             // 同步更新前端语言
             const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
             locale.value = frontendLocale as any;
-        },
-        'config.languageChangeFailed',
-        'config.languageChanged'
-    );
+        }, 'config.languageChangeFailed', 'config.languageChanged');
+    };
 
     // 通过前端语言代码设置语言
     const setLocale = async (localeCode: SupportedLocaleType): Promise<void> => {
@@ -243,19 +216,25 @@ export const useConfigStore = defineStore('config', () => {
         }
     };
 
-    // 创建数值调整器
-    const fontSize = createNumberAdjuster('fontSize');
-    const tabSize = createNumberAdjuster('tabSize');
-    const lineHeight = createNumberAdjuster('lineHeight');
+    // 创建数值调整器实例
+    const adjusters = {
+        fontSize: createAdjuster('fontSize'),
+        tabSize: createAdjuster('tabSize'),
+        lineHeight: createAdjuster('lineHeight')
+    };
 
-    // 创建切换器
-    const toggleTabIndent = createToggler('enableTabIndent');
-    const toggleAlwaysOnTop = createToggler('alwaysOnTop');
-    const toggleTabType = createEnumToggler('tabType', CONFIG_LIMITS.tabType.values);
+    // 创建切换器实例
+    const togglers = {
+        tabIndent: createToggler('enableTabIndent'),
+        alwaysOnTop: createToggler('alwaysOnTop'),
+        tabType: createEnumToggler('tabType', CONFIG_LIMITS.tabType.values)
+    };
 
     // 字符串配置设置器
-    const setFontFamily = (value: string) => updateConfig('fontFamily', value);
-    const setFontWeight = (value: string) => updateConfig('fontWeight', value);
+    const setters = {
+        fontFamily: (value: string) => safeCall(() => updateConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
+        fontWeight: (value: string) => safeCall(() => updateConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess')
+    };
 
     return {
         // 状态
@@ -267,9 +246,9 @@ export const useConfigStore = defineStore('config', () => {
         ...limits,
 
         // 核心方法
-        initConfig,
+        initConfig: () => safeCall(() => initConfig(), 'config.loadFailed', 'config.loadSuccess'),
         resetConfig,
-        updateConfig,
+        updateConfig: (key: keyof EditorConfig, value: any) => safeCall(() => updateConfig(key, value), 'config.saveFailed', 'config.saveSuccess'),
         
         // 语言相关方法
         setLanguage,
@@ -277,29 +256,29 @@ export const useConfigStore = defineStore('config', () => {
         initializeLanguage,
         
         // 字体大小操作
-        ...fontSize,
-        increaseFontSize: fontSize.increase,
-        decreaseFontSize: fontSize.decrease,
-        resetFontSize: fontSize.reset,
-        setFontSize: fontSize.set,
+        ...adjusters.fontSize,
+        increaseFontSize: adjusters.fontSize.increase,
+        decreaseFontSize: adjusters.fontSize.decrease,
+        resetFontSize: adjusters.fontSize.reset,
+        setFontSize: adjusters.fontSize.set,
         
         // Tab操作
-        toggleTabIndent,
-        ...tabSize,
-        increaseTabSize: tabSize.increase,
-        decreaseTabSize: tabSize.decrease,
-        setTabSize: tabSize.set,
-        toggleTabType,
+        toggleTabIndent: togglers.tabIndent,
+        ...adjusters.tabSize,
+        increaseTabSize: adjusters.tabSize.increase,
+        decreaseTabSize: adjusters.tabSize.decrease,
+        setTabSize: adjusters.tabSize.set,
+        toggleTabType: togglers.tabType,
         
         // 行高操作
-        setLineHeight: lineHeight.set,
+        setLineHeight: adjusters.lineHeight.set,
         
         // 窗口操作
-        toggleAlwaysOnTop,
+        toggleAlwaysOnTop: togglers.alwaysOnTop,
 
         // 字体操作
-        setFontFamily,
-        setFontWeight,
+        setFontFamily: setters.fontFamily,
+        setFontWeight: setters.fontWeight,
     };
 },{
     persist: true,

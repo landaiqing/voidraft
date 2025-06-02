@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -8,6 +9,7 @@ import { LanguageType } from '../../../../bindings/voidraft/internal/models/mode
 
 const { t } = useI18n();
 const configStore = useConfigStore();
+const { safeCall } = useErrorHandler();
 
 // 语言选项
 const languageOptions = [
@@ -20,12 +22,10 @@ const updateLanguage = async (event: Event) => {
   const select = event.target as HTMLSelectElement;
   const selectedLanguage = select.value as LanguageType;
   
-  try {
-    // 使用 configStore 的语言设置方法
-    await configStore.setLanguage(selectedLanguage);
-  } catch (error) {
-    console.error('Failed to update language:', error);
-  }
+  await safeCall(
+    () => configStore.setLanguage(selectedLanguage),
+    'config.languageChangeFailed'
+  );
 };
 
 // 主题选择（未实际实现，仅界面展示）

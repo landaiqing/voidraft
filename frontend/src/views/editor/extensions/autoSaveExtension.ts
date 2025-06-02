@@ -49,7 +49,7 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
             await DocumentService.UpdateActiveDocumentContent(content);
             onSave(true);
           } catch (err) {
-            console.error('Failed to update document content:', err);
+            // 静默处理错误，不在控制台打印
             onSave(false);
           } finally {
             this.isSaving = false;
@@ -69,11 +69,11 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
         // 标记插件不再活跃
         this.isActive = false;
         
-        // 直接发送最终内容
+        // 静默发送最终内容，忽略错误
         const content = this.view.state.doc.toString();
-        DocumentService.UpdateActiveDocumentContent(content)
-          .then(() => console.log('Successfully sent final content on destroy'))
-          .catch(err => console.error('Failed to send content on destroy:', err));
+        DocumentService.UpdateActiveDocumentContent(content).catch(() => {
+          // 静默忽略销毁时的错误
+        });
       }
     }
   );

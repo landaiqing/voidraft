@@ -2,12 +2,10 @@ import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
-import {useLogStore} from './logStore';
-import {useI18n} from 'vue-i18n';
+import {useErrorHandler} from '@/utils/errorHandler';
 
 export const useDocumentStore = defineStore('document', () => {
-  const logStore = useLogStore();
-  const { t } = useI18n();
+  const {safeCall} = useErrorHandler();
 
   // 状态
   const activeDocument = ref<Document | null>(null);
@@ -16,86 +14,92 @@ export const useDocumentStore = defineStore('document', () => {
   const lastSaved = ref<Date | null>(null);
 
   // 计算属性
-  const documentContent = computed(() => activeDocument.value?.content || '');
-  const documentTitle = computed(() => activeDocument.value?.meta?.title || '');
+  const documentContent = computed(() => activeDocument.value?.content ?? '');
+  const documentTitle = computed(() => activeDocument.value?.meta?.title ?? '');
   const hasActiveDocument = computed(() => !!activeDocument.value);
   const isSaveInProgress = computed(() => isSaving.value);
   const lastSavedTime = computed(() => lastSaved.value);
 
-  // 加载文档
-  async function loadDocument() {
-    if (isLoading.value) return;
+  // 状态管理包装器
+  const withStateGuard = async <T>(
+    operation: () => Promise<T>,
+    stateRef: typeof isLoading | typeof isSaving,
+    errorMessageKey: string,
+    successMessageKey?: string
+  ): Promise<T | null> => {
+    if (stateRef.value) return null;
     
-    isLoading.value = true;
+    stateRef.value = true;
     try {
-        activeDocument.value = await DocumentService.GetActiveDocument();
-      logStore.info(t('document.loadSuccess'));
-    } catch (err) {
-      console.error('Failed to load document:', err);
-      logStore.error(t('document.loadFailed'));
-      activeDocument.value = null;
+      return await safeCall(operation, errorMessageKey, successMessageKey);
     } finally {
-      isLoading.value = false;
+      stateRef.value = false;
     }
-  }
+  };
+
+  // 加载文档
+  const loadDocument = () => withStateGuard(
+    async () => {
+      const doc = await DocumentService.GetActiveDocument();
+      activeDocument.value = doc;
+      return doc;
+    },
+    isLoading,
+    'document.loadFailed',
+    'document.loadSuccess'
+  );
 
   // 保存文档
-  async function saveDocument(content: string): Promise<boolean> {
-    if (isSaving.value) return false;
+  const saveDocument = async (content: string): Promise<boolean> => {
+    const result = await withStateGuard(
+      async () => {
+        await DocumentService.UpdateActiveDocumentContent(content);
+        lastSaved.value = new Date();
+        
+        // 使用可选链更新本地副本
+        if (activeDocument.value) {
+          activeDocument.value.content = content;
+          activeDocument.value.meta.lastUpdated = lastSaved.value;
+        }
+        
+        return true;
+      },
+      isSaving,
+      'document.saveFailed',
+      'document.saveSuccess'
+    );
     
-    isSaving.value = true;
-    try {
-      await DocumentService.UpdateActiveDocumentContent(content);
-      lastSaved.value = new Date();
-      
-      // 更新本地副本
-      if (activeDocument.value) {
-        activeDocument.value.content = content;
-        activeDocument.value.meta.lastUpdated = lastSaved.value;
-      }
-      
-      logStore.info(t('document.saveSuccess'));
-      return true;
-    } catch (err) {
-      console.error('Failed to save document:', err);
-      logStore.error(t('document.saveFailed'));
-      return false;
-    } finally {
-      isSaving.value = false;
-    }
-  }
+    return result ?? false;
+  };
 
   // 强制保存文档到磁盘
-  async function forceSaveDocument(): Promise<boolean> {
-    if (isSaving.value) return false;
+  const forceSaveDocument = async (): Promise<boolean> => {
+    const result = await withStateGuard(
+      async () => {
+        // 直接调用强制保存API
+        await DocumentService.ForceSave();
+        
+        lastSaved.value = new Date();
+        
+        // 使用可选链更新时间戳
+        if (activeDocument.value) {
+          activeDocument.value.meta.lastUpdated = lastSaved.value;
+        }
+        
+        return true;
+      },
+      isSaving,
+      'document.saveFailed',
+      'document.manualSaveSuccess'
+    );
     
-    isSaving.value = true;
-    try {
-      // 直接调用强制保存API
-      await DocumentService.ForceSave();
-      
-      lastSaved.value = new Date();
-      
-      // 更新时间戳
-      if (activeDocument.value) {
-        activeDocument.value.meta.lastUpdated = lastSaved.value;
-      }
-      
-      logStore.info(t('document.manualSaveSuccess'));
-      return true;
-    } catch (err) {
-      console.error('Failed to force save document:', err);
-      logStore.error(t('document.saveFailed'));
-      return false;
-    } finally {
-      isSaving.value = false;
-    }
-  }
+    return result ?? false;
+  };
 
   // 初始化
-  async function initialize() {
+  const initialize = async () => {
     await loadDocument();
-  }
+  };
 
   return {
     // 状态

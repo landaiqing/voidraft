@@ -2,15 +2,16 @@
 import {useEditorStore} from '@/stores/editorStore';
 import {useConfigStore, SUPPORTED_LOCALES, type SupportedLocaleType} from '@/stores/configStore';
 import {useLogStore} from '@/stores/logStore';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
 import { ref, onMounted, watch } from 'vue';
-import { ConfigUtils } from '@/utils/configUtils';
 import * as runtime from '@wailsio/runtime';
 import { useRouter } from 'vue-router';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const logStore = useLogStore();
+const { safeCall } = useErrorHandler();
 const { t, locale } = useI18n();
 const router = useRouter();
 // 语言下拉菜单
@@ -18,13 +19,10 @@ const showLanguageMenu = ref(false);
 
 // 切换语言
 const changeLanguage = async (localeCode: SupportedLocaleType) => {
-  try {
-    // 使用 configStore 的语言设置方法
-    await configStore.setLocale(localeCode);
-  } catch (error) {
-    console.error('Failed to change language:', error);
-  }
-  
+  await safeCall(
+    () => configStore.setLocale(localeCode),
+    'config.languageChangeFailed'
+  );
   showLanguageMenu.value = false;
 };
 
@@ -35,14 +33,11 @@ const toggleLanguageMenu = () => {
 
 // 窗口置顶控制
 const toggleAlwaysOnTop = async () => {
-  try {
+  await safeCall(async () => {
     await configStore.toggleAlwaysOnTop();
     // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
     await runtime.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
-  } catch (error) {
-    console.error('Failed to set window always on top:', error);
-    logStore.error(t('config.alwaysOnTopFailed'));
-  }
+  }, 'config.alwaysOnTopFailed');
 };
 
 // 打开设置页面
@@ -50,31 +45,31 @@ const openSettings = () => {
   router.push('/settings');
 };
 
+// 设置窗口置顶状态的通用函数
+const setWindowAlwaysOnTop = async (alwaysOnTop: boolean) => {
+  await safeCall(
+    () => runtime.Window.SetAlwaysOnTop(alwaysOnTop),
+    'config.alwaysOnTopFailed'
+  );
+};
+
 // 初始化配置
 onMounted(async () => {
   // 加载配置
   if (!configStore.configLoaded) {
-    await configStore.loadConfig();
+    await configStore.initConfig();
   }
   
   // 设置窗口置顶状态
   if (configStore.config.alwaysOnTop) {
-    try {
-      await runtime.Window.SetAlwaysOnTop(true);
-    } catch (error) {
-      console.error('Failed to set window always on top:', error);
-    }
+    await setWindowAlwaysOnTop(true);
   }
 });
 
 // 监听配置加载完成
 watch(() => configStore.configLoaded, (isLoaded) => {
   if (isLoaded && configStore.config.alwaysOnTop) {
-    try {
-      runtime.Window.SetAlwaysOnTop(true);
-    } catch (error) {
-      console.error('Failed to set window always on top:', error);
-    }
+    setWindowAlwaysOnTop(true);
   }
 });
 </script>

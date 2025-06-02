@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { FONT_OPTIONS } from '@/stores/configStore';
+import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
 import { ref, computed, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -10,11 +11,12 @@ import { TabType } from '../../../../bindings/voidraft/internal/models/models';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
+const { safeCall } = useErrorHandler();
 
 // 确保配置已加载
 onMounted(async () => {
   if (!configStore.configLoaded) {
-    await configStore.loadConfig();
+    await configStore.initConfig();
   }
 });
 
@@ -27,11 +29,10 @@ const handleFontFamilyChange = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
   const fontFamily = target.value;
   if (fontFamily) {
-    try {
-      await configStore.setFontFamily(fontFamily);
-    } catch (error) {
-      console.error('Failed to set font family:', error);
-    }
+    await safeCall(
+      () => configStore.setFontFamily(fontFamily),
+      'config.fontFamilyUpdateFailed'
+    );
   }
 };
 
@@ -51,47 +52,42 @@ const fontWeightOptions = [
 // 字体粗细选择
 const handleFontWeightChange = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  try {
-    await configStore.setFontWeight(target.value);
-  } catch (error) {
-    console.error('Failed to set font weight:', error);
-  }
+  await safeCall(
+    () => configStore.setFontWeight(target.value),
+    'config.fontWeightUpdateFailed'
+  );
 };
 
 // 行高控制
 const increaseLineHeight = async () => {
   const newLineHeight = Math.min(3.0, configStore.config.lineHeight + 0.1);
-  try {
-    await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
-  } catch (error) {
-    console.error('Failed to increase line height:', error);
-  }
+  await safeCall(
+    () => configStore.setLineHeight(Math.round(newLineHeight * 10) / 10),
+    'config.lineHeightIncreaseFailed'
+  );
 };
 
 const decreaseLineHeight = async () => {
   const newLineHeight = Math.max(1.0, configStore.config.lineHeight - 0.1);
-  try {
-    await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
-  } catch (error) {
-    console.error('Failed to decrease line height:', error);
-  }
+  await safeCall(
+    () => configStore.setLineHeight(Math.round(newLineHeight * 10) / 10),
+    'config.lineHeightDecreaseFailed'
+  );
 };
 
 // 字体大小控制
 const increaseFontSize = async () => {
-  try {
-    await configStore.increaseFontSize();
-  } catch (error) {
-    console.error('Failed to increase font size:', error);
-  }
+  await safeCall(
+    () => configStore.increaseFontSize(),
+    'config.fontSizeIncreaseFailed'
+  );
 };
 
 const decreaseFontSize = async () => {
-  try {
-    await configStore.decreaseFontSize();
-  } catch (error) {
-    console.error('Failed to decrease font size:', error);
-  }
+  await safeCall(
+    () => configStore.decreaseFontSize(),
+    'config.fontSizeDecreaseFailed'
+  );
 };
 
 // Tab类型切换
@@ -103,36 +99,32 @@ const tabTypeText = computed(() => {
 
 // Tab大小增减
 const increaseTabSize = async () => {
-  try {
-    await configStore.increaseTabSize();
-  } catch (error) {
-    console.error('Failed to increase tab size:', error);
-  }
+  await safeCall(
+    () => configStore.increaseTabSize(),
+    'config.tabSizeIncreaseFailed'
+  );
 };
 
 const decreaseTabSize = async () => {
-  try {
-    await configStore.decreaseTabSize();
-  } catch (error) {
-    console.error('Failed to decrease tab size:', error);
-  }
+  await safeCall(
+    () => configStore.decreaseTabSize(),
+    'config.tabSizeDecreaseFailed'
+  );
 };
 
 // Tab相关操作
 const handleToggleTabIndent = async () => {
-  try {
-    await configStore.toggleTabIndent();
-  } catch (error) {
-    console.error('Failed to toggle tab indent:', error);
-  }
+  await safeCall(
+    () => configStore.toggleTabIndent(),
+    'config.tabIndentToggleFailed'
+  );
 };
 
 const handleToggleTabType = async () => {
-  try {
-    await configStore.toggleTabType();
-  } catch (error) {
-    console.error('Failed to toggle tab type:', error);
-  }
+  await safeCall(
+    () => configStore.toggleTabType(),
+    'config.tabTypeToggleFailed'
+  );
 };
 </script>
 
