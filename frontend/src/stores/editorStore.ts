@@ -33,7 +33,7 @@ export const useEditorStore = defineStore('editor', () => {
         // 更新编辑器的字体大小
         const editorDOM = editorView.value.dom;
         if (editorDOM) {
-            editorDOM.style.fontSize = `${configStore.config.fontSize}px`;
+            editorDOM.style.fontSize = `${configStore.config.editing.fontSize}px`;
             editorView.value?.requestMeasure();
         }
     }

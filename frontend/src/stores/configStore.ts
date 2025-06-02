@@ -3,7 +3,7 @@ import {computed, reactive} from 'vue';
 import {
     ConfigService
 } from '@/../bindings/voidraft/internal/services';
-import {EditorConfig, TabType, LanguageType} from '@/../bindings/voidraft/internal/models/models';
+import {AppConfig, GeneralConfig, EditingConfig, AppearanceConfig, TabType, LanguageType} from '@/../bindings/voidraft/internal/models';
 import { useI18n } from 'vue-i18n';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { ConfigUtils } from '@/utils/configUtils';
@@ -24,26 +24,41 @@ export const SUPPORTED_LOCALES = [
 ] as const;
 
 // 配置键映射和限制的类型定义
-type ConfigKeyMap = {
-    readonly [K in keyof EditorConfig]: string;
+type GeneralConfigKeyMap = {
+    readonly [K in keyof GeneralConfig]: string;
+};
+
+type EditingConfigKeyMap = {
+    readonly [K in keyof EditingConfig]: string;
+};
+
+type AppearanceConfigKeyMap = {
+    readonly [K in keyof AppearanceConfig]: string;
 };
 
 type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
-type StringConfigKey = 'fontFamily' | 'fontWeight';
-type BooleanConfigKey = 'enableTabIndent' | 'alwaysOnTop';
-type EnumConfigKey = 'tabType' | 'language';
 
 // 配置键映射
-const CONFIG_KEY_MAP: ConfigKeyMap = {
-    fontSize: 'editor.font_size',
-    fontFamily: 'editor.font_family',
-    fontWeight: 'editor.font_weight',
-    lineHeight: 'editor.line_height',
-    enableTabIndent: 'editor.enable_tab_indent',
-    tabSize: 'editor.tab_size',
-    tabType: 'editor.tab_type',
-    language: 'editor.language',
-    alwaysOnTop: 'editor.always_on_top'
+const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
+    alwaysOnTop: 'general.always_on_top',
+    dataPath: 'general.data_path'
+} as const;
+
+const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
+    fontSize: 'editing.font_size',
+    fontFamily: 'editing.font_family',
+    fontWeight: 'editing.font_weight',
+    lineHeight: 'editing.line_height',
+    enableTabIndent: 'editing.enable_tab_indent',
+    tabSize: 'editing.tab_size',
+    tabType: 'editing.tab_type',
+    autoSaveDelay: 'editing.auto_save_delay',
+    changeThreshold: 'editing.change_threshold',
+    minSaveInterval: 'editing.min_save_interval'
+} as const;
+
+const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
+    language: 'appearance.language'
 } as const;
 
 // 配置限制
@@ -80,16 +95,32 @@ const getBrowserLanguage = (): SupportedLocaleType => {
 };
 
 // 默认配置
-const DEFAULT_CONFIG: EditorConfig = {
-    fontSize: CONFIG_LIMITS.fontSize.default,
-    fontFamily: FONT_OPTIONS[0].value,
-    fontWeight: 'normal',
-    lineHeight: CONFIG_LIMITS.lineHeight.default,
-    enableTabIndent: true,
-    tabSize: CONFIG_LIMITS.tabSize.default,
-    tabType: CONFIG_LIMITS.tabType.default,
-    language: LanguageType.LangZhCN,
-    alwaysOnTop: false
+const DEFAULT_CONFIG: AppConfig = {
+    general: {
+        alwaysOnTop: false,
+        dataPath: './data'
+    },
+    editing: {
+        fontSize: CONFIG_LIMITS.fontSize.default,
+        fontFamily: FONT_OPTIONS[0].value,
+        fontWeight: 'normal',
+        lineHeight: CONFIG_LIMITS.lineHeight.default,
+        enableTabIndent: true,
+        tabSize: CONFIG_LIMITS.tabSize.default,
+        tabType: CONFIG_LIMITS.tabType.default,
+        autoSaveDelay: 5000,
+        changeThreshold: 500,
+        minSaveInterval: 1000
+    },
+    appearance: {
+        language: LanguageType.LangZhCN
+    },
+    keyBindings: {},
+    updates: {},
+    metadata: {
+        version: '1.0.0',
+        lastUpdated: null
+    }
 };
 
 export const useConfigStore = defineStore('config', () => {
@@ -98,7 +129,7 @@ export const useConfigStore = defineStore('config', () => {
     
     // 响应式状态
     const state = reactive({
-        config: { ...DEFAULT_CONFIG } as EditorConfig,
+        config: { ...DEFAULT_CONFIG } as AppConfig,
         isLoading: false,
         configLoaded: false
     });
@@ -110,19 +141,49 @@ export const useConfigStore = defineStore('config', () => {
     ) as Record<NumberConfigKey, ReturnType<typeof createLimitComputed>>;
 
     // 通用配置更新方法
-    const updateConfig = async <K extends keyof EditorConfig>(key: K, value: EditorConfig[K]): Promise<void> => {
+    const updateGeneralConfig = async <K extends keyof GeneralConfig>(key: K, value: GeneralConfig[K]): Promise<void> => {
         // 确保配置已加载
         if (!state.configLoaded && !state.isLoading) {
             await initConfig();
         }
         
-        const backendKey = CONFIG_KEY_MAP[key];
+        const backendKey = GENERAL_CONFIG_KEY_MAP[key];
         if (!backendKey) {
-            throw new Error(`No backend key mapping found for ${key.toString()}`);
+            throw new Error(`No backend key mapping found for general.${key.toString()}`);
         }
         
         await ConfigService.Set(backendKey, value);
-        state.config[key] = value;
+        state.config.general[key] = value;
+    };
+
+    const updateEditingConfig = async <K extends keyof EditingConfig>(key: K, value: EditingConfig[K]): Promise<void> => {
+        // 确保配置已加载
+        if (!state.configLoaded && !state.isLoading) {
+            await initConfig();
+        }
+        
+        const backendKey = EDITING_CONFIG_KEY_MAP[key];
+        if (!backendKey) {
+            throw new Error(`No backend key mapping found for editing.${key.toString()}`);
+        }
+        
+        await ConfigService.Set(backendKey, value);
+        state.config.editing[key] = value;
+    };
+
+    const updateAppearanceConfig = async <K extends keyof AppearanceConfig>(key: K, value: AppearanceConfig[K]): Promise<void> => {
+        // 确保配置已加载
+        if (!state.configLoaded && !state.isLoading) {
+            await initConfig();
+        }
+        
+        const backendKey = APPEARANCE_CONFIG_KEY_MAP[key];
+        if (!backendKey) {
+            throw new Error(`No backend key mapping found for appearance.${key.toString()}`);
+        }
+        
+        await ConfigService.Set(backendKey, value);
+        state.config.appearance[key] = value;
     };
 
     // 加载配置
@@ -133,8 +194,14 @@ export const useConfigStore = defineStore('config', () => {
         try {
             const appConfig = await ConfigService.GetConfig();
             
-            if (appConfig?.editor) {
-                Object.assign(state.config, appConfig.editor);
+            if (appConfig) {
+                // 合并配置
+                if (appConfig.general) Object.assign(state.config.general, appConfig.general);
+                if (appConfig.editing) Object.assign(state.config.editing, appConfig.editing);
+                if (appConfig.appearance) Object.assign(state.config.appearance, appConfig.appearance);
+                if (appConfig.keyBindings) Object.assign(state.config.keyBindings, appConfig.keyBindings);
+                if (appConfig.updates) Object.assign(state.config.updates, appConfig.updates);
+                if (appConfig.metadata) Object.assign(state.config.metadata, appConfig.metadata);
             }
             
             state.configLoaded = true;
@@ -149,23 +216,26 @@ export const useConfigStore = defineStore('config', () => {
         const clamp = (value: number) => ConfigUtils.clamp(value, limit.min, limit.max);
         
         return {
-            increase: () => safeCall(() => updateConfig(key, clamp(state.config[key] + 1)), 'config.saveFailed', 'config.saveSuccess'),
-            decrease: () => safeCall(() => updateConfig(key, clamp(state.config[key] - 1)), 'config.saveFailed', 'config.saveSuccess'),
-            set: (value: number) => safeCall(() => updateConfig(key, clamp(value)), 'config.saveFailed', 'config.saveSuccess'),
-            reset: () => safeCall(() => updateConfig(key, limit.default), 'config.saveFailed', 'config.saveSuccess')
+            increase: () => safeCall(() => updateEditingConfig(key, clamp(state.config.editing[key] + 1)), 'config.saveFailed', 'config.saveSuccess'),
+            decrease: () => safeCall(() => updateEditingConfig(key, clamp(state.config.editing[key] - 1)), 'config.saveFailed', 'config.saveSuccess'),
+            set: (value: number) => safeCall(() => updateEditingConfig(key, clamp(value)), 'config.saveFailed', 'config.saveSuccess'),
+            reset: () => safeCall(() => updateEditingConfig(key, limit.default), 'config.saveFailed', 'config.saveSuccess')
         };
     };
 
     // 通用布尔值切换器
-    const createToggler = <T extends BooleanConfigKey>(key: T) => 
-        () => safeCall(() => updateConfig(key, !state.config[key]), 'config.saveFailed', 'config.saveSuccess');
+    const createGeneralToggler = <T extends keyof GeneralConfig>(key: T) => 
+        () => safeCall(() => updateGeneralConfig(key, !state.config.general[key] as GeneralConfig[T]), 'config.saveFailed', 'config.saveSuccess');
+
+    const createEditingToggler = <T extends keyof EditingConfig>(key: T) => 
+        () => safeCall(() => updateEditingConfig(key, !state.config.editing[key] as EditingConfig[T]), 'config.saveFailed', 'config.saveSuccess');
 
     // 枚举值切换器
     const createEnumToggler = <T extends TabType>(key: 'tabType', values: readonly T[]) =>
         () => {
-            const currentIndex = values.indexOf(state.config[key] as T);
+            const currentIndex = values.indexOf(state.config.editing[key] as T);
             const nextIndex = (currentIndex + 1) % values.length;
-            return safeCall(() => updateConfig(key, values[nextIndex]), 'config.saveFailed', 'config.saveSuccess');
+            return safeCall(() => updateEditingConfig(key, values[nextIndex]), 'config.saveFailed', 'config.saveSuccess');
         };
 
     // 重置配置
@@ -184,19 +254,12 @@ export const useConfigStore = defineStore('config', () => {
     // 语言设置方法
     const setLanguage = async (language: LanguageType): Promise<void> => {
         await safeCall(async () => {
-            await ConfigService.Set(CONFIG_KEY_MAP.language, language);
-            state.config.language = language;
+            await updateAppearanceConfig('language', language);
             
             // 同步更新前端语言
             const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
             locale.value = frontendLocale as any;
         }, 'config.languageChangeFailed', 'config.languageChanged');
-    };
-
-    // 通过前端语言代码设置语言
-    const setLocale = async (localeCode: SupportedLocaleType): Promise<void> => {
-        const backendLanguage = ConfigUtils.frontendLanguageToBackend(localeCode);
-        await setLanguage(backendLanguage);
     };
 
     // 初始化语言设置
@@ -208,7 +271,7 @@ export const useConfigStore = defineStore('config', () => {
             }
             
             // 同步前端语言设置
-            const frontendLocale = ConfigUtils.backendLanguageToFrontend(state.config.language);
+            const frontendLocale = ConfigUtils.backendLanguageToFrontend(state.config.appearance.language);
             locale.value = frontendLocale as any;
         } catch (error) {
             const browserLang = getBrowserLanguage();
@@ -225,15 +288,16 @@ export const useConfigStore = defineStore('config', () => {
 
     // 创建切换器实例
     const togglers = {
-        tabIndent: createToggler('enableTabIndent'),
-        alwaysOnTop: createToggler('alwaysOnTop'),
+        tabIndent: createEditingToggler('enableTabIndent'),
+        alwaysOnTop: createGeneralToggler('alwaysOnTop'),
         tabType: createEnumToggler('tabType', CONFIG_LIMITS.tabType.values)
     };
 
     // 字符串配置设置器
     const setters = {
-        fontFamily: (value: string) => safeCall(() => updateConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
-        fontWeight: (value: string) => safeCall(() => updateConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess')
+        fontFamily: (value: string) => safeCall(() => updateEditingConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
+        fontWeight: (value: string) => safeCall(() => updateEditingConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess'),
+        dataPath: (value: string) => safeCall(() => updateGeneralConfig('dataPath', value), 'config.saveFailed', 'config.saveSuccess')
     };
 
     return {
@@ -248,11 +312,9 @@ export const useConfigStore = defineStore('config', () => {
         // 核心方法
         initConfig: () => safeCall(() => initConfig(), 'config.loadFailed', 'config.loadSuccess'),
         resetConfig,
-        updateConfig: (key: keyof EditorConfig, value: any) => safeCall(() => updateConfig(key, value), 'config.saveFailed', 'config.saveSuccess'),
         
         // 语言相关方法
         setLanguage,
-        setLocale,
         initializeLanguage,
         
         // 字体大小操作
@@ -279,6 +341,9 @@ export const useConfigStore = defineStore('config', () => {
         // 字体操作
         setFontFamily: setters.fontFamily,
         setFontWeight: setters.fontWeight,
+
+        // 路径操作
+        setDataPath: setters.dataPath,
     };
 },{
     persist: true,

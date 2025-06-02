@@ -1,75 +1,79 @@
 <script setup lang="ts">
-import {useEditorStore} from '@/stores/editorStore';
-import {useConfigStore, SUPPORTED_LOCALES, type SupportedLocaleType} from '@/stores/configStore';
-import {useLogStore} from '@/stores/logStore';
-import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
 import { ref, onMounted, watch } from 'vue';
+import { useConfigStore } from '@/stores/configStore';
+import { useEditorStore } from '@/stores/editorStore';
+import { useErrorHandler } from '@/utils/errorHandler';
 import * as runtime from '@wailsio/runtime';
 import { useRouter } from 'vue-router';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
-const logStore = useLogStore();
 const { safeCall } = useErrorHandler();
 const { t, locale } = useI18n();
 const router = useRouter();
+
 // 语言下拉菜单
 const showLanguageMenu = ref(false);
 
-// 切换语言
-const changeLanguage = async (localeCode: SupportedLocaleType) => {
-  await safeCall(
-    () => configStore.setLocale(localeCode),
-    'config.languageChangeFailed'
-  );
-  showLanguageMenu.value = false;
-};
+const supportedLanguages = [
+  { code: 'zh-CN', name: '简体中文' },
+  { code: 'en-US', name: 'English' }
+];
 
-// 切换语言菜单显示
 const toggleLanguageMenu = () => {
   showLanguageMenu.value = !showLanguageMenu.value;
 };
 
-// 窗口置顶控制
+const closeLanguageMenu = () => {
+  showLanguageMenu.value = false;
+};
+
+const changeLanguage = async (langCode: string) => {
+  await safeCall(() => configStore.setLanguage(langCode as any), 'language.changeFailed');
+  closeLanguageMenu();
+};
+
+// 设置窗口置顶
+const setWindowAlwaysOnTop = async (isTop: boolean) => {
+  await safeCall(async () => {
+    await runtime.Window.SetAlwaysOnTop(isTop);
+  }, 'window.setTopFailed');
+};
+
+// 切换窗口置顶
 const toggleAlwaysOnTop = async () => {
   await safeCall(async () => {
     await configStore.toggleAlwaysOnTop();
     // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
-    await runtime.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
+    await runtime.Window.SetAlwaysOnTop(configStore.config.general.alwaysOnTop);
   }, 'config.alwaysOnTopFailed');
 };
 
-// 打开设置页面
-const openSettings = () => {
+// 跳转到设置页面
+const goToSettings = () => {
   router.push('/settings');
 };
 
-// 设置窗口置顶状态的通用函数
-const setWindowAlwaysOnTop = async (alwaysOnTop: boolean) => {
-  await safeCall(
-    () => runtime.Window.SetAlwaysOnTop(alwaysOnTop),
-    'config.alwaysOnTopFailed'
-  );
-};
+const isLoaded = ref(false);
 
-// 初始化配置
-onMounted(async () => {
-  // 加载配置
-  if (!configStore.configLoaded) {
-    await configStore.initConfig();
-  }
-  
-  // 设置窗口置顶状态
-  if (configStore.config.alwaysOnTop) {
-    await setWindowAlwaysOnTop(true);
-  }
+onMounted(() => {
+  isLoaded.value = true;
 });
 
-// 监听配置加载完成
-watch(() => configStore.configLoaded, (isLoaded) => {
-  if (isLoaded && configStore.config.alwaysOnTop) {
-    setWindowAlwaysOnTop(true);
+// 监听置顶设置变化
+watch(
+  () => configStore.config.general.alwaysOnTop,
+  async (newValue) => {
+    if (!isLoaded.value) return;
+    await runtime.Window.SetAlwaysOnTop(newValue);
+  }
+);
+
+// 在组件加载完成后应用置顶设置
+watch(isLoaded, async (newLoaded) => {
+  if (newLoaded && configStore.config.general.alwaysOnTop) {
+    await setWindowAlwaysOnTop(true);
   }
 });
 </script>
@@ -86,34 +90,30 @@ watch(() => configStore.configLoaded, (isLoaded) => {
       <span class="stat-item" :title="t('toolbar.editor.selected')" v-if="editorStore.documentStats.selectedCharacters > 0">
         {{ t('toolbar.editor.selected') }}: <span class="stat-value">{{ editorStore.documentStats.selectedCharacters }}</span>
       </span>
-      <span v-if="logStore.showLog && logStore.latestLog" class="log-item" :class="'log-' + logStore.latestLog.level"
-            @click="logStore.hideCurrentLog()">
-        {{ logStore.latestLog.message }}
-      </span>
     </div>
     <div class="actions">
       <span class="font-size" :title="t('toolbar.fontSizeTooltip')" @click="() => configStore.resetFontSize()">
-        {{ configStore.config.fontSize }}px
+        {{ configStore.config.editing.fontSize }}px
       </span>
       <span class="tab-settings">
         <label :title="t('toolbar.tabLabel')" class="tab-toggle">
-          <input type="checkbox" :checked="configStore.config.enableTabIndent" @change="() => configStore.toggleTabIndent()"/>
+          <input type="checkbox" :checked="configStore.config.editing.enableTabIndent" @change="() => configStore.toggleTabIndent()"/>
           <span>{{ t('toolbar.tabLabel') }}</span>
         </label>
-        <span class="tab-type" :title="t('toolbar.tabType.' + (configStore.config.tabType === 'spaces' ? 'spaces' : 'tab'))" @click="() => configStore.toggleTabType()">
-          {{ t('toolbar.tabType.' + (configStore.config.tabType === 'spaces' ? 'spaces' : 'tab')) }}
+        <span class="tab-type" :title="t('toolbar.tabType.' + (configStore.config.editing.tabType === 'spaces' ? 'spaces' : 'tab'))" @click="() => configStore.toggleTabType()">
+          {{ t('toolbar.tabType.' + (configStore.config.editing.tabType === 'spaces' ? 'spaces' : 'tab')) }}
         </span>
-        <span class="tab-size" title="Tab大小" v-if="configStore.config.tabType === 'spaces'">
-          <button class="tab-btn" @click="() => configStore.decreaseTabSize()" :disabled="configStore.config.tabSize <= configStore.tabSize.min">-</button>
-          <span>{{ configStore.config.tabSize }}</span>
-          <button class="tab-btn" @click="() => configStore.increaseTabSize()" :disabled="configStore.config.tabSize >= configStore.tabSize.max">+</button>
+        <span class="tab-size" title="Tab大小" v-if="configStore.config.editing.tabType === 'spaces'">
+          <button class="tab-btn" @click="() => configStore.decreaseTabSize()" :disabled="configStore.config.editing.tabSize <= configStore.tabSize.min">-</button>
+          <span>{{ configStore.config.editing.tabSize }}</span>
+          <button class="tab-btn" @click="() => configStore.increaseTabSize()" :disabled="configStore.config.editing.tabSize >= configStore.tabSize.max">+</button>
         </span>
       </span>
 
       <!-- 窗口置顶图标按钮 -->
       <div 
         class="pin-button" 
-        :class="{ 'active': configStore.config.alwaysOnTop }"
+        :class="{ 'active': configStore.config.general.alwaysOnTop }"
         :title="t('toolbar.alwaysOnTop')"
         @click="toggleAlwaysOnTop"
       >
@@ -130,7 +130,7 @@ watch(() => configStore.configLoaded, (isLoaded) => {
         </button>
         <div class="selector-menu" v-if="showLanguageMenu">
           <div 
-            v-for="lang in SUPPORTED_LOCALES" 
+            v-for="lang in supportedLanguages" 
             :key="lang.code" 
             class="selector-option"
             :class="{ active: locale === lang.code }"
@@ -141,7 +141,7 @@ watch(() => configStore.configLoaded, (isLoaded) => {
         </div>
       </div>
       
-      <button class="settings-btn" :title="t('toolbar.settings')" @click="openSettings">
+      <button class="settings-btn" :title="t('toolbar.settings')" @click="goToSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>
@@ -175,24 +175,6 @@ watch(() => configStore.configLoaded, (isLoaded) => {
 
       .stat-value {
         color: #e0e0e0;
-      }
-    }
-    
-    .log-item {
-      cursor: default;
-      font-size: 12px;
-      transition: opacity 0.3s ease;
-      
-      &.log-info {
-        color: rgba(177, 176, 176, 0.8);
-      }
-      
-      &.log-warning {
-        color: rgba(240, 230, 140, 0.8);
-      }
-      
-      &.log-error {
-        color: rgba(255, 107, 107, 0.8);
       }
     }
   }

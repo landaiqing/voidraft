@@ -22,7 +22,7 @@ onMounted(async () => {
 
 // 字体选择选项
 const fontFamilyOptions = FONT_OPTIONS;
-const currentFontFamily = computed(() => configStore.config.fontFamily);
+const currentFontFamily = computed(() => configStore.config.editing.fontFamily);
 
 // 字体选择
 const handleFontFamilyChange = async (event: Event) => {
@@ -60,7 +60,7 @@ const handleFontWeightChange = async (event: Event) => {
 
 // 行高控制
 const increaseLineHeight = async () => {
-  const newLineHeight = Math.min(3.0, configStore.config.lineHeight + 0.1);
+  const newLineHeight = Math.min(3.0, configStore.config.editing.lineHeight + 0.1);
   await safeCall(
     () => configStore.setLineHeight(Math.round(newLineHeight * 10) / 10),
     'config.lineHeightIncreaseFailed'
@@ -68,7 +68,7 @@ const increaseLineHeight = async () => {
 };
 
 const decreaseLineHeight = async () => {
-  const newLineHeight = Math.max(1.0, configStore.config.lineHeight - 0.1);
+  const newLineHeight = Math.max(1.0, configStore.config.editing.lineHeight - 0.1);
   await safeCall(
     () => configStore.setLineHeight(Math.round(newLineHeight * 10) / 10),
     'config.lineHeightDecreaseFailed'
@@ -92,7 +92,7 @@ const decreaseFontSize = async () => {
 
 // Tab类型切换
 const tabTypeText = computed(() => {
-  return configStore.config.tabType === TabType.TabTypeSpaces 
+  return configStore.config.editing.tabType === TabType.TabTypeSpaces 
     ? t('settings.spaces') 
     : t('settings.tabs');
 });
@@ -156,7 +156,7 @@ const handleToggleTabType = async () => {
       >
         <div class="number-control">
           <button @click="decreaseFontSize" class="control-button">-</button>
-          <span>{{ configStore.config.fontSize }}px</span>
+          <span>{{ configStore.config.editing.fontSize }}px</span>
           <button @click="increaseFontSize" class="control-button">+</button>
         </div>
       </SettingItem>
@@ -167,7 +167,7 @@ const handleToggleTabType = async () => {
       >
         <select 
           class="font-weight-select" 
-          :value="configStore.config.fontWeight"
+          :value="configStore.config.editing.fontWeight"
           @change="handleFontWeightChange"
         >
           <option 
@@ -186,16 +186,16 @@ const handleToggleTabType = async () => {
       >
         <div class="number-control">
           <button @click="decreaseLineHeight" class="control-button">-</button>
-          <span>{{ configStore.config.lineHeight.toFixed(1) }}</span>
+          <span>{{ configStore.config.editing.lineHeight.toFixed(1) }}</span>
           <button @click="increaseLineHeight" class="control-button">+</button>
         </div>
       </SettingItem>
 
       <div class="font-preview" :style="{ 
-        fontSize: `${configStore.config.fontSize}px`,
-        fontFamily: configStore.config.fontFamily,
-        fontWeight: configStore.config.fontWeight,
-        lineHeight: configStore.config.lineHeight
+        fontSize: `${configStore.config.editing.fontSize}px`,
+        fontFamily: configStore.config.editing.fontFamily,
+        fontWeight: configStore.config.editing.fontWeight,
+        lineHeight: configStore.config.editing.lineHeight
       }">
         <div class="preview-label">字体预览</div>
         <div class="preview-text">
@@ -210,9 +210,9 @@ const handleToggleTabType = async () => {
     <SettingSection :title="t('settings.tabSettings')">
       <SettingItem :title="t('settings.tabSize')">
         <div class="number-control">
-          <button @click="decreaseTabSize" class="control-button" :disabled="configStore.config.tabSize <= configStore.tabSize.min">-</button>
-          <span>{{ configStore.config.tabSize }}</span>
-          <button @click="increaseTabSize" class="control-button" :disabled="configStore.config.tabSize >= configStore.tabSize.max">+</button>
+          <button @click="decreaseTabSize" class="control-button" :disabled="configStore.config.editing.tabSize <= configStore.tabSize.min">-</button>
+          <span>{{ configStore.config.editing.tabSize }}</span>
+          <button @click="increaseTabSize" class="control-button" :disabled="configStore.config.editing.tabSize >= configStore.tabSize.max">+</button>
         </div>
       </SettingItem>
       
@@ -224,7 +224,7 @@ const handleToggleTabType = async () => {
       
       <SettingItem :title="t('settings.enableTabIndent')">
         <ToggleSwitch 
-          v-model="configStore.config.enableTabIndent" 
+          v-model="configStore.config.editing.enableTabIndent" 
           @update:modelValue="handleToggleTabIndent"
         />
       </SettingItem>

@@ -53,17 +53,17 @@ const createEditor = async () => {
 
   // 获取Tab相关扩展
   const tabExtensions = getTabExtensions(
-      configStore.config.tabSize,
-      configStore.config.enableTabIndent,
-      configStore.config.tabType
+      configStore.config.editing.tabSize,
+      configStore.config.editing.enableTabIndent,
+      configStore.config.editing.tabType
   );
 
   // 创建字体扩展
   const fontExtension = createFontExtensionFromBackend({
-    fontFamily: configStore.config.fontFamily,
-    fontSize: configStore.config.fontSize,
-    lineHeight: configStore.config.lineHeight,
-    fontWeight: configStore.config.fontWeight
+    fontFamily: configStore.config.editing.fontFamily,
+    fontSize: configStore.config.editing.fontSize,
+    lineHeight: configStore.config.editing.lineHeight,
+    fontWeight: configStore.config.editing.fontWeight
   });
 
   // 创建统计信息更新扩展
@@ -148,9 +148,9 @@ const reconfigureTabSettings = () => {
   if (!editorStore.editorView) return;
   updateTabConfig(
       editorStore.editorView as EditorView,
-      configStore.config.tabSize,
-      configStore.config.enableTabIndent,
-      configStore.config.tabType
+      configStore.config.editing.tabSize,
+      configStore.config.editing.enableTabIndent,
+      configStore.config.editing.tabType
   );
 };
 
@@ -158,32 +158,32 @@ const reconfigureTabSettings = () => {
 const reconfigureFontSettings = () => {
   if (!editorStore.editorView) return;
   updateFontConfig(editorStore.editorView as EditorView, {
-    fontFamily: configStore.config.fontFamily,
-    fontSize: configStore.config.fontSize,
-    lineHeight: configStore.config.lineHeight,
-    fontWeight: configStore.config.fontWeight
+    fontFamily: configStore.config.editing.fontFamily,
+    fontSize: configStore.config.editing.fontSize,
+    lineHeight: configStore.config.editing.lineHeight,
+    fontWeight: configStore.config.editing.fontWeight
   });
 };
 
 // 监听Tab设置变化
-watch(() => configStore.config.tabSize, reconfigureTabSettings);
-watch(() => configStore.config.enableTabIndent, reconfigureTabSettings);
-watch(() => configStore.config.tabType, reconfigureTabSettings);
+watch([
+  () => configStore.config.editing.tabSize,
+  () => configStore.config.editing.enableTabIndent,
+  () => configStore.config.editing.tabType,
+], () => {
+  reconfigureTabSettings();
+});
 
 // 监听字体大小变化
-watch(() => configStore.config.fontSize, () => {
+watch([
+  () => configStore.config.editing.fontFamily,
+  () => configStore.config.editing.fontSize,
+  () => configStore.config.editing.lineHeight,
+  () => configStore.config.editing.fontWeight,
+], () => {
   reconfigureFontSettings();
   editorStore.applyFontSize();
 });
-
-// 监听字体族变化
-watch(() => configStore.config.fontFamily, reconfigureFontSettings);
-
-// 监听字体粗细变化
-watch(() => configStore.config.fontWeight, reconfigureFontSettings);
-
-// 监听行高变化
-watch(() => configStore.config.lineHeight, reconfigureFontSettings);
 
 onMounted(() => {
   // 创建编辑器

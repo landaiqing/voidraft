@@ -52,7 +52,7 @@ const resetSettings = async () => {
   <div class="settings-page">
     <SettingSection :title="t('settings.globalHotkey')">
       <SettingItem :title="t('settings.enableGlobalHotkey')">
-        <ToggleSwitch v-model="configStore.config.alwaysOnTop" /> <!-- 此处使用alwaysOnTop作为示例 -->
+        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" /> <!-- 此处使用alwaysOnTop作为示例 -->
       </SettingItem>
       
       <div class="hotkey-selector">
@@ -87,19 +87,19 @@ const resetSettings = async () => {
     
     <SettingSection :title="t('settings.window')">
       <SettingItem :title="t('settings.showInSystemTray')">
-        <ToggleSwitch v-model="configStore.config.alwaysOnTop" />  <!-- 需要后端实现 -->
+        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" />  <!-- 需要后端实现 -->
       </SettingItem>
       <SettingItem :title="t('settings.alwaysOnTop')">
-        <ToggleSwitch v-model="configStore.config.alwaysOnTop" @update:modelValue="configStore.toggleAlwaysOnTop" />
+        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" @update:modelValue="configStore.toggleAlwaysOnTop" />
       </SettingItem>
     </SettingSection>
     
     <SettingSection :title="t('settings.bufferFiles')">
       <SettingItem :title="t('settings.useCustomLocation')">
-        <ToggleSwitch v-model="configStore.config.alwaysOnTop" /> <!-- 需要后端实现 -->
+        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" /> <!-- 需要后端实现 -->
       </SettingItem>
       <div class="directory-selector">
-        <div class="path-display">{{ configStore.config.alwaysOnTop ? 'C:/Custom/Path' : 'Default Location' }}</div>
+        <div class="path-display">{{ configStore.config.general.alwaysOnTop ? 'C:/Custom/Path' : 'Default Location' }}</div>
         <button class="select-button">{{ t('settings.selectDirectory') }}</button>
       </div>
     </SettingSection>

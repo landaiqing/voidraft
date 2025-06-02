@@ -68,7 +68,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 	fixed := false
 
 	switch key {
-	case "editor.font_size":
+	case "editing.font_size":
 		if intVal, ok := value.(int); ok {
 			if intVal < limits.FontSizeMin {
 				cs.logger.Warning("Config: Font size too small, fixing", "original", intVal, "fixed", limits.FontSizeMin)
@@ -80,7 +80,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 			}
 		}
 
-	case "editor.tab_size":
+	case "editing.tab_size":
 		if intVal, ok := value.(int); ok {
 			if intVal < limits.TabSizeMin {
 				cs.logger.Warning("Config: Tab size too small, fixing", "original", intVal, "fixed", limits.TabSizeMin)
@@ -92,7 +92,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 			}
 		}
 
-	case "editor.tab_type":
+	case "editing.tab_type":
 		if strVal, ok := value.(string); ok {
 			validTypes := []string{string(models.TabTypeSpaces), string(models.TabTypeTab)}
 			isValid := false
@@ -108,7 +108,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 			}
 		}
 
-	case "editor.language":
+	case "appearance.language":
 		if strVal, ok := value.(string); ok {
 			validLanguages := []string{string(models.LangZhCN), string(models.LangEnUS)}
 			isValid := false
@@ -124,7 +124,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 			}
 		}
 
-	case "document.auto_save_delay":
+	case "editing.auto_save_delay":
 		if intVal, ok := value.(int); ok {
 			if intVal < 1000 {
 				cs.logger.Warning("Config: Auto save delay too small, fixing", "original", intVal, "fixed", 1000)
@@ -136,7 +136,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 			}
 		}
 
-	case "document.change_threshold":
+	case "editing.change_threshold":
 		if intVal, ok := value.(int); ok {
 			if intVal < 10 {
 				cs.logger.Warning("Config: Change threshold too small, fixing", "original", intVal, "fixed", 10)
@@ -148,7 +148,7 @@ func (cs *ConfigService) validateAndFixValue(key string, value interface{}) (int
 			}
 		}
 
-	case "document.min_save_interval":
+	case "editing.min_save_interval":
 		if intVal, ok := value.(int); ok {
 			if intVal < 100 {
 				cs.logger.Warning("Config: Min save interval too small, fixing", "original", intVal, "fixed", 100)
@@ -175,39 +175,39 @@ func (cs *ConfigService) validateAllConfig() error {
 	}
 
 	// 验证编辑器配置
-	if fixedValue, fixed := cs.validateAndFixValue("editor.font_size", config.Editor.FontSize); fixed {
-		cs.viper.Set("editor.font_size", fixedValue)
+	if fixedValue, fixed := cs.validateAndFixValue("editing.font_size", config.Editing.FontSize); fixed {
+		cs.viper.Set("editing.font_size", fixedValue)
 		hasChanges = true
 	}
 
-	if fixedValue, fixed := cs.validateAndFixValue("editor.tab_size", config.Editor.TabSize); fixed {
-		cs.viper.Set("editor.tab_size", fixedValue)
+	if fixedValue, fixed := cs.validateAndFixValue("editing.tab_size", config.Editing.TabSize); fixed {
+		cs.viper.Set("editing.tab_size", fixedValue)
 		hasChanges = true
 	}
 
-	if fixedValue, fixed := cs.validateAndFixValue("editor.tab_type", string(config.Editor.TabType)); fixed {
-		cs.viper.Set("editor.tab_type", fixedValue)
+	if fixedValue, fixed := cs.validateAndFixValue("editing.tab_type", string(config.Editing.TabType)); fixed {
+		cs.viper.Set("editing.tab_type", fixedValue)
 		hasChanges = true
 	}
 
-	if fixedValue, fixed := cs.validateAndFixValue("editor.language", string(config.Editor.Language)); fixed {
-		cs.viper.Set("editor.language", fixedValue)
+	if fixedValue, fixed := cs.validateAndFixValue("appearance.language", string(config.Appearance.Language)); fixed {
+		cs.viper.Set("appearance.language", fixedValue)
 		hasChanges = true
 	}
 
-	// 验证文档配置
-	if fixedValue, fixed := cs.validateAndFixValue("document.auto_save_delay", config.Document.AutoSaveDelay); fixed {
-		cs.viper.Set("document.auto_save_delay", fixedValue)
+	// 验证保存选项配置
+	if fixedValue, fixed := cs.validateAndFixValue("editing.auto_save_delay", config.Editing.AutoSaveDelay); fixed {
+		cs.viper.Set("editing.auto_save_delay", fixedValue)
 		hasChanges = true
 	}
 
-	if fixedValue, fixed := cs.validateAndFixValue("document.change_threshold", config.Document.ChangeThreshold); fixed {
-		cs.viper.Set("document.change_threshold", fixedValue)
+	if fixedValue, fixed := cs.validateAndFixValue("editing.change_threshold", config.Editing.ChangeThreshold); fixed {
+		cs.viper.Set("editing.change_threshold", fixedValue)
 		hasChanges = true
 	}
 
-	if fixedValue, fixed := cs.validateAndFixValue("document.min_save_interval", config.Document.MinSaveInterval); fixed {
-		cs.viper.Set("document.min_save_interval", fixedValue)
+	if fixedValue, fixed := cs.validateAndFixValue("editing.min_save_interval", config.Editing.MinSaveInterval); fixed {
+		cs.viper.Set("editing.min_save_interval", fixedValue)
 		hasChanges = true
 	}
 
@@ -280,24 +280,24 @@ func NewConfigService(logger *log.LoggerService) *ConfigService {
 func setDefaults(v *viper.Viper) {
 	defaultConfig := models.NewDefaultAppConfig()
 
-	// 编辑器配置默认值
-	v.SetDefault("editor.font_size", defaultConfig.Editor.FontSize)
-	v.SetDefault("editor.font_family", defaultConfig.Editor.FontFamily)
-	v.SetDefault("editor.font_weight", defaultConfig.Editor.FontWeight)
-	v.SetDefault("editor.line_height", defaultConfig.Editor.LineHeight)
-	v.SetDefault("editor.enable_tab_indent", defaultConfig.Editor.EnableTabIndent)
-	v.SetDefault("editor.tab_size", defaultConfig.Editor.TabSize)
-	v.SetDefault("editor.tab_type", defaultConfig.Editor.TabType)
-	v.SetDefault("editor.language", defaultConfig.Editor.Language)
-	v.SetDefault("editor.always_on_top", defaultConfig.Editor.AlwaysOnTop)
+	// 通用设置默认值
+	v.SetDefault("general.always_on_top", defaultConfig.General.AlwaysOnTop)
+	v.SetDefault("general.data_path", defaultConfig.General.DataPath)
 
-	// 文档配置默认值
-	v.SetDefault("document.auto_save_delay", defaultConfig.Document.AutoSaveDelay)
-	v.SetDefault("document.change_threshold", defaultConfig.Document.ChangeThreshold)
-	v.SetDefault("document.min_save_interval", defaultConfig.Document.MinSaveInterval)
+	// 编辑设置默认值
+	v.SetDefault("editing.font_size", defaultConfig.Editing.FontSize)
+	v.SetDefault("editing.font_family", defaultConfig.Editing.FontFamily)
+	v.SetDefault("editing.font_weight", defaultConfig.Editing.FontWeight)
+	v.SetDefault("editing.line_height", defaultConfig.Editing.LineHeight)
+	v.SetDefault("editing.enable_tab_indent", defaultConfig.Editing.EnableTabIndent)
+	v.SetDefault("editing.tab_size", defaultConfig.Editing.TabSize)
+	v.SetDefault("editing.tab_type", defaultConfig.Editing.TabType)
+	v.SetDefault("editing.auto_save_delay", defaultConfig.Editing.AutoSaveDelay)
+	v.SetDefault("editing.change_threshold", defaultConfig.Editing.ChangeThreshold)
+	v.SetDefault("editing.min_save_interval", defaultConfig.Editing.MinSaveInterval)
 
-	// 路径配置默认值
-	v.SetDefault("paths.data_path", defaultConfig.Paths.DataPath)
+	// 外观设置默认值
+	v.SetDefault("appearance.language", defaultConfig.Appearance.Language)
 
 	// 元数据默认值
 	v.SetDefault("metadata.version", defaultConfig.Metadata.Version)

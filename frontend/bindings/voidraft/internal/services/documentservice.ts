@@ -61,7 +61,7 @@ export function GetDiffInfo(oldText: string, newText: string): Promise<$models.D
 /**
  * GetSaveSettings 获取文档保存设置
  */
-export function GetSaveSettings(): Promise<models$0.DocumentConfig | null> & { cancel(): void } {
+export function GetSaveSettings(): Promise<models$0.EditingConfig | null> & { cancel(): void } {
     let $resultPromise = $Call.ByID(4257471801) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType4($result);
@@ -129,7 +129,7 @@ export function UpdateActiveDocumentContent(content: string): Promise<void> & { 
 /**
  * UpdateSaveSettings 更新文档保存设置
  */
-export function UpdateSaveSettings(docConfig: models$0.DocumentConfig): Promise<void> & { cancel(): void } {
+export function UpdateSaveSettings(docConfig: models$0.EditingConfig): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1245479534, docConfig) as any;
     return $resultPromise;
 }
@@ -138,5 +138,5 @@ export function UpdateSaveSettings(docConfig: models$0.DocumentConfig): Promise<
 const $$createType0 = models$0.Document.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.DiffResult.createFrom;
-const $$createType3 = models$0.DocumentConfig.createFrom;
+const $$createType3 = models$0.EditingConfig.createFrom;
 const $$createType4 = $Create.Nullable($$createType3);

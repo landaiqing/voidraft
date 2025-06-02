@@ -10,23 +10,33 @@ import {Create as $Create} from "@wailsio/runtime";
 import * as time$0 from "../../../time/models.js";
 
 /**
- * AppConfig 应用配置 - 包含业务配置和路径配置
+ * AppConfig 应用配置 - 按照前端设置页面分类组织
  */
 export class AppConfig {
     /**
-     * 编辑器配置
+     * 通用设置
      */
-    "editor": EditorConfig;
+    "general": GeneralConfig;
 
     /**
-     * 文档配置
+     * 编辑设置
      */
-    "document": DocumentConfig;
+    "editing": EditingConfig;
 
     /**
-     * 路径配置
+     * 外观设置
      */
-    "paths": PathsConfig;
+    "appearance": AppearanceConfig;
+
+    /**
+     * 快捷键设置
+     */
+    "keyBindings": KeyBindingsConfig;
+
+    /**
+     * 更新设置
+     */
+    "updates": UpdatesConfig;
 
     /**
      * 配置元数据
@@ -35,14 +45,20 @@ export class AppConfig {
 
     /** Creates a new AppConfig instance. */
     constructor($$source: Partial<AppConfig> = {}) {
-        if (!("editor" in $$source)) {
-            this["editor"] = (new EditorConfig());
+        if (!("general" in $$source)) {
+            this["general"] = (new GeneralConfig());
         }
-        if (!("document" in $$source)) {
-            this["document"] = (new DocumentConfig());
+        if (!("editing" in $$source)) {
+            this["editing"] = (new EditingConfig());
         }
-        if (!("paths" in $$source)) {
-            this["paths"] = (new PathsConfig());
+        if (!("appearance" in $$source)) {
+            this["appearance"] = (new AppearanceConfig());
+        }
+        if (!("keyBindings" in $$source)) {
+            this["keyBindings"] = (new KeyBindingsConfig());
+        }
+        if (!("updates" in $$source)) {
+            this["updates"] = (new UpdatesConfig());
         }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
@@ -59,20 +75,55 @@ export class AppConfig {
         const $$createField1_0 = $$createType1;
         const $$createField2_0 = $$createType2;
         const $$createField3_0 = $$createType3;
+        const $$createField4_0 = $$createType4;
+        const $$createField5_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("editor" in $$parsedSource) {
-            $$parsedSource["editor"] = $$createField0_0($$parsedSource["editor"]);
+        if ("general" in $$parsedSource) {
+            $$parsedSource["general"] = $$createField0_0($$parsedSource["general"]);
         }
-        if ("document" in $$parsedSource) {
-            $$parsedSource["document"] = $$createField1_0($$parsedSource["document"]);
+        if ("editing" in $$parsedSource) {
+            $$parsedSource["editing"] = $$createField1_0($$parsedSource["editing"]);
         }
-        if ("paths" in $$parsedSource) {
-            $$parsedSource["paths"] = $$createField2_0($$parsedSource["paths"]);
+        if ("appearance" in $$parsedSource) {
+            $$parsedSource["appearance"] = $$createField2_0($$parsedSource["appearance"]);
+        }
+        if ("keyBindings" in $$parsedSource) {
+            $$parsedSource["keyBindings"] = $$createField3_0($$parsedSource["keyBindings"]);
+        }
+        if ("updates" in $$parsedSource) {
+            $$parsedSource["updates"] = $$createField4_0($$parsedSource["updates"]);
         }
         if ("metadata" in $$parsedSource) {
-            $$parsedSource["metadata"] = $$createField3_0($$parsedSource["metadata"]);
+            $$parsedSource["metadata"] = $$createField5_0($$parsedSource["metadata"]);
         }
         return new AppConfig($$parsedSource as Partial<AppConfig>);
+    }
+}
+
+/**
+ * AppearanceConfig 外观设置配置
+ */
+export class AppearanceConfig {
+    /**
+     * 界面语言
+     */
+    "language": LanguageType;
+
+    /** Creates a new AppearanceConfig instance. */
+    constructor($$source: Partial<AppearanceConfig> = {}) {
+        if (!("language" in $$source)) {
+            this["language"] = ("" as LanguageType);
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AppearanceConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AppearanceConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AppearanceConfig($$parsedSource as Partial<AppearanceConfig>);
     }
 }
 
@@ -141,55 +192,12 @@ export class Document {
      * Creates a new Document instance from a string or object.
      */
     static createFrom($$source: any = {}): Document {
-        const $$createField0_0 = $$createType4;
+        const $$createField0_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("meta" in $$parsedSource) {
             $$parsedSource["meta"] = $$createField0_0($$parsedSource["meta"]);
         }
         return new Document($$parsedSource as Partial<Document>);
-    }
-}
-
-/**
- * DocumentConfig 定义文档配置
- */
-export class DocumentConfig {
-    /**
-     * 自动保存延迟（毫秒）- 内容变更后多久自动保存
-     */
-    "autoSaveDelay": number;
-
-    /**
-     * 变更字符阈值，超过此阈值立即触发保存
-     */
-    "changeThreshold": number;
-
-    /**
-     * 最小保存间隔（毫秒）- 两次保存之间的最小时间间隔，避免频繁IO
-     */
-    "minSaveInterval": number;
-
-    /** Creates a new DocumentConfig instance. */
-    constructor($$source: Partial<DocumentConfig> = {}) {
-        if (!("autoSaveDelay" in $$source)) {
-            this["autoSaveDelay"] = 0;
-        }
-        if (!("changeThreshold" in $$source)) {
-            this["changeThreshold"] = 0;
-        }
-        if (!("minSaveInterval" in $$source)) {
-            this["minSaveInterval"] = 0;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new DocumentConfig instance from a string or object.
-     */
-    static createFrom($$source: any = {}): DocumentConfig {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new DocumentConfig($$parsedSource as Partial<DocumentConfig>);
     }
 }
 
@@ -245,10 +253,11 @@ export class DocumentMeta {
 }
 
 /**
- * EditorConfig 定义编辑器配置
+ * EditingConfig 编辑设置配置
  */
-export class EditorConfig {
+export class EditingConfig {
     /**
+     * 字体设置
      * 字体大小
      */
     "fontSize": number;
@@ -269,6 +278,7 @@ export class EditorConfig {
     "lineHeight": number;
 
     /**
+     * Tab设置
      * 是否启用Tab缩进
      */
     "enableTabIndent": boolean;
@@ -284,17 +294,23 @@ export class EditorConfig {
     "tabType": TabType;
 
     /**
-     * 界面语言
+     * 保存选项
+     * 自动保存延迟（毫秒）
      */
-    "language": LanguageType;
+    "autoSaveDelay": number;
 
     /**
-     * 窗口是否置顶
+     * 变更字符阈值
      */
-    "alwaysOnTop": boolean;
+    "changeThreshold": number;
 
-    /** Creates a new EditorConfig instance. */
-    constructor($$source: Partial<EditorConfig> = {}) {
+    /**
+     * 最小保存间隔（毫秒）
+     */
+    "minSaveInterval": number;
+
+    /** Creates a new EditingConfig instance. */
+    constructor($$source: Partial<EditingConfig> = {}) {
         if (!("fontSize" in $$source)) {
             this["fontSize"] = 0;
         }
@@ -316,22 +332,80 @@ export class EditorConfig {
         if (!("tabType" in $$source)) {
             this["tabType"] = ("" as TabType);
         }
-        if (!("language" in $$source)) {
-            this["language"] = ("" as LanguageType);
+        if (!("autoSaveDelay" in $$source)) {
+            this["autoSaveDelay"] = 0;
         }
-        if (!("alwaysOnTop" in $$source)) {
-            this["alwaysOnTop"] = false;
+        if (!("changeThreshold" in $$source)) {
+            this["changeThreshold"] = 0;
+        }
+        if (!("minSaveInterval" in $$source)) {
+            this["minSaveInterval"] = 0;
         }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new EditorConfig instance from a string or object.
+     * Creates a new EditingConfig instance from a string or object.
      */
-    static createFrom($$source: any = {}): EditorConfig {
+    static createFrom($$source: any = {}): EditingConfig {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new EditorConfig($$parsedSource as Partial<EditorConfig>);
+        return new EditingConfig($$parsedSource as Partial<EditingConfig>);
+    }
+}
+
+/**
+ * GeneralConfig 通用设置配置
+ */
+export class GeneralConfig {
+    /**
+     * 窗口是否置顶
+     */
+    "alwaysOnTop": boolean;
+
+    /**
+     * 数据存储路径
+     */
+    "dataPath": string;
+
+    /** Creates a new GeneralConfig instance. */
+    constructor($$source: Partial<GeneralConfig> = {}) {
+        if (!("alwaysOnTop" in $$source)) {
+            this["alwaysOnTop"] = false;
+        }
+        if (!("dataPath" in $$source)) {
+            this["dataPath"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GeneralConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GeneralConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GeneralConfig($$parsedSource as Partial<GeneralConfig>);
+    }
+}
+
+/**
+ * KeyBindingsConfig 快捷键设置配置
+ */
+export class KeyBindingsConfig {
+
+    /** Creates a new KeyBindingsConfig instance. */
+    constructor($$source: Partial<KeyBindingsConfig> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new KeyBindingsConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): KeyBindingsConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new KeyBindingsConfig($$parsedSource as Partial<KeyBindingsConfig>);
     }
 }
 
@@ -356,33 +430,6 @@ export enum LanguageType {
 };
 
 /**
- * PathsConfig 路径配置集合
- */
-export class PathsConfig {
-    /**
-     * 数据存储路径
-     */
-    "dataPath": string;
-
-    /** Creates a new PathsConfig instance. */
-    constructor($$source: Partial<PathsConfig> = {}) {
-        if (!("dataPath" in $$source)) {
-            this["dataPath"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new PathsConfig instance from a string or object.
-     */
-    static createFrom($$source: any = {}): PathsConfig {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new PathsConfig($$parsedSource as Partial<PathsConfig>);
-    }
-}
-
-/**
  * TabType 定义了制表符类型
  */
 export enum TabType {
@@ -402,9 +449,31 @@ export enum TabType {
     TabTypeTab = "tab",
 };
 
+/**
+ * UpdatesConfig 更新设置配置
+ */
+export class UpdatesConfig {
+
+    /** Creates a new UpdatesConfig instance. */
+    constructor($$source: Partial<UpdatesConfig> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdatesConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdatesConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdatesConfig($$parsedSource as Partial<UpdatesConfig>);
+    }
+}
+
 // Private type creation functions
-const $$createType0 = EditorConfig.createFrom;
-const $$createType1 = DocumentConfig.createFrom;
-const $$createType2 = PathsConfig.createFrom;
-const $$createType3 = ConfigMetadata.createFrom;
-const $$createType4 = DocumentMeta.createFrom;
+const $$createType0 = GeneralConfig.createFrom;
+const $$createType1 = EditingConfig.createFrom;
+const $$createType2 = AppearanceConfig.createFrom;
+const $$createType3 = KeyBindingsConfig.createFrom;
+const $$createType4 = UpdatesConfig.createFrom;
+const $$createType5 = ConfigMetadata.createFrom;
+const $$createType6 = DocumentMeta.createFrom;

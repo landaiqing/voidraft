@@ -16,29 +16,6 @@ const (
 	TabTypeTab TabType = "tab"
 )
 
-// DocumentConfig 定义文档配置
-type DocumentConfig struct {
-	// 自动保存延迟（毫秒）- 内容变更后多久自动保存
-	AutoSaveDelay int `json:"autoSaveDelay" yaml:"auto_save_delay" mapstructure:"auto_save_delay"`
-	// 变更字符阈值，超过此阈值立即触发保存
-	ChangeThreshold int `json:"changeThreshold" yaml:"change_threshold" mapstructure:"change_threshold"`
-	// 最小保存间隔（毫秒）- 两次保存之间的最小时间间隔，避免频繁IO
-	MinSaveInterval int `json:"minSaveInterval" yaml:"min_save_interval" mapstructure:"min_save_interval"`
-}
-
-// EditorConfig 定义编辑器配置
-type EditorConfig struct {
-	FontSize        int          `json:"fontSize" yaml:"font_size" mapstructure:"font_size"`                        // 字体大小
-	FontFamily      string       `json:"fontFamily" yaml:"font_family" mapstructure:"font_family"`                  // 字体族
-	FontWeight      string       `json:"fontWeight" yaml:"font_weight" mapstructure:"font_weight"`                  // 字体粗细
-	LineHeight      float64      `json:"lineHeight" yaml:"line_height" mapstructure:"line_height"`                  // 行高
-	EnableTabIndent bool         `json:"enableTabIndent" yaml:"enable_tab_indent" mapstructure:"enable_tab_indent"` // 是否启用Tab缩进
-	TabSize         int          `json:"tabSize" yaml:"tab_size" mapstructure:"tab_size"`                           // Tab大小
-	TabType         TabType      `json:"tabType" yaml:"tab_type" mapstructure:"tab_type"`                           // Tab类型（空格或Tab）
-	Language        LanguageType `json:"language" yaml:"language" mapstructure:"language"`                          // 界面语言
-	AlwaysOnTop     bool         `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"`             // 窗口是否置顶
-}
-
 // LanguageType 语言类型定义
 type LanguageType string
 
@@ -49,17 +26,54 @@ const (
 	LangEnUS LanguageType = "en-US"
 )
 
-// PathsConfig 路径配置集合
-type PathsConfig struct {
-	DataPath string `json:"dataPath" yaml:"data_path" mapstructure:"data_path"` // 数据存储路径
+// GeneralConfig 通用设置配置
+type GeneralConfig struct {
+	AlwaysOnTop bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"` // 窗口是否置顶
+	DataPath    string `json:"dataPath" yaml:"data_path" mapstructure:"data_path"`            // 数据存储路径
 }
 
-// AppConfig 应用配置 - 包含业务配置和路径配置
+// EditingConfig 编辑设置配置
+type EditingConfig struct {
+	// 字体设置
+	FontSize   int     `json:"fontSize" yaml:"font_size" mapstructure:"font_size"`       // 字体大小
+	FontFamily string  `json:"fontFamily" yaml:"font_family" mapstructure:"font_family"` // 字体族
+	FontWeight string  `json:"fontWeight" yaml:"font_weight" mapstructure:"font_weight"` // 字体粗细
+	LineHeight float64 `json:"lineHeight" yaml:"line_height" mapstructure:"line_height"` // 行高
+
+	// Tab设置
+	EnableTabIndent bool    `json:"enableTabIndent" yaml:"enable_tab_indent" mapstructure:"enable_tab_indent"` // 是否启用Tab缩进
+	TabSize         int     `json:"tabSize" yaml:"tab_size" mapstructure:"tab_size"`                           // Tab大小
+	TabType         TabType `json:"tabType" yaml:"tab_type" mapstructure:"tab_type"`                           // Tab类型（空格或Tab）
+
+	// 保存选项
+	AutoSaveDelay   int `json:"autoSaveDelay" yaml:"auto_save_delay" mapstructure:"auto_save_delay"`       // 自动保存延迟（毫秒）
+	ChangeThreshold int `json:"changeThreshold" yaml:"change_threshold" mapstructure:"change_threshold"`   // 变更字符阈值
+	MinSaveInterval int `json:"minSaveInterval" yaml:"min_save_interval" mapstructure:"min_save_interval"` // 最小保存间隔（毫秒）
+}
+
+// AppearanceConfig 外观设置配置
+type AppearanceConfig struct {
+	Language LanguageType `json:"language" yaml:"language" mapstructure:"language"` // 界面语言
+}
+
+// KeyBindingsConfig 快捷键设置配置
+type KeyBindingsConfig struct {
+	// 预留给未来的快捷键配置
+}
+
+// UpdatesConfig 更新设置配置
+type UpdatesConfig struct {
+	// 预留给未来的更新配置
+}
+
+// AppConfig 应用配置 - 按照前端设置页面分类组织
 type AppConfig struct {
-	Editor   EditorConfig   `json:"editor" yaml:"editor" mapstructure:"editor"`       // 编辑器配置
-	Document DocumentConfig `json:"document" yaml:"document" mapstructure:"document"` // 文档配置
-	Paths    PathsConfig    `json:"paths" yaml:"paths" mapstructure:"paths"`          // 路径配置
-	Metadata ConfigMetadata `json:"metadata" yaml:"metadata" mapstructure:"metadata"` // 配置元数据
+	General     GeneralConfig     `json:"general" yaml:"general" mapstructure:"general"`               // 通用设置
+	Editing     EditingConfig     `json:"editing" yaml:"editing" mapstructure:"editing"`               // 编辑设置
+	Appearance  AppearanceConfig  `json:"appearance" yaml:"appearance" mapstructure:"appearance"`      // 外观设置
+	KeyBindings KeyBindingsConfig `json:"keyBindings" yaml:"key_bindings" mapstructure:"key_bindings"` // 快捷键设置
+	Updates     UpdatesConfig     `json:"updates" yaml:"updates" mapstructure:"updates"`               // 更新设置
+	Metadata    ConfigMetadata    `json:"metadata" yaml:"metadata" mapstructure:"metadata"`            // 配置元数据
 }
 
 // ConfigMetadata 配置元数据
@@ -80,24 +94,33 @@ func NewDefaultAppConfig() *AppConfig {
 	dataDir := filepath.Join(currentDir, "data")
 
 	return &AppConfig{
-		Editor: EditorConfig{
-			FontSize:        13,
-			FontFamily:      `"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
-			FontWeight:      "normal",
-			LineHeight:      1.5,
+		General: GeneralConfig{
+			AlwaysOnTop: false,
+			DataPath:    dataDir,
+		},
+		Editing: EditingConfig{
+			// 字体设置
+			FontSize:   13,
+			FontFamily: `"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
+			FontWeight: "normal",
+			LineHeight: 1.5,
+			// Tab设置
 			EnableTabIndent: true,
 			TabSize:         4,
 			TabType:         TabTypeSpaces,
-			Language:        LangZhCN,
-			AlwaysOnTop:     false,
-		},
-		Document: DocumentConfig{
+			// 保存选项
 			AutoSaveDelay:   5000, // 5秒后自动保存
 			ChangeThreshold: 500,  // 500个字符变更触发保存
 			MinSaveInterval: 1000, // 最小间隔1000毫秒
 		},
-		Paths: PathsConfig{
-			DataPath: dataDir,
+		Appearance: AppearanceConfig{
+			Language: LangZhCN,
+		},
+		KeyBindings: KeyBindingsConfig{
+			// 预留给未来的快捷键配置
+		},
+		Updates: UpdatesConfig{
+			// 预留给未来的更新配置
 		},
 		Metadata: ConfigMetadata{
 			Version:     "1.0.0",
