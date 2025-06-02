@@ -1,32 +1,26 @@
 <script setup lang="ts">
 import {useEditorStore} from '@/stores/editorStore';
-import {useConfigStore} from '@/stores/configStore';
+import {useConfigStore, SUPPORTED_LOCALES, type SupportedLocaleType} from '@/stores/configStore';
 import {useLogStore} from '@/stores/logStore';
 import { useI18n } from 'vue-i18n';
 import { ref, onMounted, watch } from 'vue';
-import {SUPPORTED_LOCALES, setLocale, SupportedLocaleType} from '@/i18n';
-import {LanguageType} from '@/../bindings/voidraft/internal/models/models';
 import { ConfigUtils } from '@/utils/configUtils';
 import * as runtime from '@wailsio/runtime';
+import { useRouter } from 'vue-router';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const logStore = useLogStore();
 const { t, locale } = useI18n();
-
+const router = useRouter();
 // 语言下拉菜单
 const showLanguageMenu = ref(false);
 
 // 切换语言
 const changeLanguage = async (localeCode: SupportedLocaleType) => {
-  // 使用工具类转换语言类型
-  const backendLanguage = ConfigUtils.frontendLanguageToBackend(localeCode);
-  
   try {
-    // 设置后端语言配置
-    await configStore.setLanguage(backendLanguage);
-    // 设置前端语言
-    setLocale(localeCode);
+    // 使用 configStore 的语言设置方法
+    await configStore.setLocale(localeCode);
   } catch (error) {
     console.error('Failed to change language:', error);
   }
@@ -44,25 +38,16 @@ const toggleAlwaysOnTop = async () => {
   try {
     await configStore.toggleAlwaysOnTop();
     // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
-    runtime.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
+    await runtime.Window.SetAlwaysOnTop(configStore.config.alwaysOnTop);
   } catch (error) {
     console.error('Failed to set window always on top:', error);
     logStore.error(t('config.alwaysOnTopFailed'));
   }
 };
 
-// 打开设置窗口
-const openSettingsWindow = () => {
-  try {
-    // 直接操作窗口对象
-    runtime.Events.Emit({
-      name: "show_settings_window",
-      data: {},
-    });
-  } catch (error) {
-    console.error('Failed to open settings window:', error);
-    logStore.error('Failed to open settings window');
-  }
+// 打开设置页面
+const openSettings = () => {
+  router.push('/settings');
 };
 
 // 初始化配置
@@ -75,16 +60,10 @@ onMounted(async () => {
   // 设置窗口置顶状态
   if (configStore.config.alwaysOnTop) {
     try {
-      runtime.Window.SetAlwaysOnTop(true);
+      await runtime.Window.SetAlwaysOnTop(true);
     } catch (error) {
       console.error('Failed to set window always on top:', error);
     }
-  }
-  
-  // 同步前端语言设置
-  const frontendLocale = ConfigUtils.backendLanguageToFrontend(configStore.config.language);
-  if (locale.value !== frontendLocale) {
-    setLocale(frontendLocale);
   }
 });
 
@@ -130,9 +109,9 @@ watch(() => configStore.configLoaded, (isLoaded) => {
           {{ t('toolbar.tabType.' + (configStore.config.tabType === 'spaces' ? 'spaces' : 'tab')) }}
         </span>
         <span class="tab-size" title="Tab大小" v-if="configStore.config.tabType === 'spaces'">
-          <button class="tab-btn" @click="() => configStore.decreaseTabSize()" :disabled="configStore.config.tabSize <= configStore.MIN_TAB_SIZE">-</button>
+          <button class="tab-btn" @click="() => configStore.decreaseTabSize()" :disabled="configStore.config.tabSize <= configStore.tabSize.min">-</button>
           <span>{{ configStore.config.tabSize }}</span>
-          <button class="tab-btn" @click="() => configStore.increaseTabSize()" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
+          <button class="tab-btn" @click="() => configStore.increaseTabSize()" :disabled="configStore.config.tabSize >= configStore.tabSize.max">+</button>
         </span>
       </span>
 
@@ -167,7 +146,7 @@ watch(() => configStore.configLoaded, (isLoaded) => {
         </div>
       </div>
       
-      <button class="settings-btn" :title="t('toolbar.settings')" @click="openSettingsWindow">
+      <button class="settings-btn" :title="t('toolbar.settings')" @click="openSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>

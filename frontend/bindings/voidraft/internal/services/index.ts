@@ -3,9 +3,11 @@
 
 import * as ConfigService from "./configservice.js";
 import * as DocumentService from "./documentservice.js";
+import * as SystemService from "./systemservice.js";
 export {
     ConfigService,
-    DocumentService
+    DocumentService,
+    SystemService
 };
 
 export * from "./models.js";

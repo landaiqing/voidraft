@@ -9,6 +9,7 @@ import (
 type ServiceManager struct {
 	configService   *ConfigService
 	documentService *DocumentService
+	systemService   *SystemService
 	logger          *log.LoggerService
 }
 
@@ -23,6 +24,9 @@ func NewServiceManager() *ServiceManager {
 	// 初始化文档服务
 	documentService := NewDocumentService(configService, logger)
 
+	// 初始化系统服务
+	systemService := NewSystemService(logger)
+
 	// 初始化文档服务
 	err := documentService.Initialize()
 	if err != nil {
@@ -33,6 +37,7 @@ func NewServiceManager() *ServiceManager {
 	return &ServiceManager{
 		configService:   configService,
 		documentService: documentService,
+		systemService:   systemService,
 		logger:          logger,
 	}
 }
@@ -42,5 +47,6 @@ func (sm *ServiceManager) GetServices() []application.Service {
 	return []application.Service{
 		application.NewService(sm.configService),
 		application.NewService(sm.documentService),
+		application.NewService(sm.systemService),
 	}
 }

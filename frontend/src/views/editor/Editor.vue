@@ -19,7 +19,7 @@ import {
   updateFontConfig,
 } from './extensions';
 import { useI18n } from 'vue-i18n';
-import { DocumentService } from '@/../bindings/voidraft/internal/services';
+import { DocumentService } from '../../../bindings/voidraft/internal/services';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 
 const editorStore = useEditorStore();

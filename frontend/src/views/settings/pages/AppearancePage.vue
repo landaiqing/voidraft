@@ -4,9 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { ref } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
-import { LanguageType } from '@/../bindings/voidraft/internal/models/models';
-import { setLocale, SupportedLocaleType } from '@/i18n';
-import { ConfigUtils } from '@/utils/configUtils';
+import { LanguageType } from '../../../../bindings/voidraft/internal/models/models';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
@@ -23,12 +21,8 @@ const updateLanguage = async (event: Event) => {
   const selectedLanguage = select.value as LanguageType;
   
   try {
-    // 设置后端语言配置
+    // 使用 configStore 的语言设置方法
     await configStore.setLanguage(selectedLanguage);
-    
-    // 同步前端语言设置
-    const frontendLocale = ConfigUtils.backendLanguageToFrontend(selectedLanguage);
-    setLocale(frontendLocale);
   } catch (error) {
     console.error('Failed to update language:', error);
   }

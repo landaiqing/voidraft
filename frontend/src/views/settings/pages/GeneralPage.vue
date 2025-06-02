@@ -39,6 +39,13 @@ const updateSelectedKey = (event: Event) => {
 const toggleModifier = (key: keyof typeof selectedModifiers.value) => {
   selectedModifiers.value[key] = !selectedModifiers.value[key];
 };
+
+// 重置设置
+const resetSettings = async () => {
+  if (confirm(t('settings.confirmReset'))) {
+    await configStore.resetConfig();
+  }
+};
 </script>
 
 <template>
@@ -94,6 +101,20 @@ const toggleModifier = (key: keyof typeof selectedModifiers.value) => {
       <div class="directory-selector">
         <div class="path-display">{{ configStore.config.alwaysOnTop ? 'C:/Custom/Path' : 'Default Location' }}</div>
         <button class="select-button">{{ t('settings.selectDirectory') }}</button>
+      </div>
+    </SettingSection>
+    
+    <SettingSection :title="t('settings.dangerZone')">
+      <div class="danger-zone">
+        <div class="reset-section">
+          <div class="reset-info">
+            <h4>{{ t('settings.resetAllSettings') }}</h4>
+            <p>{{ t('settings.resetDescription') }}</p>
+          </div>
+          <button class="reset-button" @click="resetSettings">
+            {{ t('settings.reset') }}
+          </button>
+        </div>
       </div>
     </SettingSection>
   </div>
@@ -207,6 +228,61 @@ const toggleModifier = (key: keyof typeof selectedModifiers.value) => {
     
     &:active {
       transform: translateY(1px);
+    }
+  }
+}
+
+.danger-zone {
+  padding: 20px;
+  background-color: rgba(220, 53, 69, 0.05);
+  border: 1px solid rgba(220, 53, 69, 0.2);
+  border-radius: 6px;
+  margin-top: 10px;
+  
+  .reset-section {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    
+    .reset-info {
+      flex: 1;
+      
+      h4 {
+        margin: 0 0 6px 0;
+        color: #ff6b6b;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      
+      p {
+        margin: 0;
+        color: #b0b0b0;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+    }
+    
+    .reset-button {
+      padding: 8px 16px;
+      background-color: #dc3545;
+      border: 1px solid #c82333;
+      border-radius: 4px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      
+      &:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+      }
+      
+      &:active {
+        transform: translateY(1px);
+      }
     }
   }
 }

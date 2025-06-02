@@ -1,5 +1,5 @@
 import {defineStore} from 'pinia';
-import {ref, computed} from 'vue';
+import {computed, reactive} from 'vue';
 import {
     ConfigService
 } from '@/../bindings/voidraft/internal/services';
@@ -7,10 +7,34 @@ import {EditorConfig, TabType, LanguageType} from '@/../bindings/voidraft/intern
 import {useLogStore} from './logStore';
 import { useI18n } from 'vue-i18n';
 import { ConfigUtils } from '@/utils/configUtils';
-import { FONT_PRESETS, getFontPresetOptions, type FontPresetKey } from '@/editor/extensions/fontExtension';
 
-// 配置键映射 - 前端字段到后端配置键的映射
-const CONFIG_KEY_MAP = {
+// 国际化相关导入
+export type SupportedLocaleType = 'zh-CN' | 'en-US';
+
+// 支持的语言列表
+export const SUPPORTED_LOCALES = [
+    {
+        code: 'zh-CN' as SupportedLocaleType,
+        name: '简体中文'
+    },
+    {
+        code: 'en-US' as SupportedLocaleType,
+        name: 'English'
+    }
+];
+
+// 配置键映射和限制的类型定义
+type ConfigKeyMap = {
+    readonly [K in keyof EditorConfig]: string;
+};
+
+type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
+type StringConfigKey = 'fontFamily' | 'fontWeight';
+type BooleanConfigKey = 'enableTabIndent' | 'alwaysOnTop';
+type EnumConfigKey = 'tabType' | 'language';
+
+// 配置键映射
+const CONFIG_KEY_MAP: ConfigKeyMap = {
     fontSize: 'editor.font_size',
     fontFamily: 'editor.font_family',
     fontWeight: 'editor.font_weight',
@@ -26,236 +50,257 @@ const CONFIG_KEY_MAP = {
 const CONFIG_LIMITS = {
     fontSize: { min: 12, max: 28, default: 13 },
     tabSize: { min: 2, max: 8, default: 4 },
+    lineHeight: { min: 1.0, max: 3.0, default: 1.5 },
     tabType: { values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces }
 } as const;
 
+// 常用字体选项
+export const FONT_OPTIONS = [
+    { label: '鸿蒙字体', value: '"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif' },
+    { label: '微软雅黑', value: '"Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif' },
+    { label: '苹方字体', value: '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif' },
+    { label: 'JetBrains Mono', value: '"JetBrains Mono", "Fira Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace' },
+    { label: 'Fira Code', value: '"Fira Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace' },
+    { label: 'Source Code Pro', value: '"Source Code Pro", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace' },
+    { label: 'Cascadia Code', value: '"Cascadia Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace' },
+    { label: '系统等宽字体', value: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace' }
+] as const;
+
+// 获取浏览器的默认语言
+const getBrowserLanguage = (): SupportedLocaleType => {
+    const browserLang = navigator.language;
+    const langCode = browserLang.split('-')[0];
+
+    // 检查是否支持此语言
+    const supportedLang = SUPPORTED_LOCALES.find(locale =>
+        locale.code.startsWith(langCode) || locale.code.split('-')[0] === langCode
+    );
+
+    return supportedLang?.code || 'zh-CN';
+};
+
+// 默认配置
+const DEFAULT_CONFIG: EditorConfig = {
+    fontSize: CONFIG_LIMITS.fontSize.default,
+    fontFamily: FONT_OPTIONS[0].value,
+    fontWeight: 'normal',
+    lineHeight: CONFIG_LIMITS.lineHeight.default,
+    enableTabIndent: true,
+    tabSize: CONFIG_LIMITS.tabSize.default,
+    tabType: CONFIG_LIMITS.tabType.default,
+    language: LanguageType.LangZhCN,
+    alwaysOnTop: false
+};
+
 export const useConfigStore = defineStore('config', () => {
-    // 获取日志store
     const logStore = useLogStore();
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     
-    // 配置状态
-    const config = ref<EditorConfig>(new EditorConfig({
-        fontSize: CONFIG_LIMITS.fontSize.default,
-        fontFamily: '"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif',
-        fontWeight: 'normal',
-        lineHeight: 1.5,
-        enableTabIndent: true,
-        tabSize: CONFIG_LIMITS.tabSize.default,
-        tabType: CONFIG_LIMITS.tabType.default,
-        language: LanguageType.LangZhCN,
-        alwaysOnTop: false
-    }));
+    // 响应式状态
+    const state = reactive({
+        config: { ...DEFAULT_CONFIG } as EditorConfig,
+        isLoading: false,
+        configLoaded: false
+    });
 
-    // 加载状态
-    const isLoading = ref(false);
-    const configLoaded = ref(false);
+    // 计算属性 - 使用工厂函数简化
+    const createLimitComputed = (key: NumberConfigKey) => computed(() => CONFIG_LIMITS[key]);
+    const limits = {
+        fontSize: createLimitComputed('fontSize'),
+        tabSize: createLimitComputed('tabSize'),
+        lineHeight: createLimitComputed('lineHeight')
+    };
 
-    // 计算属性
-    const MIN_FONT_SIZE = computed(() => CONFIG_LIMITS.fontSize.min);
-    const MAX_FONT_SIZE = computed(() => CONFIG_LIMITS.fontSize.max);
-    const MIN_TAB_SIZE = computed(() => CONFIG_LIMITS.tabSize.min);
-    const MAX_TAB_SIZE = computed(() => CONFIG_LIMITS.tabSize.max);
-
-    // 从后端加载配置
-    async function loadConfig(): Promise<void> {
-        if (isLoading.value) return;
+    // 错误处理装饰器
+    const withErrorHandling = <T extends any[], R>(
+        fn: (...args: T) => Promise<R>,
+        errorMsg: string,
+        successMsg?: string
+    ) => async (...args: T): Promise<R | null> => {
+        const result = await fn(...args).catch(error => {
+            console.error(errorMsg, error);
+            logStore.error(t(errorMsg));
+            return null;
+        });
         
-        isLoading.value = true;
-        try {
-            const appConfig = await ConfigService.GetConfig();
-            
-            if (appConfig?.editor) {
-                Object.assign(config.value, appConfig.editor);
+        if (result !== null && successMsg) {
+            logStore.info(t(successMsg));
+        }
+        
+        return result;
+    };
+
+    // 通用配置更新方法
+    const updateConfig = withErrorHandling(
+        async <K extends keyof EditorConfig>(key: K, value: EditorConfig[K]): Promise<void> => {
+            // 确保配置已加载
+            if (!state.configLoaded && !state.isLoading) {
+                await initConfig();
             }
             
-            configLoaded.value = true;
-            logStore.info(t('config.loadSuccess'));
-        } catch (error) {
-            console.error('Failed to load configuration:', error);
-            logStore.error(t('config.loadFailed'));
-        } finally {
-            isLoading.value = false;
-        }
-    }
-
-    // 更新配置项的通用方法 - 直接调用后端Set方法
-    async function updateConfig<K extends keyof EditorConfig>(key: K, value: EditorConfig[K]): Promise<void> {
-        if (!configLoaded.value) return;
-        
-        try {
-            const backendKey = CONFIG_KEY_MAP[key as keyof typeof CONFIG_KEY_MAP];
+            const backendKey = CONFIG_KEY_MAP[key];
             if (!backendKey) {
-                throw new Error(`No backend key mapping found for ${String(key)}`);
+                throw new Error(`No backend key mapping found for ${key.toString()}`);
             }
             
             await ConfigService.Set(backendKey, value);
+            state.config[key] = value;
+        },
+        'config.saveFailed',
+        'config.saveSuccess'
+    );
+
+    // 加载配置
+    const initConfig = withErrorHandling(
+        async (): Promise<void> => {
+            if (state.isLoading) return;
             
-            // 更新本地状态
-            config.value[key] = value;
+            state.isLoading = true;
+            const appConfig = await ConfigService.GetConfig();
             
-            logStore.info(t('config.saveSuccess'));
-        } catch (error) {
-            console.error(`Failed to update config ${String(key)}:`, error);
-            logStore.error(t('config.saveFailed'));
-            throw error;
-        }
-    }
+            if (appConfig?.editor) {
+                Object.assign(state.config, appConfig.editor);
+            }
+            
+            state.configLoaded = true;
+            state.isLoading = false;
+        },
+        'config.loadFailed',
+        'config.loadSuccess'
+    );
 
-    // 字体大小操作
-    async function adjustFontSize(delta: number): Promise<void> {
-        const newSize = ConfigUtils.clamp(config.value.fontSize + delta, CONFIG_LIMITS.fontSize.min, CONFIG_LIMITS.fontSize.max);
-        await updateConfig('fontSize', newSize);
-    }
+    // 数值调整工厂函数
+    const createNumberAdjuster = (key: NumberConfigKey) => {
+        const limit = CONFIG_LIMITS[key];
+        return {
+            increase: () => updateConfig(key, ConfigUtils.clamp(state.config[key] + 1, limit.min, limit.max)),
+            decrease: () => updateConfig(key, ConfigUtils.clamp(state.config[key] - 1, limit.min, limit.max)),
+            set: (value: number) => updateConfig(key, ConfigUtils.clamp(value, limit.min, limit.max)),
+            reset: () => updateConfig(key, limit.default)
+        };
+    };
 
-    // Tab大小操作
-    async function adjustTabSize(delta: number): Promise<void> {
-        const newSize = ConfigUtils.clamp(config.value.tabSize + delta, CONFIG_LIMITS.tabSize.min, CONFIG_LIMITS.tabSize.max);
-        await updateConfig('tabSize', newSize);
-    }
+    // 布尔值切换工厂函数
+    const createToggler = (key: BooleanConfigKey) => 
+        () => updateConfig(key, !state.config[key]);
 
-    // 切换操作
-    async function toggleTabIndent(): Promise<void> {
-        await updateConfig('enableTabIndent', !config.value.enableTabIndent);
-    }
-
-    async function toggleTabType(): Promise<void> {
-        const newTabType = config.value.tabType === TabType.TabTypeSpaces ? TabType.TabTypeTab : TabType.TabTypeSpaces;
-        await updateConfig('tabType', newTabType);
-    }
-
-    async function toggleAlwaysOnTop(): Promise<void> {
-        await updateConfig('alwaysOnTop', !config.value.alwaysOnTop);
-    }
-
-    // 语言设置
-    async function setLanguage(language: LanguageType): Promise<void> {
-        try {
-            await ConfigService.Set(CONFIG_KEY_MAP.language, language);
-            config.value.language = language;
-            logStore.info(t('config.languageChanged'));
-        } catch (error) {
-            console.error('Failed to set language:', error);
-            logStore.error(t('config.languageChangeFailed'));
-            throw error;
-        }
-    }
+    // 枚举值切换工厂函数
+    const createEnumToggler = <T extends TabType>(key: 'tabType', values: readonly T[]) =>
+        () => {
+            const currentIndex = values.indexOf(state.config[key] as T);
+            const nextIndex = (currentIndex + 1) % values.length;
+            return updateConfig(key, values[nextIndex]);
+        };
 
     // 重置配置
-    async function resetConfig(): Promise<void> {
-        if (isLoading.value) return;
-        
-        try {
-            isLoading.value = true;
-            await ConfigService.ResetConfig();
-            await loadConfig();
-            logStore.info(t('config.resetSuccess'));
-        } catch (error) {
-            console.error('Failed to reset configuration:', error);
-            logStore.error(t('config.resetFailed'));
-        } finally {
-            isLoading.value = false;
-        }
-    }
-
-    // 设置字体大小
-    async function setFontSize(size: number): Promise<void> {
-        await updateConfig('fontSize', size);
-    }
-
-    // 设置Tab大小
-    async function setTabSize(size: number): Promise<void> {
-        await updateConfig('tabSize', size);
-    }
-
-    // 字体预设相关方法
-    async function setFontPreset(presetKey: FontPresetKey): Promise<void> {
-        const preset = FONT_PRESETS[presetKey];
-        if (!preset) {
-            throw new Error(`Unknown font preset: ${presetKey}`);
-        }
-
-        try {
-            // 批量更新字体相关配置
-            await updateConfig('fontFamily', preset.fontFamily);
-            await updateConfig('fontWeight', preset.fontWeight);
-            await updateConfig('lineHeight', preset.lineHeight);
-            // 可选择是否同时更新字体大小
-            // await updateConfig('fontSize', preset.fontSize);
+    const resetConfig = withErrorHandling(
+        async (): Promise<void> => {
+            if (state.isLoading) return;
             
-            logStore.info(`字体预设已切换为: ${preset.name}`);
-        } catch (error) {
-            console.error('Failed to set font preset:', error);
-            logStore.error('字体预设设置失败');
-            throw error;
-        }
-    }
+            state.isLoading = true;
+            await ConfigService.ResetConfig();
+            await initConfig();
+            state.isLoading = false;
+        },
+        'config.resetFailed',
+        'config.resetSuccess'
+    );
 
-    // 获取当前字体预设（如果匹配的话）
-    function getCurrentFontPreset(): FontPresetKey | null {
-        const currentFamily = config.value.fontFamily;
-        for (const [key, preset] of Object.entries(FONT_PRESETS)) {
-            if (preset.fontFamily === currentFamily) {
-                return key as FontPresetKey;
+    // 语言设置方法
+    const setLanguage = withErrorHandling(
+        async (language: LanguageType): Promise<void> => {
+            await ConfigService.Set(CONFIG_KEY_MAP.language, language);
+            state.config.language = language;
+            
+            // 同步更新前端语言
+            const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
+            locale.value = frontendLocale as any;
+        },
+        'config.languageChangeFailed',
+        'config.languageChanged'
+    );
+
+    // 通过前端语言代码设置语言
+    const setLocale = async (localeCode: SupportedLocaleType): Promise<void> => {
+        const backendLanguage = ConfigUtils.frontendLanguageToBackend(localeCode);
+        await setLanguage(backendLanguage);
+    };
+
+    // 初始化语言设置
+    const initializeLanguage = async (): Promise<void> => {
+        try {
+            // 如果配置未加载，先加载配置
+            if (!state.configLoaded) {
+                await initConfig();
             }
+            
+            // 同步前端语言设置
+            const frontendLocale = ConfigUtils.backendLanguageToFrontend(state.config.language);
+            locale.value = frontendLocale as any;
+        } catch (error) {
+            const browserLang = getBrowserLanguage();
+            locale.value = browserLang as any;
         }
-        return null;
-    }
+    };
 
-    // 设置字体族
-    async function setFontFamily(fontFamily: string): Promise<void> {
-        await updateConfig('fontFamily', fontFamily);
-    }
+    // 创建数值调整器
+    const fontSize = createNumberAdjuster('fontSize');
+    const tabSize = createNumberAdjuster('tabSize');
+    const lineHeight = createNumberAdjuster('lineHeight');
 
-    // 设置字体粗细
-    async function setFontWeight(fontWeight: string): Promise<void> {
-        await updateConfig('fontWeight', fontWeight);
-    }
+    // 创建切换器
+    const toggleTabIndent = createToggler('enableTabIndent');
+    const toggleAlwaysOnTop = createToggler('alwaysOnTop');
+    const toggleTabType = createEnumToggler('tabType', CONFIG_LIMITS.tabType.values);
 
-    // 设置行高
-    async function setLineHeight(lineHeight: number): Promise<void> {
-        await updateConfig('lineHeight', lineHeight);
-    }
-    
+    // 字符串配置设置器
+    const setFontFamily = (value: string) => updateConfig('fontFamily', value);
+    const setFontWeight = (value: string) => updateConfig('fontWeight', value);
+
     return {
         // 状态
-        config,
-        configLoaded,
-        isLoading,
+        config: computed(() => state.config),
+        configLoaded: computed(() => state.configLoaded),
+        isLoading: computed(() => state.isLoading),
 
-        // 计算属性
-        MIN_FONT_SIZE,
-        MAX_FONT_SIZE,
-        MIN_TAB_SIZE,
-        MAX_TAB_SIZE,
+        // 限制常量
+        ...limits,
 
         // 核心方法
-        loadConfig,
+        initConfig,
         resetConfig,
-        setLanguage,
         updateConfig,
         
+        // 语言相关方法
+        setLanguage,
+        setLocale,
+        initializeLanguage,
+        
         // 字体大小操作
-        increaseFontSize: () => adjustFontSize(1),
-        decreaseFontSize: () => adjustFontSize(-1),
-        resetFontSize: () => setFontSize(CONFIG_LIMITS.fontSize.default),
-        setFontSize,
+        ...fontSize,
+        increaseFontSize: fontSize.increase,
+        decreaseFontSize: fontSize.decrease,
+        resetFontSize: fontSize.reset,
+        setFontSize: fontSize.set,
         
         // Tab操作
         toggleTabIndent,
-        increaseTabSize: () => adjustTabSize(1),
-        decreaseTabSize: () => adjustTabSize(-1),
+        ...tabSize,
+        increaseTabSize: tabSize.increase,
+        decreaseTabSize: tabSize.decrease,
+        setTabSize: tabSize.set,
         toggleTabType,
-        setTabSize,
+        
+        // 行高操作
+        setLineHeight: lineHeight.set,
         
         // 窗口操作
         toggleAlwaysOnTop,
 
-        // 字体预设相关方法
-        setFontPreset,
-        getCurrentFontPreset,
+        // 字体操作
         setFontFamily,
         setFontWeight,
-        setLineHeight
     };
-}); 
+},{
+    persist: true,
+});

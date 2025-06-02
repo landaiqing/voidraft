@@ -1,11 +1,11 @@
 import {createRouter, createWebHashHistory, createWebHistory, RouteRecordRaw} from 'vue-router';
-import Editor from '@/editor/Editor.vue';
-import Settings from '@/settings/Settings.vue';
-import GeneralPage from '@/settings/pages/GeneralPage.vue';
-import EditingPage from '@/settings/pages/EditingPage.vue';
-import AppearancePage from '@/settings/pages/AppearancePage.vue';
-import KeyBindingsPage from '@/settings/pages/KeyBindingsPage.vue';
-import UpdatesPage from '@/settings/pages/UpdatesPage.vue';
+import Editor from '@/views/editor/Editor.vue';
+import Settings from '@/views/settings/Settings.vue';
+import GeneralPage from '@/views/settings/pages/GeneralPage.vue';
+import EditingPage from '@/views/settings/pages/EditingPage.vue';
+import AppearancePage from '@/views/settings/pages/AppearancePage.vue';
+import KeyBindingsPage from '@/views/settings/pages/KeyBindingsPage.vue';
+import UpdatesPage from '@/views/settings/pages/UpdatesPage.vue';
 
 const routes: RouteRecordRaw[] = [
   {

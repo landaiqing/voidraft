@@ -136,6 +136,73 @@ export enum EditType {
     EditEqual = 2,
 };
 
+/**
+ * MemoryStats 内存统计信息
+ */
+export class MemoryStats {
+    /**
+     * 当前堆内存使用量（字节）
+     */
+    "heapInUse": number;
+
+    /**
+     * 堆内存分配总量（字节）
+     */
+    "heapAlloc": number;
+
+    /**
+     * 系统内存使用量（字节）
+     */
+    "sys": number;
+
+    /**
+     * GC 次数
+     */
+    "numGC": number;
+
+    /**
+     * GC 暂停时间（纳秒）
+     */
+    "pauseTotalNs": number;
+
+    /**
+     * Goroutine 数量
+     */
+    "numGoroutine": number;
+
+    /** Creates a new MemoryStats instance. */
+    constructor($$source: Partial<MemoryStats> = {}) {
+        if (!("heapInUse" in $$source)) {
+            this["heapInUse"] = 0;
+        }
+        if (!("heapAlloc" in $$source)) {
+            this["heapAlloc"] = 0;
+        }
+        if (!("sys" in $$source)) {
+            this["sys"] = 0;
+        }
+        if (!("numGC" in $$source)) {
+            this["numGC"] = 0;
+        }
+        if (!("pauseTotalNs" in $$source)) {
+            this["pauseTotalNs"] = 0;
+        }
+        if (!("numGoroutine" in $$source)) {
+            this["numGoroutine"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MemoryStats instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MemoryStats {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MemoryStats($$parsedSource as Partial<MemoryStats>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = Edit.createFrom;
 const $$createType1 = $Create.Array($$createType0);

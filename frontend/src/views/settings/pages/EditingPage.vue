@@ -1,26 +1,37 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
+import { FONT_OPTIONS } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import { TabType } from '@/../bindings/voidraft/internal/models/models';
-import { getFontPresetOptions, type FontPresetKey } from '@/editor/extensions/fontExtension';
+import { TabType } from '../../../../bindings/voidraft/internal/models/models';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 
-// 字体预设选项
-const fontPresetOptions = getFontPresetOptions();
-const currentFontPreset = computed(() => configStore.getCurrentFontPreset());
+// 确保配置已加载
+onMounted(async () => {
+  if (!configStore.configLoaded) {
+    await configStore.loadConfig();
+  }
+});
 
-// 字体预设选择
-const handleFontPresetChange = (event: Event) => {
+// 字体选择选项
+const fontFamilyOptions = FONT_OPTIONS;
+const currentFontFamily = computed(() => configStore.config.fontFamily);
+
+// 字体选择
+const handleFontFamilyChange = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  const presetKey = target.value;
-  if (presetKey && presetKey !== 'custom') {
-    configStore.setFontPreset(presetKey as FontPresetKey);
+  const fontFamily = target.value;
+  if (fontFamily) {
+    try {
+      await configStore.setFontFamily(fontFamily);
+    } catch (error) {
+      console.error('Failed to set font family:', error);
+    }
   }
 };
 
@@ -38,29 +49,49 @@ const fontWeightOptions = [
 ];
 
 // 字体粗细选择
-const handleFontWeightChange = (event: Event) => {
+const handleFontWeightChange = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  configStore.setFontWeight(target.value);
+  try {
+    await configStore.setFontWeight(target.value);
+  } catch (error) {
+    console.error('Failed to set font weight:', error);
+  }
 };
 
 // 行高控制
-const increaseLineHeight = () => {
+const increaseLineHeight = async () => {
   const newLineHeight = Math.min(3.0, configStore.config.lineHeight + 0.1);
-  configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
+  try {
+    await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
+  } catch (error) {
+    console.error('Failed to increase line height:', error);
+  }
 };
 
-const decreaseLineHeight = () => {
+const decreaseLineHeight = async () => {
   const newLineHeight = Math.max(1.0, configStore.config.lineHeight - 0.1);
-  configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
+  try {
+    await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
+  } catch (error) {
+    console.error('Failed to decrease line height:', error);
+  }
 };
 
 // 字体大小控制
-const increaseFontSize = () => {
-  configStore.increaseFontSize();
+const increaseFontSize = async () => {
+  try {
+    await configStore.increaseFontSize();
+  } catch (error) {
+    console.error('Failed to increase font size:', error);
+  }
 };
 
-const decreaseFontSize = () => {
-  configStore.decreaseFontSize();
+const decreaseFontSize = async () => {
+  try {
+    await configStore.decreaseFontSize();
+  } catch (error) {
+    console.error('Failed to decrease font size:', error);
+  }
 };
 
 // Tab类型切换
@@ -71,12 +102,37 @@ const tabTypeText = computed(() => {
 });
 
 // Tab大小增减
-const increaseTabSize = () => {
-  configStore.increaseTabSize();
+const increaseTabSize = async () => {
+  try {
+    await configStore.increaseTabSize();
+  } catch (error) {
+    console.error('Failed to increase tab size:', error);
+  }
 };
 
-const decreaseTabSize = () => {
-  configStore.decreaseTabSize();
+const decreaseTabSize = async () => {
+  try {
+    await configStore.decreaseTabSize();
+  } catch (error) {
+    console.error('Failed to decrease tab size:', error);
+  }
+};
+
+// Tab相关操作
+const handleToggleTabIndent = async () => {
+  try {
+    await configStore.toggleTabIndent();
+  } catch (error) {
+    console.error('Failed to toggle tab indent:', error);
+  }
+};
+
+const handleToggleTabType = async () => {
+  try {
+    await configStore.toggleTabType();
+  } catch (error) {
+    console.error('Failed to toggle tab type:', error);
+  }
 };
 </script>
 
@@ -84,17 +140,16 @@ const decreaseTabSize = () => {
   <div class="settings-page">
     <SettingSection :title="t('settings.fontSettings')">
       <SettingItem 
-        :title="t('settings.fontPreset')" 
-        :description="t('settings.fontPresetDescription')"
+        :title="t('settings.fontFamily')" 
+        :description="t('settings.fontFamilyDescription')"
       >
         <select 
-          class="font-preset-select" 
-          :value="currentFontPreset || 'custom'"
-          @change="handleFontPresetChange"
+          class="font-family-select" 
+          :value="currentFontFamily"
+          @change="handleFontFamilyChange"
         >
-          <option value="custom">自定义</option>
           <option 
-            v-for="option in fontPresetOptions" 
+            v-for="option in fontFamilyOptions" 
             :key="option.value" 
             :value="option.value"
           >
@@ -163,14 +218,14 @@ const decreaseTabSize = () => {
     <SettingSection :title="t('settings.tabSettings')">
       <SettingItem :title="t('settings.tabSize')">
         <div class="number-control">
-          <button @click="decreaseTabSize" class="control-button" :disabled="configStore.config.tabSize <= configStore.MIN_TAB_SIZE">-</button>
+          <button @click="decreaseTabSize" class="control-button" :disabled="configStore.config.tabSize <= configStore.tabSize.min">-</button>
           <span>{{ configStore.config.tabSize }}</span>
-          <button @click="increaseTabSize" class="control-button" :disabled="configStore.config.tabSize >= configStore.MAX_TAB_SIZE">+</button>
+          <button @click="increaseTabSize" class="control-button" :disabled="configStore.config.tabSize >= configStore.tabSize.max">+</button>
         </div>
       </SettingItem>
       
       <SettingItem :title="t('settings.tabType')">
-        <button class="tab-type-toggle" @click="configStore.toggleTabType">
+        <button class="tab-type-toggle" @click="handleToggleTabType">
           {{ tabTypeText }}
         </button>
       </SettingItem>
@@ -178,7 +233,7 @@ const decreaseTabSize = () => {
       <SettingItem :title="t('settings.enableTabIndent')">
         <ToggleSwitch 
           v-model="configStore.config.enableTabIndent" 
-          @update:modelValue="configStore.toggleTabIndent"
+          @update:modelValue="handleToggleTabIndent"
         />
       </SettingItem>
     </SettingSection>
@@ -325,7 +380,7 @@ const decreaseTabSize = () => {
   }
 }
 
-.font-preset-select,
+.font-family-select,
 .font-weight-select {
   min-width: 180px;
   padding: 8px 12px;

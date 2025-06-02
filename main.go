@@ -88,28 +88,9 @@ func main() {
 		URL:              "/#/",
 	})
 	mainWindow.Center()
-	settingsWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
-		Title:               "voidraft设置",
-		Width:               700,
-		Height:              800,
-		Hidden:              true,
-		AlwaysOnTop:         true,
-		DisableResize:       true,
-		MinimiseButtonState: application.ButtonHidden,
-		MaximiseButtonState: application.ButtonHidden,
-		Mac: application.MacWindow{
-			Backdrop:                application.MacBackdropTranslucent,
-			TitleBar:                application.MacTitleBarHiddenInset,
-			InvisibleTitleBarHeight: 50,
-		},
-		Windows:          application.WindowsWindow{},
-		BackgroundColour: application.NewRGB(27, 38, 54),
-		URL:              "/#/settings",
-	})
-	settingsWindow.Center()
 
 	// 设置系统托盘
-	systray.SetupSystemTray(app, mainWindow, settingsWindow, assets)
+	systray.SetupSystemTray(app, mainWindow, assets)
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.

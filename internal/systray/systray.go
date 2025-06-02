@@ -7,7 +7,7 @@ import (
 )
 
 // SetupSystemTray 设置系统托盘及其功能
-func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, settingsWindow *application.WebviewWindow, assets embed.FS) {
+func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS) {
 	// 创建系统托盘
 	systray := app.NewSystemTray()
 
@@ -22,10 +22,10 @@ func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow
 	menu := app.NewMenu()
 
 	// 注册托盘菜单事件
-	events.RegisterTrayMenuEvents(app, menu, mainWindow, settingsWindow)
+	events.RegisterTrayMenuEvents(app, menu, mainWindow)
 
 	systray.SetMenu(menu)
 
 	// 注册托盘相关事件
-	events.RegisterTrayEvents(app, systray, mainWindow, settingsWindow)
+	events.RegisterTrayEvents(app, systray, mainWindow)
 }

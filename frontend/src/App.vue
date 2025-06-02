@@ -1,5 +1,15 @@
 <script setup lang="ts">
+import { onMounted } from 'vue';
+import { useConfigStore } from '@/stores/configStore';
 
+const configStore = useConfigStore();
+
+
+// 应用启动时加载配置
+onMounted(async () => {
+  await configStore.initializeLanguage();
+  await configStore.initConfig();
+});
 </script>
 
 <template>

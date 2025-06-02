@@ -1,5 +1,5 @@
 import { LanguageType } from '@/../bindings/voidraft/internal/models/models';
-import { SupportedLocaleType } from '@/i18n';
+import type { SupportedLocaleType } from '@/stores/configStore';
 
 /**
  * 配置工具类
