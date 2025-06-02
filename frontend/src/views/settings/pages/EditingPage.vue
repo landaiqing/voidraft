@@ -3,11 +3,11 @@ import { useConfigStore } from '@/stores/configStore';
 import { FONT_OPTIONS } from '@/stores/configStore';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
-import { ref, computed, onMounted } from 'vue';
+import {computed, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import { TabType } from '../../../../bindings/voidraft/internal/models/models';
+import { TabType } from '@/../bindings/voidraft/internal/models/';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
@@ -113,18 +113,51 @@ const decreaseTabSize = async () => {
 };
 
 // Tab相关操作
-const handleToggleTabIndent = async () => {
-  await safeCall(
-    () => configStore.toggleTabIndent(),
-    'config.tabIndentToggleFailed'
-  );
-};
-
 const handleToggleTabType = async () => {
   await safeCall(
     () => configStore.toggleTabType(),
     'config.tabTypeToggleFailed'
   );
+};
+
+// 创建双向绑定的计算属性
+const enableTabIndent = computed({
+  get: () => configStore.config.editing.enableTabIndent,
+  set: (value: boolean) => configStore.setEnableTabIndent(value)
+});
+
+// 保存选项处理器
+const handleAutoSaveDelayChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const value = parseInt(target.value, 10);
+  if (!isNaN(value) && value >= 1000 && value <= 30000) {
+    await safeCall(
+      () => configStore.setAutoSaveDelay(value),
+      'config.autoSaveDelayUpdateFailed'
+    );
+  }
+};
+
+const handleChangeThresholdChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const value = parseInt(target.value, 10);
+  if (!isNaN(value) && value >= 10 && value <= 10000) {
+    await safeCall(
+      () => configStore.setChangeThreshold(value),
+      'config.changeThresholdUpdateFailed'
+    );
+  }
+};
+
+const handleMinSaveIntervalChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const value = parseInt(target.value, 10);
+  if (!isNaN(value) && value >= 100 && value <= 10000) {
+    await safeCall(
+      () => configStore.setMinSaveInterval(value),
+      'config.minSaveIntervalUpdateFailed'
+    );
+  }
 };
 </script>
 
@@ -208,25 +241,37 @@ const handleToggleTabType = async () => {
     </SettingSection>
     
     <SettingSection :title="t('settings.tabSettings')">
-      <SettingItem :title="t('settings.tabSize')">
-        <div class="number-control">
-          <button @click="decreaseTabSize" class="control-button" :disabled="configStore.config.editing.tabSize <= configStore.tabSize.min">-</button>
+      <SettingItem :title="t('settings.enableTabIndent')">
+        <ToggleSwitch 
+          v-model="enableTabIndent"
+        />
+      </SettingItem>
+      
+      <SettingItem :title="t('settings.tabSize')" :class="{ 'disabled-setting': !enableTabIndent }">
+        <div class="number-control" :class="{ 'disabled': !enableTabIndent }">
+          <button 
+            @click="decreaseTabSize" 
+            class="control-button" 
+            :disabled="!enableTabIndent || configStore.config.editing.tabSize <= configStore.tabSize.min"
+          >-</button>
           <span>{{ configStore.config.editing.tabSize }}</span>
-          <button @click="increaseTabSize" class="control-button" :disabled="configStore.config.editing.tabSize >= configStore.tabSize.max">+</button>
+          <button 
+            @click="increaseTabSize" 
+            class="control-button" 
+            :disabled="!enableTabIndent || configStore.config.editing.tabSize >= configStore.tabSize.max"
+          >+</button>
         </div>
       </SettingItem>
       
-      <SettingItem :title="t('settings.tabType')">
-        <button class="tab-type-toggle" @click="handleToggleTabType">
+      <SettingItem :title="t('settings.tabType')" :class="{ 'disabled-setting': !enableTabIndent }">
+        <button 
+          class="tab-type-toggle" 
+          :class="{ 'disabled': !enableTabIndent }"
+          :disabled="!enableTabIndent"
+          @click="handleToggleTabType"
+        >
           {{ tabTypeText }}
         </button>
-      </SettingItem>
-      
-      <SettingItem :title="t('settings.enableTabIndent')">
-        <ToggleSwitch 
-          v-model="configStore.config.editing.enableTabIndent" 
-          @update:modelValue="handleToggleTabIndent"
-        />
       </SettingItem>
     </SettingSection>
     
@@ -235,8 +280,8 @@ const handleToggleTabType = async () => {
         <input 
           type="number" 
           class="number-input" 
-          disabled
-          :value="5000"
+          :value="configStore.config.editing.autoSaveDelay"
+          @change="handleAutoSaveDelayChange"
         />
       </SettingItem>
       
@@ -244,8 +289,8 @@ const handleToggleTabType = async () => {
         <input 
           type="number" 
           class="number-input" 
-          disabled
-          :value="500"
+          :value="configStore.config.editing.changeThreshold"
+          @change="handleChangeThresholdChange"
         />
       </SettingItem>
       
@@ -253,8 +298,8 @@ const handleToggleTabType = async () => {
         <input 
           type="number" 
           class="number-input" 
-          disabled
-          :value="1000"
+          :value="configStore.config.editing.minSaveInterval"
+          @change="handleMinSaveIntervalChange"
         />
       </SettingItem>
     </SettingSection>
@@ -427,7 +472,7 @@ const handleToggleTabType = async () => {
   border: 1px solid #555555;
   border-radius: 4px;
   background-color: #3a3a3a;
-  color: #a0a0a0;
+  color: #e0e0e0;
   font-size: 13px;
   
   &:focus {
@@ -435,9 +480,53 @@ const handleToggleTabType = async () => {
     border-color: #4a9eff;
   }
   
+  &:hover {
+    border-color: #666666;
+  }
+  
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+    background-color: #2a2a2a;
+    color: #a0a0a0;
+  }
+}
+
+// 禁用状态样式
+.disabled-setting {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.number-control.disabled {
+  opacity: 0.5;
+  
+  .control-button {
+    cursor: not-allowed;
+    
+    &:hover {
+      background-color: #3a3a3a;
+      border-color: #555555;
+    }
+  }
+  
+  span {
+    opacity: 0.7;
+  }
+}
+
+.tab-type-toggle.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  
+  &:hover {
+    background-color: #3a3a3a;
+    border-color: #555555;
+    transform: none;
+  }
+  
+  &:active {
+    transform: none;
   }
 }
 </style> 

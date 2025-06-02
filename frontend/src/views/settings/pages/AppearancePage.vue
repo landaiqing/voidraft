@@ -46,7 +46,7 @@ const selectTheme = (themeId: string) => {
 <template>
   <div class="settings-page">
     <SettingSection :title="t('settings.language')">
-      <SettingItem :title="t('settings.language')" :description="t('settings.restartRequired')">
+      <SettingItem :title="t('settings.language')">
         <select class="select-input" :value="configStore.config.appearance.language" @change="updateLanguage">
           <option v-for="option in languageOptions" :key="option.value" :value="option.value">
             {{ option.label }}

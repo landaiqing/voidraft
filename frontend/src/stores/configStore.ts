@@ -297,7 +297,10 @@ export const useConfigStore = defineStore('config', () => {
     const setters = {
         fontFamily: (value: string) => safeCall(() => updateEditingConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
         fontWeight: (value: string) => safeCall(() => updateEditingConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess'),
-        dataPath: (value: string) => safeCall(() => updateGeneralConfig('dataPath', value), 'config.saveFailed', 'config.saveSuccess')
+        dataPath: (value: string) => safeCall(() => updateGeneralConfig('dataPath', value), 'config.saveFailed', 'config.saveSuccess'),
+        autoSaveDelay: (value: number) => safeCall(() => updateEditingConfig('autoSaveDelay', value), 'config.saveFailed', 'config.saveSuccess'),
+        changeThreshold: (value: number) => safeCall(() => updateEditingConfig('changeThreshold', value), 'config.saveFailed', 'config.saveSuccess'),
+        minSaveInterval: (value: number) => safeCall(() => updateEditingConfig('minSaveInterval', value), 'config.saveFailed', 'config.saveSuccess')
     };
 
     return {
@@ -326,6 +329,7 @@ export const useConfigStore = defineStore('config', () => {
         
         // Tab操作
         toggleTabIndent: togglers.tabIndent,
+        setEnableTabIndent: (value: boolean) => safeCall(() => updateEditingConfig('enableTabIndent', value), 'config.saveFailed', 'config.saveSuccess'),
         ...adjusters.tabSize,
         increaseTabSize: adjusters.tabSize.increase,
         decreaseTabSize: adjusters.tabSize.decrease,
@@ -344,7 +348,10 @@ export const useConfigStore = defineStore('config', () => {
 
         // 路径操作
         setDataPath: setters.dataPath,
+
+        // 保存配置相关方法
+        setAutoSaveDelay: setters.autoSaveDelay,
+        setChangeThreshold: setters.changeThreshold,
+        setMinSaveInterval: setters.minSaveInterval
     };
-},{
-    persist: true,
 });
