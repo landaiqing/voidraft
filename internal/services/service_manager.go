@@ -33,13 +33,17 @@ func NewServiceManager() *ServiceManager {
 	// 初始化热键服务
 	hotkeyService := NewHotkeyService(configService, logger)
 
-	// 设置热键配置变更回调
-	configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
+	// 使用新的配置通知系统设置热键配置变更监听
+	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
 	})
+	if err != nil {
+		logger.Error("Failed to set hotkey change callback", "error", err)
+		panic(err)
+	}
 
 	// 初始化文档服务
-	err := documentService.Initialize()
+	err = documentService.Initialize()
 	if err != nil {
 		logger.Error("Failed to initialize document service", "error", err)
 		panic(err)

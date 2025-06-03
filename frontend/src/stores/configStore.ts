@@ -13,6 +13,7 @@ import {useI18n} from 'vue-i18n';
 import {useErrorHandler} from '@/utils/errorHandler';
 import {ConfigUtils} from '@/utils/configUtils';
 import {WindowController} from '@/utils/windowController';
+import * as runtime from '@wailsio/runtime';
 // 国际化相关导入
 export type SupportedLocaleType = 'zh-CN' | 'en-US';
 
@@ -46,7 +47,9 @@ type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
 // 配置键映射
 const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     alwaysOnTop: 'general.always_on_top',
-    dataPath: 'general.data_path',
+    defaultDataPath: 'general.default_data_path',
+    useCustomDataPath: 'general.use_custom_data_path',
+    customDataPath: 'general.custom_data_path',
     enableGlobalHotkey: 'general.enable_global_hotkey',
     globalHotkey: 'general.global_hotkey'
 } as const;
@@ -114,7 +117,9 @@ const getBrowserLanguage = (): SupportedLocaleType => {
 const DEFAULT_CONFIG: AppConfig = {
     general: {
         alwaysOnTop: false,
-        dataPath: './data',
+        defaultDataPath: './data',
+        useCustomDataPath: false,
+        customDataPath: '',
         enableGlobalHotkey: false,
         globalHotkey: {
             ctrl: false,
@@ -318,7 +323,13 @@ export const useConfigStore = defineStore('config', () => {
     // 创建切换器实例
     const togglers = {
         tabIndent: createEditingToggler('enableTabIndent'),
-        alwaysOnTop: createGeneralToggler('alwaysOnTop'),
+        alwaysOnTop: async () => {
+            await safeCall(async () => {
+                await updateGeneralConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
+                // 立即应用窗口置顶状态
+                await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
+            }, 'config.alwaysOnTopFailed', 'config.alwaysOnTopSuccess');
+        },
         tabType: createEnumToggler('tabType', CONFIG_LIMITS.tabType.values)
     };
 
@@ -326,7 +337,7 @@ export const useConfigStore = defineStore('config', () => {
     const setters = {
         fontFamily: (value: string) => safeCall(() => updateEditingConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
         fontWeight: (value: string) => safeCall(() => updateEditingConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess'),
-        dataPath: (value: string) => safeCall(() => updateGeneralConfig('dataPath', value), 'config.saveFailed', 'config.saveSuccess'),
+        defaultDataPath: (value: string) => safeCall(() => updateGeneralConfig('defaultDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
         autoSaveDelay: (value: number) => safeCall(() => updateEditingConfig('autoSaveDelay', value), 'config.saveFailed', 'config.saveSuccess'),
         changeThreshold: (value: number) => safeCall(() => updateEditingConfig('changeThreshold', value), 'config.saveFailed', 'config.saveSuccess'),
         minSaveInterval: (value: number) => safeCall(() => updateEditingConfig('minSaveInterval', value), 'config.saveFailed', 'config.saveSuccess')
@@ -370,13 +381,16 @@ export const useConfigStore = defineStore('config', () => {
 
         // 窗口操作
         toggleAlwaysOnTop: togglers.alwaysOnTop,
+        setAlwaysOnTop: (value: boolean) => safeCall(() => updateGeneralConfig('alwaysOnTop', value), 'config.saveFailed', 'config.saveSuccess'),
 
         // 字体操作
         setFontFamily: setters.fontFamily,
         setFontWeight: setters.fontWeight,
 
         // 路径操作
-        setDataPath: setters.dataPath,
+        setDefaultDataPath: setters.defaultDataPath,
+        setUseCustomDataPath: (value: boolean) => safeCall(() => updateGeneralConfig('useCustomDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
+        setCustomDataPath: (value: string) =>  safeCall(() => updateGeneralConfig('customDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
 
         // 保存配置相关方法
         setAutoSaveDelay: setters.autoSaveDelay,

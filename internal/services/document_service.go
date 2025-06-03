@@ -304,8 +304,16 @@ func (ds *DocumentService) ensureDocumentsDir() error {
 		return err
 	}
 
+	// 获取实际的数据路径（如果启用自定义路径则使用自定义路径，否则使用默认路径）
+	var dataPath string
+	if config.General.UseCustomDataPath && config.General.CustomDataPath != "" {
+		dataPath = config.General.CustomDataPath
+	} else {
+		dataPath = config.General.DefaultDataPath
+	}
+
 	// 创建文档目录
-	docsDir := filepath.Join(config.General.DataPath, "docs")
+	docsDir := filepath.Join(dataPath, "docs")
 	err = os.MkdirAll(docsDir, 0755)
 	if err != nil {
 		return err
@@ -320,7 +328,16 @@ func (ds *DocumentService) getDocumentsDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(config.General.DataPath, "docs"), nil
+
+	// 获取实际的数据路径（如果启用自定义路径则使用自定义路径，否则使用默认路径）
+	var dataPath string
+	if config.General.UseCustomDataPath && config.General.CustomDataPath != "" {
+		dataPath = config.General.CustomDataPath
+	} else {
+		dataPath = config.General.DefaultDataPath
+	}
+
+	return filepath.Join(dataPath, "docs"), nil
 }
 
 // getDefaultDocumentPath 获取默认文档路径

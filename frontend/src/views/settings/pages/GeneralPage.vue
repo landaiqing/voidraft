@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 import { useErrorHandler } from '@/utils/errorHandler';
+import * as runtime from '@wailsio/runtime';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
@@ -23,6 +24,19 @@ const keyOptions = [
 const enableGlobalHotkey = computed({
   get: () => configStore.config.general.enableGlobalHotkey,
   set: (value: boolean) => configStore.setEnableGlobalHotkey(value)
+});
+
+// 计算属性 - 窗口始终置顶
+const alwaysOnTop = computed({
+  get: () => configStore.config.general.alwaysOnTop,
+  set: async (value: boolean) => {
+    await safeCall(async () => {
+      // 先更新配置
+      await configStore.setAlwaysOnTop(value);
+      // 然后立即应用窗口置顶状态
+      await runtime.Window.SetAlwaysOnTop(value);
+    }, 'config.alwaysOnTopFailed', 'config.alwaysOnTopSuccess');
+  }
 });
 
 // 修饰键配置 - 只读计算属性
@@ -71,6 +85,34 @@ const hotkeyPreview = computed(() => {
   
   return parts.join(' + ');
 });
+
+// 数据存储路径配置
+const useCustomDataPath = computed({
+  get: () => configStore.config.general.useCustomDataPath,
+  set: (value: boolean) => configStore.setUseCustomDataPath(value)
+});
+
+// 自定义路径输入
+const customPathInput = ref('');
+
+// 监听自定义路径的变化，同步到配置
+const updateCustomPath = () => {
+  configStore.setCustomDataPath(customPathInput.value.trim());
+};
+
+// 当启用自定义路径时，初始化输入框的值
+const initCustomPath = () => {
+  if (useCustomDataPath.value) {
+    customPathInput.value = configStore.config.general.customDataPath || '';
+  }
+};
+
+// 监听useCustomDataPath的变化
+watch(() => useCustomDataPath.value, (newVal) => {
+  if (newVal) {
+    initCustomPath();
+  }
+}, { immediate: true });
 </script>
 
 <template>
@@ -112,21 +154,29 @@ const hotkeyPreview = computed(() => {
     </SettingSection>
     
     <SettingSection :title="t('settings.window')">
-      <SettingItem :title="t('settings.showInSystemTray')">
-        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" />  <!-- 需要后端实现 -->
-      </SettingItem>
       <SettingItem :title="t('settings.alwaysOnTop')">
-        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" @update:modelValue="configStore.toggleAlwaysOnTop" />
+        <ToggleSwitch v-model="alwaysOnTop" />
       </SettingItem>
     </SettingSection>
     
-    <SettingSection :title="t('settings.bufferFiles')">
-      <SettingItem :title="t('settings.useCustomLocation')">
-        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" /> <!-- 需要后端实现 -->
+    <SettingSection :title="t('settings.dataStorage')">
+      <SettingItem :title="t('settings.useCustomDataPath')">
+        <ToggleSwitch v-model="useCustomDataPath" />
       </SettingItem>
-      <div class="directory-selector">
-        <div class="path-display">{{ configStore.config.general.alwaysOnTop ? 'C:/Custom/Path' : 'Default Location' }}</div>
-        <button class="select-button">{{ t('settings.selectDirectory') }}</button>
+      <div class="path-input-section" v-if="useCustomDataPath">
+        <input 
+          type="text" 
+          v-model="customPathInput" 
+          @blur="updateCustomPath"
+          @keyup.enter="updateCustomPath"
+          :placeholder="t('settings.enterCustomPath')" 
+          class="path-input"
+        />
+        <div class="path-hint">{{ t('settings.pathHint') }}</div>
+      </div>
+      <div class="default-path-info" v-else>
+        <div class="path-display default">{{ configStore.config.general.defaultDataPath }}</div>
+        <span class="path-label">{{ t('settings.defaultDataPath') }}</span>
       </div>
     </SettingSection>
     
@@ -255,45 +305,69 @@ const hotkeyPreview = computed(() => {
   }
 }
 
-.directory-selector {
+.path-input-section {
   margin-top: 10px;
   padding-left: 20px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  padding-right: 20px;
   
-  .path-display {
-    flex: 1;
-    padding: 8px 12px;
-    background-color: #3a3a3a;
-    border: 1px solid #555555;
-    border-radius: 4px;
-    color: #b0b0b0;
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .select-button {
+  .path-input {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
     padding: 8px 12px;
     background-color: #3a3a3a;
     border: 1px solid #555555;
     border-radius: 4px;
     color: #e0e0e0;
-    cursor: pointer;
     font-size: 13px;
     transition: all 0.2s ease;
+    
+    &:focus {
+      outline: none;
+      border-color: #4a9eff;
+      background-color: #404040;
+    }
+    
+    &::placeholder {
+      color: #888888;
+    }
+  }
+  
+  .path-hint {
+    margin-top: 5px;
+    color: #888888;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+}
+
+.default-path-info {
+  margin-top: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  
+  .path-display {
+    padding: 8px 12px;
+    background-color: #2a2a2a;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    color: #888888;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
+    box-sizing: border-box;
     
-    &:hover {
-      background-color: #444444;
-      border-color: #666666;
+    &.default {
+      font-style: italic;
     }
-    
-    &:active {
-      transform: translateY(1px);
-    }
+  }
+  
+  .path-label {
+    display: block;
+    margin-top: 4px;
+    color: #666666;
+    font-size: 12px;
   }
 }
 
