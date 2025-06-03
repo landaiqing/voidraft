@@ -92,6 +92,17 @@ func main() {
 	// 设置系统托盘
 	systray.SetupSystemTray(app, mainWindow, assets)
 
+	// 初始化热键服务
+	hotkeyService := serviceManager.GetHotkeyService()
+	err := hotkeyService.Initialize(app)
+	if err != nil {
+		log.Printf("Failed to initialize hotkey service: %v\n", err)
+		panic(err)
+	}
+
+	// 设置全局变量供单实例处理使用
+	window = mainWindow
+
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.
 	go func() {
@@ -103,7 +114,7 @@ func main() {
 	}()
 
 	// Run the application. This blocks until the application has been exited.
-	err := app.Run()
+	err = app.Run()
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {

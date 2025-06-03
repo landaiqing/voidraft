@@ -30,6 +30,19 @@ const (
 type GeneralConfig struct {
 	AlwaysOnTop bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"` // 窗口是否置顶
 	DataPath    string `json:"dataPath" yaml:"data_path" mapstructure:"data_path"`            // 数据存储路径
+
+	// 全局热键设置
+	EnableGlobalHotkey bool        `json:"enableGlobalHotkey" yaml:"enable_global_hotkey" mapstructure:"enable_global_hotkey"` // 是否启用全局热键
+	GlobalHotkey       HotkeyCombo `json:"globalHotkey" yaml:"global_hotkey" mapstructure:"global_hotkey"`                     // 全局热键组合
+}
+
+// HotkeyCombo 热键组合定义
+type HotkeyCombo struct {
+	Ctrl  bool   `json:"ctrl" yaml:"ctrl" mapstructure:"ctrl"`    // Ctrl键
+	Shift bool   `json:"shift" yaml:"shift" mapstructure:"shift"` // Shift键
+	Alt   bool   `json:"alt" yaml:"alt" mapstructure:"alt"`       // Alt键
+	Win   bool   `json:"win" yaml:"win" mapstructure:"win"`       // Win键
+	Key   string `json:"key" yaml:"key" mapstructure:"key"`       // 主键（如 'X', 'F1' 等）
 }
 
 // EditingConfig 编辑设置配置
@@ -95,8 +108,16 @@ func NewDefaultAppConfig() *AppConfig {
 
 	return &AppConfig{
 		General: GeneralConfig{
-			AlwaysOnTop: false,
-			DataPath:    dataDir,
+			AlwaysOnTop:        false,
+			DataPath:           dataDir,
+			EnableGlobalHotkey: false,
+			GlobalHotkey: HotkeyCombo{
+				Ctrl:  false,
+				Shift: false,
+				Alt:   true,
+				Win:   false,
+				Key:   "X",
+			},
 		},
 		Editing: EditingConfig{
 			// 字体设置

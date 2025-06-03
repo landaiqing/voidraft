@@ -1,6 +1,8 @@
 package services
 
 import (
+	"voidraft/internal/models"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
@@ -10,6 +12,7 @@ type ServiceManager struct {
 	configService   *ConfigService
 	documentService *DocumentService
 	systemService   *SystemService
+	hotkeyService   *HotkeyService
 	logger          *log.LoggerService
 }
 
@@ -27,6 +30,14 @@ func NewServiceManager() *ServiceManager {
 	// 初始化系统服务
 	systemService := NewSystemService(logger)
 
+	// 初始化热键服务
+	hotkeyService := NewHotkeyService(configService, logger)
+
+	// 设置热键配置变更回调
+	configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
+		return hotkeyService.UpdateHotkey(enable, hotkey)
+	})
+
 	// 初始化文档服务
 	err := documentService.Initialize()
 	if err != nil {
@@ -38,6 +49,7 @@ func NewServiceManager() *ServiceManager {
 		configService:   configService,
 		documentService: documentService,
 		systemService:   systemService,
+		hotkeyService:   hotkeyService,
 		logger:          logger,
 	}
 }
@@ -48,5 +60,11 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.configService),
 		application.NewService(sm.documentService),
 		application.NewService(sm.systemService),
+		application.NewService(sm.hotkeyService),
 	}
+}
+
+// GetHotkeyService 获取热键服务实例
+func (sm *ServiceManager) GetHotkeyService() *HotkeyService {
+	return sm.hotkeyService
 }

@@ -1,25 +1,15 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { computed } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
+import { useErrorHandler } from '@/utils/errorHandler';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
-
-// 选择的键盘修饰键
-const selectedModifiers = ref({
-  ctrl: false,
-  shift: false,
-  alt: true,
-  altgr: false,
-  win: false
-});
-
-// 选择的键
-const selectedKey = ref('X');
+const { safeCall } = useErrorHandler();
 
 // 可选键列表
 const keyOptions = [
@@ -29,15 +19,35 @@ const keyOptions = [
   'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
 ];
 
+// 计算属性 - 启用全局热键
+const enableGlobalHotkey = computed({
+  get: () => configStore.config.general.enableGlobalHotkey,
+  set: (value: boolean) => configStore.setEnableGlobalHotkey(value)
+});
+
+// 修饰键配置 - 只读计算属性
+const modifierKeys = computed(() => ({
+  ctrl: configStore.config.general.globalHotkey.ctrl,
+  shift: configStore.config.general.globalHotkey.shift,
+  alt: configStore.config.general.globalHotkey.alt,
+  win: configStore.config.general.globalHotkey.win
+}));
+
+// 主键配置 - 只读计算属性
+const selectedKey = computed(() => configStore.config.general.globalHotkey.key);
+
+// 切换修饰键
+const toggleModifier = (key: 'ctrl' | 'shift' | 'alt' | 'win') => {
+  const currentHotkey = configStore.config.general.globalHotkey;
+  const newHotkey = { ...currentHotkey, [key]: !currentHotkey[key] };
+  configStore.setGlobalHotkey(newHotkey);
+};
+
 // 更新选择的键
 const updateSelectedKey = (event: Event) => {
   const select = event.target as HTMLSelectElement;
-  selectedKey.value = select.value;
-};
-
-// 切换修饰键
-const toggleModifier = (key: keyof typeof selectedModifiers.value) => {
-  selectedModifiers.value[key] = !selectedModifiers.value[key];
+  const newHotkey = { ...configStore.config.general.globalHotkey, key: select.value };
+  configStore.setGlobalHotkey(newHotkey);
 };
 
 // 重置设置
@@ -46,42 +56,58 @@ const resetSettings = async () => {
     await configStore.resetConfig();
   }
 };
+
+// 计算热键预览文本
+const hotkeyPreview = computed(() => {
+  if (!enableGlobalHotkey.value) return '';
+  
+  const hotkey = configStore.config.general.globalHotkey;
+  const parts: string[] = [];
+  if (hotkey.ctrl) parts.push('Ctrl');
+  if (hotkey.shift) parts.push('Shift');
+  if (hotkey.alt) parts.push('Alt');
+  if (hotkey.win) parts.push('Win');
+  if (hotkey.key) parts.push(hotkey.key);
+  
+  return parts.join(' + ');
+});
 </script>
 
 <template>
   <div class="settings-page">
     <SettingSection :title="t('settings.globalHotkey')">
       <SettingItem :title="t('settings.enableGlobalHotkey')">
-        <ToggleSwitch v-model="configStore.config.general.alwaysOnTop" /> <!-- 此处使用alwaysOnTop作为示例 -->
+        <ToggleSwitch v-model="enableGlobalHotkey" />
       </SettingItem>
       
-      <div class="hotkey-selector">
+      <div class="hotkey-selector" :class="{ 'disabled': !enableGlobalHotkey }">
         <div class="hotkey-modifiers">
-          <label class="modifier-label" :class="{ active: selectedModifiers.ctrl }">
-            <input type="checkbox" v-model="selectedModifiers.ctrl" class="hidden-checkbox">
+          <label class="modifier-label" :class="{ active: modifierKeys.ctrl }" @click="toggleModifier('ctrl')">
+            <input type="checkbox" :checked="modifierKeys.ctrl" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
             <span class="modifier-key">Ctrl</span>
           </label>
-          <label class="modifier-label" :class="{ active: selectedModifiers.shift }">
-            <input type="checkbox" v-model="selectedModifiers.shift" class="hidden-checkbox">
+          <label class="modifier-label" :class="{ active: modifierKeys.shift }" @click="toggleModifier('shift')">
+            <input type="checkbox" :checked="modifierKeys.shift" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
             <span class="modifier-key">Shift</span>
           </label>
-          <label class="modifier-label" :class="{ active: selectedModifiers.alt }">
-            <input type="checkbox" v-model="selectedModifiers.alt" class="hidden-checkbox">
+          <label class="modifier-label" :class="{ active: modifierKeys.alt }" @click="toggleModifier('alt')">
+            <input type="checkbox" :checked="modifierKeys.alt" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
             <span class="modifier-key">Alt</span>
           </label>
-          <label class="modifier-label" :class="{ active: selectedModifiers.altgr }">
-            <input type="checkbox" v-model="selectedModifiers.altgr" class="hidden-checkbox">
-            <span class="modifier-key">AltGr</span>
-          </label>
-          <label class="modifier-label" :class="{ active: selectedModifiers.win }">
-            <input type="checkbox" v-model="selectedModifiers.win" class="hidden-checkbox">
+          <label class="modifier-label" :class="{ active: modifierKeys.win }" @click="toggleModifier('win')">
+            <input type="checkbox" :checked="modifierKeys.win" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
             <span class="modifier-key">Win</span>
           </label>
         </div>
         
-        <select class="key-select" v-model="selectedKey">
+        <select class="key-select" :value="selectedKey" @change="updateSelectedKey" :disabled="!enableGlobalHotkey">
           <option v-for="key in keyOptions" :key="key" :value="key">{{ key }}</option>
         </select>
+        
+        <div class="hotkey-preview" v-if="hotkeyPreview">
+          <span class="preview-label">预览：</span>
+          <span class="preview-hotkey">{{ hotkeyPreview }}</span>
+        </div>
       </div>
     </SettingSection>
     
@@ -128,6 +154,11 @@ const resetSettings = async () => {
 .hotkey-selector {
   padding: 15px 0 5px 20px;
   
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  
   .hotkey-modifiers {
     display: flex;
     gap: 8px;
@@ -136,6 +167,10 @@ const resetSettings = async () => {
     
     .modifier-label {
       cursor: pointer;
+      
+      &.disabled {
+        cursor: not-allowed;
+      }
       
       .hidden-checkbox {
         display: none;
@@ -178,14 +213,44 @@ const resetSettings = async () => {
     background-position: right 8px center;
     background-size: 16px;
     padding-right: 30px;
+    margin-bottom: 12px;
     
     &:focus {
       outline: none;
       border-color: #4a9eff;
     }
     
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      background-color: #2a2a2a;
+    }
+    
     option {
       background-color: #2a2a2a;
+    }
+  }
+  
+  .hotkey-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: #252525;
+    border: 1px solid #444444;
+    border-radius: 4px;
+    margin-top: 8px;
+    
+    .preview-label {
+      font-size: 12px;
+      color: #888888;
+    }
+    
+    .preview-hotkey {
+      font-size: 13px;
+      color: #4a9eff;
+      font-weight: 500;
+      font-family: 'Consolas', 'Courier New', monospace;
     }
   }
 }

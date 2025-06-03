@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 	"voidraft/internal/models"
@@ -19,6 +20,13 @@ type ConfigService struct {
 	viper  *viper.Viper       // Viper 实例
 	logger *log.LoggerService // 日志服务
 	mu     sync.RWMutex       // 读写锁
+
+	// 热键配置变更回调
+	hotkeyChangeCallback func(enable bool, hotkey *models.HotkeyCombo) error
+
+	// 热键变更防抖
+	hotkeyNotificationTimer *time.Timer
+	hotkeyNotificationMu    sync.Mutex
 }
 
 // ConfigError 配置错误
@@ -283,6 +291,12 @@ func setDefaults(v *viper.Viper) {
 	// 通用设置默认值
 	v.SetDefault("general.always_on_top", defaultConfig.General.AlwaysOnTop)
 	v.SetDefault("general.data_path", defaultConfig.General.DataPath)
+	v.SetDefault("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
+	v.SetDefault("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
+	v.SetDefault("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
+	v.SetDefault("general.global_hotkey.alt", defaultConfig.General.GlobalHotkey.Alt)
+	v.SetDefault("general.global_hotkey.win", defaultConfig.General.GlobalHotkey.Win)
+	v.SetDefault("general.global_hotkey.key", defaultConfig.General.GlobalHotkey.Key)
 
 	// 编辑设置默认值
 	v.SetDefault("editing.font_size", defaultConfig.Editing.FontSize)
@@ -404,6 +418,15 @@ func (cs *ConfigService) Set(key string, value interface{}) error {
 		cs.logger.Debug("Config: Successfully set config", "key", key, "value", value)
 	}
 
+	// 检查是否是热键相关配置
+	if cs.isHotkeyRelatedKey(key) {
+		cs.logger.Info("Config: Detected hotkey configuration change", "key", key, "value", value)
+		// 释放锁后通知，避免死锁
+		go func() {
+			cs.notifyHotkeyChange()
+		}()
+	}
+
 	return nil
 }
 
@@ -429,4 +452,78 @@ func (cs *ConfigService) ResetConfig() error {
 
 	cs.logger.Info("Config: Successfully reset to default configuration")
 	return nil
+}
+
+// SetHotkeyChangeCallback 设置热键配置变更回调
+func (cs *ConfigService) SetHotkeyChangeCallback(callback func(enable bool, hotkey *models.HotkeyCombo) error) {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+	cs.hotkeyChangeCallback = callback
+}
+
+// notifyHotkeyChange 通知热键配置变更
+func (cs *ConfigService) notifyHotkeyChange() {
+	if cs.hotkeyChangeCallback == nil {
+		return
+	}
+
+	cs.hotkeyNotificationMu.Lock()
+	defer cs.hotkeyNotificationMu.Unlock()
+
+	// 取消之前的定时器
+	if cs.hotkeyNotificationTimer != nil {
+		cs.hotkeyNotificationTimer.Stop()
+	}
+
+	// 设置新的防抖定时器（200ms延迟）
+	cs.hotkeyNotificationTimer = time.AfterFunc(200*time.Millisecond, func() {
+		cs.logger.Debug("Config: Executing hotkey change notification after debounce")
+
+		// 获取当前热键配置
+		config, err := cs.GetConfig()
+		if err != nil {
+			cs.logger.Error("Config: Failed to get config for hotkey notification", "error", err)
+			return
+		}
+
+		cs.logger.Debug("Config: Notifying hotkey service of configuration change",
+			"enable", config.General.EnableGlobalHotkey,
+			"ctrl", config.General.GlobalHotkey.Ctrl,
+			"shift", config.General.GlobalHotkey.Shift,
+			"alt", config.General.GlobalHotkey.Alt,
+			"win", config.General.GlobalHotkey.Win,
+			"key", config.General.GlobalHotkey.Key)
+
+		// 异步通知热键服务
+		go func() {
+			err := cs.hotkeyChangeCallback(config.General.EnableGlobalHotkey, &config.General.GlobalHotkey)
+			if err != nil {
+				cs.logger.Error("Config: Failed to notify hotkey change", "error", err)
+			} else {
+				cs.logger.Debug("Config: Successfully notified hotkey change")
+			}
+		}()
+	})
+
+	cs.logger.Debug("Config: Hotkey change notification scheduled with debounce")
+}
+
+// isHotkeyRelatedKey 检查是否是热键相关的配置键
+func (cs *ConfigService) isHotkeyRelatedKey(key string) bool {
+	hotkeyKeys := []string{
+		"general.enable_global_hotkey",
+		"general.global_hotkey",
+		"general.global_hotkey.ctrl",
+		"general.global_hotkey.shift",
+		"general.global_hotkey.alt",
+		"general.global_hotkey.win",
+		"general.global_hotkey.key",
+	}
+
+	for _, hotkeyKey := range hotkeyKeys {
+		if strings.HasPrefix(key, hotkeyKey) || key == hotkeyKey {
+			return true
+		}
+	}
+	return false
 }
