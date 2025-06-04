@@ -14,10 +14,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as $models from "./models.js";
-
 /**
  * ForceSave 强制保存当前文档
  */
@@ -47,30 +43,6 @@ export function GetActiveDocumentContent(): Promise<string> & { cancel(): void }
 }
 
 /**
- * GetDiffInfo 获取两个文本之间的详细差异信息
- */
-export function GetDiffInfo(oldText: string, newText: string): Promise<$models.DiffResult> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2490726526, oldText, newText) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType2($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetSaveSettings 获取文档保存设置
- */
-export function GetSaveSettings(): Promise<models$0.EditingConfig | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4257471801) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType4($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
  * Initialize 初始化文档服务
  */
 export function Initialize(): Promise<void> & { cancel(): void } {
@@ -79,15 +51,7 @@ export function Initialize(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * LoadDefaultDocument 加载默认文档
- */
-export function LoadDefaultDocument(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2343023569) as any;
-    return $resultPromise;
-}
-
-/**
- * SaveDocumentSync 同步保存文档内容 (用于页面关闭前同步保存)
+ * SaveDocumentSync 同步保存文档内容
  */
 export function SaveDocumentSync(content: string): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3770207288, content) as any;
@@ -95,26 +59,10 @@ export function SaveDocumentSync(content: string): Promise<void> & { cancel(): v
 }
 
 /**
- * ServiceShutdown 实现应用程序关闭时的服务关闭逻辑
+ * ServiceShutdown 服务关闭
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(638578044) as any;
-    return $resultPromise;
-}
-
-/**
- * SetSaveCallback 设置保存回调函数
- */
-export function SetSaveCallback(callback: any): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(675315211, callback) as any;
-    return $resultPromise;
-}
-
-/**
- * Shutdown 关闭文档服务，确保所有数据保存
- */
-export function Shutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3444504909) as any;
     return $resultPromise;
 }
 
@@ -126,17 +74,6 @@ export function UpdateActiveDocumentContent(content: string): Promise<void> & { 
     return $resultPromise;
 }
 
-/**
- * UpdateSaveSettings 更新文档保存设置
- */
-export function UpdateSaveSettings(docConfig: models$0.EditingConfig): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1245479534, docConfig) as any;
-    return $resultPromise;
-}
-
 // Private type creation functions
 const $$createType0 = models$0.Document.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.DiffResult.createFrom;
-const $$createType3 = models$0.EditingConfig.createFrom;
-const $$createType4 = $Create.Nullable($$createType3);

@@ -124,8 +124,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("editing.tab_size", defaultConfig.Editing.TabSize)
 	v.SetDefault("editing.tab_type", defaultConfig.Editing.TabType)
 	v.SetDefault("editing.auto_save_delay", defaultConfig.Editing.AutoSaveDelay)
-	v.SetDefault("editing.change_threshold", defaultConfig.Editing.ChangeThreshold)
-	v.SetDefault("editing.min_save_interval", defaultConfig.Editing.MinSaveInterval)
 
 	// 外观设置默认值
 	v.SetDefault("appearance.language", defaultConfig.Appearance.Language)

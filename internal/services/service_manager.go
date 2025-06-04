@@ -13,6 +13,7 @@ type ServiceManager struct {
 	documentService *DocumentService
 	systemService   *SystemService
 	hotkeyService   *HotkeyService
+	dialogService   *DialogService
 	logger          *log.LoggerService
 }
 
@@ -32,6 +33,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化热键服务
 	hotkeyService := NewHotkeyService(configService, logger)
+
+	// 初始化对话服务
+	dialogService := NewDialogService(logger)
 
 	// 使用新的配置通知系统设置热键配置变更监听
 	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
@@ -54,6 +58,7 @@ func NewServiceManager() *ServiceManager {
 		documentService: documentService,
 		systemService:   systemService,
 		hotkeyService:   hotkeyService,
+		dialogService:   dialogService,
 		logger:          logger,
 	}
 }
@@ -65,6 +70,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.documentService),
 		application.NewService(sm.systemService),
 		application.NewService(sm.hotkeyService),
+		application.NewService(sm.dialogService),
 	}
 }
 

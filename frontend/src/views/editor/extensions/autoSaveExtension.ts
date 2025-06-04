@@ -12,6 +12,12 @@ export interface AutoSaveOptions {
 
 /**
  * 创建自动保存插件
+ * 
+ * 新的简化保存策略：
+ * - 前端只负责将内容变更传递给后端
+ * - 后端使用定时保存机制，每隔配置的时间间隔自动保存（仅在有变更时）
+ * - 移除了复杂的阈值保存和最小间隔控制
+ * 
  * @param options 配置选项
  * @returns EditorView.Plugin
  */

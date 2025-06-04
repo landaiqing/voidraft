@@ -138,27 +138,31 @@ const handleAutoSaveDelayChange = async (event: Event) => {
   }
 };
 
-const handleChangeThresholdChange = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const value = parseInt(target.value, 10);
-  if (!isNaN(value) && value >= 10 && value <= 10000) {
-    await safeCall(
-      () => configStore.setChangeThreshold(value),
-      'config.changeThresholdUpdateFailed'
-    );
+// 动态字体预览文本
+const fontPreviewText = computed(() => {
+  const currentFont = configStore.config.editing.fontFamily;
+  
+  // 根据字体类型返回不同的预览文本
+  if (currentFont.includes('HarmonyOS')) {
+    return '鸿蒙字体测试';
+  } else if (currentFont.includes('Microsoft YaHei')) {
+    return '微软雅黑测试';
+  } else if (currentFont.includes('PingFang')) {
+    return '苹方字体测试';
+  } else if (currentFont.includes('JetBrains')) {
+    return 'JetBrains Mono';
+  } else if (currentFont.includes('Fira Code')) {
+    return 'Fira Code Test';
+  } else if (currentFont.includes('Source Code')) {
+    return 'Source Code Pro';
+  } else if (currentFont.includes('Cascadia')) {
+    return 'Cascadia Code';
+  } else if (currentFont.includes('SF Mono') || currentFont.includes('Monaco')) {
+    return 'System Monospace';
+  } else {
+    return 'Font Preview';
   }
-};
-
-const handleMinSaveIntervalChange = async (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  const value = parseInt(target.value, 10);
-  if (!isNaN(value) && value >= 100 && value <= 10000) {
-    await safeCall(
-      () => configStore.setMinSaveInterval(value),
-      'config.minSaveIntervalUpdateFailed'
-    );
-  }
-};
+});
 </script>
 
 <template>
@@ -234,7 +238,7 @@ const handleMinSaveIntervalChange = async (event: Event) => {
         <div class="preview-text">
           <span>function example() {</span>
           <span class="indent">console.log("Hello, 世界!");</span>
-          <span class="indent">const message = "鸿蒙字体测试";</span>
+          <span class="indent">const message = "{{ fontPreviewText }}";</span>
           <span>}</span>
         </div>
       </div>
@@ -276,30 +280,12 @@ const handleMinSaveIntervalChange = async (event: Event) => {
     </SettingSection>
     
     <SettingSection :title="t('settings.saveOptions')">
-      <SettingItem :title="t('settings.autoSaveDelay')" :description="'单位：毫秒'">
+      <SettingItem :title="t('settings.autoSaveDelay')" :description="'定时保存间隔，每隔指定时间自动保存（仅在有变更时）'">
         <input 
           type="number" 
           class="number-input" 
           :value="configStore.config.editing.autoSaveDelay"
           @change="handleAutoSaveDelayChange"
-        />
-      </SettingItem>
-      
-      <SettingItem :title="t('settings.changeThreshold')" :description="'变更字符超过此阈值时触发保存'">
-        <input 
-          type="number" 
-          class="number-input" 
-          :value="configStore.config.editing.changeThreshold"
-          @change="handleChangeThresholdChange"
-        />
-      </SettingItem>
-      
-      <SettingItem :title="t('settings.minSaveInterval')" :description="'单位：毫秒'">
-        <input 
-          type="number" 
-          class="number-input" 
-          :value="configStore.config.editing.minSaveInterval"
-          @change="handleMinSaveIntervalChange"
         />
       </SettingItem>
     </SettingSection>

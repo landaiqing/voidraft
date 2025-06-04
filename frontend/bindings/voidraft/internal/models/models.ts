@@ -299,16 +299,6 @@ export class EditingConfig {
      */
     "autoSaveDelay": number;
 
-    /**
-     * 变更字符阈值
-     */
-    "changeThreshold": number;
-
-    /**
-     * 最小保存间隔（毫秒）
-     */
-    "minSaveInterval": number;
-
     /** Creates a new EditingConfig instance. */
     constructor($$source: Partial<EditingConfig> = {}) {
         if (!("fontSize" in $$source)) {
@@ -334,12 +324,6 @@ export class EditingConfig {
         }
         if (!("autoSaveDelay" in $$source)) {
             this["autoSaveDelay"] = 0;
-        }
-        if (!("changeThreshold" in $$source)) {
-            this["changeThreshold"] = 0;
-        }
-        if (!("minSaveInterval" in $$source)) {
-            this["minSaveInterval"] = 0;
         }
 
         Object.assign(this, $$source);

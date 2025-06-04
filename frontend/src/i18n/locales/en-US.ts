@@ -73,10 +73,9 @@ export default {
     selectDirectory: 'Select Directory',
     selectDataDirectory: 'Select Data Storage Directory',
     defaultDataPath: 'Default data storage path',
-    enterCustomPath: 'Enter custom data storage path',
-    pathHint: 'Example: C:\\MyData or /home/user/data or relative path ./data',
     bufferFiles: 'Buffer Files Path',
     useCustomLocation: 'Use custom location for buffer files',
+    customDataPath: 'Custom Data Storage Path',
     fontSize: 'Font Size',
     fontSizeDescription: 'Editor font size',
     fontSettings: 'Font Settings',
@@ -96,7 +95,6 @@ export default {
     restartRequired: '(Restart required)',
     saveOptions: 'Save Options',
     autoSaveDelay: 'Auto Save Delay (ms)',
-    changeThreshold: 'Change Threshold',
-    minSaveInterval: 'Min Save Interval (ms)'
+    selectDirectoryFailed: 'Failed to select directory'
   }
 }; 

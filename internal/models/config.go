@@ -63,9 +63,7 @@ type EditingConfig struct {
 	TabType         TabType `json:"tabType" yaml:"tab_type" mapstructure:"tab_type"`                           // Tab类型（空格或Tab）
 
 	// 保存选项
-	AutoSaveDelay   int `json:"autoSaveDelay" yaml:"auto_save_delay" mapstructure:"auto_save_delay"`       // 自动保存延迟（毫秒）
-	ChangeThreshold int `json:"changeThreshold" yaml:"change_threshold" mapstructure:"change_threshold"`   // 变更字符阈值
-	MinSaveInterval int `json:"minSaveInterval" yaml:"min_save_interval" mapstructure:"min_save_interval"` // 最小保存间隔（毫秒）
+	AutoSaveDelay int `json:"autoSaveDelay" yaml:"auto_save_delay" mapstructure:"auto_save_delay"` // 自动保存延迟（毫秒）
 }
 
 // AppearanceConfig 外观设置配置
@@ -136,9 +134,7 @@ func NewDefaultAppConfig() *AppConfig {
 			TabSize:         4,
 			TabType:         TabTypeSpaces,
 			// 保存选项
-			AutoSaveDelay:   5000, // 5秒后自动保存
-			ChangeThreshold: 500,  // 500个字符变更触发保存
-			MinSaveInterval: 1000, // 最小间隔1000毫秒
+			AutoSaveDelay: 5000, // 5秒后自动保存
 		},
 		Appearance: AppearanceConfig{
 			Language: LangZhCN,

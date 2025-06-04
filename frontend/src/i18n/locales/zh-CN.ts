@@ -73,10 +73,9 @@ export default {
     selectDirectory: '选择目录',
     selectDataDirectory: '选择数据存储目录',
     defaultDataPath: '默认数据存储路径',
-    enterCustomPath: '请输入自定义数据存储路径',
-    pathHint: '例如: C:\\MyData 或 /home/user/data 或相对路径 ./data',
     bufferFiles: '缓冲文件路径',
     useCustomLocation: '使用自定义位置存储缓冲文件',
+    customDataPath: '自定义数据存储路径',
     fontSize: '字体大小',
     fontSizeDescription: '编辑器字体大小',
     fontSettings: '字体设置',
@@ -96,7 +95,6 @@ export default {
     restartRequired: '(需要重启)',
     saveOptions: '保存选项',
     autoSaveDelay: '自动保存延迟(毫秒)',
-    changeThreshold: '变更字符阈值',
-    minSaveInterval: '最小保存间隔(毫秒)'
+    selectDirectoryFailed: '选择目录失败'
   }
 }; 

@@ -62,9 +62,7 @@ const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
     enableTabIndent: 'editing.enable_tab_indent',
     tabSize: 'editing.tab_size',
     tabType: 'editing.tab_type',
-    autoSaveDelay: 'editing.auto_save_delay',
-    changeThreshold: 'editing.change_threshold',
-    minSaveInterval: 'editing.min_save_interval'
+    autoSaveDelay: 'editing.auto_save_delay'
 } as const;
 
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
@@ -137,9 +135,7 @@ const DEFAULT_CONFIG: AppConfig = {
         enableTabIndent: true,
         tabSize: CONFIG_LIMITS.tabSize.default,
         tabType: CONFIG_LIMITS.tabType.default,
-        autoSaveDelay: 5000,
-        changeThreshold: 500,
-        minSaveInterval: 1000
+        autoSaveDelay: 5000
     },
     appearance: {
         language: LanguageType.LangZhCN
@@ -338,9 +334,7 @@ export const useConfigStore = defineStore('config', () => {
         fontFamily: (value: string) => safeCall(() => updateEditingConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
         fontWeight: (value: string) => safeCall(() => updateEditingConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess'),
         defaultDataPath: (value: string) => safeCall(() => updateGeneralConfig('defaultDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
-        autoSaveDelay: (value: number) => safeCall(() => updateEditingConfig('autoSaveDelay', value), 'config.saveFailed', 'config.saveSuccess'),
-        changeThreshold: (value: number) => safeCall(() => updateEditingConfig('changeThreshold', value), 'config.saveFailed', 'config.saveSuccess'),
-        minSaveInterval: (value: number) => safeCall(() => updateEditingConfig('minSaveInterval', value), 'config.saveFailed', 'config.saveSuccess')
+        autoSaveDelay: (value: number) => safeCall(() => updateEditingConfig('autoSaveDelay', value), 'config.saveFailed', 'config.saveSuccess')
     };
 
     return {
@@ -394,8 +388,6 @@ export const useConfigStore = defineStore('config', () => {
 
         // 保存配置相关方法
         setAutoSaveDelay: setters.autoSaveDelay,
-        setChangeThreshold: setters.changeThreshold,
-        setMinSaveInterval: setters.minSaveInterval,
 
         // 热键配置相关方法
         setEnableGlobalHotkey: (value: boolean) => safeCall(() => updateGeneralConfig('enableGlobalHotkey', value), 'config.saveFailed', 'config.saveSuccess'),

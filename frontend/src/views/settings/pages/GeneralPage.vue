@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
-import { computed, ref, watch } from 'vue';
+import { computed} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 import { useErrorHandler } from '@/utils/errorHandler';
+import { DialogService } from '@/../bindings/voidraft/internal/services';
 import * as runtime from '@wailsio/runtime';
 
 const { t } = useI18n();
@@ -92,27 +93,28 @@ const useCustomDataPath = computed({
   set: (value: boolean) => configStore.setUseCustomDataPath(value)
 });
 
-// 自定义路径输入
-const customPathInput = ref('');
+// 自定义路径显示
+const customPathDisplay = computed(() => {
+  return configStore.config.general.customDataPath || '';
+});
 
-// 监听自定义路径的变化，同步到配置
-const updateCustomPath = () => {
-  configStore.setCustomDataPath(customPathInput.value.trim());
-};
-
-// 当启用自定义路径时，初始化输入框的值
-const initCustomPath = () => {
-  if (useCustomDataPath.value) {
-    customPathInput.value = configStore.config.general.customDataPath || '';
+const selectDirectory = async () => {
+  // 只有开启自定义路径时才能选择
+  if (!useCustomDataPath.value) return;
+  
+  try {
+    const selectedPath = await DialogService.SelectDirectory();
+    
+    if (selectedPath && selectedPath.trim()) {
+      await configStore.setCustomDataPath(selectedPath.trim());
+    }
+  } catch (error) {
+    // 可以添加用户友好的错误提示
+    await safeCall(async () => {
+      throw error;
+    }, 'settings.selectDirectoryFailed');
   }
 };
-
-// 监听useCustomDataPath的变化
-watch(() => useCustomDataPath.value, (newVal) => {
-  if (newVal) {
-    initCustomPath();
-  }
-}, { immediate: true });
 </script>
 
 <template>
@@ -163,20 +165,25 @@ watch(() => useCustomDataPath.value, (newVal) => {
       <SettingItem :title="t('settings.useCustomDataPath')">
         <ToggleSwitch v-model="useCustomDataPath" />
       </SettingItem>
-      <div class="path-input-section" v-if="useCustomDataPath">
-        <input 
-          type="text" 
-          v-model="customPathInput" 
-          @blur="updateCustomPath"
-          @keyup.enter="updateCustomPath"
-          :placeholder="t('settings.enterCustomPath')" 
-          class="path-input"
-        />
-        <div class="path-hint">{{ t('settings.pathHint') }}</div>
-      </div>
-      <div class="default-path-info" v-else>
-        <div class="path-display default">{{ configStore.config.general.defaultDataPath }}</div>
-        <span class="path-label">{{ t('settings.defaultDataPath') }}</span>
+      
+      <!-- 路径显示区域 -->
+      <div class="path-section">
+        <div class="path-input-container">
+          <input 
+            type="text" 
+            :value="useCustomDataPath ? customPathDisplay : configStore.config.general.defaultDataPath" 
+            readonly
+            :placeholder="useCustomDataPath ? t('settings.selectDataDirectory') : t('settings.defaultDataPath')"
+            :class="[
+              'path-display-input',
+              { 'clickable': useCustomDataPath, 'disabled': !useCustomDataPath }
+            ]"
+            @click="selectDirectory"
+          />
+          <div class="path-label">
+            {{ useCustomDataPath ? t('settings.customDataPath') : t('settings.defaultDataPath') }}
+          </div>
+        </div>
       </div>
     </SettingSection>
     
@@ -305,69 +312,55 @@ watch(() => useCustomDataPath.value, (newVal) => {
   }
 }
 
-.path-input-section {
+.path-section {
   margin-top: 10px;
-  padding-left: 20px;
-  padding-right: 20px;
+  padding: 0 20px;
   
-  .path-input {
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    padding: 8px 12px;
-    background-color: #3a3a3a;
-    border: 1px solid #555555;
-    border-radius: 4px;
-    color: #e0e0e0;
-    font-size: 13px;
-    transition: all 0.2s ease;
-    
-    &:focus {
-      outline: none;
-      border-color: #4a9eff;
-      background-color: #404040;
+  .path-input-container {
+    .path-display-input {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      padding: 8px 12px;
+      background-color: #3a3a3a;
+      border: 1px solid #555555;
+      border-radius: 4px;
+      color: #e0e0e0;
+      font-size: 13px;
+      transition: all 0.2s ease;
+      
+      &.disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background-color: #2a2a2a;
+        border-color: #444444;
+      }
+      
+      &.clickable {
+        cursor: pointer;
+        
+        &:hover {
+          border-color: #4a9eff;
+          background-color: #404040;
+        }
+        
+        &:focus {
+          outline: none;
+          border-color: #4a9eff;
+          background-color: #404040;
+        }
+      }
+      
+      &::placeholder {
+        color: #888888;
+      }
     }
     
-    &::placeholder {
+    .path-label {
+      margin-top: 4px;
       color: #888888;
+      font-size: 12px;
     }
-  }
-  
-  .path-hint {
-    margin-top: 5px;
-    color: #888888;
-    font-size: 12px;
-    line-height: 1.4;
-  }
-}
-
-.default-path-info {
-  margin-top: 10px;
-  padding-left: 20px;
-  padding-right: 20px;
-  
-  .path-display {
-    padding: 8px 12px;
-    background-color: #2a2a2a;
-    border: 1px solid #444444;
-    border-radius: 4px;
-    color: #888888;
-    font-size: 13px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    box-sizing: border-box;
-    
-    &.default {
-      font-style: italic;
-    }
-  }
-  
-  .path-label {
-    display: block;
-    margin-top: 4px;
-    color: #666666;
-    font-size: 12px;
   }
 }
 
