@@ -19,6 +19,8 @@ type ConfigChangeType string
 const (
 	// ConfigChangeTypeHotkey 热键配置变更
 	ConfigChangeTypeHotkey ConfigChangeType = "hotkey"
+	// ConfigChangeTypeDataPath 数据路径配置变更
+	ConfigChangeTypeDataPath ConfigChangeType = "datapath"
 )
 
 // ConfigChangeCallback 配置变更回调函数类型
@@ -439,6 +441,45 @@ func CreateHotkeyListener(callback func(enable bool, hotkey *models.HotkeyCombo)
 			return nil
 		},
 		DebounceDelay: 200 * time.Millisecond,
+		GetConfigFunc: func(v *viper.Viper) interface{} {
+			var config models.AppConfig
+			if err := v.Unmarshal(&config); err != nil {
+				return nil
+			}
+			return &config
+		},
+	}
+}
+
+// CreateDataPathListener 创建数据路径配置监听器
+func CreateDataPathListener(callback func(oldPath, newPath string) error) *ConfigListener {
+	return &ConfigListener{
+		Name:       "DataPathListener",
+		ChangeType: ConfigChangeTypeDataPath,
+		Callback: func(changeType ConfigChangeType, oldConfig, newConfig interface{}) error {
+			var oldPath, newPath string
+
+			// 处理旧配置
+			if oldAppConfig, ok := oldConfig.(*models.AppConfig); ok {
+				oldPath = oldAppConfig.General.DataPath
+			}
+
+			// 处理新配置
+			if newAppConfig, ok := newConfig.(*models.AppConfig); ok {
+				newPath = newAppConfig.General.DataPath
+			} else if newConfig == nil {
+				// 如果新配置为空，说明配置被删除，使用默认值
+				defaultConfig := models.NewDefaultAppConfig()
+				newPath = defaultConfig.General.DataPath
+			}
+
+			// 只有路径真正改变时才调用回调
+			if oldPath != newPath {
+				return callback(oldPath, newPath)
+			}
+			return nil
+		},
+		DebounceDelay: 100 * time.Millisecond, // 较短的防抖延迟，因为数据路径变更需要快速响应
 		GetConfigFunc: func(v *viper.Viper) interface{} {
 			var config models.AppConfig
 			if err := v.Unmarshal(&config); err != nil {

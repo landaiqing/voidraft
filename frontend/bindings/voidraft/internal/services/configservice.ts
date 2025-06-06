@@ -51,6 +51,14 @@ export function Set(key: string, value: any): Promise<void> & { cancel(): void }
 }
 
 /**
+ * SetDataPathChangeCallback 设置数据路径配置变更回调
+ */
+export function SetDataPathChangeCallback(callback: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(393017412, callback) as any;
+    return $resultPromise;
+}
+
+/**
  * SetHotkeyChangeCallback 设置热键配置变更回调
  */
 export function SetHotkeyChangeCallback(callback: any): Promise<void> & { cancel(): void } {

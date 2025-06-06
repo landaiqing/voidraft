@@ -47,9 +47,7 @@ type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
 // 配置键映射
 const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     alwaysOnTop: 'general.always_on_top',
-    defaultDataPath: 'general.default_data_path',
-    useCustomDataPath: 'general.use_custom_data_path',
-    customDataPath: 'general.custom_data_path',
+    dataPath: 'general.data_path',
     enableGlobalHotkey: 'general.enable_global_hotkey',
     globalHotkey: 'general.global_hotkey'
 } as const;
@@ -115,9 +113,7 @@ const getBrowserLanguage = (): SupportedLocaleType => {
 const DEFAULT_CONFIG: AppConfig = {
     general: {
         alwaysOnTop: false,
-        defaultDataPath: './data',
-        useCustomDataPath: false,
-        customDataPath: '',
+        dataPath: './data',
         enableGlobalHotkey: false,
         globalHotkey: {
             ctrl: false,
@@ -333,7 +329,7 @@ export const useConfigStore = defineStore('config', () => {
     const setters = {
         fontFamily: (value: string) => safeCall(() => updateEditingConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
         fontWeight: (value: string) => safeCall(() => updateEditingConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess'),
-        defaultDataPath: (value: string) => safeCall(() => updateGeneralConfig('defaultDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
+        dataPath: (value: string) => safeCall(() => updateGeneralConfig('dataPath', value), 'config.saveFailed', 'config.saveSuccess'),
         autoSaveDelay: (value: number) => safeCall(() => updateEditingConfig('autoSaveDelay', value), 'config.saveFailed', 'config.saveSuccess')
     };
 
@@ -382,9 +378,7 @@ export const useConfigStore = defineStore('config', () => {
         setFontWeight: setters.fontWeight,
 
         // 路径操作
-        setDefaultDataPath: setters.defaultDataPath,
-        setUseCustomDataPath: (value: boolean) => safeCall(() => updateGeneralConfig('useCustomDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
-        setCustomDataPath: (value: string) =>  safeCall(() => updateGeneralConfig('customDataPath', value), 'config.saveFailed', 'config.saveSuccess'),
+        setDataPath: setters.dataPath,
 
         // 保存配置相关方法
         setAutoSaveDelay: setters.autoSaveDelay,

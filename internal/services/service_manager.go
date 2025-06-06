@@ -9,12 +9,13 @@ import (
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	configService   *ConfigService
-	documentService *DocumentService
-	systemService   *SystemService
-	hotkeyService   *HotkeyService
-	dialogService   *DialogService
-	logger          *log.LoggerService
+	configService    *ConfigService
+	documentService  *DocumentService
+	migrationService *MigrationService
+	systemService    *SystemService
+	hotkeyService    *HotkeyService
+	dialogService    *DialogService
+	logger           *log.LoggerService
 }
 
 // NewServiceManager 创建新的服务管理器实例
@@ -24,6 +25,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化配置服务 - 使用固定配置（当前目录下的 config/config.yaml）
 	configService := NewConfigService(logger)
+
+	// 初始化迁移服务
+	migrationService := NewMigrationService(logger)
 
 	// 初始化文档服务
 	documentService := NewDocumentService(configService, logger)
@@ -46,6 +50,15 @@ func NewServiceManager() *ServiceManager {
 		panic(err)
 	}
 
+	// 设置数据路径变更监听
+	err = configService.SetDataPathChangeCallback(func(oldPath, newPath string) error {
+		return documentService.OnDataPathChanged(oldPath, newPath)
+	})
+	if err != nil {
+		logger.Error("Failed to set data path change callback", "error", err)
+		panic(err)
+	}
+
 	// 初始化文档服务
 	err = documentService.Initialize()
 	if err != nil {
@@ -54,12 +67,13 @@ func NewServiceManager() *ServiceManager {
 	}
 
 	return &ServiceManager{
-		configService:   configService,
-		documentService: documentService,
-		systemService:   systemService,
-		hotkeyService:   hotkeyService,
-		dialogService:   dialogService,
-		logger:          logger,
+		configService:    configService,
+		documentService:  documentService,
+		migrationService: migrationService,
+		systemService:    systemService,
+		hotkeyService:    hotkeyService,
+		dialogService:    dialogService,
+		logger:           logger,
 	}
 }
 
@@ -68,6 +82,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 	return []application.Service{
 		application.NewService(sm.configService),
 		application.NewService(sm.documentService),
+		application.NewService(sm.migrationService),
 		application.NewService(sm.systemService),
 		application.NewService(sm.hotkeyService),
 		application.NewService(sm.dialogService),
@@ -77,4 +92,9 @@ func (sm *ServiceManager) GetServices() []application.Service {
 // GetHotkeyService 获取热键服务实例
 func (sm *ServiceManager) GetHotkeyService() *HotkeyService {
 	return sm.hotkeyService
+}
+
+// GetDialogService 获取对话框服务实例
+func (sm *ServiceManager) GetDialogService() *DialogService {
+	return sm.dialogService
 }

@@ -10,10 +10,22 @@
 // @ts-ignore: Unused imports
 import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
 /**
  * SelectDirectory 打开目录选择对话框
  */
 export function SelectDirectory(): Promise<string> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2249533621) as any;
+    return $resultPromise;
+}
+
+/**
+ * SetWindow 设置绑定的窗口
+ */
+export function SetWindow(window: application$0.WebviewWindow | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(968177170, window) as any;
     return $resultPromise;
 }

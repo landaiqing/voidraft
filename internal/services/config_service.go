@@ -105,9 +105,7 @@ func setDefaults(v *viper.Viper) {
 
 	// 通用设置默认值
 	v.SetDefault("general.always_on_top", defaultConfig.General.AlwaysOnTop)
-	v.SetDefault("general.default_data_path", defaultConfig.General.DefaultDataPath)
-	v.SetDefault("general.use_custom_data_path", defaultConfig.General.UseCustomDataPath)
-	v.SetDefault("general.custom_data_path", defaultConfig.General.CustomDataPath)
+	v.SetDefault("general.data_path", defaultConfig.General.DataPath)
 	v.SetDefault("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
 	v.SetDefault("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
 	v.SetDefault("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
@@ -256,4 +254,14 @@ func (cs *ConfigService) SetHotkeyChangeCallback(callback func(enable bool, hotk
 	// 创建热键监听器并注册
 	hotkeyListener := CreateHotkeyListener(callback)
 	return cs.notificationService.RegisterListener(hotkeyListener)
+}
+
+// SetDataPathChangeCallback 设置数据路径配置变更回调
+func (cs *ConfigService) SetDataPathChangeCallback(callback func(oldPath, newPath string) error) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	// 创建数据路径监听器并注册
+	dataPathListener := CreateDataPathListener(callback)
+	return cs.notificationService.RegisterListener(dataPathListener)
 }

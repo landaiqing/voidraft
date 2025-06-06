@@ -348,20 +348,9 @@ export class GeneralConfig {
     "alwaysOnTop": boolean;
 
     /**
-     * 默认数据存储路径
+     * 数据存储路径
      */
-    "defaultDataPath": string;
-
-    /**
-     * 数据存储路径配置
-     * 是否使用自定义数据路径
-     */
-    "useCustomDataPath": boolean;
-
-    /**
-     * 自定义数据存储路径
-     */
-    "customDataPath": string;
+    "dataPath": string;
 
     /**
      * 全局热键设置
@@ -379,14 +368,8 @@ export class GeneralConfig {
         if (!("alwaysOnTop" in $$source)) {
             this["alwaysOnTop"] = false;
         }
-        if (!("defaultDataPath" in $$source)) {
-            this["defaultDataPath"] = "";
-        }
-        if (!("useCustomDataPath" in $$source)) {
-            this["useCustomDataPath"] = false;
-        }
-        if (!("customDataPath" in $$source)) {
-            this["customDataPath"] = "";
+        if (!("dataPath" in $$source)) {
+            this["dataPath"] = "";
         }
         if (!("enableGlobalHotkey" in $$source)) {
             this["enableGlobalHotkey"] = false;
@@ -402,10 +385,10 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType7;
+        const $$createField3_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
-            $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
+            $$parsedSource["globalHotkey"] = $$createField3_0($$parsedSource["globalHotkey"]);
         }
         return new GeneralConfig($$parsedSource as Partial<GeneralConfig>);
     }

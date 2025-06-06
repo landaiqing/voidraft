@@ -5,12 +5,14 @@ import * as ConfigService from "./configservice.js";
 import * as DialogService from "./dialogservice.js";
 import * as DocumentService from "./documentservice.js";
 import * as HotkeyService from "./hotkeyservice.js";
+import * as MigrationService from "./migrationservice.js";
 import * as SystemService from "./systemservice.js";
 export {
     ConfigService,
     DialogService,
     DocumentService,
     HotkeyService,
+    MigrationService,
     SystemService
 };
 

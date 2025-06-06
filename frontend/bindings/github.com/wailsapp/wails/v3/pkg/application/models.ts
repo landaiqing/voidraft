@@ -62,6 +62,23 @@ export class Menu {
     }
 }
 
+export class WebviewWindow {
+
+    /** Creates a new WebviewWindow instance. */
+    constructor($$source: Partial<WebviewWindow> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WebviewWindow instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WebviewWindow {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WebviewWindow($$parsedSource as Partial<WebviewWindow>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = Menu.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);

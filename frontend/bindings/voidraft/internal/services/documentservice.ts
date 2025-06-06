@@ -15,7 +15,7 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as models$0 from "../models/models.js";
 
 /**
- * ForceSave 强制保存当前文档
+ * ForceSave 强制保存
  */
 export function ForceSave(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2767091023) as any;
@@ -23,7 +23,7 @@ export function ForceSave(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * GetActiveDocument 获取当前活动文档
+ * GetActiveDocument 获取活动文档
  */
 export function GetActiveDocument(): Promise<models$0.Document | null> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1785823398) as any;
@@ -35,15 +35,7 @@ export function GetActiveDocument(): Promise<models$0.Document | null> & { cance
 }
 
 /**
- * GetActiveDocumentContent 获取当前活动文档内容
- */
-export function GetActiveDocumentContent(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(922617063) as any;
-    return $resultPromise;
-}
-
-/**
- * Initialize 初始化文档服务
+ * Initialize 初始化服务
  */
 export function Initialize(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3418008221) as any;
@@ -51,15 +43,23 @@ export function Initialize(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * SaveDocumentSync 同步保存文档内容
+ * OnDataPathChanged 处理数据路径变更
  */
-export function SaveDocumentSync(content: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3770207288, content) as any;
+export function OnDataPathChanged(oldPath: string, newPath: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(269349439, oldPath, newPath) as any;
     return $resultPromise;
 }
 
 /**
- * ServiceShutdown 服务关闭
+ * ReloadDocument 重新加载文档
+ */
+export function ReloadDocument(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3093415283) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceShutdown 关闭服务
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(638578044) as any;
@@ -67,7 +67,7 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * UpdateActiveDocumentContent 更新当前活动文档内容
+ * UpdateActiveDocumentContent 更新文档内容
  */
 export function UpdateActiveDocumentContent(content: string): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1486276638, content) as any;

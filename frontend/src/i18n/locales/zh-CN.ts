@@ -45,7 +45,37 @@ export default {
       loadFailed: '加载保存设置失败',
       saveSuccess: '保存设置已更新',
       saveFailed: '保存设置更新失败'
+    },
+    migration: {
+      inProgress: '正在迁移数据到新路径...',
+      success: '数据迁移完成',
+      failed: '数据迁移失败'
     }
+  },
+  migration: {
+    title: '数据迁移',
+    preparing: '准备中',
+    migrating: '迁移中', 
+    completed: '已完成',
+    failed: '失败',
+    cancelled: '已取消',
+    idle: '空闲',
+    currentFile: '当前文件',
+    files: '文件',
+    size: '大小',
+    timeRemaining: '剩余时间',
+    complete: '完成',
+    retry: '重试',
+    close: '关闭',
+    migrationInProgress: '正在迁移数据到新路径...',
+    migrationCompleted: '数据迁移完成',
+    migrationFailed: '数据迁移失败',
+    recursiveCopyError: '目标路径不能是源路径的子目录，这会导致无限递归复制',
+    targetNotDirectory: '目标路径存在但不是目录',
+    targetNotEmpty: '目标目录不为空，无法迁移',
+    compressing: '正在压缩源目录...',
+    extracting: '正在解压到目标位置...',
+    cleaning: '正在清理源目录...'
   },
   settings: {
     title: '设置',
@@ -69,13 +99,11 @@ export default {
     showInSystemTray: '在系统托盘中显示',
     alwaysOnTop: '窗口始终置顶',
     dataStorage: '数据存储',
-    useCustomDataPath: '使用自定义数据存储路径',
-    selectDirectory: '选择目录',
-    selectDataDirectory: '选择数据存储目录',
-    defaultDataPath: '默认数据存储路径',
-    bufferFiles: '缓冲文件路径',
-    useCustomLocation: '使用自定义位置存储缓冲文件',
-    customDataPath: '自定义数据存储路径',
+    dataPath: '数据存储路径',
+    clickToSelectPath: '点击选择路径',
+    resetDefault: '恢复默认',
+    resetToDefaultPath: '恢复为默认路径',
+    restartRequiredForDataPath: '需要重启应用程序',
     fontSize: '字体大小',
     fontSizeDescription: '编辑器字体大小',
     fontSettings: '字体设置',
@@ -95,6 +123,10 @@ export default {
     restartRequired: '(需要重启)',
     saveOptions: '保存选项',
     autoSaveDelay: '自动保存延迟(毫秒)',
-    selectDirectoryFailed: '选择目录失败'
+    selectDirectoryFailed: '选择目录失败',
+    validation: {
+      customPathRequired: '启用自定义路径时必须选择一个有效的目录',
+      customPathAutoDisabled: '由于未选择有效目录，自定义数据路径已自动关闭'
+    }
   }
 }; 

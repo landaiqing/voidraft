@@ -28,12 +28,8 @@ const (
 
 // GeneralConfig 通用设置配置
 type GeneralConfig struct {
-	AlwaysOnTop     bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"`             // 窗口是否置顶
-	DefaultDataPath string `json:"defaultDataPath" yaml:"default_data_path" mapstructure:"default_data_path"` // 默认数据存储路径
-
-	// 数据存储路径配置
-	UseCustomDataPath bool   `json:"useCustomDataPath" yaml:"use_custom_data_path" mapstructure:"use_custom_data_path"` // 是否使用自定义数据路径
-	CustomDataPath    string `json:"customDataPath" yaml:"custom_data_path" mapstructure:"custom_data_path"`            // 自定义数据存储路径
+	AlwaysOnTop bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"` // 窗口是否置顶
+	DataPath    string `json:"dataPath" yaml:"data_path" mapstructure:"data_path"`            // 数据存储路径
 
 	// 全局热键设置
 	EnableGlobalHotkey bool        `json:"enableGlobalHotkey" yaml:"enable_global_hotkey" mapstructure:"enable_global_hotkey"` // 是否启用全局热键
@@ -111,9 +107,7 @@ func NewDefaultAppConfig() *AppConfig {
 	return &AppConfig{
 		General: GeneralConfig{
 			AlwaysOnTop:        false,
-			DefaultDataPath:    dataDir,
-			UseCustomDataPath:  false,
-			CustomDataPath:     "",
+			DataPath:           dataDir,
 			EnableGlobalHotkey: false,
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,

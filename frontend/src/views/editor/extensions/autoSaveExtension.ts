@@ -24,7 +24,7 @@ export interface AutoSaveOptions {
 export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
   const { 
     onSave = () => {},
-    debounceDelay = 1000  // 默认1000ms延迟，原为300ms
+    debounceDelay = 2000
   } = options;
 
   return ViewPlugin.fromClass(

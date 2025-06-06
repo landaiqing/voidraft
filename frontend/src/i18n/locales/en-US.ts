@@ -45,7 +45,37 @@ export default {
       loadFailed: 'Failed to load save settings',
       saveSuccess: 'Save settings updated',
       saveFailed: 'Failed to update save settings'
+    },
+    migration: {
+      inProgress: 'Migrating data to new path...',
+      success: 'Data migration completed',
+      failed: 'Data migration failed'
     }
+  },
+  migration: {
+    title: 'Data Migration',
+    preparing: 'Preparing',
+    migrating: 'Migrating',
+    completed: 'Completed',
+    failed: 'Failed',
+    cancelled: 'Cancelled',
+    idle: 'Idle',
+    currentFile: 'Current File',
+    files: 'Files',
+    size: 'Size',
+    timeRemaining: 'Time Remaining',
+    complete: 'Complete',
+    retry: 'Retry',
+    close: 'Close',
+    migrationInProgress: 'Migrating data to new path...',
+    migrationCompleted: 'Data migration completed',
+    migrationFailed: 'Data migration failed',
+    recursiveCopyError: 'Target path cannot be a subdirectory of source path, this would cause infinite recursive copying',
+    targetNotDirectory: 'Target path exists but is not a directory',
+    targetNotEmpty: 'Target directory is not empty, cannot migrate',
+    compressing: 'Compressing source directory...',
+    extracting: 'Extracting to target location...',
+    cleaning: 'Cleaning up source directory...'
   },
   settings: {
     title: 'Settings',
@@ -69,13 +99,11 @@ export default {
     showInSystemTray: 'Show in System Tray',
     alwaysOnTop: 'Always on Top',
     dataStorage: 'Data Storage',
-    useCustomDataPath: 'Use custom data storage path',
-    selectDirectory: 'Select Directory',
-    selectDataDirectory: 'Select Data Storage Directory',
-    defaultDataPath: 'Default data storage path',
-    bufferFiles: 'Buffer Files Path',
-    useCustomLocation: 'Use custom location for buffer files',
-    customDataPath: 'Custom Data Storage Path',
+    dataPath: 'Data Storage Path',
+    clickToSelectPath: 'Click to select path',
+    resetDefault: 'Reset Default',
+    resetToDefaultPath: 'Reset to default path',
+    restartRequiredForDataPath: 'Restart required',
     fontSize: 'Font Size',
     fontSizeDescription: 'Editor font size',
     fontSettings: 'Font Settings',
@@ -95,6 +123,10 @@ export default {
     restartRequired: '(Restart required)',
     saveOptions: 'Save Options',
     autoSaveDelay: 'Auto Save Delay (ms)',
-    selectDirectoryFailed: 'Failed to select directory'
+    selectDirectoryFailed: 'Failed to select directory',
+    validation: {
+      customPathRequired: 'A valid directory must be selected when enabling custom path',
+      customPathAutoDisabled: 'Custom data path has been automatically disabled due to no valid directory selected'
+    }
   }
 }; 

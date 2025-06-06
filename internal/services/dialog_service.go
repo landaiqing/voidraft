@@ -8,6 +8,7 @@ import (
 // DialogService 对话框服务，处理文件选择等对话框操作
 type DialogService struct {
 	logger *log.LoggerService
+	window *application.WebviewWindow // 绑定的窗口
 }
 
 // NewDialogService 创建新的对话框服务实例
@@ -18,7 +19,14 @@ func NewDialogService(logger *log.LoggerService) *DialogService {
 
 	return &DialogService{
 		logger: logger,
+		window: nil, // 初始为空，后续通过 SetWindow 设置
 	}
+}
+
+// SetWindow 设置绑定的窗口
+func (ds *DialogService) SetWindow(window *application.WebviewWindow) {
+	ds.window = window
+	ds.logger.Info("Dialog service window binding updated")
 }
 
 // SelectDirectory 打开目录选择对话框
@@ -41,9 +49,9 @@ func (ds *DialogService) SelectDirectory() (string, error) {
 		ResolvesAliases: true, // 解析别名/快捷方式
 
 		// 对话框文本配置
-		Title:      "选择数据存储目录",
-		Message:    "请选择用于存储应用数据的文件夹",
-		ButtonText: "选择",
+		Title:      "Select Directory",
+		Message:    "Select the folder where you want to store your app data",
+		ButtonText: "Select",
 
 		// 不设置过滤器，因为我们选择目录
 		Filters: nil,
@@ -51,8 +59,8 @@ func (ds *DialogService) SelectDirectory() (string, error) {
 		// 不指定默认目录，让系统决定
 		Directory: "",
 
-		// 不绑定到特定窗口，使用默认行为
-		Window: nil,
+		// 绑定到主窗口
+		Window: ds.window,
 	})
 
 	path, err := dialog.PromptForSingleSelection()

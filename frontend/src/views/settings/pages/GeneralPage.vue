@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
-import { computed} from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
+import MigrationProgress from '@/components/migration/MigrationProgress.vue';
 import { useErrorHandler } from '@/utils/errorHandler';
-import { DialogService } from '@/../bindings/voidraft/internal/services';
+import { DialogService, MigrationService } from '@/../bindings/voidraft/internal/services';
 import * as runtime from '@wailsio/runtime';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 const { safeCall } = useErrorHandler();
+
+// 迁移状态
+const showMigrationProgress = ref(false);
 
 // 可选键列表
 const keyOptions = [
@@ -87,33 +91,56 @@ const hotkeyPreview = computed(() => {
   return parts.join(' + ');
 });
 
-// 数据存储路径配置
-const useCustomDataPath = computed({
-  get: () => configStore.config.general.useCustomDataPath,
-  set: (value: boolean) => configStore.setUseCustomDataPath(value)
-});
+// 数据路径配置
+const currentDataPath = computed(() => configStore.config.general.dataPath);
 
-// 自定义路径显示
-const customPathDisplay = computed(() => {
-  return configStore.config.general.customDataPath || '';
-});
-
-const selectDirectory = async () => {
-  // 只有开启自定义路径时才能选择
-  if (!useCustomDataPath.value) return;
-  
+// 选择数据存储目录
+const selectDataDirectory = async () => {
   try {
     const selectedPath = await DialogService.SelectDirectory();
     
-    if (selectedPath && selectedPath.trim()) {
-      await configStore.setCustomDataPath(selectedPath.trim());
+    if (selectedPath && selectedPath.trim() && selectedPath !== currentDataPath.value) {
+      // 显示迁移进度对话框
+      showMigrationProgress.value = true;
+      
+      // 开始迁移
+      await safeCall(async () => {
+        const oldPath = currentDataPath.value;
+        const newPath = selectedPath.trim();
+        
+        // 先启动迁移
+        await MigrationService.MigrateDirectory(oldPath, newPath);
+        
+        // 迁移完成后更新配置
+        await configStore.setDataPath(newPath);
+      }, 'migration.migrationFailed');
     }
   } catch (error) {
-    // 可以添加用户友好的错误提示
     await safeCall(async () => {
       throw error;
     }, 'settings.selectDirectoryFailed');
   }
+};
+    
+// 处理迁移完成
+const handleMigrationComplete = () => {
+  showMigrationProgress.value = false;
+  // 显示成功消息
+  safeCall(async () => {
+    // 空的成功操作，只为了显示成功消息
+  }, '', 'migration.migrationCompleted');
+};
+
+// 处理迁移关闭
+const handleMigrationClose = () => {
+  showMigrationProgress.value = false;
+};
+
+// 处理迁移重试
+const handleMigrationRetry = () => {
+  // 重新触发路径选择
+  showMigrationProgress.value = false;
+  selectDataDirectory();
 };
 </script>
 
@@ -162,27 +189,20 @@ const selectDirectory = async () => {
     </SettingSection>
     
     <SettingSection :title="t('settings.dataStorage')">
-      <SettingItem :title="t('settings.useCustomDataPath')">
-        <ToggleSwitch v-model="useCustomDataPath" />
-      </SettingItem>
-      
-      <!-- 路径显示区域 -->
-      <div class="path-section">
-        <div class="path-input-container">
+      <div class="data-path-setting">
+        <div class="setting-header">
+          <div class="setting-title">{{ t('settings.dataPath') }}</div>
+        </div>
+        <div class="data-path-controls">
           <input 
             type="text" 
-            :value="useCustomDataPath ? customPathDisplay : configStore.config.general.defaultDataPath" 
+            :value="currentDataPath"
             readonly
-            :placeholder="useCustomDataPath ? t('settings.selectDataDirectory') : t('settings.defaultDataPath')"
-            :class="[
-              'path-display-input',
-              { 'clickable': useCustomDataPath, 'disabled': !useCustomDataPath }
-            ]"
-            @click="selectDirectory"
+            :placeholder="t('settings.clickToSelectPath')"
+            class="path-display-input"
+            @click="selectDataDirectory"
+            :title="t('settings.clickToSelectPath')"
           />
-          <div class="path-label">
-            {{ useCustomDataPath ? t('settings.customDataPath') : t('settings.defaultDataPath') }}
-          </div>
         </div>
       </div>
     </SettingSection>
@@ -200,6 +220,14 @@ const selectDirectory = async () => {
         </div>
       </div>
     </SettingSection>
+    
+    <!-- 迁移进度对话框 -->
+    <MigrationProgress 
+      :visible="showMigrationProgress"
+      @complete="handleMigrationComplete"
+      @close="handleMigrationClose"
+      @retry="handleMigrationRetry"
+    />
   </div>
 </template>
 
@@ -312,31 +340,44 @@ const selectDirectory = async () => {
   }
 }
 
-.path-section {
-  margin-top: 10px;
-  padding: 0 20px;
+.data-path-setting {
+  padding: 14px 0;
   
-  .path-input-container {
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+  
+  .setting-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    
+    .setting-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: #e0e0e0;
+    }
+  }
+}
+
+.data-path-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  
     .path-display-input {
       width: 100%;
-      max-width: 100%;
+    max-width: 450px;
       box-sizing: border-box;
-      padding: 8px 12px;
+    padding: 10px 12px;
       background-color: #3a3a3a;
       border: 1px solid #555555;
       border-radius: 4px;
       color: #e0e0e0;
       font-size: 13px;
+    line-height: 1.2;
       transition: all 0.2s ease;
-      
-      &.disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        background-color: #2a2a2a;
-        border-color: #444444;
-      }
-      
-      &.clickable {
         cursor: pointer;
         
         &:hover {
@@ -348,20 +389,16 @@ const selectDirectory = async () => {
           outline: none;
           border-color: #4a9eff;
           background-color: #404040;
-        }
-      }
+    }
+    
+      
       
       &::placeholder {
         color: #888888;
       }
     }
     
-    .path-label {
-      margin-top: 4px;
-      color: #888888;
-      font-size: 12px;
-    }
-  }
+
 }
 
 .danger-zone {
@@ -389,7 +426,7 @@ const selectDirectory = async () => {
       
       p {
         margin: 0;
-        color: #b0b0b0;
+        color: #cccccc;
         font-size: 13px;
         line-height: 1.4;
       }
@@ -398,14 +435,13 @@ const selectDirectory = async () => {
     .reset-button {
       padding: 8px 16px;
       background-color: #dc3545;
-      border: 1px solid #c82333;
+      border: 1px solid #dc3545;
       border-radius: 4px;
-      color: #ffffff;
-      cursor: pointer;
+      color: white;
       font-size: 13px;
-      font-weight: 500;
+      cursor: pointer;
       transition: all 0.2s ease;
-      white-space: nowrap;
+      flex-shrink: 0;
       
       &:hover {
         background-color: #c82333;

@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { useConfigStore } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import MemoryMonitor from '@/components/monitor/MemoryMonitor.vue';
 
 const { t } = useI18n();
-const configStore = useConfigStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -28,9 +26,10 @@ const handleNavClick = (item: typeof navItems[0]) => {
 };
 
 // 返回编辑器
-const goBackToEditor = () => {
-  router.push('/');
+const goBackToEditor = async () => {
+  await router.push('/');
 };
+
 </script>
 
 <template>

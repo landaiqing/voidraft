@@ -100,6 +100,10 @@ func main() {
 		panic(err)
 	}
 
+	// 设置对话框服务的窗口绑定
+	dialogService := serviceManager.GetDialogService()
+	dialogService.SetWindow(mainWindow)
+
 	// 设置全局变量供单实例处理使用
 	window = mainWindow
 
