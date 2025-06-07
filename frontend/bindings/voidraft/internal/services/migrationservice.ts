@@ -51,10 +51,10 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * SetProgressCallback 设置进度回调
+ * SetProgressBroadcaster 设置进度广播函数
  */
-export function SetProgressCallback(callback: $models.MigrationProgressCallback): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(75752256, callback) as any;
+export function SetProgressBroadcaster(broadcaster: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3244071921, broadcaster) as any;
     return $resultPromise;
 }
 

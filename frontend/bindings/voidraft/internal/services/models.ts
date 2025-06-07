@@ -5,10 +5,6 @@
 // @ts-ignore: Unused imports
 import {Create as $Create} from "@wailsio/runtime";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as time$0 from "../../../time/models.js";
-
 /**
  * MemoryStats 内存统计信息
  */
@@ -86,86 +82,22 @@ export class MigrationProgress {
     "status": MigrationStatus;
 
     /**
-     * 当前处理的文件
-     */
-    "currentFile": string;
-
-    /**
-     * 已处理文件数
-     */
-    "processedFiles": number;
-
-    /**
-     * 总文件数
-     */
-    "totalFiles": number;
-
-    /**
-     * 已处理字节数
-     */
-    "processedBytes": number;
-
-    /**
-     * 总字节数
-     */
-    "totalBytes": number;
-
-    /**
      * 进度百分比 (0-100)
      */
     "progress": number;
-
-    /**
-     * 状态消息
-     */
-    "message": string;
 
     /**
      * 错误信息
      */
     "error"?: string;
 
-    /**
-     * 开始时间
-     */
-    "startTime": time$0.Time;
-
-    /**
-     * 估计剩余时间
-     */
-    "estimatedTime": time$0.Duration;
-
     /** Creates a new MigrationProgress instance. */
     constructor($$source: Partial<MigrationProgress> = {}) {
         if (!("status" in $$source)) {
             this["status"] = ("" as MigrationStatus);
         }
-        if (!("currentFile" in $$source)) {
-            this["currentFile"] = "";
-        }
-        if (!("processedFiles" in $$source)) {
-            this["processedFiles"] = 0;
-        }
-        if (!("totalFiles" in $$source)) {
-            this["totalFiles"] = 0;
-        }
-        if (!("processedBytes" in $$source)) {
-            this["processedBytes"] = 0;
-        }
-        if (!("totalBytes" in $$source)) {
-            this["totalBytes"] = 0;
-        }
         if (!("progress" in $$source)) {
             this["progress"] = 0;
-        }
-        if (!("message" in $$source)) {
-            this["message"] = "";
-        }
-        if (!("startTime" in $$source)) {
-            this["startTime"] = null;
-        }
-        if (!("estimatedTime" in $$source)) {
-            this["estimatedTime"] = (0 as time$0.Duration);
         }
 
         Object.assign(this, $$source);
@@ -181,11 +113,6 @@ export class MigrationProgress {
 }
 
 /**
- * MigrationProgressCallback 进度回调函数类型
- */
-export type MigrationProgressCallback = any;
-
-/**
  * MigrationStatus 迁移状态
  */
 export enum MigrationStatus {
@@ -193,16 +120,6 @@ export enum MigrationStatus {
      * The Go zero value for the underlying type of the enum.
      */
     $zero = "",
-
-    /**
-     * 空闲状态
-     */
-    MigrationStatusIdle = "idle",
-
-    /**
-     * 准备中
-     */
-    MigrationStatusPreparing = "preparing",
 
     /**
      * 迁移中
@@ -218,9 +135,4 @@ export enum MigrationStatus {
      * 失败
      */
     MigrationStatusFailed = "failed",
-
-    /**
-     * 取消
-     */
-    MigrationStatusCancelled = "cancelled",
 };

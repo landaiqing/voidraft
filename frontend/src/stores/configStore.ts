@@ -270,8 +270,16 @@ export const useConfigStore = defineStore('config', () => {
 
         state.isLoading = true;
         try {
+            // 调用后端重置配置
             await safeCall(() => ConfigService.ResetConfig(), 'config.resetFailed', 'config.resetSuccess');
-            await safeCall(() => initConfig(), 'config.loadFailed', 'config.loadSuccess');
+            
+            // 立即重新加载后端配置以确保前端状态同步
+            await safeCall(async () => {
+                const appConfig = await ConfigService.GetConfig();
+                if (appConfig) {
+                    state.config = JSON.parse(JSON.stringify(appConfig)) as AppConfig;
+                }
+            }, 'config.loadFailed', 'config.loadSuccess');
         } finally {
             state.isLoading = false;
         }

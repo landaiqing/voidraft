@@ -1,21 +1,164 @@
 <script setup lang="ts">
-import { useConfigStore } from '@/stores/configStore';
-import { useI18n } from 'vue-i18n';
-import { computed, ref, onMounted } from 'vue';
+import {useConfigStore} from '@/stores/configStore';
+import {useI18n} from 'vue-i18n';
+import {computed, onUnmounted, ref, watch} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import MigrationProgress from '@/components/migration/MigrationProgress.vue';
-import { useErrorHandler } from '@/utils/errorHandler';
-import { DialogService, MigrationService } from '@/../bindings/voidraft/internal/services';
+import {useErrorHandler} from '@/utils/errorHandler';
+import {DialogService, MigrationService} from '@/../bindings/voidraft/internal/services';
+import {useWebSocket} from '@/composables/useWebSocket';
 import * as runtime from '@wailsio/runtime';
 
-const { t } = useI18n();
+const {t} = useI18n();
 const configStore = useConfigStore();
-const { safeCall } = useErrorHandler();
+const {safeCall} = useErrorHandler();
+
+// WebSocket连接
+const {migrationProgress, isConnected, connectionState, connect, disconnect, on} = useWebSocket({
+  debug: true,
+  autoConnect: false // 手动控制连接
+});
+
+// 迁移消息链
+interface MigrationMessage {
+  id: number;
+  content: string;
+  type: 'start' | 'progress' | 'success' | 'error';
+  timestamp: number;
+}
+
+const migrationMessages = ref<MigrationMessage[]>([]);
+const showMessages = ref(false);
+let messageIdCounter = 0;
+let hideMessagesTimer: any = null;
+
+// 添加迁移消息
+const addMigrationMessage = (content: string, type: MigrationMessage['type']) => {
+  const message: MigrationMessage = {
+    id: ++messageIdCounter,
+    content,
+    type,
+    timestamp: Date.now()
+  };
+  
+  migrationMessages.value.push(message);
+  showMessages.value = true;
+};
+
+// 清除所有消息
+const clearMigrationMessages = () => {
+  migrationMessages.value = [];
+  showMessages.value = false;
+};
+
+// 监听连接状态变化
+const connectionWatcher = computed(() => isConnected.value);
+watch(connectionWatcher, (connected) => {
+  if (connected && isMigrating.value) {
+    // 如果连接成功且正在迁移，添加连接消息
+    if (!migrationMessages.value.some(msg => msg.content === '实时连接中')) {
+      addMigrationMessage('实时连接中', 'progress');
+    }
+  }
+});
+
+// 监听迁移进度变化
+on('migration_progress', (data) => {
+  // 清除之前的隐藏定时器
+  if (hideMessagesTimer) {
+    clearTimeout(hideMessagesTimer);
+    hideMessagesTimer = null;
+  }
+  
+  if (data.status === 'migrating') {
+    // 如果是第一次收到迁移状态，添加开始消息
+    if (migrationMessages.value.length === 0) {
+      addMigrationMessage(t('migration.started'), 'start');
+    }
+    // 如果还没有迁移中消息，添加迁移中消息
+    if (!migrationMessages.value.some(msg => msg.type === 'progress' && msg.content === t('migration.migrating'))) {
+      addMigrationMessage(t('migration.migrating'), 'progress');
+    }
+  } else if (data.status === 'completed') {
+    addMigrationMessage(t('migration.completed'), 'success');
+    
+    // 3秒后断开连接
+    setTimeout(() => {
+      disconnect();
+    }, 3000);
+    
+    // 5秒后开始逐个隐藏消息
+    hideMessagesTimer = setTimeout(() => {
+      hideMessagesSequentially();
+    }, 5000);
+    
+  } else if (data.status === 'failed') {
+    const errorMsg = data.error || t('migration.failed');
+    addMigrationMessage(errorMsg, 'error');
+    
+    // 3秒后断开连接
+    setTimeout(() => {
+      disconnect();
+    }, 3000);
+    
+    // 8秒后开始逐个隐藏消息
+    hideMessagesTimer = setTimeout(() => {
+      hideMessagesSequentially();
+    }, 8000);
+  }
+});
+
+// 逐个隐藏消息
+const hideMessagesSequentially = () => {
+  const hideNextMessage = () => {
+    if (migrationMessages.value.length > 0) {
+      migrationMessages.value.shift(); // 移除第一条消息
+      
+      if (migrationMessages.value.length > 0) {
+        // 如果还有消息，1秒后隐藏下一条
+        setTimeout(hideNextMessage, 1000);
+      } else {
+        // 所有消息都隐藏完了，同时隐藏进度条
+        showMessages.value = false;
+      }
+    }
+  };
+  
+  hideNextMessage();
+};
 
 // 迁移状态
-const showMigrationProgress = ref(false);
+const isMigrating = computed(() => migrationProgress.status === 'migrating');
+const migrationComplete = computed(() => migrationProgress.status === 'completed');
+const migrationFailed = computed(() => migrationProgress.status === 'failed');
+
+// 进度条样式和宽度
+const progressBarClass = computed(() => {
+  switch (migrationProgress.status) {
+    case 'migrating':
+      return 'migrating';
+    case 'completed':
+      return 'success';
+    case 'failed':
+      return 'error';
+    default:
+      return '';
+  }
+});
+
+const progressBarWidth = computed(() => {
+  if (isMigrating.value) {
+    return migrationProgress.progress + '%';
+  } else if (migrationComplete.value || migrationFailed.value) {
+    return '100%';
+  }
+  return '0%';
+});
+
+// 重置确认状态
+const resetConfirmState = ref<'idle' | 'confirming'>('idle');
+let resetConfirmTimer: any = null;
 
 // 可选键列表
 const keyOptions = [
@@ -58,22 +201,37 @@ const selectedKey = computed(() => configStore.config.general.globalHotkey.key);
 // 切换修饰键
 const toggleModifier = (key: 'ctrl' | 'shift' | 'alt' | 'win') => {
   const currentHotkey = configStore.config.general.globalHotkey;
-  const newHotkey = { ...currentHotkey, [key]: !currentHotkey[key] };
+  const newHotkey = {...currentHotkey, [key]: !currentHotkey[key]};
   configStore.setGlobalHotkey(newHotkey);
 };
 
 // 更新选择的键
 const updateSelectedKey = (event: Event) => {
   const select = event.target as HTMLSelectElement;
-  const newHotkey = { ...configStore.config.general.globalHotkey, key: select.value };
+  const newHotkey = {...configStore.config.general.globalHotkey, key: select.value};
   configStore.setGlobalHotkey(newHotkey);
 };
 
 // 重置设置
-const resetSettings = async () => {
-  if (confirm(t('settings.confirmReset'))) {
-    await configStore.resetConfig();
+const resetSettings = () => {
+  if (resetConfirmState.value === 'idle') {
+    // 第一次点击，进入确认状态
+    resetConfirmState.value = 'confirming';
+    // 3秒后自动返回idle状态
+    resetConfirmTimer = setTimeout(() => {
+      resetConfirmState.value = 'idle';
+    }, 3000);
+  } else if (resetConfirmState.value === 'confirming') {
+    // 第二次点击，执行重置
+    clearTimeout(resetConfirmTimer);
+    resetConfirmState.value = 'idle';
+    confirmReset();
   }
+};
+
+// 确认重置
+const confirmReset = async () => {
+  await configStore.resetConfig();
 };
 
 // 计算热键预览文本
@@ -96,95 +254,89 @@ const currentDataPath = computed(() => configStore.config.general.dataPath);
 
 // 选择数据存储目录
 const selectDataDirectory = async () => {
-  try {
+  if (isMigrating.value) return;
+  
     const selectedPath = await DialogService.SelectDirectory();
     
     if (selectedPath && selectedPath.trim() && selectedPath !== currentDataPath.value) {
-      // 显示迁移进度对话框
-      showMigrationProgress.value = true;
+      // 清除之前的消息
+      clearMigrationMessages();
+      
+      // 连接WebSocket以接收迁移进度
+      await connect();
       
       // 开始迁移
+      try {
       await safeCall(async () => {
         const oldPath = currentDataPath.value;
         const newPath = selectedPath.trim();
         
-        // 先启动迁移
         await MigrationService.MigrateDirectory(oldPath, newPath);
-        
-        // 迁移完成后更新配置
         await configStore.setDataPath(newPath);
-      }, 'migration.migrationFailed');
-    }
+      }, '');
   } catch (error) {
-    await safeCall(async () => {
-      throw error;
-    }, 'settings.selectDirectoryFailed');
+        // 发生错误时清除消息
+        clearMigrationMessages();
+    }
   }
 };
-    
-// 处理迁移完成
-const handleMigrationComplete = () => {
-  showMigrationProgress.value = false;
-  // 显示成功消息
-  safeCall(async () => {
-    // 空的成功操作，只为了显示成功消息
-  }, '', 'migration.migrationCompleted');
-};
 
-// 处理迁移关闭
-const handleMigrationClose = () => {
-  showMigrationProgress.value = false;
-};
-
-// 处理迁移重试
-const handleMigrationRetry = () => {
-  // 重新触发路径选择
-  showMigrationProgress.value = false;
-  selectDataDirectory();
-};
+// 清理定时器和WebSocket连接
+onUnmounted(() => {
+  disconnect();
+  if (resetConfirmTimer) {
+    clearTimeout(resetConfirmTimer);
+  }
+  if (hideMessagesTimer) {
+    clearTimeout(hideMessagesTimer);
+  }
+});
 </script>
 
 <template>
   <div class="settings-page">
     <SettingSection :title="t('settings.globalHotkey')">
       <SettingItem :title="t('settings.enableGlobalHotkey')">
-        <ToggleSwitch v-model="enableGlobalHotkey" />
+        <ToggleSwitch v-model="enableGlobalHotkey"/>
       </SettingItem>
       
       <div class="hotkey-selector" :class="{ 'disabled': !enableGlobalHotkey }">
-        <div class="hotkey-modifiers">
-          <label class="modifier-label" :class="{ active: modifierKeys.ctrl }" @click="toggleModifier('ctrl')">
-            <input type="checkbox" :checked="modifierKeys.ctrl" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
-            <span class="modifier-key">Ctrl</span>
-          </label>
-          <label class="modifier-label" :class="{ active: modifierKeys.shift }" @click="toggleModifier('shift')">
-            <input type="checkbox" :checked="modifierKeys.shift" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
-            <span class="modifier-key">Shift</span>
-          </label>
-          <label class="modifier-label" :class="{ active: modifierKeys.alt }" @click="toggleModifier('alt')">
-            <input type="checkbox" :checked="modifierKeys.alt" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
-            <span class="modifier-key">Alt</span>
-          </label>
-          <label class="modifier-label" :class="{ active: modifierKeys.win }" @click="toggleModifier('win')">
-            <input type="checkbox" :checked="modifierKeys.win" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
-            <span class="modifier-key">Win</span>
-          </label>
+        <div class="hotkey-controls">
+          <div class="hotkey-modifiers">
+            <label class="modifier-label" :class="{ active: modifierKeys.ctrl }" @click="toggleModifier('ctrl')">
+              <input type="checkbox" :checked="modifierKeys.ctrl" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
+              <span class="modifier-key">Ctrl</span>
+            </label>
+            <label class="modifier-label" :class="{ active: modifierKeys.shift }" @click="toggleModifier('shift')">
+              <input type="checkbox" :checked="modifierKeys.shift" class="hidden-checkbox"
+                     :disabled="!enableGlobalHotkey">
+              <span class="modifier-key">Shift</span>
+            </label>
+            <label class="modifier-label" :class="{ active: modifierKeys.alt }" @click="toggleModifier('alt')">
+              <input type="checkbox" :checked="modifierKeys.alt" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
+              <span class="modifier-key">Alt</span>
+            </label>
+            <label class="modifier-label" :class="{ active: modifierKeys.win }" @click="toggleModifier('win')">
+              <input type="checkbox" :checked="modifierKeys.win" class="hidden-checkbox" :disabled="!enableGlobalHotkey">
+              <span class="modifier-key">Win</span>
+            </label>
+          </div>
+          
+          <select class="key-select" :value="selectedKey" @change="updateSelectedKey" :disabled="!enableGlobalHotkey">
+            <option v-for="key in keyOptions" :key="key" :value="key">{{ key }}</option>
+          </select>
         </div>
         
-        <select class="key-select" :value="selectedKey" @change="updateSelectedKey" :disabled="!enableGlobalHotkey">
-          <option v-for="key in keyOptions" :key="key" :value="key">{{ key }}</option>
-        </select>
-        
-        <div class="hotkey-preview" v-if="hotkeyPreview">
+        <div class="hotkey-preview">
           <span class="preview-label">预览：</span>
-          <span class="preview-hotkey">{{ hotkeyPreview }}</span>
+          <span class="preview-hotkey">{{ hotkeyPreview || '无' }}</span>
         </div>
       </div>
     </SettingSection>
     
     <SettingSection :title="t('settings.window')">
       <SettingItem :title="t('settings.alwaysOnTop')">
-        <ToggleSwitch v-model="alwaysOnTop" />
+        <ToggleSwitch v-model="alwaysOnTop"/>
       </SettingItem>
     </SettingSection>
     
@@ -194,41 +346,61 @@ const handleMigrationRetry = () => {
           <div class="setting-title">{{ t('settings.dataPath') }}</div>
         </div>
         <div class="data-path-controls">
-          <input 
-            type="text" 
-            :value="currentDataPath"
-            readonly
-            :placeholder="t('settings.clickToSelectPath')"
-            class="path-display-input"
-            @click="selectDataDirectory"
-            :title="t('settings.clickToSelectPath')"
-          />
+          <div class="path-input-container">
+            <input 
+              type="text" 
+              :value="currentDataPath"
+              readonly
+              :placeholder="t('settings.clickToSelectPath')"
+              class="path-display-input"
+              @click="selectDataDirectory"
+              :title="t('settings.clickToSelectPath')"
+              :disabled="isMigrating"
+            />
+            <div 
+              class="progress-bar" 
+              :class="[
+                { 'active': showMessages },
+                progressBarClass
+              ]"
+              :style="{ width: progressBarWidth }"
+            ></div>
+          </div>
+          <div class="migration-status-container">
+            <Transition name="fade-slide" mode="out-in">
+              <div v-if="showMessages" class="migration-messages">
+                <TransitionGroup name="message-list" tag="div">
+                  <div v-for="message in migrationMessages" :key="message.id" class="migration-message" :class="message.type">
+                    {{ message.content }}
+                  </div>
+                </TransitionGroup>
+              </div>
+            </Transition>
+
+          </div>
         </div>
       </div>
     </SettingSection>
     
     <SettingSection :title="t('settings.dangerZone')">
-      <div class="danger-zone">
-        <div class="reset-section">
-          <div class="reset-info">
-            <h4>{{ t('settings.resetAllSettings') }}</h4>
-            <p>{{ t('settings.resetDescription') }}</p>
-          </div>
-          <button class="reset-button" @click="resetSettings">
+      <SettingItem :title="t('settings.resetAllSettings')" :description="t('settings.resetDescription')">
+        <button 
+          class="reset-button" 
+          :class="{ 'confirming': resetConfirmState === 'confirming' }"
+          @click="resetSettings"
+        >
+          <template v-if="resetConfirmState === 'idle'">
             {{ t('settings.reset') }}
-          </button>
-        </div>
-      </div>
+          </template>
+          <template v-else-if="resetConfirmState === 'confirming'">
+            {{ t('settings.confirmReset') }}
+          </template>
+        </button>
+      </SettingItem>
     </SettingSection>
-    
-    <!-- 迁移进度对话框 -->
-    <MigrationProgress 
-      :visible="showMigrationProgress"
-      @complete="handleMigrationComplete"
-      @close="handleMigrationClose"
-      @retry="handleMigrationRetry"
-    />
   </div>
+
+
 </template>
 
 <style scoped lang="scss">
@@ -238,16 +410,24 @@ const handleMigrationRetry = () => {
 
 .hotkey-selector {
   padding: 15px 0 5px 20px;
+  transition: all 0.3s ease;
   
   &.disabled {
     opacity: 0.5;
     pointer-events: none;
   }
   
+  .hotkey-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  
   .hotkey-modifiers {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
     flex-wrap: wrap;
     
     .modifier-label {
@@ -298,7 +478,6 @@ const handleMigrationRetry = () => {
     background-position: right 8px center;
     background-size: 16px;
     padding-right: 30px;
-    margin-bottom: 12px;
     
     &:focus {
       outline: none;
@@ -366,92 +545,261 @@ const handleMigrationRetry = () => {
   flex-direction: column;
   gap: 8px;
   
+  .path-input-container {
+    position: relative;
+    width: 100%;
+    max-width: 450px;
+    
     .path-display-input {
       width: 100%;
-    max-width: 450px;
       box-sizing: border-box;
-    padding: 10px 12px;
+      padding: 10px 12px;
       background-color: #3a3a3a;
       border: 1px solid #555555;
       border-radius: 4px;
       color: #e0e0e0;
       font-size: 13px;
-    line-height: 1.2;
+      line-height: 1.2;
       transition: all 0.2s ease;
-        cursor: pointer;
-        
-        &:hover {
-          border-color: #4a9eff;
-          background-color: #404040;
-        }
-        
-        &:focus {
-          outline: none;
-          border-color: #4a9eff;
-          background-color: #404040;
-    }
-    
+      cursor: pointer;
       
+      &:hover:not(:disabled) {
+        border-color: #4a9eff;
+        background-color: #404040;
+      }
+      
+      &:focus {
+        outline: none;
+        border-color: #4a9eff;
+        background-color: #404040;
+      }
+      
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
       
       &::placeholder {
         color: #888888;
       }
     }
     
+    .progress-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      background-color: #22c55e;
+      transition: width 0.3s ease;
+      border-radius: 0 0 4px 4px;
+      opacity: 0;
+      
+      &.active {
+        opacity: 1;
+      }
 
-}
+      &.migrating {
+        background-color: #3b82f6;
+      }
 
-.danger-zone {
-  padding: 20px;
-  background-color: rgba(220, 53, 69, 0.05);
-  border: 1px solid rgba(220, 53, 69, 0.2);
-  border-radius: 6px;
-  margin-top: 10px;
-  
-  .reset-section {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    
-    .reset-info {
-      flex: 1;
-      
-      h4 {
-        margin: 0 0 6px 0;
-        color: #ff6b6b;
-        font-size: 14px;
-        font-weight: 600;
+      &.success {
+        background-color: #22c55e;
       }
-      
-      p {
-        margin: 0;
-        color: #cccccc;
-        font-size: 13px;
-        line-height: 1.4;
-      }
-    }
-    
-    .reset-button {
-      padding: 8px 16px;
-      background-color: #dc3545;
-      border: 1px solid #dc3545;
-      border-radius: 4px;
-      color: white;
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-      
-      &:hover {
-        background-color: #c82333;
-        border-color: #bd2130;
-      }
-      
-      &:active {
-        transform: translateY(1px);
+
+      &.error {
+        background-color: #ef4444;
       }
     }
   }
+
+      .migration-status-container {
+    margin-top: 8px;
+    min-height: 0;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
+    .migration-messages {
+    margin-bottom: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  
+  .migration-message {
+    font-size: 11px;
+    padding: 2px 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transform: translateY(0);
+    opacity: 1;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    
+    &::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+      
+    &.start {
+      color: #94a3b8;
+      
+      &::before {
+        background-color: #94a3b8;
+      }
+    }
+      
+    &.progress {
+      color: #3b82f6;
+      
+      &::before {
+        background-color: #3b82f6;
+        animation: pulse-dot 1.5s infinite;
+      }
+    }
+      
+    &.success {
+      color: #22c55e;
+      
+      &::before {
+        background-color: #22c55e;
+      }
+    }
+      
+    &.error {
+      color: #ef4444;
+      
+      &::before {
+        background-color: #ef4444;
+      }
+    }
+              
+    &.v-enter-from, &.v-leave-to {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+  
+
+    
+    &:empty {
+      min-height: 0;
+      margin-top: 0;
+    }
+  }
+}
+
+.reset-button {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  border: 1px solid #dc3545;
+  border-radius: 4px;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 80px;
+  
+  &:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+  }
+  
+  &:active {
+    transform: translateY(1px);
+  }
+  
+  &.confirming {
+    background-color: #ff4757;
+    border-color: #ff4757;
+    animation: pulse-button 1.5s infinite;
+    
+    &:hover {
+      background-color: #ff3838;
+      border-color: #ff3838;
+    }
+  }
+}
+
+// 按钮脉冲动画
+@keyframes pulse-button {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 71, 87, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
+  }
+}
+
+// 消息点脉冲动画
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.2);
+  }
+}
+
+// Vue Transition 动画
+.fade-slide-enter-active {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.fade-slide-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.fade-slide-enter-to,
+.fade-slide-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+  max-height: 150px;
+}
+
+// 消息列表动画
+.message-list-enter-active {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.message-list-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.message-list-enter-from {
+  opacity: 0;
+  transform: translateX(-16px);
+}
+
+.message-list-leave-to {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+.message-list-move {
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 </style> 

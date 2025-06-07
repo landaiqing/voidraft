@@ -35,7 +35,7 @@ export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): vo
 }
 
 /**
- * ResetConfig 重置为默认配置
+ * ResetConfig 强制重置所有配置为默认值
  */
 export function ResetConfig(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3593047389) as any;

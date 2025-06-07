@@ -229,21 +229,48 @@ func (cs *ConfigService) Get(key string) interface{} {
 	return cs.viper.Get(key)
 }
 
-// ResetConfig 重置为默认配置
-func (cs *ConfigService) ResetConfig() error {
+// ResetConfig 强制重置所有配置为默认值
+func (cs *ConfigService) ResetConfig() {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	// 重新设置默认值
-	setDefaults(cs.viper)
+	defaultConfig := models.NewDefaultAppConfig()
 
-	// 使用 WriteConfig 写入配置文件（会触发文件监听）
+	// 通用设置 - 批量设置到viper中
+	cs.viper.Set("general.always_on_top", defaultConfig.General.AlwaysOnTop)
+	cs.viper.Set("general.data_path", defaultConfig.General.DataPath)
+	cs.viper.Set("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
+	cs.viper.Set("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
+	cs.viper.Set("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
+	cs.viper.Set("general.global_hotkey.alt", defaultConfig.General.GlobalHotkey.Alt)
+	cs.viper.Set("general.global_hotkey.win", defaultConfig.General.GlobalHotkey.Win)
+	cs.viper.Set("general.global_hotkey.key", defaultConfig.General.GlobalHotkey.Key)
+
+	// 编辑设置 - 批量设置到viper中
+	cs.viper.Set("editing.font_size", defaultConfig.Editing.FontSize)
+	cs.viper.Set("editing.font_family", defaultConfig.Editing.FontFamily)
+	cs.viper.Set("editing.font_weight", defaultConfig.Editing.FontWeight)
+	cs.viper.Set("editing.line_height", defaultConfig.Editing.LineHeight)
+	cs.viper.Set("editing.enable_tab_indent", defaultConfig.Editing.EnableTabIndent)
+	cs.viper.Set("editing.tab_size", defaultConfig.Editing.TabSize)
+	cs.viper.Set("editing.tab_type", defaultConfig.Editing.TabType)
+	cs.viper.Set("editing.auto_save_delay", defaultConfig.Editing.AutoSaveDelay)
+
+	// 外观设置 - 批量设置到viper中
+	cs.viper.Set("appearance.language", defaultConfig.Appearance.Language)
+
+	// 元数据 - 批量设置到viper中
+	cs.viper.Set("metadata.version", defaultConfig.Metadata.Version)
+	cs.viper.Set("metadata.last_updated", time.Now())
+
+	// 一次性写入配置文件，触发配置变更通知
 	if err := cs.viper.WriteConfig(); err != nil {
-		return &ConfigError{Operation: "reset_config", Err: err}
+		cs.logger.Error("Config: Failed to write config during reset", "error", err)
+	} else {
+		cs.logger.Info("Config: All settings have been reset to defaults")
+		// 手动触发配置变更检查，确保通知系统能感知到变更
+		cs.notificationService.CheckConfigChanges()
 	}
-
-	cs.logger.Info("Config: Successfully reset to default configuration")
-	return nil
 }
 
 // SetHotkeyChangeCallback 设置热键配置变更回调

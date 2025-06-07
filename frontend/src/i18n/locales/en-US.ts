@@ -46,36 +46,12 @@ export default {
       saveSuccess: 'Save settings updated',
       saveFailed: 'Failed to update save settings'
     },
-    migration: {
-      inProgress: 'Migrating data to new path...',
-      success: 'Data migration completed',
-      failed: 'Data migration failed'
-    }
   },
   migration: {
-    title: 'Data Migration',
-    preparing: 'Preparing',
+    started: 'Starting data migration',
     migrating: 'Migrating',
-    completed: 'Completed',
-    failed: 'Failed',
-    cancelled: 'Cancelled',
-    idle: 'Idle',
-    currentFile: 'Current File',
-    files: 'Files',
-    size: 'Size',
-    timeRemaining: 'Time Remaining',
-    complete: 'Complete',
-    retry: 'Retry',
-    close: 'Close',
-    migrationInProgress: 'Migrating data to new path...',
-    migrationCompleted: 'Data migration completed',
-    migrationFailed: 'Data migration failed',
-    recursiveCopyError: 'Target path cannot be a subdirectory of source path, this would cause infinite recursive copying',
-    targetNotDirectory: 'Target path exists but is not a directory',
-    targetNotEmpty: 'Target directory is not empty, cannot migrate',
-    compressing: 'Compressing source directory...',
-    extracting: 'Extracting to target location...',
-    cleaning: 'Cleaning up source directory...'
+    completed: 'Migration Completed',
+    failed: 'Migration Failed'
   },
   settings: {
     title: 'Settings',
@@ -89,10 +65,11 @@ export default {
     comingSoon: 'Coming Soon...',
     save: 'Save',
     reset: 'Reset',
+    cancel: 'Cancel',
     dangerZone: 'Danger Zone',
     resetAllSettings: 'Reset All Settings',
     resetDescription: 'This will restore all settings to their default values. This action cannot be undone.',
-    confirmReset: 'Are you sure you want to reset all settings? This action cannot be undone.',
+    confirmReset: 'Click again to confirm reset',
     globalHotkey: 'Global Keyboard Shortcuts',
     enableGlobalHotkey: 'Enable Global Hotkeys',
     window: 'Window/Application',

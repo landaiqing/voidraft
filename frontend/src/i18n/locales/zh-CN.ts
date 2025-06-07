@@ -46,36 +46,12 @@ export default {
       saveSuccess: '保存设置已更新',
       saveFailed: '保存设置更新失败'
     },
-    migration: {
-      inProgress: '正在迁移数据到新路径...',
-      success: '数据迁移完成',
-      failed: '数据迁移失败'
-    }
   },
   migration: {
-    title: '数据迁移',
-    preparing: '准备中',
-    migrating: '迁移中', 
-    completed: '已完成',
-    failed: '失败',
-    cancelled: '已取消',
-    idle: '空闲',
-    currentFile: '当前文件',
-    files: '文件',
-    size: '大小',
-    timeRemaining: '剩余时间',
-    complete: '完成',
-    retry: '重试',
-    close: '关闭',
-    migrationInProgress: '正在迁移数据到新路径...',
-    migrationCompleted: '数据迁移完成',
-    migrationFailed: '数据迁移失败',
-    recursiveCopyError: '目标路径不能是源路径的子目录，这会导致无限递归复制',
-    targetNotDirectory: '目标路径存在但不是目录',
-    targetNotEmpty: '目标目录不为空，无法迁移',
-    compressing: '正在压缩源目录...',
-    extracting: '正在解压到目标位置...',
-    cleaning: '正在清理源目录...'
+    started: '开始迁移数据',
+    migrating: '迁移中',
+    completed: '迁移已完成',
+    failed: '迁移失败'
   },
   settings: {
     title: '设置',
@@ -89,10 +65,11 @@ export default {
     comingSoon: '即将推出...',
     save: '保存',
     reset: '重置',
+    cancel: '取消',
     dangerZone: '危险操作',
     resetAllSettings: '重置所有设置',
     resetDescription: '这将恢复所有设置为默认值，此操作无法撤销',
-    confirmReset: '确定要重置所有设置吗？此操作无法撤销。',
+    confirmReset: '再次点击确认重置',
     globalHotkey: '全局键盘快捷键',
     enableGlobalHotkey: '启用全局热键',
     window: '窗口/应用程序',
