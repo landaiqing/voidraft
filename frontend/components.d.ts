@@ -8,10 +8,13 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    LinuxTitleBar: typeof import('./src/components/titlebar/LinuxTitleBar.vue')['default']
+    MacOSTitleBar: typeof import('./src/components/titlebar/MacOSTitleBar.vue')['default']
     MemoryMonitor: typeof import('./src/components/monitor/MemoryMonitor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Toolbar: typeof import('./src/components/toolbar/Toolbar.vue')['default']
+    WindowsTitleBar: typeof import('./src/components/titlebar/WindowsTitleBar.vue')['default']
     WindowTitleBar: typeof import('./src/components/titlebar/WindowTitleBar.vue')['default']
   }
 }
