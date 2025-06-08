@@ -114,6 +114,11 @@ export class AppearanceConfig {
      */
     "theme": ThemeType;
 
+    /**
+     * 系统界面主题
+     */
+    "systemTheme": SystemThemeType;
+
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
@@ -121,6 +126,9 @@ export class AppearanceConfig {
         }
         if (!("theme" in $$source)) {
             this["theme"] = ("" as ThemeType);
+        }
+        if (!("systemTheme" in $$source)) {
+            this["systemTheme"] = ("" as SystemThemeType);
         }
 
         Object.assign(this, $$source);
@@ -507,6 +515,31 @@ export enum LanguageType {
      * LangEnUS 英文-美国
      */
     LangEnUS = "en-US",
+};
+
+/**
+ * SystemThemeType 系统主题类型定义
+ */
+export enum SystemThemeType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * SystemThemeDark 深色系统主题
+     */
+    SystemThemeDark = "dark",
+
+    /**
+     * SystemThemeLight 浅色系统主题
+     */
+    SystemThemeLight = "light",
+
+    /**
+     * SystemThemeAuto 跟随系统主题
+     */
+    SystemThemeAuto = "auto",
 };
 
 /**

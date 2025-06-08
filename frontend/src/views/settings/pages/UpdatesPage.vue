@@ -89,6 +89,7 @@ const downloadUpdate = () => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
+  padding-bottom: 48px;
 }
 
 .update-info {
@@ -105,22 +106,22 @@ const downloadUpdate = () => {
       font-size: 14px;
       
       .label {
-        color: #a0a0a0;
+        color: var(--text-muted);
         margin-right: 5px;
       }
       
       .version {
-        color: #e0e0e0;
+        color: var(--settings-text);
         font-weight: 500;
       }
     }
     
     .check-button {
       padding: 8px 16px;
-      background-color: #3a3a3a;
-      border: 1px solid #555555;
+      background-color: var(--settings-input-bg);
+      border: 1px solid var(--settings-input-border);
       border-radius: 4px;
-      color: #e0e0e0;
+      color: var(--settings-text);
       cursor: pointer;
       font-size: 13px;
       transition: all 0.2s ease;
@@ -129,8 +130,8 @@ const downloadUpdate = () => {
       gap: 8px;
       
       &:hover:not(:disabled) {
-        background-color: #444444;
-        border-color: #666666;
+        background-color: var(--settings-hover);
+        border-color: var(--settings-border);
       }
       
       &:active:not(:disabled) {
@@ -148,7 +149,7 @@ const downloadUpdate = () => {
         height: 14px;
         border: 2px solid rgba(255, 255, 255, 0.3);
         border-radius: 50%;
-        border-top-color: #e0e0e0;
+        border-top-color: var(--settings-text);
         animation: spin 1s linear infinite;
       }
       
@@ -159,8 +160,8 @@ const downloadUpdate = () => {
   }
   
   .update-available {
-    background-color: #2c3847;
-    border: 1px solid #3a4a5c;
+    background-color: var(--settings-card-bg);
+    border: 1px solid var(--settings-border);
     border-radius: 6px;
     padding: 16px;
     
@@ -199,7 +200,7 @@ const downloadUpdate = () => {
     .update-notes {
       .notes-title {
         font-size: 13px;
-        color: #b0b0b0;
+        color: var(--settings-text-secondary);
         margin-bottom: 8px;
       }
       
@@ -209,7 +210,7 @@ const downloadUpdate = () => {
         
         li {
           font-size: 13px;
-          color: #d0d0d0;
+          color: var(--settings-text-secondary);
           margin-bottom: 6px;
           
           &:last-child {

@@ -174,7 +174,8 @@ watch(isLoaded, async (newLoaded) => {
       color: var(--text-muted);
 
       .stat-value {
-        color: #e0e0e0;
+        color: var(--text-secondary);
+        font-weight: 500;
       }
     }
   }
@@ -212,10 +213,12 @@ watch(isLoaded, async (newLoaded) => {
         cursor: pointer;
         padding: 0 3px;
         border-radius: 3px;
-        background-color: rgba(255, 255, 255, 0.05);
+        background-color: var(--border-color);
+        opacity: 0.6;
         
         &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
+          opacity: 1;
+          background-color: var(--border-color);
         }
       }
 
@@ -255,7 +258,8 @@ watch(isLoaded, async (newLoaded) => {
       transition: all 0.2s ease;
       
       &:hover {
-        background-color: rgba(255, 255, 255, 0.1);
+        background-color: var(--border-color);
+        opacity: 0.8;
       }
       
       &.active {
@@ -291,7 +295,8 @@ watch(isLoaded, async (newLoaded) => {
         border-radius: 3px;
         
         &:hover {
-          background-color: rgba(255, 255, 255, 0.05);
+          background-color: var(--border-color);
+          opacity: 0.8;
         }
         
         .arrow {
@@ -321,7 +326,8 @@ watch(isLoaded, async (newLoaded) => {
           white-space: nowrap;
           
           &:hover {
-            background-color: var(--bg-hover);
+            background-color: var(--border-color);
+            opacity: 0.8;
           }
           
           &.active {
@@ -342,7 +348,7 @@ watch(isLoaded, async (newLoaded) => {
       padding: 2px;
 
       &:hover {
-        color: var(--text-primary);
+        color: var(--text-secondary);
       }
     }
   }

@@ -127,6 +127,7 @@ func setDefaults(v *viper.Viper) {
 	// 外观设置默认值
 	v.SetDefault("appearance.language", defaultConfig.Appearance.Language)
 	v.SetDefault("appearance.theme", defaultConfig.Appearance.Theme)
+	v.SetDefault("appearance.system_theme", defaultConfig.Appearance.SystemTheme)
 
 	// 元数据默认值
 	v.SetDefault("metadata.version", defaultConfig.Metadata.Version)
@@ -262,6 +263,7 @@ func (cs *ConfigService) ResetConfig() {
 	// 外观设置 - 批量设置到viper中
 	cs.viper.Set("appearance.language", defaultConfig.Appearance.Language)
 	cs.viper.Set("appearance.theme", defaultConfig.Appearance.Theme)
+	cs.viper.Set("appearance.system_theme", defaultConfig.Appearance.SystemTheme)
 
 	// 元数据 - 批量设置到viper中
 	cs.viper.Set("metadata.version", defaultConfig.Metadata.Version)

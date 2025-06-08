@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n';
 import { ref, computed, watch } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
-import type { ThemeType } from '@/types';
+import type { ThemeType, SystemThemeType } from '@/types';
 import { LanguageType } from '@/../bindings/voidraft/internal/models';
 import { AVAILABLE_THEMES } from '@/types/theme';
 import { useTheme } from '@/composables/useTheme';
@@ -21,6 +21,13 @@ const languageOptions = [
   { value: LanguageType.LangEnUS, label: t('languages.en-US') },
 ];
 
+// 系统主题选项
+const systemThemeOptions = [
+  { value: 'dark' as SystemThemeType, label: t('systemTheme.dark') },
+  { value: 'light' as SystemThemeType, label: t('systemTheme.light') },
+  { value: 'auto' as SystemThemeType, label: t('systemTheme.auto') },
+];
+
 // 更新语言设置
 const updateLanguage = async (event: Event) => {
   const select = event.target as HTMLSelectElement;
@@ -29,6 +36,17 @@ const updateLanguage = async (event: Event) => {
   await safeCall(
     () => configStore.setLanguage(selectedLanguage),
     'config.languageChangeFailed'
+  );
+};
+
+// 更新系统主题设置
+const updateSystemTheme = async (event: Event) => {
+  const select = event.target as HTMLSelectElement;
+  const selectedSystemTheme = select.value as SystemThemeType;
+  
+  await safeCall(
+    () => configStore.setSystemTheme(selectedSystemTheme),
+    'config.systemThemeChangeFailed'
   );
 };
 
@@ -71,6 +89,16 @@ watch(() => configStore.config.appearance.theme, (newTheme) => {
       <SettingItem :title="t('settings.language')">
         <select class="select-input" :value="configStore.config.appearance.language" @change="updateLanguage">
           <option v-for="option in languageOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </SettingItem>
+    </SettingSection>
+    
+    <SettingSection :title="t('settings.systemTheme')">
+      <SettingItem :title="t('settings.systemTheme')">
+        <select class="select-input" :value="configStore.config.appearance.systemTheme" @change="updateSystemTheme">
+          <option v-for="option in systemThemeOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </option>
         </select>
@@ -140,6 +168,7 @@ watch(() => configStore.config.appearance.theme, (newTheme) => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 1000px;
+  padding-bottom: 48px;
 }
 
 .appearance-content {
@@ -169,17 +198,18 @@ watch(() => configStore.config.appearance.theme, (newTheme) => {
 .select-input {
   min-width: 150px;
   padding: 8px 12px;
-  border: 1px solid #555555;
+  border: 1px solid var(--settings-input-border);
   border-radius: 4px;
-  background-color: #3a3a3a;
-  color: #e0e0e0;
+  background-color: var(--settings-input-bg);
+  color: var(--settings-text);
   font-size: 13px;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
   background-position: right 8px center;
   background-size: 16px;
   padding-right: 30px;
+  transition: border-color 0.2s ease;
   
   &:focus {
     outline: none;
@@ -187,7 +217,8 @@ watch(() => configStore.config.appearance.theme, (newTheme) => {
   }
   
   option {
-    background-color: #2a2a2a;
+    background-color: var(--settings-card-bg);
+    color: var(--settings-text);
   }
 }
 

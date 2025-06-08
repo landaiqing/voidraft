@@ -295,30 +295,31 @@ const fontPreviewText = computed(() => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
+  padding-bottom: 48px;
 }
 
 .number-control {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   
   .control-button {
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--settings-input-border);
+    background-color: var(--settings-input-bg);
+    color: var(--settings-text);
+    border-radius: 4px;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: #3a3a3a;
-    border: 1px solid #555555;
-    border-radius: 4px;
-    color: #e0e0e0;
-    cursor: pointer;
-    font-size: 16px;
+    font-size: 14px;
     transition: all 0.2s ease;
     
     &:hover:not(:disabled) {
-      background-color: #444444;
-      border-color: #666666;
+      background-color: var(--settings-hover);
+      border-color: var(--settings-border);
     }
     
     &:active:not(:disabled) {
@@ -335,9 +336,9 @@ const fontPreviewText = computed(() => {
     min-width: 50px;
     text-align: center;
     font-size: 14px;
-    color: #e0e0e0;
-    background-color: #3a3a3a;
-    border: 1px solid #555555;
+    color: var(--settings-text);
+    background-color: var(--settings-input-bg);
+    border: 1px solid var(--settings-input-border);
     border-radius: 4px;
     padding: 5px 8px;
   }
@@ -346,14 +347,14 @@ const fontPreviewText = computed(() => {
 .font-size-preview {
   margin: 15px 0 5px 20px;
   padding: 15px;
-  background-color: #252525;
-  border: 1px solid #444444;
+  background-color: var(--settings-card-bg);
+  border: 1px solid var(--settings-border);
   border-radius: 4px;
   font-family: 'Consolas', 'Courier New', monospace;
   
   .preview-label {
     font-size: 12px;
-    color: #888888;
+    color: var(--text-muted);
     margin-bottom: 8px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
@@ -364,7 +365,7 @@ const fontPreviewText = computed(() => {
     
     span {
       line-height: 1.4;
-      color: #d0d0d0;
+      color: var(--settings-text-secondary);
     }
     
     .indent {
@@ -377,13 +378,13 @@ const fontPreviewText = computed(() => {
 .font-preview {
   margin: 15px 0 5px 20px;
   padding: 15px;
-  background-color: #252525;
-  border: 1px solid #444444;
+  background-color: var(--settings-card-bg);
+  border: 1px solid var(--settings-border);
   border-radius: 4px;
   
   .preview-label {
     font-size: 12px;
-    color: #888888;
+    color: var(--text-muted);
     margin-bottom: 8px;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
@@ -393,7 +394,7 @@ const fontPreviewText = computed(() => {
     flex-direction: column;
     
     span {
-      color: #d0d0d0;
+      color: var(--settings-text-secondary);
     }
     
     .indent {
@@ -407,10 +408,10 @@ const fontPreviewText = computed(() => {
 .font-weight-select {
   min-width: 180px;
   padding: 8px 12px;
-  border: 1px solid #555555;
+  border: 1px solid var(--settings-input-border);
   border-radius: 4px;
-  background-color: #3a3a3a;
-  color: #e0e0e0;
+  background-color: var(--settings-input-bg);
+  color: var(--settings-text);
   font-size: 13px;
   cursor: pointer;
   
@@ -420,12 +421,12 @@ const fontPreviewText = computed(() => {
   }
   
   &:hover {
-    border-color: #666666;
+    border-color: var(--settings-border);
   }
   
   option {
-    background-color: #3a3a3a;
-    color: #e0e0e0;
+    background-color: var(--settings-input-bg);
+    color: var(--settings-text);
     padding: 4px 8px;
   }
 }
@@ -433,18 +434,18 @@ const fontPreviewText = computed(() => {
 .tab-type-toggle {
   min-width: 100px;
   padding: 8px 15px;
-  background-color: #3a3a3a;
-  border: 1px solid #555555;
+  background-color: var(--settings-input-bg);
+  border: 1px solid var(--settings-input-border);
   border-radius: 4px;
-  color: #e0e0e0;
+  color: var(--settings-text);
   cursor: pointer;
   font-size: 13px;
   text-align: center;
   transition: all 0.2s ease;
   
   &:hover {
-    background-color: #444444;
-    border-color: #666666;
+    background-color: var(--settings-hover);
+    border-color: var(--settings-border);
   }
   
   &:active {
@@ -455,10 +456,10 @@ const fontPreviewText = computed(() => {
 .number-input {
   width: 100px;
   padding: 8px 12px;
-  border: 1px solid #555555;
+  border: 1px solid var(--settings-input-border);
   border-radius: 4px;
-  background-color: #3a3a3a;
-  color: #e0e0e0;
+  background-color: var(--settings-input-bg);
+  color: var(--settings-text);
   font-size: 13px;
   
   &:focus {
@@ -467,14 +468,14 @@ const fontPreviewText = computed(() => {
   }
   
   &:hover {
-    border-color: #666666;
+    border-color: var(--settings-border);
   }
   
   &:disabled {
     opacity: 0.7;
     cursor: not-allowed;
-    background-color: #2a2a2a;
-    color: #a0a0a0;
+    background-color: var(--settings-hover);
+    color: var(--text-muted);
   }
 }
 
@@ -491,8 +492,8 @@ const fontPreviewText = computed(() => {
     cursor: not-allowed;
     
     &:hover {
-      background-color: #3a3a3a;
-      border-color: #555555;
+      background-color: var(--settings-input-bg);
+      border-color: var(--settings-input-border);
     }
   }
   
@@ -506,8 +507,8 @@ const fontPreviewText = computed(() => {
   cursor: not-allowed;
   
   &:hover {
-    background-color: #3a3a3a;
-    border-color: #555555;
+    background-color: var(--settings-input-bg);
+    border-color: var(--settings-input-border);
     transform: none;
   }
   

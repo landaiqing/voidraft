@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useConfigStore } from '@/stores/configStore';
+import { useSystemTheme } from '@/composables/useSystemTheme';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
 
 const configStore = useConfigStore();
-
+const { setTheme } = useSystemTheme();
 
 // 应用启动时加载配置
 onMounted(async () => {
   await configStore.initConfig();
   await configStore.initializeLanguage();
+  setTheme(configStore.config.appearance.systemTheme);
 });
 </script>
 

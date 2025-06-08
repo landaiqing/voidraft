@@ -123,7 +123,8 @@ onMounted(async () => {
 .windows-titlebar {
   display: flex;
   height: 32px;
-  background: #202020;
+  background: var(--toolbar-bg);
+  border-bottom: 1px solid var(--toolbar-border);
   user-select: none;
   -webkit-user-select: none;
   position: fixed;
@@ -145,7 +146,7 @@ onMounted(async () => {
   flex: 1;
   padding-left: 8px;
   gap: 8px;
-  color: #ffffff;
+  color: var(--toolbar-text);
   font-size: 12px;
   font-weight: 400;
   cursor: default;
@@ -169,7 +170,7 @@ onMounted(async () => {
 
 .titlebar-title {
   font-size: 12px;
-  color: #ffffff;
+  color: var(--toolbar-text);
 }
 
 .titlebar-controls {
@@ -187,7 +188,7 @@ onMounted(async () => {
   height: 32px;
   border: none;
   background: transparent;
-  color: #ffffff;
+  color: var(--toolbar-text);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -197,11 +198,12 @@ onMounted(async () => {
   margin: 0;
   
   &:hover {
-    background: rgba(255, 255, 255, 0.0605);
+    background: var(--toolbar-button-hover);
   }
   
   &:active {
-    background: rgba(255, 255, 255, 0.0837);
+    background: var(--toolbar-button-hover);
+    opacity: 0.8;
   }
 }
 
@@ -220,12 +222,13 @@ onMounted(async () => {
 
 .minimize-button:hover,
 .maximize-button:hover {
-  background: rgba(255, 255, 255, 0.0605);
+  background: var(--toolbar-button-hover);
 }
 
 .minimize-button:active,
 .maximize-button:active {
-  background: rgba(255, 255, 255, 0.0837);
+  background: var(--toolbar-button-hover);
+  opacity: 0.8;
 }
 
 .close-button:hover {

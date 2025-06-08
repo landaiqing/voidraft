@@ -37,11 +37,18 @@ export default {
     languageChanged: 'Language setting updated',
     languageChangeFailed: 'Failed to update language setting',
     themeChanged: 'Theme setting updated',
-    themeChangeFailed: 'Failed to update theme setting'
+    themeChangeFailed: 'Failed to update theme setting',
+    systemThemeChanged: 'System theme setting updated',
+    systemThemeChangeFailed: 'Failed to update system theme setting'
   },
   languages: {
     'zh-CN': '简体中文',
     'en-US': 'English'
+  },
+  systemTheme: {
+    dark: 'Dark',
+    light: 'Light',
+    auto: 'Follow System'
   },
   document: {
     loadSuccess: 'Document loaded successfully',
@@ -76,7 +83,6 @@ export default {
     cancel: 'Cancel',
     dangerZone: 'Danger Zone',
     resetAllSettings: 'Reset All Settings',
-    resetDescription: 'This will restore all settings to their default values. This action cannot be undone.',
     confirmReset: 'Click again to confirm reset',
     globalHotkey: 'Global Keyboard Shortcuts',
     enableGlobalHotkey: 'Enable Global Hotkeys',
@@ -106,6 +112,7 @@ export default {
     tabs: 'Tabs',
     enableTabIndent: 'Enable Tab Indent',
     language: 'Interface Language',
+    systemTheme: 'System Theme',
     theme: 'Editor Theme',
     themeDescription: 'Choose editor theme',
     restartRequired: '(Restart required)',

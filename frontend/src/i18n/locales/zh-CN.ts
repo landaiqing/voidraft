@@ -37,11 +37,18 @@ export default {
     languageChanged: '语言设置已更新',
     languageChangeFailed: '语言设置更新失败',
     themeChanged: '主题设置已更新',
-    themeChangeFailed: '主题设置更新失败'
+    themeChangeFailed: '主题设置更新失败',
+    systemThemeChanged: '系统主题设置已更新',
+    systemThemeChangeFailed: '系统主题设置更新失败'
   },
   languages: {
     'zh-CN': '简体中文',
     'en-US': 'English'
+  },
+  systemTheme: {
+    dark: '深色',
+    light: '浅色',
+    auto: '跟随系统'
   },
   document: {
     loadSuccess: '文档加载成功',
@@ -76,7 +83,6 @@ export default {
     cancel: '取消',
     dangerZone: '危险操作',
     resetAllSettings: '重置所有设置',
-    resetDescription: '这将恢复所有设置为默认值，此操作无法撤销',
     confirmReset: '再次点击确认重置',
     globalHotkey: '全局键盘快捷键',
     enableGlobalHotkey: '启用全局热键',
@@ -106,6 +112,7 @@ export default {
     tabs: '制表符',
     enableTabIndent: '启用 Tab 缩进',
     language: '界面语言',
+    systemTheme: '系统主题',
     theme: '编辑器主题',
     themeDescription: '选择编辑器主题',
     restartRequired: '(需要重启)',

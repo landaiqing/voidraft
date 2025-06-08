@@ -16,19 +16,20 @@ defineProps<{
 <style scoped lang="scss">
 .setting-section {
   margin-bottom: 30px;
-  background-color: #333333;
+  background-color: var(--settings-card-bg);
   border-radius: 6px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--settings-border);
   
   .section-title {
     font-size: 14px;
     font-weight: 600;
     margin: 0;
     padding: 12px 16px;
-    background-color: #3d3d3d;
-    color: #ffffff;
-    border-bottom: 1px solid #444444;
+    background-color: var(--settings-hover);
+    color: var(--settings-text);
+    border-bottom: 1px solid var(--settings-border);
   }
   
   .section-content {

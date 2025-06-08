@@ -56,6 +56,18 @@ const (
 	ThemeTokyoNightDay ThemeType = "tokyo-night-day"
 )
 
+// SystemThemeType 系统主题类型定义
+type SystemThemeType string
+
+const (
+	// SystemThemeDark 深色系统主题
+	SystemThemeDark SystemThemeType = "dark"
+	// SystemThemeLight 浅色系统主题
+	SystemThemeLight SystemThemeType = "light"
+	// SystemThemeAuto 跟随系统主题
+	SystemThemeAuto SystemThemeType = "auto"
+)
+
 // GeneralConfig 通用设置配置
 type GeneralConfig struct {
 	AlwaysOnTop      bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"`                // 窗口是否置顶
@@ -95,8 +107,9 @@ type EditingConfig struct {
 
 // AppearanceConfig 外观设置配置
 type AppearanceConfig struct {
-	Language LanguageType `json:"language" yaml:"language" mapstructure:"language"` // 界面语言
-	Theme    ThemeType    `json:"theme" yaml:"theme" mapstructure:"theme"`          // 编辑器主题
+	Language    LanguageType    `json:"language" yaml:"language" mapstructure:"language"`            // 界面语言
+	Theme       ThemeType       `json:"theme" yaml:"theme" mapstructure:"theme"`                     // 编辑器主题
+	SystemTheme SystemThemeType `json:"systemTheme" yaml:"system_theme" mapstructure:"system_theme"` // 系统界面主题
 }
 
 // KeyBindingsConfig 快捷键设置配置
@@ -164,8 +177,9 @@ func NewDefaultAppConfig() *AppConfig {
 			AutoSaveDelay: 5000, // 5秒后自动保存
 		},
 		Appearance: AppearanceConfig{
-			Language: LangZhCN,
-			Theme:    ThemeDefaultDark, // 默认使用深色主题
+			Language:    LangZhCN,
+			Theme:       ThemeDefaultDark, // 默认使用深色主题
+			SystemTheme: SystemThemeDark,  // 默认使用深色系统主题
 		},
 		KeyBindings: KeyBindingsConfig{
 			// 预留给未来的快捷键配置

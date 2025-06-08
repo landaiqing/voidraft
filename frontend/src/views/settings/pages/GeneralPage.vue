@@ -148,9 +148,11 @@ const progressBarClass = computed(() => {
 });
 
 const progressBarWidth = computed(() => {
-  if (isMigrating.value) {
+  // 只有在显示消息且正在迁移时才显示进度条
+  if (showMessages.value && isMigrating.value) {
     return migrationProgress.progress + '%';
-  } else if (migrationComplete.value || migrationFailed.value) {
+  } else if (showMessages.value && (migrationComplete.value || migrationFailed.value)) {
+    // 迁移完成或失败时，短暂显示100%，然后随着消息隐藏而隐藏
     return '100%';
   }
   return '0%';
@@ -369,7 +371,7 @@ onUnmounted(() => {
             <div 
               class="progress-bar" 
               :class="[
-                { 'active': showMessages },
+                { 'active': showMessages && (isMigrating || migrationComplete || migrationFailed) },
                 progressBarClass
               ]"
               :style="{ width: progressBarWidth }"
@@ -392,7 +394,7 @@ onUnmounted(() => {
     </SettingSection>
     
     <SettingSection :title="t('settings.dangerZone')">
-      <SettingItem :title="t('settings.resetAllSettings')" :description="t('settings.resetDescription')">
+      <SettingItem :title="t('settings.resetAllSettings')">
         <button 
           class="reset-button" 
           :class="{ 'confirming': resetConfirmState === 'confirming' }"
@@ -415,6 +417,7 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
+  padding-bottom: 48px;
 }
 
 .hotkey-selector {
@@ -453,15 +456,15 @@ onUnmounted(() => {
       .modifier-key {
         display: inline-block;
         padding: 6px 12px;
-        background-color: #444444;
-        border: 1px solid #555555;
+        background-color: var(--settings-input-bg);
+        border: 1px solid var(--settings-input-border);
         border-radius: 4px;
-        color: #b0b0b0;
+        color: var(--settings-text-secondary);
         font-size: 13px;
         transition: all 0.2s ease;
         
         &:hover {
-          background-color: #4a4a4a;
+          background-color: var(--settings-hover);
         }
       }
       
@@ -476,13 +479,13 @@ onUnmounted(() => {
   .key-select {
     min-width: 80px;
     padding: 8px 12px;
-    background-color: #3a3a3a;
-    border: 1px solid #555555;
+    background-color: var(--settings-input-bg);
+    border: 1px solid var(--settings-input-border);
     border-radius: 4px;
-    color: #e0e0e0;
+    color: var(--settings-text);
     font-size: 13px;
     appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23e0e0e0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 8px center;
     background-size: 16px;
@@ -496,11 +499,12 @@ onUnmounted(() => {
     &:disabled {
       opacity: 0.5;
       cursor: not-allowed;
-      background-color: #2a2a2a;
+      background-color: var(--settings-hover);
     }
     
     option {
-      background-color: #2a2a2a;
+      background-color: var(--settings-input-bg);
+      color: var(--settings-text);
     }
   }
   
@@ -509,19 +513,19 @@ onUnmounted(() => {
     align-items: center;
     gap: 8px;
     padding: 8px 12px;
-    background-color: #252525;
-    border: 1px solid #444444;
+    background-color: var(--settings-card-bg);
+    border: 1px solid var(--settings-border);
     border-radius: 4px;
     margin-top: 8px;
     
     .preview-label {
       font-size: 12px;
-      color: #888888;
+      color: var(--settings-text-secondary);
     }
     
     .preview-hotkey {
       font-size: 13px;
-      color: #4a9eff;
+      color: var(--settings-text);
       font-weight: 500;
       font-family: 'Consolas', 'Courier New', monospace;
     }
@@ -544,7 +548,7 @@ onUnmounted(() => {
     .setting-title {
       font-size: 14px;
       font-weight: 500;
-      color: #e0e0e0;
+      color: var(--settings-text);
     }
   }
 }
@@ -563,24 +567,23 @@ onUnmounted(() => {
       width: 100%;
       box-sizing: border-box;
       padding: 10px 12px;
-      background-color: #3a3a3a;
-      border: 1px solid #555555;
+      background-color: var(--settings-input-bg);
+      border: 1px solid var(--settings-input-border);
       border-radius: 4px;
-      color: #e0e0e0;
+      color: var(--settings-text);
       font-size: 13px;
       line-height: 1.2;
       transition: all 0.2s ease;
       cursor: pointer;
       
       &:hover:not(:disabled) {
-        border-color: #4a9eff;
-        background-color: #404040;
+        border-color: var(--settings-hover);
+        background-color: var(--settings-hover);
       }
       
       &:focus {
         outline: none;
         border-color: #4a9eff;
-        background-color: #404040;
       }
       
       &:disabled {
@@ -589,7 +592,7 @@ onUnmounted(() => {
       }
       
       &::placeholder {
-        color: #888888;
+        color: var(--text-muted);
       }
     }
     
@@ -598,25 +601,27 @@ onUnmounted(() => {
       bottom: 0;
       left: 0;
       height: 2px;
-      background-color: #22c55e;
-      transition: width 0.3s ease;
+      background-color: transparent;
       border-radius: 0 0 4px 4px;
+      transition: all 0.3s ease;
+      width: 0;
       opacity: 0;
       
       &.active {
         opacity: 1;
-      }
+        
+        &.migrating {
+          background-color: #3b82f6;
+          animation: progress-wave 2s infinite;
+        }
 
-      &.migrating {
-        background-color: #3b82f6;
-      }
+        &.success {
+          background-color: #22c55e;
+        }
 
-      &.success {
-        background-color: #22c55e;
-      }
-
-      &.error {
-        background-color: #ef4444;
+        &.error {
+          background-color: #ef4444;
+        }
       }
     }
   }
@@ -653,10 +658,10 @@ onUnmounted(() => {
     }
       
     &.start {
-      color: #94a3b8;
+      color: var(--text-muted);
       
       &::before {
-        background-color: #94a3b8;
+        background-color: var(--text-muted);
       }
     }
       
@@ -729,6 +734,19 @@ onUnmounted(() => {
       background-color: #ff3838;
       border-color: #ff3838;
     }
+  }
+}
+
+// 进度条波浪动画
+@keyframes progress-wave {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
   }
 }
 

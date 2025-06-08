@@ -21,11 +21,12 @@ defineProps<{
 .setting-item {
   display: flex;
   padding: 14px 0;
-  border-bottom: 1px solid #444444;
+  border-bottom: 1px solid var(--settings-border);
   transition: background-color 0.15s ease;
   
   &:hover {
-    background-color: rgba(255, 255, 255, 0.03);
+    background-color: var(--settings-hover);
+    opacity: 0.8;
   }
   
   &:last-child {
@@ -40,12 +41,12 @@ defineProps<{
       font-size: 14px;
       font-weight: 500;
       margin-bottom: 6px;
-      color: #e0e0e0;
+      color: var(--settings-text);
     }
     
     .setting-description {
       font-size: 12px;
-      color: #a0a0a0;
+      color: var(--settings-text-secondary);
       line-height: 1.5;
     }
   }

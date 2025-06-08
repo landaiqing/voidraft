@@ -22,7 +22,7 @@ const toggle = () => {
 .toggle-switch {
   width: 40px;
   height: 20px;
-  background-color: #555555;
+  background-color: var(--settings-input-border);
   border-radius: 10px;
   position: relative;
   cursor: pointer;
@@ -44,7 +44,7 @@ const toggle = () => {
     left: 2px;
     width: 16px;
     height: 16px;
-    background-color: #f0f0f0;
+    background-color: var(--settings-text);
     border-radius: 50%;
     transition: all 0.2s ease;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);

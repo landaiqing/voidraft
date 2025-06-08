@@ -7,6 +7,7 @@ import {
     EditingConfig,
     GeneralConfig,
     LanguageType,
+    SystemThemeType,
     TabType,
     ThemeType
 } from '@/../bindings/voidraft/internal/models';
@@ -67,7 +68,8 @@ const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
 
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
     language: 'appearance.language',
-    theme: 'appearance.theme'
+    theme: 'appearance.theme',
+    systemTheme: 'appearance.system_theme'
 } as const;
 
 // 配置限制
@@ -139,7 +141,8 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     appearance: {
         language: LanguageType.LangZhCN,
-        theme: 'default-dark' as ThemeType
+        theme: 'default-dark' as ThemeType,
+        systemTheme: 'dark' as SystemThemeType
     },
     keyBindings: {},
     updates: {},
@@ -308,6 +311,13 @@ export const useConfigStore = defineStore('config', () => {
         }, 'config.themeChangeFailed', 'config.themeChanged');
     };
 
+    // 系统主题设置方法
+    const setSystemTheme = async (systemTheme: SystemThemeType): Promise<void> => {
+        await safeCall(async () => {
+            await updateAppearanceConfig('systemTheme', systemTheme);
+        }, 'config.systemThemeChangeFailed', 'config.systemThemeChanged');
+    };
+
     // 初始化语言设置
     const initializeLanguage = async (): Promise<void> => {
         try {
@@ -372,6 +382,7 @@ export const useConfigStore = defineStore('config', () => {
 
         // 主题相关方法
         setTheme,
+        setSystemTheme,
 
         // 字体大小操作
         ...adjusters.fontSize,

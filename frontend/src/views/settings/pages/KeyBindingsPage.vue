@@ -121,6 +121,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
+  padding-bottom: 48px;
 }
 
 .key-bindings-container {
@@ -129,8 +130,8 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
   .key-bindings-header {
     display: flex;
     padding: 0 0 10px 0;
-    border-bottom: 1px solid #444444;
-    color: #a0a0a0;
+    border-bottom: 1px solid var(--settings-border);
+    color: var(--text-muted);
     font-size: 13px;
     font-weight: 500;
   }
@@ -138,7 +139,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
   .key-binding-row {
     display: flex;
     padding: 14px 0;
-    border-bottom: 1px solid #3a3a3a;
+    border-bottom: 1px solid var(--settings-border);
     align-items: center;
     transition: background-color 0.2s ease;
     
@@ -147,7 +148,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     }
     
     &:hover {
-      background-color: rgba(255, 255, 255, 0.03);
+      background-color: var(--settings-hover);
     }
     
     &.is-editing {
@@ -159,6 +160,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     flex: 1;
     padding-right: 10px;
     font-size: 14px;
+    color: var(--settings-text);
   }
   
   .keybinding-col {
@@ -169,15 +171,16 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     
     &.is-editing {
       font-style: italic;
-      color: #a0a0a0;
+      color: var(--text-muted);
     }
     
     .key-badge {
-      background-color: #3a3a3a;
+      background-color: var(--settings-input-bg);
       padding: 3px 8px;
       border-radius: 3px;
       font-size: 12px;
-      border: 1px solid #555555;
+      border: 1px solid var(--settings-input-border);
+      color: var(--settings-text);
     }
   }
   
@@ -187,17 +190,17 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     
     .edit-button {
       padding: 5px 10px;
-      background-color: #3a3a3a;
-      border: 1px solid #555555;
+      background-color: var(--settings-input-bg);
+      border: 1px solid var(--settings-input-border);
       border-radius: 4px;
-      color: #e0e0e0;
+      color: var(--settings-text);
       cursor: pointer;
       font-size: 13px;
       transition: all 0.2s ease;
       
       &:hover {
-        background-color: #444444;
-        border-color: #666666;
+        background-color: var(--settings-hover);
+        border-color: var(--settings-border);
       }
       
       &:active {
@@ -209,9 +212,9 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
 
 .coming-soon-placeholder {
   padding: 20px;
-  background-color: #333333;
+  background-color: var(--settings-card-bg);
   border-radius: 6px;
-  color: #a0a0a0;
+  color: var(--text-muted);
   text-align: center;
   font-style: italic;
   font-size: 14px;

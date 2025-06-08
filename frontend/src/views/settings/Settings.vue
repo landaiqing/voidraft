@@ -45,7 +45,7 @@ const goBackToEditor = async () => {
           <h1>{{ t('settings.title') }}</h1>
         </div>
       </div>
-      <div class="settings-nav">
+      <div class="settings-nav thin-scrollbar">
         <div
           v-for="item in navItems"
           :key="item.id"
@@ -76,8 +76,8 @@ const goBackToEditor = async () => {
   height: 100vh;
   margin: 0;
   padding: 0;
-  background-color: #2a2a2a;
-  color: #e0e0e0;
+  background-color: var(--settings-bg);
+  color: var(--settings-text);
   display: flex;
   overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -85,16 +85,16 @@ const goBackToEditor = async () => {
   .settings-sidebar {
     width: 200px;
     height: 100%;
-    background-color: #333333;
-    border-right: 1px solid #444444;
+    background-color: var(--settings-card-bg);
+    border-right: 1px solid var(--settings-border);
     display: flex;
     flex-direction: column;
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     
     .settings-header {
       padding: 20px 16px;
-      border-bottom: 1px solid #444444;
-      background-color: #2d2d2d;
+      border-bottom: 1px solid var(--settings-border);
+      background-color: var(--settings-card-bg);
       
       .header-content {
         display: flex;
@@ -104,7 +104,7 @@ const goBackToEditor = async () => {
         .back-button {
           background: none;
           border: none;
-          color: #a0a0a0;
+          color: var(--settings-text-secondary);
           cursor: pointer;
           padding: 6px;
           border-radius: 4px;
@@ -114,8 +114,8 @@ const goBackToEditor = async () => {
           transition: all 0.2s ease;
           
           &:hover {
-            color: #e0e0e0;
-            background-color: #3a3a3a;
+            color: var(--settings-text);
+            background-color: var(--settings-hover);
           }
           
           svg {
@@ -128,7 +128,7 @@ const goBackToEditor = async () => {
           font-size: 18px;
           font-weight: 600;
           margin: 0;
-          color: #ffffff;
+          color: var(--settings-text);
         }
       }
     }
@@ -137,19 +137,6 @@ const goBackToEditor = async () => {
       flex: 1;
       padding: 10px 0;
       overflow-y: auto;
-      
-      &::-webkit-scrollbar {
-        width: 8px;
-      }
-      
-      &::-webkit-scrollbar-track {
-        background: #333333;
-      }
-      
-      &::-webkit-scrollbar-thumb {
-        background-color: #555555;
-        border-radius: 4px;
-      }
       
       .nav-item {
         display: flex;
@@ -160,11 +147,11 @@ const goBackToEditor = async () => {
         border-left: 3px solid transparent;
         
         &:hover {
-          background-color: #3a3a3a;
+          background-color: var(--settings-hover);
         }
         
         &.active {
-          background-color: #3c3c3c;
+          background-color: var(--settings-hover);
           border-left-color: #4a9eff;
           font-weight: 500;
         }
@@ -183,8 +170,8 @@ const goBackToEditor = async () => {
     
     .settings-footer {
       padding: 12px 16px 16px 16px;
-      border-top: 1px solid #444444;
-      background-color: #2d2d2d;
+      border-top: 1px solid var(--settings-border);
+      background-color: var(--settings-card-bg);
       
       .memory-info-section {
         display: flex;
@@ -193,7 +180,7 @@ const goBackToEditor = async () => {
         
         .section-title {
           font-size: 10px;
-          color: #777777;
+          color: var(--settings-text-secondary);
           font-weight: 500;
           margin-bottom: 0;
           text-transform: uppercase;
@@ -206,36 +193,11 @@ const goBackToEditor = async () => {
   .settings-content {
     flex: 1;
     height: 100%;
-    padding: 24px;
+    padding: 24px 24px 48px 24px;
     overflow-y: auto;
-    background-color: #2a2a2a;
-    
-    &::-webkit-scrollbar {
-      width: 10px;
-    }
-    
-    &::-webkit-scrollbar-track {
-      background: #2a2a2a;
-    }
-    
-    &::-webkit-scrollbar-thumb {
-      background-color: #555555;
-      border-radius: 5px;
-      border: 2px solid #2a2a2a;
-    }
+    background-color: var(--settings-bg);
   }
 }
 
-// 自定义变量
-:root {
-  --border-color: #444444;
-  --hover-color: #3a3a3a;
-  --active-bg: #3c3c3c;
-  --accent-color: #4a9eff;
-  --bg-primary: #2a2a2a;
-  --bg-secondary: #333333;
-  --text-primary: #e0e0e0;
-  --text-secondary: #a0a0a0;
-  --text-muted: #777777;
-}
+
 </style> 
