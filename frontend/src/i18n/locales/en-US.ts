@@ -76,6 +76,7 @@ export default {
     enableGlobalHotkey: 'Enable Global Hotkeys',
     window: 'Window/Application',
     showInSystemTray: 'Show in System Tray',
+    enableSystemTray: 'Enable System Tray',
     alwaysOnTop: 'Always on Top',
     dataStorage: 'Data Storage',
     dataPath: 'Data Storage Path',

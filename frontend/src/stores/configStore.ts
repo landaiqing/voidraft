@@ -49,6 +49,7 @@ type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
 const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     alwaysOnTop: 'general.always_on_top',
     dataPath: 'general.data_path',
+    enableSystemTray: 'general.enable_system_tray',
     enableGlobalHotkey: 'general.enable_global_hotkey',
     globalHotkey: 'general.global_hotkey'
 } as const;
@@ -116,6 +117,7 @@ const DEFAULT_CONFIG: AppConfig = {
     general: {
         alwaysOnTop: false,
         dataPath: '',
+        enableSystemTray: true,
         enableGlobalHotkey: false,
         globalHotkey: {
             ctrl: false,
@@ -406,6 +408,9 @@ export const useConfigStore = defineStore('config', () => {
 
         // 热键配置相关方法
         setEnableGlobalHotkey: (value: boolean) => safeCall(() => updateGeneralConfig('enableGlobalHotkey', value), 'config.saveFailed', 'config.saveSuccess'),
-        setGlobalHotkey: (hotkey: any) => safeCall(() => updateGeneralConfig('globalHotkey', hotkey), 'config.saveFailed', 'config.saveSuccess')
+        setGlobalHotkey: (hotkey: any) => safeCall(() => updateGeneralConfig('globalHotkey', hotkey), 'config.saveFailed', 'config.saveSuccess'),
+
+        // 系统托盘配置相关方法
+        setEnableSystemTray: (value: boolean) => safeCall(() => updateGeneralConfig('enableSystemTray', value), 'config.saveFailed', 'config.saveSuccess')
     };
 });

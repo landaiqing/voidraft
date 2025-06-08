@@ -120,3 +120,13 @@ func (sm *ServiceManager) GetHotkeyService() *HotkeyService {
 func (sm *ServiceManager) GetDialogService() *DialogService {
 	return sm.dialogService
 }
+
+// GetLogger 获取日志服务实例
+func (sm *ServiceManager) GetLogger() *log.LoggerService {
+	return sm.logger
+}
+
+// GetConfigService 获取配置服务实例
+func (sm *ServiceManager) GetConfigService() *ConfigService {
+	return sm.configService
+}

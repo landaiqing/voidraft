@@ -187,6 +187,12 @@ const alwaysOnTop = computed({
   }
 });
 
+// 计算属性 - 启用系统托盘
+const enableSystemTray = computed({
+  get: () => configStore.config.general.enableSystemTray,
+  set: (value: boolean) => configStore.setEnableSystemTray(value)
+});
+
 // 修饰键配置 - 只读计算属性
 const modifierKeys = computed(() => ({
   ctrl: configStore.config.general.globalHotkey.ctrl,
@@ -337,6 +343,9 @@ onUnmounted(() => {
     <SettingSection :title="t('settings.window')">
       <SettingItem :title="t('settings.alwaysOnTop')">
         <ToggleSwitch v-model="alwaysOnTop"/>
+      </SettingItem>
+      <SettingItem :title="t('settings.enableSystemTray')">
+        <ToggleSwitch v-model="enableSystemTray"/>
       </SettingItem>
     </SettingSection>
     

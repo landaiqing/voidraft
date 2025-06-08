@@ -2,13 +2,14 @@ package events
 
 import (
 	"time"
+	"voidraft/internal/services"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	wailsevents "github.com/wailsapp/wails/v3/pkg/events"
 )
 
 // RegisterTrayEvents 注册与系统托盘相关的所有事件
-func RegisterTrayEvents(app *application.App, systray *application.SystemTray, mainWindow *application.WebviewWindow) {
+func RegisterTrayEvents(app *application.App, systray *application.SystemTray, mainWindow *application.WebviewWindow, trayService *services.TrayService) {
 	// 不附加窗口到系统托盘，避免失去焦点自动缩小
 	// systray.AttachWindow(mainWindow)
 
@@ -17,31 +18,25 @@ func RegisterTrayEvents(app *application.App, systray *application.SystemTray, m
 
 	// 设置点击托盘图标显示主窗口
 	systray.OnClick(func() {
-		mainWindow.Show()
-		mainWindow.Restore()
-		mainWindow.Focus()
-		// 通知前端窗口已显示
-		app.EmitEvent("window:shown", nil)
+		trayService.ShowWindow()
 	})
 
-	// 处理窗口关闭事件 - 隐藏到托盘
+	// 处理窗口关闭事件 - 根据配置决定是隐藏到托盘还是直接退出
 	mainWindow.RegisterHook(wailsevents.Common.WindowClosing, func(event *application.WindowEvent) {
 		// 取消默认关闭行为
 		event.Cancel()
-		// 隐藏窗口到托盘
-		mainWindow.Hide()
-		// 通知前端窗口已隐藏
-		app.EmitEvent("window:hidden", nil)
+		// 使用托盘服务处理关闭事件
+		trayService.HandleWindowClose()
 	})
 
-	// 处理窗口最小化事件 - 也隐藏到托盘
+	// 处理窗口最小化事件 - 根据配置决定是隐藏到托盘还是正常最小化
 	mainWindow.RegisterHook(wailsevents.Common.WindowMinimise, func(event *application.WindowEvent) {
-		// 取消默认最小化行为
-		event.Cancel()
-		// 隐藏窗口到托盘
-		mainWindow.Hide()
-		// 通知前端窗口已隐藏
-		app.EmitEvent("window:hidden", nil)
+		if trayService.ShouldMinimizeToTray() {
+			// 取消默认最小化行为，隐藏到托盘
+			event.Cancel()
+			trayService.HandleWindowMinimize()
+		}
+		// 如果不启用托盘，允许正常最小化（不取消事件）
 	})
 }
 

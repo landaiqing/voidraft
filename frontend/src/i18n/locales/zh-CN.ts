@@ -76,6 +76,7 @@ export default {
     enableGlobalHotkey: '启用全局热键',
     window: '窗口/应用程序',
     showInSystemTray: '在系统托盘中显示',
+    enableSystemTray: '启用系统托盘',
     alwaysOnTop: '窗口始终置顶',
     dataStorage: '数据存储',
     dataPath: '数据存储路径',

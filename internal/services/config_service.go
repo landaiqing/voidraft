@@ -106,6 +106,7 @@ func setDefaults(v *viper.Viper) {
 	// 通用设置默认值
 	v.SetDefault("general.always_on_top", defaultConfig.General.AlwaysOnTop)
 	v.SetDefault("general.data_path", defaultConfig.General.DataPath)
+	v.SetDefault("general.enable_system_tray", defaultConfig.General.EnableSystemTray)
 	v.SetDefault("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
 	v.SetDefault("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
 	v.SetDefault("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
@@ -240,6 +241,7 @@ func (cs *ConfigService) ResetConfig() {
 	// 通用设置 - 批量设置到viper中
 	cs.viper.Set("general.always_on_top", defaultConfig.General.AlwaysOnTop)
 	cs.viper.Set("general.data_path", defaultConfig.General.DataPath)
+	cs.viper.Set("general.enable_system_tray", defaultConfig.General.EnableSystemTray)
 	cs.viper.Set("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
 	cs.viper.Set("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
 	cs.viper.Set("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)

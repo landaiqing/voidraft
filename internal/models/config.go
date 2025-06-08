@@ -58,8 +58,9 @@ const (
 
 // GeneralConfig 通用设置配置
 type GeneralConfig struct {
-	AlwaysOnTop bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"` // 窗口是否置顶
-	DataPath    string `json:"dataPath" yaml:"data_path" mapstructure:"data_path"`            // 数据存储路径
+	AlwaysOnTop      bool   `json:"alwaysOnTop" yaml:"always_on_top" mapstructure:"always_on_top"`                // 窗口是否置顶
+	DataPath         string `json:"dataPath" yaml:"data_path" mapstructure:"data_path"`                           // 数据存储路径
+	EnableSystemTray bool   `json:"enableSystemTray" yaml:"enable_system_tray" mapstructure:"enable_system_tray"` // 是否启用系统托盘
 
 	// 全局热键设置
 	EnableGlobalHotkey bool        `json:"enableGlobalHotkey" yaml:"enable_global_hotkey" mapstructure:"enable_global_hotkey"` // 是否启用全局热键
@@ -139,6 +140,7 @@ func NewDefaultAppConfig() *AppConfig {
 		General: GeneralConfig{
 			AlwaysOnTop:        false,
 			DataPath:           dataDir,
+			EnableSystemTray:   true, // 默认启用系统托盘
 			EnableGlobalHotkey: false,
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,

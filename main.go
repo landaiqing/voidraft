@@ -84,13 +84,20 @@ func main() {
 			Backdrop:                application.MacBackdropTranslucent,
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
+		Windows: application.WindowsWindow{
+			Theme: application.SystemDefault,
+		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
 		URL:              "/#/",
 	})
 	mainWindow.Center()
 
+	// 创建托盘服务
+	trayService := services.NewTrayService(serviceManager.GetLogger(), serviceManager.GetConfigService())
+	trayService.SetAppReferences(app, mainWindow)
+
 	// 设置系统托盘
-	systray.SetupSystemTray(app, mainWindow, assets)
+	systray.SetupSystemTray(app, mainWindow, assets, trayService)
 
 	// 初始化热键服务
 	hotkeyService := serviceManager.GetHotkeyService()

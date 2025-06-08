@@ -4,10 +4,11 @@ import (
 	"embed"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"voidraft/internal/events"
+	"voidraft/internal/services"
 )
 
 // SetupSystemTray 设置系统托盘及其功能
-func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS) {
+func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
 	// 创建系统托盘
 	systray := app.NewSystemTray()
 
@@ -27,5 +28,5 @@ func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow
 	systray.SetMenu(menu)
 
 	// 注册托盘相关事件
-	events.RegisterTrayEvents(app, systray, mainWindow)
+	events.RegisterTrayEvents(app, systray, mainWindow, trayService)
 }
