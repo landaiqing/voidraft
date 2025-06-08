@@ -2,14 +2,18 @@
 import { useConfigStore } from '@/stores/configStore';
 import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
-import { LanguageType } from '../../../../bindings/voidraft/internal/models/models';
+import type { ThemeType } from '@/types';
+import { LanguageType } from '@/../bindings/voidraft/internal/models';
+import { AVAILABLE_THEMES } from '@/types/theme';
+import { useTheme } from '@/composables/useTheme';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 const { safeCall } = useErrorHandler();
+const { setTheme: setThemeComposable } = useTheme();
 
 // 语言选项
 const languageOptions = [
@@ -28,19 +32,37 @@ const updateLanguage = async (event: Event) => {
   );
 };
 
-// 主题选择（未实际实现，仅界面展示）
-const themeOptions = [
-  { id: 'dark', name: '深色', color: '#2a2a2a' },
-  { id: 'darker', name: '暗黑', color: '#1a1a1a' },
-  { id: 'light', name: '浅色', color: '#f5f5f5' },
-  { id: 'blue', name: '蓝调', color: '#1e3a5f' },
-];
+// 主题选择
+const themeOptions = computed(() => AVAILABLE_THEMES);
+const selectedTheme = ref<ThemeType>(configStore.config.appearance.theme || 'default-dark' as ThemeType);
 
-const selectedTheme = ref('dark');
+// 当前主题预览信息
+const currentPreviewTheme = computed(() => {
+  const theme = themeOptions.value.find(t => t.id === selectedTheme.value);
+  return theme || themeOptions.value[0];
+});
 
-const selectTheme = (themeId: string) => {
+// 选择主题
+const selectTheme = async (themeId: ThemeType) => {
   selectedTheme.value = themeId;
+  
+  // 更新配置（这会自动触发编辑器主题更新）
+  await safeCall(
+    () => configStore.setTheme(themeId),
+    'config.themeChangeFailed'
+  );
+
+  // 同步更新预览（用于设置页面的预览区域）
+  await setThemeComposable(themeId);
 };
+
+// 监听配置变化，同步主题选择
+watch(() => configStore.config.appearance.theme, (newTheme) => {
+  if (newTheme && newTheme !== selectedTheme.value) {
+    selectedTheme.value = newTheme;
+    setThemeComposable(newTheme);
+  }
+}, { immediate: true });
 </script>
 
 <template>
@@ -56,31 +78,59 @@ const selectTheme = (themeId: string) => {
     </SettingSection>
     
     <SettingSection :title="t('settings.appearance')">
-      <div class="theme-selector">
-        <div class="selector-label">主题</div>
-        <div class="theme-options">
-          <div 
-            v-for="theme in themeOptions" 
-            :key="theme.id"
-            class="theme-option"
-            :class="{ active: selectedTheme === theme.id }"
-            @click="selectTheme(theme.id)"
-          >
-            <div class="color-preview" :style="{ backgroundColor: theme.color }"></div>
-            <div class="theme-name">{{ theme.name }}</div>
+      <div class="appearance-content">
+        <div class="theme-selection-area">
+          <div class="theme-selector">
+            <div class="selector-label">{{ t('settings.theme') }}</div>
+            <div class="theme-options">
+              <div 
+                v-for="theme in themeOptions" 
+                :key="theme.id"
+                class="theme-option"
+                :class="{ active: selectedTheme === theme.id }"
+                @click="selectTheme(theme.id)"
+              >
+                <div class="color-preview" :style="{ backgroundColor: theme.previewColors.background }"></div>
+                <div class="theme-name">{{ theme.displayName }}</div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <div class="editor-preview">
-        <div class="preview-header">
-          <div class="preview-title">预览</div>
-        </div>
-        <div class="preview-content">
-          <div class="preview-line"><span class="line-number">1</span><span class="keyword">function</span> <span class="function">example</span>() {</div>
-          <div class="preview-line"><span class="line-number">2</span>  <span class="keyword">const</span> greeting = <span class="string">"Hello, World!"</span>;</div>
-          <div class="preview-line"><span class="line-number">3</span>  <span class="function">console.log</span>(greeting);</div>
-          <div class="preview-line"><span class="line-number">4</span>}</div>
+        
+        <div class="preview-area">
+          <div class="editor-preview" :style="{ backgroundColor: currentPreviewTheme.previewColors.background }">
+            <div class="preview-header" :style="{ backgroundColor: currentPreviewTheme.previewColors.background, borderBottomColor: currentPreviewTheme.previewColors.foreground + '33' }">
+              <div class="preview-title" :style="{ color: currentPreviewTheme.previewColors.foreground }">{{ currentPreviewTheme.displayName }} 预览</div>
+            </div>
+            <div class="preview-content" :style="{ color: currentPreviewTheme.previewColors.foreground }">
+              <div class="preview-line">
+                <span class="line-number" :style="{ color: currentPreviewTheme.previewColors.comment }">1</span>
+                <span class="keyword" :style="{ color: currentPreviewTheme.previewColors.keyword }">function</span>
+                <span>&nbsp;</span>
+                <span class="function" :style="{ color: currentPreviewTheme.previewColors.function }">exampleFunc</span>() {
+              </div>
+              <div class="preview-line">
+                <span class="line-number" :style="{ color: currentPreviewTheme.previewColors.comment }">2</span>
+                <span>&nbsp;&nbsp;</span>
+                <span class="keyword" :style="{ color: currentPreviewTheme.previewColors.keyword }">const</span>
+                <span> hello = </span>
+                <span class="string" :style="{ color: currentPreviewTheme.previewColors.string }">"你好，世界！"</span>;
+              </div>
+              <div class="preview-line">
+                <span class="line-number" :style="{ color: currentPreviewTheme.previewColors.comment }">3</span>
+                <span>&nbsp;&nbsp;</span>
+                <span class="function" :style="{ color: currentPreviewTheme.previewColors.function }">console.log</span>(hello);
+              </div>
+              <div class="preview-line">
+                <span class="line-number" :style="{ color: currentPreviewTheme.previewColors.comment }">4</span>
+                <span>&nbsp;&nbsp;</span>
+                <span class="comment" :style="{ color: currentPreviewTheme.previewColors.comment }">// 这是中文注释</span>
+              </div>
+              <div class="preview-line">
+                <span class="line-number" :style="{ color: currentPreviewTheme.previewColors.comment }">5</span>}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </SettingSection>
@@ -89,7 +139,31 @@ const selectTheme = (themeId: string) => {
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 800px;
+  max-width: 1000px;
+}
+
+.appearance-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  
+  @media (min-width: 768px) {
+    flex-direction: row;
+    gap: 32px;
+  }
+}
+
+.theme-selection-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.preview-area {
+  flex: 0 0 400px;
+  
+  @media (max-width: 767px) {
+    flex: none;
+  }
 }
 
 .select-input {
@@ -118,7 +192,7 @@ const selectTheme = (themeId: string) => {
 }
 
 .theme-selector {
-  padding: 15px 16px;
+  padding: 0;
   
   .selector-label {
     font-size: 14px;
@@ -128,96 +202,134 @@ const selectTheme = (themeId: string) => {
   }
   
   .theme-options {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 16px;
+    justify-content: start;
     
     .theme-option {
-      width: 100px;
       cursor: pointer;
       transition: all 0.2s ease;
       
       .color-preview {
-        height: 60px;
-        border-radius: 4px;
+        height: 70px;
+        border-radius: 6px;
         border: 2px solid transparent;
         transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+        position: relative;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          width: 16px;
+          height: 16px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.1);
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
       }
       
       .theme-name {
-        margin-top: 6px;
+        margin-top: 8px;
         font-size: 13px;
         text-align: center;
         color: #c0c0c0;
+        font-weight: 500;
       }
       
-      &:hover .color-preview {
-        border-color: rgba(255, 255, 255, 0.3);
+      &:hover {
+        transform: translateY(-2px);
+        
+        .color-preview {
+          border-color: rgba(255, 255, 255, 0.4);
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+          
+          &::before {
+            opacity: 1;
+          }
+        }
       }
       
-      &.active .color-preview {
-        border-color: #4a9eff;
-      }
-      
-      &.active .theme-name {
-        color: #ffffff;
+      &.active {
+        .color-preview {
+          border-color: #4a9eff;
+          box-shadow: 0 4px 20px rgba(74, 158, 255, 0.3);
+          
+          &::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #4a9eff;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 0 0 4px rgba(74, 158, 255, 0.8);
+          }
+        }
+        
+        .theme-name {
+          color: #4a9eff;
+          font-weight: 600;
+        }
       }
     }
   }
 }
 
 .editor-preview {
-  margin: 20px 16px;
-  background-color: #252525;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 100%;
+  max-width: 400px;
   
   .preview-header {
-    padding: 10px 16px;
-    background-color: #353535;
-    border-bottom: 1px solid #444444;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     
     .preview-title {
-      font-size: 13px;
-      color: #b0b0b0;
+      font-size: 14px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      &::before {
+        content: '🎨';
+        font-size: 16px;
+      }
     }
   }
   
   .preview-content {
-    padding: 12px 0;
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 14px;
+    padding: 16px 0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
     
     .preview-line {
-      padding: 3px 16px;
-      line-height: 1.5;
-      white-space: pre;
+      padding: 2px 16px;
+      transition: background-color 0.2s ease;
       
       &:hover {
-        background-color: rgba(255, 255, 255, 0.03);
+        background-color: rgba(255, 255, 255, 0.05);
       }
       
       .line-number {
-        color: #707070;
         display: inline-block;
-        width: 25px;
-        margin-right: 15px;
+        width: 24px;
+        margin-right: 12px;
         text-align: right;
         user-select: none;
-      }
-      
-      .keyword {
-        color: #569cd6;
-      }
-      
-      .function {
-        color: #dcdcaa;
-      }
-      
-      .string {
-        color: #ce9178;
+        font-size: 12px;
+        opacity: 0.7;
       }
     }
   }

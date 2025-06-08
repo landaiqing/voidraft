@@ -7,7 +7,8 @@ import {
     EditingConfig,
     GeneralConfig,
     LanguageType,
-    TabType
+    TabType,
+    ThemeType
 } from '@/../bindings/voidraft/internal/models';
 import {useI18n} from 'vue-i18n';
 import {useErrorHandler} from '@/utils/errorHandler';
@@ -64,7 +65,8 @@ const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
 } as const;
 
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
-    language: 'appearance.language'
+    language: 'appearance.language',
+    theme: 'appearance.theme'
 } as const;
 
 // 配置限制
@@ -113,7 +115,7 @@ const getBrowserLanguage = (): SupportedLocaleType => {
 const DEFAULT_CONFIG: AppConfig = {
     general: {
         alwaysOnTop: false,
-        dataPath: './data',
+        dataPath: '',
         enableGlobalHotkey: false,
         globalHotkey: {
             ctrl: false,
@@ -134,7 +136,8 @@ const DEFAULT_CONFIG: AppConfig = {
         autoSaveDelay: 5000
     },
     appearance: {
-        language: LanguageType.LangZhCN
+        language: LanguageType.LangZhCN,
+        theme: 'default-dark' as ThemeType
     },
     keyBindings: {},
     updates: {},
@@ -296,6 +299,13 @@ export const useConfigStore = defineStore('config', () => {
         }, 'config.languageChangeFailed', 'config.languageChanged');
     };
 
+    // 主题设置方法
+    const setTheme = async (theme: ThemeType): Promise<void> => {
+        await safeCall(async () => {
+            await updateAppearanceConfig('theme', theme);
+        }, 'config.themeChangeFailed', 'config.themeChanged');
+    };
+
     // 初始化语言设置
     const initializeLanguage = async (): Promise<void> => {
         try {
@@ -357,6 +367,9 @@ export const useConfigStore = defineStore('config', () => {
         // 语言相关方法
         setLanguage,
         initializeLanguage,
+
+        // 主题相关方法
+        setTheme,
 
         // 字体大小操作
         ...adjusters.fontSize,

@@ -18,7 +18,9 @@ import {
   createFontExtensionFromBackend,
   updateFontConfig,
 } from './extensions';
+import { useEditorTheme } from '@/composables/useEditorTheme';
 import { useI18n } from 'vue-i18n';
+import type { ThemeType } from '@/types';
 import { DocumentService } from '../../../bindings/voidraft/internal/services';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 
@@ -27,6 +29,7 @@ const configStore = useConfigStore();
 const documentStore = useDocumentStore();
 const logStore = useLogStore();
 const { t } = useI18n();
+const { createThemeExtension, updateTheme } = useEditorTheme();
 
 const props = defineProps({
   initialDoc: {
@@ -50,6 +53,11 @@ const createEditor = async () => {
 
   // 获取基本扩展
   const basicExtensions = createBasicSetup();
+
+  // 获取主题扩展
+  const themeExtension = await createThemeExtension(
+    configStore.config.appearance.theme || 'default-dark' as ThemeType
+  );
 
   // 获取Tab相关扩展
   const tabExtensions = getTabExtensions(
@@ -90,6 +98,7 @@ const createEditor = async () => {
 
   // 组合所有扩展
   const extensions: Extension[] = [
+    themeExtension,
     ...basicExtensions,
     ...tabExtensions,
     fontExtension,
@@ -183,6 +192,13 @@ watch([
 ], () => {
   reconfigureFontSettings();
   editorStore.applyFontSize();
+});
+
+// 监听主题变化
+watch(() => configStore.config.appearance.theme, async (newTheme) => {
+  if (newTheme && editorStore.editorView) {
+    await updateTheme(editorStore.editorView as EditorView, newTheme);
+  }
 });
 
 onMounted(() => {

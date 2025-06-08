@@ -29,7 +29,9 @@ export default {
     alwaysOnTopFailed: 'Failed to set window always on top',
     alwaysOnTopSuccess: 'Window always on top status updated',
     languageChanged: 'Language setting updated',
-    languageChangeFailed: 'Failed to update language setting'
+    languageChangeFailed: 'Failed to update language setting',
+    themeChanged: 'Theme setting updated',
+    themeChangeFailed: 'Failed to update theme setting'
   },
   languages: {
     'zh-CN': '简体中文',
@@ -97,6 +99,8 @@ export default {
     tabs: 'Tabs',
     enableTabIndent: 'Enable Tab Indent',
     language: 'Interface Language',
+    theme: 'Editor Theme',
+    themeDescription: 'Choose editor theme',
     restartRequired: '(Restart required)',
     saveOptions: 'Save Options',
     autoSaveDelay: 'Auto Save Delay (ms)',

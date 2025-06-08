@@ -23,13 +23,10 @@ import {defaultKeymap, history, historyKeymap,} from '@codemirror/commands';
 import {highlightSelectionMatches, searchKeymap} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
-import {customHighlightActiveLine, defaultDark} from '@/views/editor/theme/default-dark';
 
 // 基本编辑器设置，包含常用扩展
 export const createBasicSetup = (): Extension[] => {
     return [
-        // 主题相关
-        defaultDark,
 
         // 基础UI
         lineNumbers(),
@@ -46,7 +43,6 @@ export const createBasicSetup = (): Extension[] => {
 
         // 选择与高亮
         drawSelection(),
-        customHighlightActiveLine,
         highlightActiveLine(),
         highlightSelectionMatches(),
         rectangularSelection(),

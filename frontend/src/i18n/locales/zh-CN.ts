@@ -29,7 +29,9 @@ export default {
     alwaysOnTopFailed: '无法设置窗口置顶状态',
     alwaysOnTopSuccess: '窗口置顶状态已更新',
     languageChanged: '语言设置已更新',
-    languageChangeFailed: '语言设置更新失败'
+    languageChangeFailed: '语言设置更新失败',
+    themeChanged: '主题设置已更新',
+    themeChangeFailed: '主题设置更新失败'
   },
   languages: {
     'zh-CN': '简体中文',
@@ -97,6 +99,8 @@ export default {
     tabs: '制表符',
     enableTabIndent: '启用 Tab 缩进',
     language: '界面语言',
+    theme: '编辑器主题',
+    themeDescription: '选择编辑器主题',
     restartRequired: '(需要重启)',
     saveOptions: '保存选项',
     autoSaveDelay: '自动保存延迟(毫秒)',
