@@ -1,4 +1,10 @@
 export default {
+  titlebar: {
+    minimize: 'Minimize',
+    maximize: 'Maximize',
+    restore: 'Restore Down',
+    close: 'Close'
+  },
   toolbar: {
     editor: {
       lines: 'Ln',

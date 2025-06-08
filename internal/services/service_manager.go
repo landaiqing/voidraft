@@ -17,6 +17,7 @@ type ServiceManager struct {
 	dialogService    *DialogService
 	websocketService *WebSocketService
 	httpService      *HTTPService
+	trayService      *TrayService
 	logger           *log.LoggerService
 }
 
@@ -48,6 +49,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化 HTTP 服务
 	httpService := NewHTTPService(logger, websocketService)
+
+	// 初始化托盘服务
+	trayService := NewTrayService(logger, configService)
 
 	// 设置迁移服务的WebSocket广播
 	migrationService.SetProgressBroadcaster(func(progress MigrationProgress) {
@@ -95,6 +99,7 @@ func NewServiceManager() *ServiceManager {
 		dialogService:    dialogService,
 		websocketService: websocketService,
 		httpService:      httpService,
+		trayService:      trayService,
 		logger:           logger,
 	}
 }
@@ -108,6 +113,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.systemService),
 		application.NewService(sm.hotkeyService),
 		application.NewService(sm.dialogService),
+		application.NewService(sm.trayService),
 	}
 }
 
@@ -129,4 +135,9 @@ func (sm *ServiceManager) GetLogger() *log.LoggerService {
 // GetConfigService 获取配置服务实例
 func (sm *ServiceManager) GetConfigService() *ConfigService {
 	return sm.configService
+}
+
+// GetTrayService 获取托盘服务实例
+func (sm *ServiceManager) GetTrayService() *TrayService {
+	return sm.trayService
 }

@@ -7,13 +7,15 @@ import * as DocumentService from "./documentservice.js";
 import * as HotkeyService from "./hotkeyservice.js";
 import * as MigrationService from "./migrationservice.js";
 import * as SystemService from "./systemservice.js";
+import * as TrayService from "./trayservice.js";
 export {
     ConfigService,
     DialogService,
     DocumentService,
     HotkeyService,
     MigrationService,
-    SystemService
+    SystemService,
+    TrayService
 };
 
 export * from "./models.js";

@@ -75,10 +75,13 @@ func main() {
 	// 'URL' is the URL that will be loaded into the webview.
 	log.Println("Creating main window...")
 	mainWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
-		Title:  "voidraft",
-		Width:  700,
-		Height: 800,
-		Hidden: false,
+		Title:                      "voidraft",
+		Width:                      700,
+		Height:                     800,
+		Hidden:                     false,
+		Frameless:                  true,
+		DevToolsEnabled:            false,
+		DefaultContextMenuDisabled: false,
 		Mac: application.MacWindow{
 			InvisibleTitleBarHeight: 50,
 			Backdrop:                application.MacBackdropTranslucent,
@@ -92,8 +95,8 @@ func main() {
 	})
 	mainWindow.Center()
 
-	// 创建托盘服务
-	trayService := services.NewTrayService(serviceManager.GetLogger(), serviceManager.GetConfigService())
+	// 获取托盘服务并设置应用引用
+	trayService := serviceManager.GetTrayService()
 	trayService.SetAppReferences(app, mainWindow)
 
 	// 设置系统托盘

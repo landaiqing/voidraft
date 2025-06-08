@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useConfigStore } from '@/stores/configStore';
+import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
 
 const configStore = useConfigStore();
 
@@ -14,7 +15,10 @@ onMounted(async () => {
 
 <template>
   <div class="app-container">
-    <router-view/>
+    <WindowTitleBar />
+    <div class="app-content">
+      <router-view/>
+    </div>
   </div>
 </template>
 
@@ -24,5 +28,14 @@ onMounted(async () => {
   height: 100vh;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-content {
+  flex: 1;
+  margin-top: 32px;
+  overflow: hidden;
+  position: relative;
 }
 </style>

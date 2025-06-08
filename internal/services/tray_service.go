@@ -77,3 +77,10 @@ func (ts *TrayService) ShowWindow() {
 		ts.logger.Info("TrayService: Window shown from system tray")
 	}
 }
+
+// MinimizeButtonClicked 处理标题栏最小化按钮点击
+func (ts *TrayService) MinimizeButtonClicked() {
+	// 最小化按钮总是执行正常最小化到任务栏，不隐藏到托盘
+	ts.mainWindow.Minimise()
+	ts.logger.Info("TrayService: Window minimized to taskbar via titlebar button")
+}
