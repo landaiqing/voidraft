@@ -3,7 +3,8 @@ import messages from './locales';
 
 // 创建i18n实例
 const i18n = createI18n({
-    compositionOnly: false,
+    legacy: false,
+    compositionOnly: true,
     globalInjection: true,
     silentTranslationWarn: true,
     locale: 'zh-CN',

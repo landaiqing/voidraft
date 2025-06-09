@@ -1,46 +1,31 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue';
+import { onMounted } from 'vue';
 import { useConfigStore } from '@/stores/configStore';
+import { useSystemStore } from '@/stores/systemStore';
 import { useSystemTheme } from '@/composables/useSystemTheme';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
-import * as runtime from '@wailsio/runtime';
 
 const configStore = useConfigStore();
+const systemStore = useSystemStore();
 const { setTheme } = useSystemTheme();
 
-// 操作系统检测
-const isWindows = ref(false);
-const isMacOS = ref(false);
-
-// 根据操作系统计算标题栏高度
-const titleBarHeight = computed(() => {
-  if (isWindows.value) return '32px';
-  if (isMacOS.value) return '28px';
-  return '34px'; // Linux 默认
-});
-
-// 应用启动时加载配置和检测操作系统
+// 应用启动时加载配置和初始化系统信息
 onMounted(async () => {
-  await configStore.initConfig();
+  // 并行初始化配置和系统信息
+  await Promise.all([
+    configStore.initConfig(),
+    systemStore.initializeSystemInfo()
+  ]);
+  
   await configStore.initializeLanguage();
   setTheme(configStore.config.appearance.systemTheme);
-  
-  // 检测操作系统
-  try {
-    isWindows.value = runtime.System.IsWindows();
-    isMacOS.value = runtime.System.IsMac();
-  } catch (error) {
-    console.error('检测操作系统失败:', error);
-    // 默认使用 Windows
-    isWindows.value = true;
-  }
 });
 </script>
 
 <template>
   <div class="app-container">
     <WindowTitleBar />
-    <div class="app-content" :style="{ marginTop: titleBarHeight }">
+    <div class="app-content" :style="{ marginTop: systemStore.titleBarHeight }">
       <router-view/>
     </div>
   </div>

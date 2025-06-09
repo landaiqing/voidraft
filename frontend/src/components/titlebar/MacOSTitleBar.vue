@@ -116,11 +116,11 @@ onMounted(async () => {
     await checkMaximizedState();
   });
 
-  onUnmounted(() => {
-    runtime.Events.Off('window:maximised');
-    runtime.Events.Off('window:unmaximised');
-    runtime.Events.Off('window:focus');
-  });
+});
+onUnmounted(() => {
+  runtime.Events.Off('window:maximised');
+  runtime.Events.Off('window:unmaximised');
+  runtime.Events.Off('window:focus');
 });
 </script>
 
