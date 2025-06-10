@@ -25,12 +25,16 @@ import {highlightSelectionMatches} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
 import { vscodeSearch, customSearchKeymap, searchVisibilityField } from '../plugins/vscodeSearch';
+
+import { hyperLink } from '../plugins/hyperlink';
 // 基本编辑器设置，包含常用扩展
 export const createBasicSetup = (): Extension[] => {
     return [
 
         vscodeSearch,
         searchVisibilityField,
+
+        hyperLink,
 
         // 基础UI
         lineNumbers(),

@@ -179,6 +179,10 @@ const lightTheme: Theme = {
     ".find-input:focus, .replace-input:focus": {
         borderColor: "var(--cm-caret, #1e51db)",
     },
+    ".find-input.error": {
+        borderColor: "#ff4444 !important",
+        backgroundColor: "#fff5f5 !important",
+    },
     ".search-controls div:hover": {
         backgroundColor: "var(--cm-gutter-foreground, #e1e1e1)"
     },
@@ -214,6 +218,10 @@ const darkTheme = {
     },
     ".find-input:focus, .replace-input:focus": {
         borderColor: "var(--cm-caret, #1e51db)",
+    },
+    ".find-input.error": {
+        borderColor: "#ff6b6b !important",
+        backgroundColor: "#3d2626 !important",
     },
     ".search-controls div:hover": {
         backgroundColor: "var(--cm-gutter-foreground, #3c3c3c)"

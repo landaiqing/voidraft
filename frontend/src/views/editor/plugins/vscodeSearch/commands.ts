@@ -54,7 +54,6 @@ export const deleteCharacterFowards: Command = (view) => {
 };
 
 export const showSearchVisibilityCommand: Command = (view) => {
-    console.log("SHOW");
     view.dispatch({
       effects: SearchVisibilityEffect.of(true) // Dispatch the effect to show the search
     });

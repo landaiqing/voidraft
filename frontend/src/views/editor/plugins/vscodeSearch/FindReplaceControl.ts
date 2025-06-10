@@ -75,6 +75,14 @@ export class CustomSearchPanel {
         }
     }
 
+    private setSearchFieldError(hasError: boolean): void {
+        if (hasError) {
+            this.searchField.classList.add('error');
+        } else {
+            this.searchField.classList.remove('error');
+        }
+    }
+
     private charBefore(str: string, index: number) {
         return str.slice(findClusterBreak(str, index, false), index)
     }
@@ -117,13 +125,24 @@ export class CustomSearchPanel {
         const cursorPos = state.selection.main.head;
         let query = getSearchQuery(state);
 
-
         if (query.regexp) {
-            this.regexCursor = new RegExpCursor(state.doc, query.search)
-            this.searchCursor = undefined;
+            try {
+                this.regexCursor = new RegExpCursor(state.doc, query.search)
+                this.searchCursor = undefined;
+            } catch (error) {
+                // 如果正则表达式无效，清空匹配结果并显示错误状态
+                console.warn("Invalid regular expression:", query.search, error);
+                this.matches = [];
+                this.currentMatch = 0;
+                this.totalMatches = 0;
+                this.updateMatchCount();
+                this.regexCursor = undefined;
+                this.searchCursor = undefined;
+                this.setSearchFieldError(true);
+                return;
+            }
         }
         else {
-
             let cursor = new SearchCursor(state.doc, query.search);
             if (cursor !== this.searchCursor) {
                 this.searchCursor = cursor;
@@ -148,20 +167,24 @@ export class CustomSearchPanel {
             }
         }
         else if (this.regexCursor) {
+            try {
+                const matchWord = this.regexpWordTest(state.charCategorizer(state.selection.main.head))
 
-            const matchWord = this.regexpWordTest(state.charCategorizer(state.selection.main.head))
+                while (!this.regexCursor.done) {
+                    this.regexCursor.next();
 
-            while (!this.regexCursor.done) {
-                this.regexCursor.next();
+                    if (!this.regexCursor.done) {
+                        const { from, to, match } = this.regexCursor.value;
 
-                if (!this.regexCursor.done) {
-                    const { from, to, match } = this.regexCursor.value;
-
-                    if (!query.wholeWord || matchWord(from, to, match)) {
-                        this.matches.push({ from, to });
+                        if (!query.wholeWord || matchWord(from, to, match)) {
+                            this.matches.push({ from, to });
+                        }
                     }
-
                 }
+            } catch (error) {
+                // 如果正则表达式执行时出错，清空匹配结果
+                console.warn("Error executing regular expression:", error);
+                this.matches = [];
             }
         }
 
@@ -170,6 +193,7 @@ export class CustomSearchPanel {
 
         if (this.matches.length === 0) {
             this.updateMatchCount();
+            this.setSearchFieldError(false);
             return;
         }
         // Find the match closest to the current cursor
@@ -183,7 +207,7 @@ export class CustomSearchPanel {
             }
         }
         this.updateMatchCount();
-
+        this.setSearchFieldError(false);
 
         requestAnimationFrame(() => {
             const match = this.matches[this.currentMatch];
@@ -197,19 +221,24 @@ export class CustomSearchPanel {
     }
 
     commit() {
-        const newQuery = new SearchQuery({
-            search: this.searchField.value,
-            replace: this.replaceField.value,
-            caseSensitive: this.matchCase,
-            regexp: this.useRegex,
-            wholeWord: this.matchWord,
-        })
-
-        let query = getSearchQuery(this.view.state)
-        if (!newQuery.eq(query)) {
-            this.view.dispatch({
-                effects: setSearchQuery.of(newQuery)
+        try {
+            const newQuery = new SearchQuery({
+                search: this.searchField.value,
+                replace: this.replaceField.value,
+                caseSensitive: this.matchCase,
+                regexp: this.useRegex,
+                wholeWord: this.matchWord,
             })
+
+            let query = getSearchQuery(this.view.state)
+            if (!newQuery.eq(query)) {
+                this.view.dispatch({
+                    effects: setSearchQuery.of(newQuery)
+                })
+            }
+        } catch (error) {
+            // 如果创建SearchQuery时出错（通常是无效的正则表达式），记录错误但不中断程序
+            console.warn("Error creating search query:", error);
         }
     }
 
