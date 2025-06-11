@@ -72,10 +72,10 @@ export const customSearchKeymap: KeyBinding[] = [
         key: "ArrowLeft",
         run: searchMoveCursorLeft,
         scope: 'search'
-    },
-    {
+      },
+      {
         key: "ArrowRight",
         run: searchMoveCursorRight,
         scope: 'search'
-    },
+      },
 ];

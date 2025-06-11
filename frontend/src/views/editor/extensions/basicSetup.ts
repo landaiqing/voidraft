@@ -24,9 +24,11 @@ import {defaultKeymap, history, historyKeymap,} from '@codemirror/commands';
 import {highlightSelectionMatches} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
-import { vscodeSearch, customSearchKeymap, searchVisibilityField } from '../plugins/vscodeSearch';
+import { vscodeSearch, customSearchKeymap, searchVisibilityField } from './vscodeSearch';
 
-import { hyperLink } from '../plugins/hyperlink';
+import { hyperLink } from './hyperlink';
+import { color } from './colorSelector';
+
 // 基本编辑器设置，包含常用扩展
 export const createBasicSetup = (): Extension[] => {
     return [
@@ -35,6 +37,7 @@ export const createBasicSetup = (): Extension[] => {
         searchVisibilityField,
 
         hyperLink,
+        color,
 
         // 基础UI
         lineNumbers(),
@@ -67,7 +70,7 @@ export const createBasicSetup = (): Extension[] => {
 
         // 键盘映射
         keymap.of([
-            ...customSearchKeymap as KeyBinding[],
+            ...customSearchKeymap,
             ...closeBracketsKeymap,
             ...defaultKeymap,
             ...historyKeymap,

@@ -127,8 +127,8 @@ export class CustomSearchPanel {
 
         if (query.regexp) {
             try {
-                this.regexCursor = new RegExpCursor(state.doc, query.search)
-                this.searchCursor = undefined;
+            this.regexCursor = new RegExpCursor(state.doc, query.search)
+            this.searchCursor = undefined;
             } catch (error) {
                 // 如果正则表达式无效，清空匹配结果并显示错误状态
                 console.warn("Invalid regular expression:", query.search, error);
@@ -168,17 +168,17 @@ export class CustomSearchPanel {
         }
         else if (this.regexCursor) {
             try {
-                const matchWord = this.regexpWordTest(state.charCategorizer(state.selection.main.head))
+            const matchWord = this.regexpWordTest(state.charCategorizer(state.selection.main.head))
 
-                while (!this.regexCursor.done) {
-                    this.regexCursor.next();
+            while (!this.regexCursor.done) {
+                this.regexCursor.next();
 
-                    if (!this.regexCursor.done) {
-                        const { from, to, match } = this.regexCursor.value;
+                if (!this.regexCursor.done) {
+                    const { from, to, match } = this.regexCursor.value;
 
-                        if (!query.wholeWord || matchWord(from, to, match)) {
-                            this.matches.push({ from, to });
-                        }
+                    if (!query.wholeWord || matchWord(from, to, match)) {
+                        this.matches.push({ from, to });
+                    }
                     }
                 }
             } catch (error) {
@@ -222,19 +222,19 @@ export class CustomSearchPanel {
 
     commit() {
         try {
-            const newQuery = new SearchQuery({
-                search: this.searchField.value,
-                replace: this.replaceField.value,
-                caseSensitive: this.matchCase,
-                regexp: this.useRegex,
-                wholeWord: this.matchWord,
-            })
+        const newQuery = new SearchQuery({
+            search: this.searchField.value,
+            replace: this.replaceField.value,
+            caseSensitive: this.matchCase,
+            regexp: this.useRegex,
+            wholeWord: this.matchWord,
+        })
 
-            let query = getSearchQuery(this.view.state)
-            if (!newQuery.eq(query)) {
-                this.view.dispatch({
-                    effects: setSearchQuery.of(newQuery)
-                })
+        let query = getSearchQuery(this.view.state)
+        if (!newQuery.eq(query)) {
+            this.view.dispatch({
+                effects: setSearchQuery.of(newQuery)
+            })
             }
         } catch (error) {
             // 如果创建SearchQuery时出错（通常是无效的正则表达式），记录错误但不中断程序
@@ -367,7 +367,7 @@ export class CustomSearchPanel {
                 });
                 
                 // 重新查找匹配项
-                this.findMatchesAndSelectClosest(this.view.state);
+        this.findMatchesAndSelectClosest(this.view.state);
             }
         }
     }
@@ -392,7 +392,7 @@ export class CustomSearchPanel {
             });
             
             // 重新查找匹配项
-            this.findMatchesAndSelectClosest(this.view.state);
+        this.findMatchesAndSelectClosest(this.view.state);
         }
     }
 
@@ -592,7 +592,7 @@ export class CustomSearchPanel {
         if (visible) {
             // 使用 setTimeout 确保DOM已经渲染
             setTimeout(() => {
-                this.searchField.focus();
+        this.searchField.focus();
                 this.searchField.select();
             }, 0);
         }
