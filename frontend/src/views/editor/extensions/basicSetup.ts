@@ -27,7 +27,7 @@ import {searchVisibilityField, vscodeSearch, customSearchKeymap} from './vscodeS
 
 import {hyperLink} from './hyperlink';
 import {color} from './colorSelector';
-import {textHighlighter} from './textHighlightExtension';
+import {createTextHighlighter} from './textHighlightExtension';
 import {minimap} from './minimap';
 
 // 基本编辑器设置
@@ -38,7 +38,7 @@ export const createBasicSetup = (): Extension[] => {
 
         hyperLink,
         color,
-        textHighlighter,
+        ...createTextHighlighter('hl'),
         minimap({
             displayText: 'characters',
             showOverlay: 'always',

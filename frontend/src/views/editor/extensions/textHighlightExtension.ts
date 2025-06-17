@@ -1,28 +1,83 @@
-import {EditorState, StateEffect, StateField} from "@codemirror/state";
-import {Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate, WidgetType} from "@codemirror/view";
-import {keymap} from "@codemirror/view";
-import {Text} from "@codemirror/state";
+import { EditorState, StateEffect, StateField, Transaction, Range } from "@codemirror/state";
+import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
+import { keymap } from "@codemirror/view";
 
-// 定义高亮标记的语法
-const HIGHLIGHT_MARKER_START = "<hl>";
-const HIGHLIGHT_MARKER_END = "</hl>";
+// 全局高亮存储 - 以文档ID为键，高亮范围数组为值
+interface HighlightInfo {
+  from: number;
+  to: number;
+}
+
+class GlobalHighlightStore {
+  private static instance: GlobalHighlightStore;
+  private highlightMap: Map<string, HighlightInfo[]> = new Map();
+  
+  private constructor() {}
+  
+  public static getInstance(): GlobalHighlightStore {
+    if (!GlobalHighlightStore.instance) {
+      GlobalHighlightStore.instance = new GlobalHighlightStore();
+    }
+    return GlobalHighlightStore.instance;
+  }
+  
+  // 保存文档的高亮
+  saveHighlights(documentId: string, highlights: HighlightInfo[]): void {
+    this.highlightMap.set(documentId, [...highlights]);
+  }
+  
+  // 获取文档的高亮
+  getHighlights(documentId: string): HighlightInfo[] {
+    return this.highlightMap.get(documentId) || [];
+  }
+  
+  // 添加高亮
+  addHighlight(documentId: string, highlight: HighlightInfo): void {
+    const highlights = this.getHighlights(documentId);
+    highlights.push(highlight);
+    this.saveHighlights(documentId, highlights);
+  }
+  
+  // 移除高亮
+  removeHighlights(documentId: string, from: number, to: number): void {
+    const highlights = this.getHighlights(documentId);
+    const filtered = highlights.filter(h => !(h.from < to && h.to > from));
+    this.saveHighlights(documentId, filtered);
+  }
+  
+  // 清除文档的所有高亮
+  clearHighlights(documentId: string): void {
+    this.highlightMap.delete(documentId);
+  }
+}
+
+// 获取全局高亮存储实例
+const highlightStore = GlobalHighlightStore.getInstance();
+
+// 定义添加和移除高亮的状态效果
+const addHighlight = StateEffect.define<{from: number, to: number, documentId: string}>({
+  map: ({from, to, documentId}, change) => ({
+    from: change.mapPos(from),
+    to: change.mapPos(to),
+    documentId
+  })
+});
+
+const removeHighlight = StateEffect.define<{from: number, to: number, documentId: string}>({
+  map: ({from, to, documentId}, change) => ({
+    from: change.mapPos(from),
+    to: change.mapPos(to),
+    documentId
+  })
+});
+
+// 初始化高亮效果 - 用于页面加载时恢复高亮
+const initHighlights = StateEffect.define<{highlights: HighlightInfo[], documentId: string}>();
 
 // 高亮样式
 const highlightMark = Decoration.mark({
   attributes: {style: `background-color: rgba(255, 215, 0, 0.3)`}
 });
-
-// 空白Widget用于隐藏标记
-class EmptyWidget extends WidgetType {
-  toDOM() {
-    return document.createElement("span");
-  }
-}
-
-const emptyWidget = new EmptyWidget();
-
-// 定义效果用于触发高亮视图刷新
-const refreshHighlightEffect = StateEffect.define<null>();
 
 // 存储高亮范围的状态字段
 const highlightState = StateField.define<DecorationSet>({
@@ -30,17 +85,37 @@ const highlightState = StateField.define<DecorationSet>({
     return Decoration.none;
   },
   update(decorations, tr) {
+    // 先映射现有的装饰，以适应文档变化
     decorations = decorations.map(tr.changes);
     
-    // 检查是否有刷新效果
+    // 处理添加和移除高亮的效果
     for (const effect of tr.effects) {
-      if (effect.is(refreshHighlightEffect)) {
-        return findHighlights(tr.state);
+      if (effect.is(addHighlight)) {
+        const { from, to, documentId } = effect.value;
+        decorations = decorations.update({
+          add: [highlightMark.range(from, to)]
+        });
+        // 同步到全局存储
+        highlightStore.addHighlight(documentId, { from, to });
+      } 
+      else if (effect.is(removeHighlight)) {
+        const { from, to, documentId } = effect.value;
+        decorations = decorations.update({
+          filter: (rangeFrom, rangeTo) => {
+            // 移除与指定范围重叠的装饰
+            return !(rangeFrom < to && rangeTo > from);
+          }
+        });
+        // 同步到全局存储
+        highlightStore.removeHighlights(documentId, from, to);
       }
-    }
-    
-    if (tr.docChanged) {
-      return findHighlights(tr.state);
+      else if (effect.is(initHighlights)) {
+        const { highlights } = effect.value;
+        const ranges = highlights.map(h => highlightMark.range(h.from, h.to));
+        if (ranges.length > 0) {
+          decorations = decorations.update({ add: ranges });
+        }
+      }
     }
     
     return decorations;
@@ -48,335 +123,120 @@ const highlightState = StateField.define<DecorationSet>({
   provide: field => EditorView.decorations.from(field)
 });
 
-// 从文档中查找高亮标记并创建装饰
-function findHighlights(state: EditorState): DecorationSet {
-  const decorations: any[] = [];
-  const doc = state.doc;
-  const text = doc.toString();
-  let pos = 0;
+// 定义高亮范围接口
+interface HighlightRange {
+  from: number;
+  to: number;
+  decoration: Decoration;
+}
+
+// 查找指定位置包含的高亮
+function findHighlightsAt(state: EditorState, pos: number): HighlightRange[] {
+  const highlights: HighlightRange[] = [];
   
-  while (pos < text.length) {
-    const startMarkerPos = text.indexOf(HIGHLIGHT_MARKER_START, pos);
-    if (startMarkerPos === -1) break;
-    
-    const contentStart = startMarkerPos + HIGHLIGHT_MARKER_START.length;
-    const endMarkerPos = text.indexOf(HIGHLIGHT_MARKER_END, contentStart);
-    if (endMarkerPos === -1) {
-      pos = contentStart;
-      continue;
+  state.field(highlightState).between(pos, pos, (from, to, deco) => {
+    highlights.push({ from, to, decoration: deco });
+  });
+  
+  return highlights;
+}
+
+// 查找与给定范围重叠的所有高亮
+function findHighlightsInRange(state: EditorState, from: number, to: number): HighlightRange[] {
+  const highlights: HighlightRange[] = [];
+  
+  state.field(highlightState).between(from, to, (rangeFrom, rangeTo, deco) => {
+    // 只添加与指定范围有重叠的高亮
+    if (rangeFrom < to && rangeTo > from) {
+      highlights.push({ from: rangeFrom, to: rangeTo, decoration: deco });
     }
-    
-    // 创建装饰，隐藏标记，高亮中间内容
-    decorations.push(Decoration.replace({
-      widget: emptyWidget
-    }).range(startMarkerPos, contentStart));
-    
-    decorations.push(highlightMark.range(contentStart, endMarkerPos));
-    
-    decorations.push(Decoration.replace({
-      widget: emptyWidget
-    }).range(endMarkerPos, endMarkerPos + HIGHLIGHT_MARKER_END.length));
-    
-    pos = endMarkerPos + HIGHLIGHT_MARKER_END.length;
-  }
+  });
   
-  return Decoration.set(decorations, true);
+  return highlights;
 }
 
-// 检查文本是否已经被高亮标记包围
-function isAlreadyHighlighted(text: string): boolean {
-  // 检查是否有嵌套标记
-  let startIndex = 0;
-  let markerCount = 0;
+// 收集当前所有高亮信息
+function collectAllHighlights(state: EditorState): HighlightInfo[] {
+  const highlights: HighlightInfo[] = [];
   
-  while (true) {
-    const nextStart = text.indexOf(HIGHLIGHT_MARKER_START, startIndex);
-    if (nextStart === -1) break;
-    markerCount++;
-    startIndex = nextStart + HIGHLIGHT_MARKER_START.length;
-  }
+  state.field(highlightState).between(0, state.doc.length, (from, to) => {
+    highlights.push({ from, to });
+  });
   
-  // 如果有多个开始标记，表示存在嵌套
-  if (markerCount > 1) return true;
-  
-  // 检查简单的包围情况
-  return text.startsWith(HIGHLIGHT_MARKER_START) && text.endsWith(HIGHLIGHT_MARKER_END);
+  return highlights;
 }
 
-// 添加高亮标记到文本
-function addHighlightMarker(view: EditorView, from: number, to: number) {
-  const text = view.state.sliceDoc(from, to);
+// 添加高亮
+function addHighlightRange(view: EditorView, from: number, to: number, documentId: string): boolean {
+  if (from === to) return false; // 不高亮空选择
   
-  // 检查文本是否已经被高亮，防止嵌套高亮
-  if (isAlreadyHighlighted(text)) {
-    return false;
-  }
+  // 检查是否已经完全高亮
+  const overlappingHighlights = findHighlightsInRange(view.state, from, to);
+  const isFullyHighlighted = overlappingHighlights.some(range => 
+    range.from <= from && range.to >= to
+  );
+  
+  if (isFullyHighlighted) return false;
   
   view.dispatch({
-    changes: {
-      from,
-      to,
-      insert: `${HIGHLIGHT_MARKER_START}${text}${HIGHLIGHT_MARKER_END}`
-    },
-    effects: refreshHighlightEffect.of(null)
+    effects: addHighlight.of({from, to, documentId})
   });
   
   return true;
 }
 
-// 移除文本的高亮标记
-function removeHighlightMarker(view: EditorView, region: {from: number, to: number, content: string}) {
+// 移除高亮
+function removeHighlightRange(view: EditorView, from: number, to: number, documentId: string): boolean {
+  const highlights = findHighlightsInRange(view.state, from, to);
+  
+  if (highlights.length === 0) return false;
+  
   view.dispatch({
-    changes: {
-      from: region.from,
-      to: region.to,
-      insert: region.content
-    },
-    effects: refreshHighlightEffect.of(null)
+    effects: removeHighlight.of({from, to, documentId})
   });
   
   return true;
-}
-
-// 清理嵌套高亮标记
-function cleanNestedHighlights(view: EditorView, from: number, to: number) {
-  const text = view.state.sliceDoc(from, to);
-  
-  // 如果没有嵌套标记，直接返回
-  if (text.indexOf(HIGHLIGHT_MARKER_START) === -1 || 
-      text.indexOf(HIGHLIGHT_MARKER_END) === -1) {
-    return false;
-  }
-  
-  // 尝试清理嵌套标记
-  let cleanedText = text;
-  let changed = false;
-  
-  // 从内到外清理嵌套标记
-  while (true) {
-    const startPos = cleanedText.indexOf(HIGHLIGHT_MARKER_START);
-    if (startPos === -1) break;
-    
-    const contentStart = startPos + HIGHLIGHT_MARKER_START.length;
-    const endPos = cleanedText.indexOf(HIGHLIGHT_MARKER_END, contentStart);
-    if (endPos === -1) break;
-    
-    // 提取标记中的内容
-    const content = cleanedText.substring(contentStart, endPos);
-    
-    // 替换带标记的部分为纯内容
-    cleanedText = cleanedText.substring(0, startPos) + content + cleanedText.substring(endPos + HIGHLIGHT_MARKER_END.length);
-    changed = true;
-  }
-  
-  if (changed) {
-    view.dispatch({
-      changes: {
-        from,
-        to,
-        insert: cleanedText
-      },
-      effects: refreshHighlightEffect.of(null)
-    });
-    return true;
-  }
-  
-  return false;
-}
-
-// 检查选中区域是否包含高亮标记
-function isHighlightedRegion(doc: Text, from: number, to: number): {from: number, to: number, content: string} | null {
-  const fullText = doc.toString();
-  
-  // 向前搜索起始标记
-  let startPos = from;
-  while (startPos > 0) {
-    const textBefore = fullText.substring(Math.max(0, startPos - 100), startPos);
-    const markerPos = textBefore.lastIndexOf(HIGHLIGHT_MARKER_START);
-    
-    if (markerPos !== -1) {
-      startPos = startPos - textBefore.length + markerPos;
-      break;
-    }
-    
-    if (startPos - 100 <= 0) {
-      // 没找到标记
-      return null;
-    }
-    
-    startPos = Math.max(0, startPos - 100);
-  }
-  
-  // 确认找到的标记范围包含选中区域
-  const contentStart = startPos + HIGHLIGHT_MARKER_START.length;
-  
-  // 向后搜索结束标记
-  const textAfter = fullText.substring(contentStart, Math.min(fullText.length, to + 100));
-  const endMarkerPos = textAfter.indexOf(HIGHLIGHT_MARKER_END);
-  
-  if (endMarkerPos === -1) {
-    return null;
-  }
-  
-  const contentEnd = contentStart + endMarkerPos;
-  const regionEnd = contentEnd + HIGHLIGHT_MARKER_END.length;
-  
-  // 确保选中区域在高亮区域内
-  if (from < startPos || to > regionEnd) {
-    return null;
-  }
-  
-  // 获取高亮内容
-  const content = fullText.substring(contentStart, contentEnd);
-  
-  return {
-    from: startPos,
-    to: regionEnd,
-    content
-  };
-}
-
-// 查找光标位置是否在高亮区域内
-function findHighlightAtCursor(view: EditorView, pos: number): {from: number, to: number, content: string} | null {
-  const doc = view.state.doc;
-  const fullText = doc.toString();
-  
-  // 向前搜索起始标记
-  let startPos = pos;
-  let foundStart = false;
-  
-  while (startPos > 0) {
-    const textBefore = fullText.substring(Math.max(0, startPos - 100), startPos);
-    const markerPos = textBefore.lastIndexOf(HIGHLIGHT_MARKER_START);
-    
-    if (markerPos !== -1) {
-      startPos = startPos - textBefore.length + markerPos;
-      foundStart = true;
-      break;
-    }
-    
-    if (startPos - 100 <= 0) {
-      break;
-    }
-    
-    startPos = Math.max(0, startPos - 100);
-  }
-  
-  if (!foundStart) {
-    return null;
-  }
-  
-  const contentStart = startPos + HIGHLIGHT_MARKER_START.length;
-  
-  // 如果光标在开始标记之前，不在高亮区域内
-  if (pos < contentStart) {
-    return null;
-  }
-  
-  // 向后搜索结束标记
-  const textAfter = fullText.substring(contentStart);
-  const endMarkerPos = textAfter.indexOf(HIGHLIGHT_MARKER_END);
-  
-  if (endMarkerPos === -1) {
-    return null;
-  }
-  
-  const contentEnd = contentStart + endMarkerPos;
-  
-  // 如果光标在结束标记之后，不在高亮区域内
-  if (pos > contentEnd) {
-    return null;
-  }
-  
-  // 获取高亮内容
-  const content = fullText.substring(contentStart, contentEnd);
-  
-  return {
-    from: startPos,
-    to: contentEnd + HIGHLIGHT_MARKER_END.length,
-    content
-  };
 }
 
 // 切换高亮状态
-function toggleHighlight(view: EditorView) {
+function toggleHighlight(view: EditorView, documentId: string): boolean {
   const selection = view.state.selection.main;
   
   // 如果有选择文本
   if (!selection.empty) {
-    // 先尝试清理选择区域内的嵌套高亮
-    if (cleanNestedHighlights(view, selection.from, selection.to)) {
-      return true;
-    }
+    const {from, to} = selection;
     
-    // 检查选中区域是否已经在高亮区域内
-    const highlightRegion = isHighlightedRegion(view.state.doc, selection.from, selection.to);
-    if (highlightRegion) {
-      removeHighlightMarker(view, highlightRegion);
-      return true;
-    }
+    // 检查选择范围内是否已经有高亮
+    const highlights = findHighlightsInRange(view.state, from, to);
     
-    // 检查是否选择了带有标记的文本
-    const selectedText = view.state.sliceDoc(selection.from, selection.to);
-    if (selectedText.indexOf(HIGHLIGHT_MARKER_START) !== -1 || 
-        selectedText.indexOf(HIGHLIGHT_MARKER_END) !== -1) {
-      return cleanNestedHighlights(view, selection.from, selection.to);
+    if (highlights.length > 0) {
+      // 如果已有高亮，则移除
+      return removeHighlightRange(view, from, to, documentId);
+    } else {
+      // 如果没有高亮，则添加
+      return addHighlightRange(view, from, to, documentId);
     }
-    
-    // 如果选择的是干净文本，添加高亮
-    addHighlightMarker(view, selection.from, selection.to);
-    return true;
-  }
+  } 
   // 如果是光标
   else {
-    // 查找光标位置是否在高亮区域内
-    const highlightAtCursor = findHighlightAtCursor(view, selection.from);
-    if (highlightAtCursor) {
-      removeHighlightMarker(view, highlightAtCursor);
-      return true;
+    const pos = selection.from;
+    const highlightsAtCursor = findHighlightsAt(view.state, pos);
+    
+    if (highlightsAtCursor.length > 0) {
+      // 移除光标位置的高亮
+      const highlight = highlightsAtCursor[0];
+      return removeHighlightRange(view, highlight.from, highlight.to, documentId);
     }
   }
   
   return false;
 }
 
-// 定义快捷键
-const highlightKeymap = keymap.of([
-  {key: "Mod-h", run: toggleHighlight}
-]);
-
-// 处理复制事件，移除高亮标记
-function handleCopy(view: EditorView, event: ClipboardEvent) {
-  if (!event.clipboardData || view.state.selection.main.empty) return false;
-  
-  const { from, to } = view.state.selection.main;
-  const selectedText = view.state.sliceDoc(from, to);
-  
-  // 如果选中的内容包含高亮标记，则处理复制
-  if (selectedText.indexOf(HIGHLIGHT_MARKER_START) !== -1 || 
-      selectedText.indexOf(HIGHLIGHT_MARKER_END) !== -1) {
-    
-    // 清理文本中的所有标记
-    let cleanText = selectedText;
-    while (true) {
-      const startPos = cleanText.indexOf(HIGHLIGHT_MARKER_START);
-      if (startPos === -1) break;
-      
-      const contentStart = startPos + HIGHLIGHT_MARKER_START.length;
-      const endPos = cleanText.indexOf(HIGHLIGHT_MARKER_END, contentStart);
-      if (endPos === -1) break;
-      
-      const content = cleanText.substring(contentStart, endPos);
-      cleanText = cleanText.substring(0, startPos) + content + cleanText.substring(endPos + HIGHLIGHT_MARKER_END.length);
-    }
-    
-    // 将清理后的文本设置为剪贴板内容
-    event.clipboardData.setData('text/plain', cleanText);
-    event.preventDefault();
-    return true;
-  }
-  
-  return false;
+// 创建高亮快捷键，需要文档ID
+function createHighlightKeymap(documentId: string) {
+  return keymap.of([
+    {key: "Mod-h", run: (view) => toggleHighlight(view, documentId)}
+  ]);
 }
 
 // 高亮刷新管理器类
@@ -385,42 +245,55 @@ class HighlightRefreshManager {
   private refreshPending = false;
   private initialSetupDone = false;
   private rafId: number | null = null;
+  private documentId: string;
   
-  constructor(view: EditorView) {
+  constructor(view: EditorView, documentId: string) {
     this.view = view;
+    this.documentId = documentId;
   }
   
   /**
-   * 使用requestAnimationFrame安排高亮刷新
-   * 确保在适当的时机执行，且不会重复触发
+   * 使用requestAnimationFrame安排视图更新
    */
   scheduleRefresh(): void {
     if (this.refreshPending) return;
     
     this.refreshPending = true;
     
-    // 使用requestAnimationFrame确保在下一帧渲染前执行
     this.rafId = requestAnimationFrame(() => {
       this.executeRefresh();
     });
   }
   
   /**
-   * 执行高亮刷新
+   * 执行视图更新
    */
   private executeRefresh(): void {
     this.refreshPending = false;
     this.rafId = null;
     
-    // 确保视图仍然有效
     if (!this.view.state) return;
     
     try {
-      this.view.dispatch({
-        effects: refreshHighlightEffect.of(null)
-      });
+      // 触发一个空的更新，确保视图刷新
+      this.view.dispatch({});
     } catch (e) {
       console.debug("highlight refresh error:", e);
+    }
+  }
+  
+  /**
+   * 初始化高亮 - 应用保存的高亮
+   */
+  initHighlights(): void {
+    const savedHighlights = highlightStore.getHighlights(this.documentId);
+    if (savedHighlights.length > 0) {
+      this.view.dispatch({
+        effects: initHighlights.of({
+          highlights: savedHighlights,
+          documentId: this.documentId
+        })
+      });
     }
   }
   
@@ -430,14 +303,9 @@ class HighlightRefreshManager {
   performInitialSetup(): void {
     if (this.initialSetupDone) return;
     
-    // 使用Promise.resolve().then确保在当前执行栈清空后运行
     Promise.resolve().then(() => {
+      this.initHighlights();
       this.scheduleRefresh();
-      
-      // 在DOM完全加载后再次刷新以确保稳定性
-      window.addEventListener('load', () => {
-        this.scheduleRefresh();
-      }, { once: true });
     });
     
     this.initialSetupDone = true;
@@ -453,38 +321,39 @@ class HighlightRefreshManager {
   }
 }
 
-// 确保编辑器初始化时立即扫描高亮
-const highlightSetupPlugin = ViewPlugin.define((view) => {
-  // 添加复制事件监听器
-  const copyHandler = (event: ClipboardEvent) => handleCopy(view, event);
-  view.dom.addEventListener('copy', copyHandler);
-  
-  // 创建刷新管理器实例
-  const refreshManager = new HighlightRefreshManager(view);
-  
-  // 执行初始化设置
-  refreshManager.performInitialSetup();
-  
-  return {
-    update(update: ViewUpdate) {
-      // 不在update回调中直接调用dispatch
-      if ((update.docChanged || update.selectionSet) && !update.transactions.some(tr => 
-        tr.effects.some(e => e.is(refreshHighlightEffect)))) {
-        // 安排一个未来的刷新
-        refreshManager.scheduleRefresh();
+// 创建高亮扩展
+export function createTextHighlighter(documentId: string) {
+  // 视图插件
+  const highlightSetupPlugin = ViewPlugin.define((view) => {
+    // 创建刷新管理器实例
+    const refreshManager = new HighlightRefreshManager(view, documentId);
+    
+    // 执行初始化设置
+    refreshManager.performInitialSetup();
+    
+    return {
+      update(update: ViewUpdate) {
+        // 页面有内容变化时，保存最新的高亮状态
+        if (update.docChanged || update.transactions.some(tr => 
+          tr.effects.some(e => e.is(addHighlight) || e.is(removeHighlight))
+        )) {
+          // 延迟收集高亮信息，确保所有效果都已应用
+          setTimeout(() => {
+            const allHighlights = collectAllHighlights(view.state);
+            highlightStore.saveHighlights(documentId, allHighlights);
+          }, 0);
+        }
+      },
+      destroy() {
+        // 清理资源
+        refreshManager.dispose();
       }
-    },
-    destroy() {
-      // 清理资源
-      refreshManager.dispose();
-      view.dom.removeEventListener('copy', copyHandler);
-    }
-  };
-});
-
-// 导出完整扩展
-export const textHighlighter = [
-  highlightState,
-  highlightKeymap,
-  highlightSetupPlugin
-]; 
+    };
+  });
+  
+  return [
+    highlightState,
+    createHighlightKeymap(documentId),
+    highlightSetupPlugin
+  ];
+} 
