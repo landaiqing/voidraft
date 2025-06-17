@@ -10,7 +10,6 @@ import {
     keymap,
     lineNumbers,
     rectangularSelection,
-    KeyBinding,
 } from '@codemirror/view';
 import {
     bracketMatching,
@@ -24,20 +23,27 @@ import {defaultKeymap, history, historyKeymap,} from '@codemirror/commands';
 import {highlightSelectionMatches} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
-import { vscodeSearch, customSearchKeymap, searchVisibilityField } from './vscodeSearch';
+import {searchVisibilityField, vscodeSearch, customSearchKeymap} from './vscodeSearch';
 
-import { hyperLink } from './hyperlink';
-import { color } from './colorSelector';
+import {hyperLink} from './hyperlink';
+import {color} from './colorSelector';
+import {textHighlighter} from './textHighlightExtension';
+import {minimap} from './minimap';
 
-// 基本编辑器设置，包含常用扩展
+// 基本编辑器设置
 export const createBasicSetup = (): Extension[] => {
     return [
-
         vscodeSearch,
         searchVisibilityField,
 
         hyperLink,
         color,
+        textHighlighter,
+        minimap({
+            displayText: 'characters',
+            showOverlay: 'always',
+            autohide: false,
+        }),
 
         // 基础UI
         lineNumbers(),
@@ -79,4 +85,4 @@ export const createBasicSetup = (): Extension[] => {
             ...lintKeymap
         ]),
     ];
-}; 
+};
