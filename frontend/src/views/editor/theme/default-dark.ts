@@ -73,11 +73,17 @@ export const draculaTheme = EditorView.theme({
     },
 
     '.cm-gutters': {
-        backgroundColor: config.lineNumberBackground,
+        backgroundColor: 'rgba(0,0,0, 0.1)',
         color: config.foreground,
-        border: 'none'
+        border: 'none',
+        padding: '0 2px 0 4px',
+        userSelect: 'none',
     },
-    '.cm-activeLineGutter': {backgroundColor: config.background},
+    '.cm-activeLineGutter': {
+        // backgroundColor: config.background
+        backgroundColor: "transparent",
+        color: 'rgba(255,255,255, 0.6)'
+    },
 
     '.cm-lineNumbers .cm-gutterElement': {color: config.lineNumber},
     '.cm-lineNumbers .cm-activeLineGutter': {color: config.lineNumberActive},

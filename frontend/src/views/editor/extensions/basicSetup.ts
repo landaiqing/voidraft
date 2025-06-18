@@ -23,28 +23,19 @@ import {defaultKeymap, history, historyKeymap,} from '@codemirror/commands';
 import {highlightSelectionMatches} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
 import {lintKeymap} from '@codemirror/lint';
-import {searchVisibilityField, vscodeSearch, customSearchKeymap} from './vscodeSearch';
+import {customSearchKeymap, searchVisibilityField, vscodeSearch} from './vscodeSearch';
 
 import {hyperLink} from './hyperlink';
 import {color} from './colorSelector';
 import {createTextHighlighter} from './textHighlightExtension';
 import {minimap} from './minimap';
-
+import {createCodeBlockExtension} from './codeblock/index';
+import {foldingOnIndent} from './foldExtension'
+import rainbowBrackets from "./rainbowBrackets";
+import {createCodeBlastExtension} from './codeblast';
 // 基本编辑器设置
 export const createBasicSetup = (): Extension[] => {
     return [
-        vscodeSearch,
-        searchVisibilityField,
-
-        hyperLink,
-        color,
-        ...createTextHighlighter('hl'),
-        minimap({
-            displayText: 'characters',
-            showOverlay: 'always',
-            autohide: false,
-        }),
-
         // 基础UI
         lineNumbers(),
         highlightActiveLineGutter(),
@@ -73,6 +64,30 @@ export const createBasicSetup = (): Extension[] => {
 
         // 自动完成
         autocompletion(),
+
+        vscodeSearch,
+        searchVisibilityField,
+        foldingOnIndent,
+        rainbowBrackets(),
+        createCodeBlastExtension({
+            effect: 1,
+            shake: true,
+            maxParticles: 300,
+            shakeIntensity: 3
+        }),
+        hyperLink,
+        color,
+        ...createTextHighlighter('hl'),
+        minimap({
+            displayText: 'characters',
+            showOverlay: 'always',
+            autohide: false,
+        }),
+
+        createCodeBlockExtension({
+            showBackground: true,
+            enableAutoDetection: true,
+        }),
 
         // 键盘映射
         keymap.of([
