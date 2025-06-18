@@ -1,6 +1,5 @@
 import {defineStore} from 'pinia';
 import {ref, watch} from 'vue';
-import {DocumentStats} from '@/types/editor';
 import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
@@ -17,18 +16,24 @@ import {
   createFontExtensionFromBackend,
   updateFontConfig,
 } from '@/views/editor/extensions';
-import { useEditorTheme } from '@/composables/useEditorTheme';
+import { createThemeExtension, updateEditorTheme } from '@/views/editor/extensions/themeExtension';
+import { useThemeStore } from './themeStore';
 import { useI18n } from 'vue-i18n';
-import type { ThemeType } from '@/types';
-import { DocumentService } from '../../bindings/voidraft/internal/services';
+import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
+import { DocumentService } from '@/../bindings/voidraft/internal/services';
 
+export interface DocumentStats {
+    lines: number;
+    characters: number;
+    selectedCharacters: number;
+}
 export const useEditorStore = defineStore('editor', () => {
     // 引用配置store
     const configStore = useConfigStore();
     const documentStore = useDocumentStore();
     const logStore = useLogStore();
+    const themeStore = useThemeStore();
     const { t } = useI18n();
-    const { createThemeExtension, updateTheme } = useEditorTheme();
 
     // 状态
     const documentStats = ref<DocumentStats>({
@@ -123,8 +128,8 @@ export const useEditorStore = defineStore('editor', () => {
         const basicExtensions = createBasicSetup();
 
         // 获取主题扩展
-        const themeExtension = await createThemeExtension(
-            configStore.config.appearance.theme || 'default-dark' as ThemeType
+        const themeExtension = createThemeExtension(
+            configStore.config.appearance.systemTheme || SystemThemeType.SystemThemeDark
         );
 
         // 获取Tab相关扩展
@@ -222,12 +227,6 @@ export const useEditorStore = defineStore('editor', () => {
         });
     };
 
-    // 更新编辑器主题
-    const updateEditorTheme = async (newTheme: ThemeType) => {
-        if (newTheme && editorView.value) {
-            await updateTheme(editorView.value as EditorView, newTheme);
-        }
-    };
 
     // 销毁编辑器
     const destroyEditor = () => {
@@ -260,9 +259,9 @@ export const useEditorStore = defineStore('editor', () => {
         });
 
         // 监听主题变化
-        watch(() => configStore.config.appearance.theme, async (newTheme) => {
-            if (newTheme) {
-                await updateEditorTheme(newTheme);
+        watch(() => themeStore.currentTheme, (newTheme) => {
+            if (editorView.value && newTheme) {
+                updateEditorTheme(editorView.value as EditorView, newTheme);
             }
         });
 
@@ -281,7 +280,6 @@ export const useEditorStore = defineStore('editor', () => {
             createEditor,
             reconfigureTabSettings,
             reconfigureFontSettings,
-            updateEditorTheme,
             handleManualSave,
             destroyEditor,
             scrollEditorToBottom,

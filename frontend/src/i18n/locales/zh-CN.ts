@@ -20,7 +20,10 @@ export default {
     },
     encoding: 'UTF-8',
     settings: '设置',
-    alwaysOnTop: '窗口置顶'
+    alwaysOnTop: '窗口置顶',
+    blockLanguage: '块语言',
+    searchLanguage: '搜索语言...',
+    noLanguageFound: '未找到匹配的语言'
   },
   config: {
     loadSuccess: '配置加载成功',

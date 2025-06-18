@@ -6,33 +6,15 @@ import { useEditorStore } from '@/stores/editorStore';
 import { useErrorHandler } from '@/utils/errorHandler';
 import * as runtime from '@wailsio/runtime';
 import { useRouter } from 'vue-router';
+import BlockLanguageSelector from './BlockLanguageSelector.vue';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const { safeCall } = useErrorHandler();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 const router = useRouter();
 
-// 语言下拉菜单
-const showLanguageMenu = ref(false);
 
-const supportedLanguages = [
-  { code: 'zh-CN', name: '简体中文' },
-  { code: 'en-US', name: 'English' }
-];
-
-const toggleLanguageMenu = () => {
-  showLanguageMenu.value = !showLanguageMenu.value;
-};
-
-const closeLanguageMenu = () => {
-  showLanguageMenu.value = false;
-};
-
-const changeLanguage = async (langCode: string) => {
-  await safeCall(() => configStore.setLanguage(langCode as any), 'language.changeFailed');
-  closeLanguageMenu();
-};
 
 // 设置窗口置顶
 const setWindowAlwaysOnTop = async (isTop: boolean) => {
@@ -95,20 +77,9 @@ watch(isLoaded, async (newLoaded) => {
       <span class="font-size" :title="t('toolbar.fontSizeTooltip')" @click="() => configStore.resetFontSize()">
         {{ configStore.config.editing.fontSize }}px
       </span>
-      <span class="tab-settings">
-        <label :title="t('toolbar.tabLabel')" class="tab-toggle">
-          <input type="checkbox" :checked="configStore.config.editing.enableTabIndent" @change="() => configStore.toggleTabIndent()"/>
-          <span>{{ t('toolbar.tabLabel') }}</span>
-        </label>
-        <span class="tab-type" :title="t('toolbar.tabType.' + (configStore.config.editing.tabType === 'spaces' ? 'spaces' : 'tab'))" @click="() => configStore.toggleTabType()">
-          {{ t('toolbar.tabType.' + (configStore.config.editing.tabType === 'spaces' ? 'spaces' : 'tab')) }}
-        </span>
-        <span class="tab-size" title="Tab大小" v-if="configStore.config.editing.tabType === 'spaces'">
-          <button class="tab-btn" @click="() => configStore.decreaseTabSize()" :disabled="configStore.config.editing.tabSize <= configStore.tabSize.min">-</button>
-          <span>{{ configStore.config.editing.tabSize }}</span>
-          <button class="tab-btn" @click="() => configStore.increaseTabSize()" :disabled="configStore.config.editing.tabSize >= configStore.tabSize.max">+</button>
-        </span>
-      </span>
+      
+      <!-- 块语言选择器 -->
+      <BlockLanguageSelector />
 
       <!-- 窗口置顶图标按钮 -->
       <div 
@@ -122,24 +93,7 @@ watch(isLoaded, async (newLoaded) => {
         </svg>
       </div>
       
-      <!-- 语言切换按钮 -->
-      <div class="selector-dropdown">
-        <button class="selector-btn" @click="toggleLanguageMenu">
-          {{ locale }}
-          <span class="arrow">▲</span>
-        </button>
-        <div class="selector-menu" v-if="showLanguageMenu">
-          <div 
-            v-for="lang in supportedLanguages" 
-            :key="lang.code" 
-            class="selector-option"
-            :class="{ active: locale === lang.code }"
-            @click="changeLanguage(lang.code)"
-          >
-            {{ t(`languages.${lang.code}`) }}
-          </div>
-        </div>
-      </div>
+
       
       <button class="settings-btn" :title="t('toolbar.settings')" @click="goToSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
@@ -191,59 +145,7 @@ watch(isLoaded, async (newLoaded) => {
       cursor: help;
     }
 
-    .tab-settings {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--text-muted);
-      font-size: 11px;
 
-      .tab-toggle {
-        display: flex;
-        align-items: center;
-        gap: 3px;
-        cursor: pointer;
-
-        input {
-          cursor: pointer;
-        }
-      }
-      
-      .tab-type {
-        cursor: pointer;
-        padding: 0 3px;
-        border-radius: 3px;
-        background-color: var(--border-color);
-        opacity: 0.6;
-        
-        &:hover {
-          opacity: 1;
-          background-color: var(--border-color);
-        }
-      }
-
-      .tab-size {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-
-        .tab-btn {
-          background: none;
-          border: none;
-          color: var(--text-primary);
-          cursor: pointer;
-          padding: 0 3px;
-          font-size: 12px;
-          line-height: 1;
-
-          &:disabled {
-            color: var(--text-muted);
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
-        }
-      }
-    }
     
     /* 窗口置顶图标按钮样式 */
     .pin-button {
@@ -278,64 +180,7 @@ watch(isLoaded, async (newLoaded) => {
       }
     }
     
-    /* 通用下拉选择器样式 */
-    .selector-dropdown {
-      position: relative;
-      
-      .selector-btn {
-        background: none;
-        border: none;
-        color: var(--text-muted);
-        cursor: pointer;
-        font-size: 11px;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        padding: 2px 4px;
-        border-radius: 3px;
-        
-        &:hover {
-          background-color: var(--border-color);
-          opacity: 0.8;
-        }
-        
-        .arrow {
-          font-size: 8px;
-          margin-left: 2px;
-        }
-      }
-      
-      .selector-menu {
-        position: absolute;
-        bottom: 100%;
-        right: 0;
-        background-color: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 3px;
-        margin-bottom: 4px;
-        min-width: 120px;
-        max-height: 200px;
-        overflow-y: auto;
-        z-index: 1000;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-        
-        .selector-option {
-          padding: 4px 8px;
-          cursor: pointer;
-          font-size: 11px;
-          white-space: nowrap;
-          
-          &:hover {
-            background-color: var(--border-color);
-            opacity: 0.8;
-          }
-          
-          &.active {
-            color: #b5cea8;
-          }
-        }
-      }
-    }
+
 
     .settings-btn {
       background: none;

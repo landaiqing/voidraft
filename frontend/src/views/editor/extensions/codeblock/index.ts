@@ -28,7 +28,6 @@ import {getCodeBlockLanguageExtension} from './lang-parser';
 import {createLanguageDetection} from './language-detection';
 import {EditorOptions, SupportedLanguage} from './types';
 import {lineNumbers} from '@codemirror/view';
-import './styles.css'
 
 /**
  * 代码块扩展配置选项
@@ -46,14 +45,6 @@ export interface CodeBlockOptions {
     /** 新建块时是否默认启用自动检测（添加-a标记） */
     defaultAutoDetect?: boolean;
 }
-
-/**
- * 默认编辑器选项
- */
-const defaultEditorOptions: EditorOptions = {
-    defaultBlockToken: 'text',
-    defaultBlockAutoDetect: false,
-};
 
 /**
  * 获取块内行号信息

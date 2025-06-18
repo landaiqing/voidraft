@@ -20,7 +20,10 @@ export default {
     },
     encoding: 'UTF-8',
     settings: 'Settings',
-    alwaysOnTop: 'Always on Top'
+    alwaysOnTop: 'Always on Top',
+    blockLanguage: 'Block Language',
+    searchLanguage: 'Search language...',
+    noLanguageFound: 'No language found'
   },
   config: {
     loadSuccess: 'Configuration loaded successfully',

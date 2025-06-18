@@ -143,16 +143,14 @@ const blockLayer = layer({
         return;
       }
       
-      // 只对最后一个块进行特殊处理
+      // 对最后一个块进行特殊处理，让它直接延伸到底部
       if (idx === blocks.length - 1) {
-        // 计算需要为最后一个块添加多少额外高度，但要更保守
         const editorHeight = view.dom.clientHeight;
         const contentBottom = toCoordsBottom - view.documentTop + view.documentPadding.top;
         
-        // 只有当内容不足以填满视口时，才添加额外高度
+        // 让最后一个块直接延伸到编辑器底部
         if (contentBottom < editorHeight) {
-          let extraHeight = editorHeight - contentBottom - view.defaultLineHeight - 16; // 保留合理的底部边距
-          extraHeight = Math.max(0, extraHeight); // 确保不为负数
+          const extraHeight = editorHeight - contentBottom-10;
           toCoordsBottom += extraHeight;
         }
       }

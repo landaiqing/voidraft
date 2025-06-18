@@ -4,5 +4,6 @@ export * from './wheelZoomExtension';
 export * from './statsExtension'; 
 export * from './autoSaveExtension'; 
 export * from './fontExtension';
+export * from './themeExtension';
 export * from './codeblast';
 export * from './codeblock'; 

@@ -110,11 +110,6 @@ export class AppearanceConfig {
     "language": LanguageType;
 
     /**
-     * 编辑器主题
-     */
-    "theme": ThemeType;
-
-    /**
      * 系统界面主题
      */
     "systemTheme": SystemThemeType;
@@ -123,9 +118,6 @@ export class AppearanceConfig {
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
             this["language"] = ("" as LanguageType);
-        }
-        if (!("theme" in $$source)) {
-            this["theme"] = ("" as ThemeType);
         }
         if (!("systemTheme" in $$source)) {
             this["systemTheme"] = ("" as SystemThemeType);
@@ -560,76 +552,6 @@ export enum TabType {
      * TabTypeTab 使用Tab作为制表符
      */
     TabTypeTab = "tab",
-};
-
-/**
- * ThemeType 主题类型定义
- */
-export enum ThemeType {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * ThemeDefaultDark 默认深色主题
-     */
-    ThemeDefaultDark = "default-dark",
-
-    /**
-     * ThemeDracula Dracula主题
-     */
-    ThemeDracula = "dracula",
-
-    /**
-     * ThemeAura Aura主题
-     */
-    ThemeAura = "aura",
-
-    /**
-     * ThemeGithubDark GitHub深色主题
-     */
-    ThemeGithubDark = "github-dark",
-
-    /**
-     * ThemeGithubLight GitHub浅色主题
-     */
-    ThemeGithubLight = "github-light",
-
-    /**
-     * ThemeMaterialDark Material深色主题
-     */
-    ThemeMaterialDark = "material-dark",
-
-    /**
-     * ThemeMaterialLight Material浅色主题
-     */
-    ThemeMaterialLight = "material-light",
-
-    /**
-     * ThemeSolarizedDark Solarized深色主题
-     */
-    ThemeSolarizedDark = "solarized-dark",
-
-    /**
-     * ThemeSolarizedLight Solarized浅色主题
-     */
-    ThemeSolarizedLight = "solarized-light",
-
-    /**
-     * ThemeTokyoNight Tokyo Night主题
-     */
-    ThemeTokyoNight = "tokyo-night",
-
-    /**
-     * ThemeTokyoNightStorm Tokyo Night Storm主题
-     */
-    ThemeTokyoNightStorm = "tokyo-night-storm",
-
-    /**
-     * ThemeTokyoNightDay Tokyo Night Day主题
-     */
-    ThemeTokyoNightDay = "tokyo-night-day",
 };
 
 /**

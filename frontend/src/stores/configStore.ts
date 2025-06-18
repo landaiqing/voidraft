@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
 import {computed, reactive} from 'vue';
-import {ConfigService} from '@/../bindings/voidraft/internal/services';
+import {ConfigService} from '../../bindings/voidraft/internal/services';
 import {
     AppConfig,
     AppearanceConfig,
@@ -9,8 +9,7 @@ import {
     LanguageType,
     SystemThemeType,
     TabType,
-    ThemeType
-} from '@/../bindings/voidraft/internal/models';
+} from '../../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {useErrorHandler} from '@/utils/errorHandler';
 import {ConfigUtils} from '@/utils/configUtils';
@@ -68,7 +67,6 @@ const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
 
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
     language: 'appearance.language',
-    theme: 'appearance.theme',
     systemTheme: 'appearance.system_theme'
 } as const;
 
@@ -141,8 +139,7 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     appearance: {
         language: LanguageType.LangZhCN,
-        theme: 'default-dark' as ThemeType,
-        systemTheme: 'dark' as SystemThemeType
+        systemTheme: SystemThemeType.SystemThemeDark
     },
     keyBindings: {},
     updates: {},
@@ -304,13 +301,6 @@ export const useConfigStore = defineStore('config', () => {
         }, 'config.languageChangeFailed', 'config.languageChanged');
     };
 
-    // 主题设置方法
-    const setTheme = async (theme: ThemeType): Promise<void> => {
-        await safeCall(async () => {
-            await updateAppearanceConfig('theme', theme);
-        }, 'config.themeChangeFailed', 'config.themeChanged');
-    };
-
     // 系统主题设置方法
     const setSystemTheme = async (systemTheme: SystemThemeType): Promise<void> => {
         await safeCall(async () => {
@@ -381,7 +371,6 @@ export const useConfigStore = defineStore('config', () => {
         initializeLanguage,
 
         // 主题相关方法
-        setTheme,
         setSystemTheme,
 
         // 字体大小操作

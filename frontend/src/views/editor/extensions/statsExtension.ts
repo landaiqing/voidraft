@@ -1,7 +1,6 @@
 import {Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
-import {DocumentStats} from '@/types/editor';
-
+import {DocumentStats} from '@/stores/editorStore';
 // 更新编辑器文档统计信息
 export const updateStats = (
   view: EditorView, 

@@ -2,23 +2,20 @@
 import { onMounted } from 'vue';
 import { useConfigStore } from '@/stores/configStore';
 import { useSystemStore } from '@/stores/systemStore';
-import { useSystemTheme } from '@/composables/useSystemTheme';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
 
 const configStore = useConfigStore();
 const systemStore = useSystemStore();
-const { setTheme } = useSystemTheme();
 
 // 应用启动时加载配置和初始化系统信息
 onMounted(async () => {
   // 并行初始化配置和系统信息
   await Promise.all([
     configStore.initConfig(),
-    systemStore.initializeSystemInfo()
+    systemStore.initializeSystemInfo(),
   ]);
   
   await configStore.initializeLanguage();
-  setTheme(configStore.config.appearance.systemTheme);
 });
 </script>
 

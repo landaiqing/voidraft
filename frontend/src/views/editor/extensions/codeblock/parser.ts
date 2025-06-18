@@ -48,14 +48,12 @@ export function getBlocksFromSyntaxTree(state: EditorState): Block[] | null {
                         
                         // 解析整个分隔符文本来获取语言和自动检测标记
                         const delimiterText = doc.sliceString(child.from, child.to);
-                        console.log('🔍 [解析器] 分隔符文本:', delimiterText);
-                        
+
                         // 使用正则表达式解析分隔符
                         const match = delimiterText.match(/∞∞∞([a-zA-Z0-9_-]+)(-a)?\n/);
                         if (match) {
                             language = match[1] || 'text';
                             auto = match[2] === '-a';
-                            console.log(`🔍 [解析器] 解析结果: 语言=${language}, 自动=${auto}`);
                         } else {
                             // 回退到逐个解析子节点
                             child.node.firstChild?.cursor().iterate(langChild => {

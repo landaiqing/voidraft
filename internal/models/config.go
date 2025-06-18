@@ -26,36 +26,6 @@ const (
 	LangEnUS LanguageType = "en-US"
 )
 
-// ThemeType 主题类型定义
-type ThemeType string
-
-const (
-	// ThemeDefaultDark 默认深色主题
-	ThemeDefaultDark ThemeType = "default-dark"
-	// ThemeDracula Dracula主题
-	ThemeDracula ThemeType = "dracula"
-	// ThemeAura Aura主题
-	ThemeAura ThemeType = "aura"
-	// ThemeGithubDark GitHub深色主题
-	ThemeGithubDark ThemeType = "github-dark"
-	// ThemeGithubLight GitHub浅色主题
-	ThemeGithubLight ThemeType = "github-light"
-	// ThemeMaterialDark Material深色主题
-	ThemeMaterialDark ThemeType = "material-dark"
-	// ThemeMaterialLight Material浅色主题
-	ThemeMaterialLight ThemeType = "material-light"
-	// ThemeSolarizedDark Solarized深色主题
-	ThemeSolarizedDark ThemeType = "solarized-dark"
-	// ThemeSolarizedLight Solarized浅色主题
-	ThemeSolarizedLight ThemeType = "solarized-light"
-	// ThemeTokyoNight Tokyo Night主题
-	ThemeTokyoNight ThemeType = "tokyo-night"
-	// ThemeTokyoNightStorm Tokyo Night Storm主题
-	ThemeTokyoNightStorm ThemeType = "tokyo-night-storm"
-	// ThemeTokyoNightDay Tokyo Night Day主题
-	ThemeTokyoNightDay ThemeType = "tokyo-night-day"
-)
-
 // SystemThemeType 系统主题类型定义
 type SystemThemeType string
 
@@ -108,7 +78,6 @@ type EditingConfig struct {
 // AppearanceConfig 外观设置配置
 type AppearanceConfig struct {
 	Language    LanguageType    `json:"language" yaml:"language" mapstructure:"language"`            // 界面语言
-	Theme       ThemeType       `json:"theme" yaml:"theme" mapstructure:"theme"`                     // 编辑器主题
 	SystemTheme SystemThemeType `json:"systemTheme" yaml:"system_theme" mapstructure:"system_theme"` // 系统界面主题
 }
 
@@ -178,8 +147,7 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 		Appearance: AppearanceConfig{
 			Language:    LangZhCN,
-			Theme:       ThemeDefaultDark, // 默认使用深色主题
-			SystemTheme: SystemThemeDark,  // 默认使用深色系统主题
+			SystemTheme: SystemThemeDark, // 默认使用深色系统主题
 		},
 		KeyBindings: KeyBindingsConfig{
 			// 预留给未来的快捷键配置

@@ -72,9 +72,7 @@ export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
         
         // 静默发送最终内容，忽略错误
         const content = this.view.state.doc.toString();
-        DocumentService.UpdateActiveDocumentContent(content).catch(() => {
-          // 静默忽略销毁时的错误
-        });
+        DocumentService.UpdateActiveDocumentContent(content).then();
       }
     }
   );
