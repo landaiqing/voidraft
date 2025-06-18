@@ -4,6 +4,7 @@
 
 import { EditorState } from '@codemirror/state';
 import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
+import { Block as BlockNode, BlockDelimiter, BlockContent, BlockLanguage, Document } from './lang-parser/parser.terms.js';
 import {
     CodeBlock,
     SupportedLanguage,
@@ -18,120 +19,80 @@ import {
 } from './types';
 
 /**
- * 语言检测工具
- */
-class LanguageDetector {
-    // 语言关键字映射
-    private static readonly LANGUAGE_PATTERNS: Record<string, RegExp[]> = {
-        javascript: [
-            /\b(function|const|let|var|class|extends|import|export|async|await)\b/,
-            /\b(console\.log|document\.|window\.)\b/,
-            /=>\s*[{(]/
-        ],
-        typescript: [
-            /\b(interface|type|enum|namespace|implements|declare)\b/,
-            /:\s*(string|number|boolean|object|any)\b/,
-            /<[A-Z][a-zA-Z0-9<>,\s]*>/
-        ],
-        python: [
-            /\b(def|class|import|from|if __name__|print|len|range)\b/,
-            /^\s*#.*$/m,
-            /\b(True|False|None)\b/
-        ],
-        java: [
-            /\b(public|private|protected|static|final|class|interface)\b/,
-            /\b(System\.out\.println|String|int|void)\b/,
-            /import\s+[a-zA-Z0-9_.]+;/
-        ],
-        html: [
-            /<\/?[a-zA-Z][^>]*>/,
-            /<!DOCTYPE\s+html>/i,
-            /<(div|span|p|h[1-6]|body|head|html)\b/
-        ],
-        css: [
-            /[.#][a-zA-Z][\w-]*\s*{/,
-            /\b(color|background|margin|padding|font-size):\s*[^;]+;/,
-            /@(media|keyframes|import)\b/
-        ],
-        json: [
-            /^\s*[{\[][\s\S]*[}\]]\s*$/,
-            /"[^"]*":\s*(".*"|[\d.]+|true|false|null)/,
-            /,\s*$/m
-        ],
-        sql: [
-            /\b(SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\b/i,
-            /\b(JOIN|LEFT|RIGHT|INNER|OUTER|ON|GROUP BY|ORDER BY)\b/i,
-            /;\s*$/m
-        ],
-        shell: [
-            /^#!/,
-            /\b(echo|cd|ls|grep|awk|sed|cat|chmod)\b/,
-            /\$\{?\w+\}?/
-        ],
-        markdown: [
-            /^#+\s+/m,
-            /\*\*.*?\*\*/,
-            /\[.*?\]\(.*?\)/,
-            /^```/m
-        ]
-    };
-
-    /**
-     * 检测文本的编程语言
-     */
-    static detectLanguage(text: string): LanguageDetectionResult {
-        if (!text.trim()) {
-            return { language: 'text', confidence: 1.0 };
-        }
-
-        const scores: Record<string, number> = {};
-
-        // 对每种语言计算匹配分数
-        for (const [language, patterns] of Object.entries(this.LANGUAGE_PATTERNS)) {
-            let score = 0;
-            const textLower = text.toLowerCase();
-
-            for (const pattern of patterns) {
-                const matches = text.match(pattern);
-                if (matches) {
-                    score += matches.length;
-                }
-            }
-
-            // 根据文本长度标准化分数
-            scores[language] = score / Math.max(text.length / 100, 1);
-        }
-
-        // 找到最高分的语言
-        const bestMatch = Object.entries(scores)
-            .sort(([, a], [, b]) => b - a)[0];
-
-        if (bestMatch && bestMatch[1] > 0) {
-            return {
-                language: bestMatch[0] as SupportedLanguage,
-                confidence: Math.min(bestMatch[1], 1.0)
-            };
-        }
-
-        return { language: 'text', confidence: 1.0 };
-    }
-}
-
-/**
  * 从语法树解析代码块
  */
-export function getBlocksFromSyntaxTree(state: EditorState): CodeBlock[] | null {
+export function getBlocksFromSyntaxTree(state: EditorState): Block[] | null {
     if (!syntaxTreeAvailable(state)) {
         return null;
     }
 
     const tree = syntaxTree(state);
-    const blocks: CodeBlock[] = [];
+    const blocks: Block[] = [];
     const doc = state.doc;
 
-    // TODO: 如果使用自定义 Lezer 语法，在这里实现语法树解析
-    // 目前先返回 null，使用字符串解析作为后备
-    return null;
+    // 遍历语法树中的所有块
+    tree.iterate({
+        enter(node) {
+            if (node.type.id === BlockNode) {
+                // 查找块的分隔符和内容
+                let delimiter: { from: number; to: number } | null = null;
+                let content: { from: number; to: number } | null = null;
+                let language = 'text';
+                let auto = false;
+
+                // 遍历块的子节点
+                const blockNode = node.node;
+                blockNode.firstChild?.cursor().iterate(child => {
+                    if (child.type.id === BlockDelimiter) {
+                        delimiter = { from: child.from, to: child.to };
+                        
+                        // 解析整个分隔符文本来获取语言和自动检测标记
+                        const delimiterText = doc.sliceString(child.from, child.to);
+                        console.log('🔍 [解析器] 分隔符文本:', delimiterText);
+                        
+                        // 使用正则表达式解析分隔符
+                        const match = delimiterText.match(/∞∞∞([a-zA-Z0-9_-]+)(-a)?\n/);
+                        if (match) {
+                            language = match[1] || 'text';
+                            auto = match[2] === '-a';
+                            console.log(`🔍 [解析器] 解析结果: 语言=${language}, 自动=${auto}`);
+                        } else {
+                            // 回退到逐个解析子节点
+                            child.node.firstChild?.cursor().iterate(langChild => {
+                                if (langChild.type.id === BlockLanguage) {
+                                    const langText = doc.sliceString(langChild.from, langChild.to);
+                                    language = langText || 'text';
+                                }
+                                // 检查是否有自动检测标记
+                                if (doc.sliceString(langChild.from, langChild.to) === '-a') {
+                                    auto = true;
+                                }
+                            });
+                        }
+                    } else if (child.type.id === BlockContent) {
+                        content = { from: child.from, to: child.to };
+                    }
+                });
+
+                if (delimiter && content) {
+                    blocks.push({
+                        language: {
+                            name: language as SupportedLanguage,
+                            auto: auto,
+                        },
+                        content: content,
+                        delimiter: delimiter,
+                        range: {
+                            from: node.from,
+                            to: node.to,
+                        },
+                    });
+                }
+            }
+        }
+    });
+
+    return blocks.length > 0 ? blocks : null;
 }
 
 // 跟踪第一个分隔符的大小
@@ -308,6 +269,13 @@ export function getBlocksFromString(state: EditorState): Block[] {
  * 获取文档中的所有块
  */
 export function getBlocks(state: EditorState): Block[] {
+    // 优先使用语法树解析
+    const syntaxTreeBlocks = getBlocksFromSyntaxTree(state);
+    if (syntaxTreeBlocks) {
+        return syntaxTreeBlocks;
+    }
+    
+    // 如果语法树不可用，回退到字符串解析
     return getBlocksFromString(state);
 }
 

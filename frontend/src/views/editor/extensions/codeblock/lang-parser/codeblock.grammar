@@ -1,0 +1,23 @@
+@external tokens blockContent from "./external-tokens.js" {
+  BlockContent
+}
+
+@top Document { Block* }
+
+Block {
+  BlockDelimiter BlockContent
+}
+
+BlockDelimiter {
+  "\n∞∞∞" BlockLanguage Auto? "\n"
+}
+
+BlockLanguage {
+  "text" | "math" | "json" | "python" | "html" | "sql" | "markdown" | 
+  "java" | "php" | "css" | "xml" | "cpp" | "rust" | "ruby" | "shell" | 
+  "yaml" | "go" | "javascript" | "typescript"
+}
+
+@tokens {
+  Auto { "-a" }
+} 

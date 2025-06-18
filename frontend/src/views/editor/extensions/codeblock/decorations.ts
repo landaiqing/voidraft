@@ -3,7 +3,7 @@
  */
 
 import { ViewPlugin, EditorView, Decoration, WidgetType, layer, RectangleMarker } from "@codemirror/view";
-import { StateField, RangeSetBuilder } from "@codemirror/state";
+import { StateField, RangeSetBuilder, EditorState } from "@codemirror/state";
 import { blockState } from "./state";
 
 /**
@@ -179,16 +179,65 @@ const blockLayer = layer({
 
 /**
  * 防止第一个块被删除
+ * 使用 changeFilter 来保护第一个块分隔符不被删除
  */
-const preventFirstBlockFromBeingDeleted = EditorView.updateListener.of((update: any) => {
-  // 暂时简化实现，后续可以完善
+const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) => {
+  const protect: number[] = [];
+  
+  // 获取块状态
+  const blocks = tr.startState.field(blockState);
+  if (blocks && blocks.length > 0) {
+    const firstBlock = blocks[0];
+    // 保护第一个块的分隔符区域
+    if (firstBlock && firstBlock.delimiter) {
+      protect.push(firstBlock.delimiter.from, firstBlock.delimiter.to);
+    }
+  }
+  
+  // 如果是搜索替换操作，保护所有块分隔符
+  if (tr.annotations.some((a: any) => a.value === "input.replace" || a.value === "input.replace.all")) {
+    blocks.forEach((block: any) => {
+      if (block.delimiter) {
+        protect.push(block.delimiter.from, block.delimiter.to);
+      }
+    });
+  }
+  
+  // 返回保护范围数组，如果没有需要保护的范围则返回 false
+  return protect.length > 0 ? protect : false;
 });
 
 /**
  * 防止选择在第一个块之前
+ * 使用 transactionFilter 来确保选择不会在第一个块之前
  */
-const preventSelectionBeforeFirstBlock = EditorView.updateListener.of((update: any) => {
-  // 暂时简化实现，后续可以完善
+const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: any) => {
+  // 获取块状态
+  const blocks = tr.startState.field(blockState);
+  if (!blocks || blocks.length === 0) {
+    return tr;
+  }
+  
+  const firstBlock = blocks[0];
+  if (!firstBlock || !firstBlock.delimiter) {
+    return tr;
+  }
+  
+  const firstBlockDelimiterSize = firstBlock.delimiter.to;
+  
+  // 检查选择范围，如果在第一个块之前，则调整到第一个块的内容开始位置
+  if (tr.selection) {
+    tr.selection.ranges.forEach((range: any) => {
+      if (range && range.from < firstBlockDelimiterSize) {
+        range.from = firstBlockDelimiterSize;
+      }
+      if (range && range.to < firstBlockDelimiterSize) {
+        range.to = firstBlockDelimiterSize;
+      }
+    });
+  }
+  
+  return tr;
 });
 
 /**

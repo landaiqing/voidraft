@@ -1,9 +1,19 @@
 /**
  * CodeBlock 扩展主入口
+ * 
+ * 配置说明：
+ * - showBackground: 控制是否显示代码块的背景色区分
+ * - enableAutoDetection: 控制是否启用内容的语言自动检测功能
+ * - defaultLanguage: 新建代码块时使用的默认语言（也是自动检测的回退语言）
+ * - defaultAutoDetect: 新建代码块时是否默认添加-a标记启用自动检测
+ * 
+ * 注意：defaultLanguage 和 defaultAutoDetect 是配合使用的：
+ * - 如果 defaultAutoDetect=true，新建块会是 ∞∞∞javascript-a（会根据内容自动检测语言）
+ * - 如果 defaultAutoDetect=false，新建块会是 ∞∞∞javascript（固定使用指定语言）
  */
 
 import {Extension} from '@codemirror/state';
-import {EditorView, keymap} from '@codemirror/view';
+import {keymap} from '@codemirror/view';
 
 // 导入核心模块
 import {blockState} from './state';
@@ -11,6 +21,11 @@ import {getBlockDecorationExtensions} from './decorations';
 import * as commands from './commands';
 import {selectAll, getBlockSelectExtensions} from './selectAll';
 import {getCopyPasteExtensions, getCopyPasteKeymap} from './copyPaste';
+import {deleteLineCommand} from './deleteLine';
+import {moveLineUp, moveLineDown} from './moveLines';
+import {transposeChars} from './transposeChars';
+import {getCodeBlockLanguageExtension} from './lang-parser';
+import {createLanguageDetection} from './language-detection';
 import {EditorOptions, SupportedLanguage} from './types';
 import {lineNumbers} from '@codemirror/view';
 import './styles.css'
@@ -19,16 +34,17 @@ import './styles.css'
  * 代码块扩展配置选项
  */
 export interface CodeBlockOptions {
-    // 视觉选项
+    /** 是否显示块背景色 */
     showBackground?: boolean;
 
-    // 功能选项
+    /** 是否启用语言自动检测功能 */
     enableAutoDetection?: boolean;
+    
+    /** 新建块时的默认语言 */
     defaultLanguage?: SupportedLanguage;
-
-    // 编辑器选项
-    defaultBlockToken?: string;
-    defaultBlockAutoDetect?: boolean;
+    
+    /** 新建块时是否默认启用自动检测（添加-a标记） */
+    defaultAutoDetect?: boolean;
 }
 
 /**
@@ -75,8 +91,6 @@ const blockLineNumbers = lineNumbers({
     }
 });
 
-
-
 /**
  * 创建代码块扩展
  */
@@ -85,13 +99,13 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         showBackground = true,
         enableAutoDetection = true,
         defaultLanguage = 'text',
-        defaultBlockToken = 'text',
-        defaultBlockAutoDetect = false,
+        defaultAutoDetect = true,
     } = options;
 
+    // 将简化的配置转换为内部使用的EditorOptions
     const editorOptions: EditorOptions = {
-        defaultBlockToken,
-        defaultBlockAutoDetect,
+        defaultBlockToken: defaultLanguage,
+        defaultBlockAutoDetect: defaultAutoDetect,
     };
 
     const extensions: Extension[] = [
@@ -100,6 +114,16 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 
         // 块内行号
         blockLineNumbers,
+
+        // 语言解析支持
+        ...getCodeBlockLanguageExtension(),
+
+        // 语言自动检测（如果启用）
+        ...(enableAutoDetection ? [createLanguageDetection({
+            defaultLanguage: defaultLanguage,
+            confidenceThreshold: 0.3,
+            minContentLength: 8,
+        })] : []),
 
         // 视觉装饰系统
         ...getBlockDecorationExtensions({
@@ -111,19 +135,6 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 
         // 复制粘贴功能
         ...getCopyPasteExtensions(),
-
-        // 主题样式
-        EditorView.theme({
-            '&': {
-                fontSize: '14px'
-            },
-            '.cm-content': {
-                fontFamily: 'Monaco, Menlo, "Ubuntu Mono", consolas, monospace'
-            },
-            '.cm-focused': {
-                outline: 'none'
-            }
-        }),
 
         // 键盘映射
         keymap.of([
@@ -191,6 +202,28 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
                 run: commands.moveCurrentBlockDown,
                 preventDefault: true
             },
+
+            // 行编辑命令
+            {
+                key: 'Mod-Shift-k',  // 删除行
+                run: deleteLineCommand,
+                preventDefault: true
+            },
+            {
+                key: 'Alt-ArrowUp',  // 向上移动行
+                run: moveLineUp,
+                preventDefault: true
+            },
+            {
+                key: 'Alt-ArrowDown',  // 向下移动行
+                run: moveLineDown,
+                preventDefault: true
+            },
+            {
+                key: 'Ctrl-t',  // 字符转置
+                run: transposeChars,
+                preventDefault: true
+            },
         ])
     ];
 
@@ -240,6 +273,44 @@ export {
     getCopyPasteExtensions,
     getCopyPasteKeymap
 } from './copyPaste';
+
+// 删除行功能
+export {
+    deleteLine,
+    deleteLineCommand
+} from './deleteLine';
+
+// 移动行功能
+export {
+    moveLineUp,
+    moveLineDown
+} from './moveLines';
+
+// 字符转置功能
+export {
+    transposeChars
+} from './transposeChars';
+
+// 语言解析器
+export {
+    getCodeBlockLanguageExtension,
+    getLanguage,
+    getLanguageTokens,
+    languageMapping,
+    LanguageInfo,
+    LANGUAGES as PARSER_LANGUAGES
+} from './lang-parser';
+
+// 语言检测
+export {
+    createLanguageDetection,
+    detectLanguage,
+    detectLanguages,
+    detectLanguageHeuristic,
+    getSupportedDetectionLanguages,
+    levenshteinDistance,
+    type LanguageDetectionResult
+} from './language-detection';
 
 // 行号相关
 export { getBlockLineFromPos, blockLineNumbers };
