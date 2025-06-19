@@ -1,33 +1,32 @@
 /**
  * CodeBlock 扩展主入口
- * 
+ *
  * 配置说明：
  * - showBackground: 控制是否显示代码块的背景色区分
  * - enableAutoDetection: 控制是否启用内容的语言自动检测功能
  * - defaultLanguage: 新建代码块时使用的默认语言（也是自动检测的回退语言）
  * - defaultAutoDetect: 新建代码块时是否默认添加-a标记启用自动检测
- * 
+ *
  * 注意：defaultLanguage 和 defaultAutoDetect 是配合使用的：
  * - 如果 defaultAutoDetect=true，新建块会是 ∞∞∞javascript-a（会根据内容自动检测语言）
  * - 如果 defaultAutoDetect=false，新建块会是 ∞∞∞javascript（固定使用指定语言）
  */
 
 import {Extension} from '@codemirror/state';
-import {keymap} from '@codemirror/view';
+import {keymap, lineNumbers} from '@codemirror/view';
 
 // 导入核心模块
 import {blockState} from './state';
 import {getBlockDecorationExtensions} from './decorations';
 import * as commands from './commands';
-import {selectAll, getBlockSelectExtensions} from './selectAll';
+import {getBlockSelectExtensions, selectAll} from './selectAll';
 import {getCopyPasteExtensions, getCopyPasteKeymap} from './copyPaste';
 import {deleteLineCommand} from './deleteLine';
-import {moveLineUp, moveLineDown} from './moveLines';
+import {moveLineDown, moveLineUp} from './moveLines';
 import {transposeChars} from './transposeChars';
 import {getCodeBlockLanguageExtension} from './lang-parser';
 import {createLanguageDetection} from './language-detection';
 import {EditorOptions, SupportedLanguage} from './types';
-import {lineNumbers} from '@codemirror/view';
 
 /**
  * 代码块扩展配置选项
@@ -38,10 +37,10 @@ export interface CodeBlockOptions {
 
     /** 是否启用语言自动检测功能 */
     enableAutoDetection?: boolean;
-    
+
     /** 新建块时的默认语言 */
     defaultLanguage?: SupportedLanguage;
-    
+
     /** 新建块时是否默认启用自动检测（添加-a标记） */
     defaultAutoDetect?: boolean;
 }
@@ -52,10 +51,10 @@ export interface CodeBlockOptions {
 function getBlockLineFromPos(state: any, pos: number) {
     const line = state.doc.lineAt(pos);
     const blocks = state.field(blockState);
-    const block = blocks.find((block: any) => 
+    const block = blocks.find((block: any) =>
         block.content.from <= line.from && block.content.to >= line.from
     );
-    
+
     if (block) {
         const firstBlockLine = state.doc.lineAt(block.content.from).number;
         return {
@@ -112,8 +111,8 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         // 语言自动检测（如果启用）
         ...(enableAutoDetection ? [createLanguageDetection({
             defaultLanguage: defaultLanguage,
-            confidenceThreshold: 0.3,
-            minContentLength: 8,
+            confidenceThreshold: 0.15,
+            minContentLength: 8
         })] : []),
 
         // 视觉装饰系统
@@ -297,14 +296,12 @@ export {
     createLanguageDetection,
     detectLanguage,
     detectLanguages,
-    detectLanguageHeuristic,
-    getSupportedDetectionLanguages,
     levenshteinDistance,
     type LanguageDetectionResult
 } from './language-detection';
 
 // 行号相关
-export { getBlockLineFromPos, blockLineNumbers };
+export {getBlockLineFromPos, blockLineNumbers};
 
 /**
  * 默认导出

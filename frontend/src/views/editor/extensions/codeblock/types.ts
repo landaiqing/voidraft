@@ -25,48 +25,68 @@ export interface Block {
  */
 export type SupportedLanguage = 
   | 'text'
-  | 'javascript'
-  | 'typescript'
-  | 'python'
-  | 'html'
-  | 'css'
   | 'json'
-  | 'markdown'
-  | 'shell'
+  | 'py'          // Python
+  | 'html'
   | 'sql'
-  | 'yaml'
-  | 'xml'
-  | 'php'
+  | 'md'          // Markdown
   | 'java'
-  | 'cpp'
-  | 'c'
+  | 'php'
+  | 'css'
+  | 'xml'
+  | 'cpp'         // C++
+  | 'rs'          // Rust
+  | 'cs'          // C#
+  | 'rb'          // Ruby
+  | 'sh'          // Shell
+  | 'yaml'
+  | 'toml'
   | 'go'
-  | 'rust'
-  | 'ruby';
+  | 'clj'         // Clojure
+  | 'ex'          // Elixir
+  | 'erl'         // Erlang
+  | 'js'          // JavaScript
+  | 'ts'          // TypeScript
+  | 'swift'
+  | 'kt'          // Kotlin
+  | 'groovy'
+  | 'ps1'         // PowerShell
+  | 'dart'
+  | 'scala';
 
 /**
  * 支持的语言列表
  */
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
   'text',
-  'javascript',
-  'typescript',
-  'python',
-  'html',
-  'css',
   'json',
-  'markdown',
-  'shell',
+  'py',
+  'html',
   'sql',
-  'yaml',
-  'xml',
-  'php',
+  'md',
   'java',
+  'php',
+  'css',
+  'xml',
   'cpp',
-  'c',
+  'rs',
+  'cs',
+  'rb',
+  'sh',
+  'yaml',
+  'toml',
   'go',
-  'rust',
-  'ruby'
+  'clj',
+  'ex',
+  'erl',
+  'js',
+  'ts',
+  'swift',
+  'kt',
+  'groovy',
+  'ps1',
+  'dart',
+  'scala'
 ];
 
 /**
@@ -133,9 +153,6 @@ export interface BlockStateUpdate {
   activeBlockIndex: number;
   operation?: BlockOperation;
 }
-
-// 块导航方向
-export type NavigationDirection = 'next' | 'previous' | 'first' | 'last';
 
 // 语言检测结果
 export interface LanguageDetectionResult {

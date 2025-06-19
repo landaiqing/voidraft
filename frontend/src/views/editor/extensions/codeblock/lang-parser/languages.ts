@@ -14,12 +14,21 @@ import { cssLanguage } from "@codemirror/lang-css";
 import { cppLanguage } from "@codemirror/lang-cpp";
 import { xmlLanguage } from "@codemirror/lang-xml";
 import { rustLanguage } from "@codemirror/lang-rust";
+import { yamlLanguage } from "@codemirror/lang-yaml";
 
 import { StreamLanguage } from "@codemirror/language";
 import { ruby } from "@codemirror/legacy-modes/mode/ruby";
 import { shell } from "@codemirror/legacy-modes/mode/shell";
 import { go } from "@codemirror/legacy-modes/mode/go";
-import { yamlLanguage } from "@codemirror/lang-yaml";
+import { csharp } from "@codemirror/legacy-modes/mode/clike";
+import { clojure } from "@codemirror/legacy-modes/mode/clojure";
+import { erlang } from "@codemirror/legacy-modes/mode/erlang";
+import { swift } from "@codemirror/legacy-modes/mode/swift";
+import { kotlin } from "@codemirror/legacy-modes/mode/clike";
+import { groovy } from "@codemirror/legacy-modes/mode/groovy";
+import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
+import { scala } from "@codemirror/legacy-modes/mode/clike";
+import { toml } from "@codemirror/legacy-modes/mode/toml";
 
 import { SupportedLanguage } from '../types';
 
@@ -30,34 +39,43 @@ export class LanguageInfo {
   constructor(
     public token: SupportedLanguage,
     public name: string,
-    public parser: any,
-    public guesslang?: string | null
+    public parser: any
   ) {}
 }
 
 /**
- * 支持的语言列表
+ * 支持的语言列表（与 Worker 中的 LANGUAGES 对应）
  */
 export const LANGUAGES: LanguageInfo[] = [
   new LanguageInfo("text", "Plain Text", null),
-  new LanguageInfo("json", "JSON", jsonLanguage.parser, "json"),
-  new LanguageInfo("python", "Python", pythonLanguage.parser, "py"),
-  new LanguageInfo("javascript", "JavaScript", javascriptLanguage.parser, "js"),
-  new LanguageInfo("typescript", "TypeScript", typescriptLanguage.parser, "ts"),
-  new LanguageInfo("html", "HTML", htmlLanguage.parser, "html"),
-  new LanguageInfo("css", "CSS", cssLanguage.parser, "css"),
-  new LanguageInfo("sql", "SQL", StandardSQL.language.parser, "sql"),
-  new LanguageInfo("markdown", "Markdown", markdownLanguage.parser, "md"),
-  new LanguageInfo("java", "Java", javaLanguage.parser, "java"),
-  new LanguageInfo("php", "PHP", phpLanguage.configure({top:"Program"}).parser, "php"),
-  new LanguageInfo("xml", "XML", xmlLanguage.parser, "xml"),
-  new LanguageInfo("cpp", "C++", cppLanguage.parser, "cpp"),
-  new LanguageInfo("c", "C", cppLanguage.parser, "c"),
-  new LanguageInfo("rust", "Rust", rustLanguage.parser, "rs"),
-  new LanguageInfo("ruby", "Ruby", StreamLanguage.define(ruby).parser, "rb"),
-  new LanguageInfo("shell", "Shell", StreamLanguage.define(shell).parser, "sh"),
-  new LanguageInfo("yaml", "YAML", yamlLanguage.parser, "yaml"),
-  new LanguageInfo("go", "Go", StreamLanguage.define(go).parser, "go"),
+  new LanguageInfo("json", "JSON", jsonLanguage.parser),
+  new LanguageInfo("py", "Python", pythonLanguage.parser),
+  new LanguageInfo("html", "HTML", htmlLanguage.parser),
+  new LanguageInfo("sql", "SQL", StandardSQL.language.parser),
+  new LanguageInfo("md", "Markdown", markdownLanguage.parser),
+  new LanguageInfo("java", "Java", javaLanguage.parser),
+  new LanguageInfo("php", "PHP", phpLanguage.configure({top:"Program"}).parser),
+  new LanguageInfo("css", "CSS", cssLanguage.parser),
+  new LanguageInfo("xml", "XML", xmlLanguage.parser),
+  new LanguageInfo("cpp", "C++", cppLanguage.parser),
+  new LanguageInfo("rs", "Rust", rustLanguage.parser),
+  new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser),
+  new LanguageInfo("rb", "Ruby", StreamLanguage.define(ruby).parser),
+  new LanguageInfo("sh", "Shell", StreamLanguage.define(shell).parser),
+  new LanguageInfo("yaml", "YAML", yamlLanguage.parser),
+  new LanguageInfo("toml", "TOML", StreamLanguage.define(toml).parser),
+  new LanguageInfo("go", "Go", StreamLanguage.define(go).parser),
+  new LanguageInfo("clj", "Clojure", StreamLanguage.define(clojure).parser),
+  new LanguageInfo("ex", "Elixir", null), // 暂无解析器
+  new LanguageInfo("erl", "Erlang", StreamLanguage.define(erlang).parser),
+  new LanguageInfo("js", "JavaScript", javascriptLanguage.parser),
+  new LanguageInfo("ts", "TypeScript", typescriptLanguage.parser),
+  new LanguageInfo("swift", "Swift", StreamLanguage.define(swift).parser),
+  new LanguageInfo("kt", "Kotlin", StreamLanguage.define(kotlin).parser),
+  new LanguageInfo("groovy", "Groovy", StreamLanguage.define(groovy).parser),
+  new LanguageInfo("ps1", "PowerShell", StreamLanguage.define(powerShell).parser),
+  new LanguageInfo("dart", "Dart", null), // 暂无解析器
+  new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser),
 ];
 
 /**
@@ -79,4 +97,4 @@ export function getLanguage(token: SupportedLanguage): LanguageInfo | undefined 
  */
 export function getLanguageTokens(): SupportedLanguage[] {
   return LANGUAGES.map(lang => lang.token);
-} 
+}

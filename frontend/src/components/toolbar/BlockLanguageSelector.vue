@@ -13,28 +13,71 @@ const searchInputRef = ref<HTMLInputElement>();
 // 语言别名映射
 const LANGUAGE_ALIASES: Record<SupportedLanguage, string> = {
   text: 'txt',
-  javascript: 'js',
-  typescript: 'ts',
-  python: 'py',
-  html: 'htm',
-  css: '',
-  json: '',
-  markdown: 'md',
-  shell: 'sh',
-  sql: '',
-  yaml: 'yml',
-  xml: '',
-  php: '',
-  java: '',
+  json: 'JSON',
+  py: 'python',
+  html: 'HTML',
+  sql: 'SQL',
+  md: 'markdown',
+  java: 'Java',
+  php: 'PHP',
+  css: 'CSS',
+  xml: 'XML',
   cpp: 'c++',
-  c: '',
-  go: '',
-  rust: 'rs',
-  ruby: 'rb'
+  rs: 'rust',
+  cs: 'c#',
+  rb: 'ruby',
+  sh: 'shell',
+  yaml: 'yml',
+  toml: 'TOML',
+  go: 'Go',
+  clj: 'clojure',
+  ex: 'elixir',
+  erl: 'erlang',
+  js: 'javascript',
+  ts: 'typescript',
+  swift: 'Swift',
+  kt: 'kotlin',
+  groovy: 'Groovy',
+  ps1: 'powershell',
+  dart: 'Dart',
+  scala: 'Scala'
+};
+
+// 语言显示名称映射
+const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
+  text: 'Plain Text',
+  json: 'JSON',
+  py: 'Python',
+  html: 'HTML',
+  sql: 'SQL',
+  md: 'Markdown',
+  java: 'Java',
+  php: 'PHP',
+  css: 'CSS',
+  xml: 'XML',
+  cpp: 'C++',
+  rs: 'Rust',
+  cs: 'C#',
+  rb: 'Ruby',
+  sh: 'Shell',
+  yaml: 'YAML',
+  toml: 'TOML',
+  go: 'Go',
+  clj: 'Clojure',
+  ex: 'Elixir',
+  erl: 'Erlang',
+  js: 'JavaScript',
+  ts: 'TypeScript',
+  swift: 'Swift',
+  kt: 'Kotlin',
+  groovy: 'Groovy',
+  ps1: 'PowerShell',
+  dart: 'Dart',
+  scala: 'Scala'
 };
 
 // 当前选中的语言
-const currentLanguage = ref<SupportedLanguage>('javascript');
+const currentLanguage = ref<SupportedLanguage>('text');
 
 // 过滤后的语言列表
 const filteredLanguages = computed(() => {
@@ -44,8 +87,10 @@ const filteredLanguages = computed(() => {
   
   const query = searchQuery.value.toLowerCase();
   return SUPPORTED_LANGUAGES.filter(langId => {
+    const name = LANGUAGE_NAMES[langId];
     const alias = LANGUAGE_ALIASES[langId];
     return langId.toLowerCase().includes(query) ||
+           (name && name.toLowerCase().includes(query)) ||
            (alias && alias.toLowerCase().includes(query));
   });
 });
@@ -96,7 +141,7 @@ onUnmounted(() => {
 
 // 获取当前语言的显示名称
 const getCurrentLanguageName = computed(() => {
-  return currentLanguage.value;
+  return LANGUAGE_NAMES[currentLanguage.value] || currentLanguage.value;
 });
 </script>
 
@@ -143,8 +188,8 @@ const getCurrentLanguageName = computed(() => {
           :class="{ 'active': currentLanguage === language }"
           @click="selectLanguage(language)"
         >
-          <span class="language-name">{{ language }}</span>
-          <span class="language-alias" v-if="LANGUAGE_ALIASES[language]">{{ LANGUAGE_ALIASES[language] }}</span>
+          <span class="language-name">{{ LANGUAGE_NAMES[language] || language }}</span>
+          <span class="language-alias">{{ language }}</span>
         </div>
         
         <!-- 无结果提示 -->
