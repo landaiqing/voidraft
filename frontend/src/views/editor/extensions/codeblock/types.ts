@@ -24,6 +24,7 @@ export interface Block {
  * 支持的语言类型
  */
 export type SupportedLanguage = 
+  | 'auto'        // 自动检测
   | 'text'
   | 'json'
   | 'py'          // Python
@@ -58,6 +59,7 @@ export type SupportedLanguage =
  * 支持的语言列表
  */
 export const SUPPORTED_LANGUAGES: SupportedLanguage[] = [
+  'auto',
   'text',
   'json',
   'py',

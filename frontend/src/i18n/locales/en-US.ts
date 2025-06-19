@@ -23,7 +23,9 @@ export default {
     alwaysOnTop: 'Always on Top',
     blockLanguage: 'Block Language',
     searchLanguage: 'Search language...',
-    noLanguageFound: 'No language found'
+    noLanguageFound: 'No language found',
+    autoDetected: 'Auto-detected',
+    formatHint: 'Current block supports formatting, use Ctrl+Shift+F shortcut for formatting',
   },
   config: {
     loadSuccess: 'Configuration loaded successfully',

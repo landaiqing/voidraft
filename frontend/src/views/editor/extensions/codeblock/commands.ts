@@ -5,7 +5,8 @@
 import { EditorSelection } from "@codemirror/state";
 import { Command } from "@codemirror/view";
 import { blockState, getActiveNoteBlock, getFirstNoteBlock, getLastNoteBlock, getNoteBlockFromPos } from "./state";
-import { Block, EditorOptions } from "./types";
+import { Block, EditorOptions, DELIMITER_REGEX } from "./types";
+import { formatBlockContent } from "./formatCode";
 
 /**
  * 获取块分隔符
@@ -143,17 +144,24 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
 export function changeLanguageTo(state: any, dispatch: any, block: Block, language: string, auto: boolean) {
     if (state.readOnly) return false;
     
-    const delimRegex = /^\n∞∞∞[a-z]+?(-a)?\n/g;
-    if (state.doc.sliceString(block.delimiter.from, block.delimiter.to).match(delimRegex)) {
-        dispatch(state.update({
+    const currentDelimiter = state.doc.sliceString(block.delimiter.from, block.delimiter.to);
+    
+    // 重置正则表达式的 lastIndex
+    DELIMITER_REGEX.lastIndex = 0;
+    if (currentDelimiter.match(DELIMITER_REGEX)) {
+        const newDelimiter = `\n∞∞∞${language}${auto ? '-a' : ''}\n`;
+        
+        dispatch({
             changes: {
                 from: block.delimiter.from,
                 to: block.delimiter.to,
-                insert: `\n∞∞∞${language}${auto ? '-a' : ''}\n`,
+                insert: newDelimiter,
             },
-        }));
+        });
+        
+        return true;
     } else {
-        throw new Error("Invalid delimiter: " + state.doc.sliceString(block.delimiter.from, block.delimiter.to));
+        return false;
     }
 }
 
@@ -162,13 +170,17 @@ export function changeLanguageTo(state: any, dispatch: any, block: Block, langua
  */
 export function changeCurrentBlockLanguage(state: any, dispatch: any, language: string | null, auto: boolean) {
     const block = getActiveNoteBlock(state);
-    if (!block) return;
+    if (!block) {
+        console.warn("No active block found");
+        return false;
+    }
     
     // 如果 language 为 null，我们只想更改自动检测标志
     if (language === null) {
         language = block.language.name;
     }
-    changeLanguageTo(state, dispatch, block, language, auto);
+    
+    return changeLanguageTo(state, dispatch, block, language, auto);
 }
 
 // 选择和移动辅助函数
@@ -352,4 +364,11 @@ function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
     }));
     
     return true;
+}
+
+/**
+ * 格式化当前块
+ */
+export const formatCurrentBlock: Command = (view) => {
+    return formatBlockContent(view);
 } 

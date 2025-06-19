@@ -13,9 +13,10 @@ BlockDelimiter {
 }
 
 BlockLanguage {
-  "text" | "math" | "json" | "python" | "html" | "sql" | "markdown" | 
-  "java" | "php" | "css" | "xml" | "cpp" | "rust" | "ruby" | "shell" | 
-  "yaml" | "go" | "javascript" | "typescript"
+  "text" | "json" | "py" | "html" | "sql" | "md" | "java" | "php" | 
+  "css" | "xml" | "cpp" | "rs" | "cs" | "rb" | "sh" | "yaml" | "toml" | 
+  "go" | "clj" | "ex" | "erl" | "js" | "ts" | "swift" | "kt" | "groovy" | 
+  "ps1" | "dart" | "scala"
 }
 
 @tokens {

@@ -4,10 +4,12 @@
 
 import { EditorState, Annotation } from '@codemirror/state';
 import { EditorView, ViewPlugin } from '@codemirror/view';
-import { blockState } from '../state';
+import { redoDepth } from '@codemirror/commands';
+import { blockState, getActiveNoteBlock } from '../state';
 import { levenshteinDistance } from './levenshtein';
 import { LANGUAGES } from '../lang-parser/languages';
 import { SupportedLanguage, Block } from '../types';
+import { changeLanguageTo } from '../commands';
 
 // ===== 类型定义 =====
 
@@ -99,27 +101,6 @@ function cancelIdleCallbackCompat(id: number): void {
  * 语言更改注解
  */
 const languageChangeAnnotation = Annotation.define<boolean>();
-
-/**
- * 更新代码块语言
- */
-function updateBlockLanguage(
-    state: EditorState,
-    dispatch: (transaction: any) => void,
-    block: Block,
-    newLanguage: SupportedLanguage
-): void {
-    const newDelimiter = `\n∞∞∞${newLanguage}-a\n`;
-    const transaction = state.update({
-        changes: {
-            from: block.delimiter.from,
-            to: block.delimiter.to,
-            insert: newDelimiter,
-        },
-        annotations: [languageChangeAnnotation.of(true)]
-    });
-    dispatch(transaction);
-}
 
 // ===== Web Worker 管理器 =====
 
@@ -237,22 +218,18 @@ export function createLanguageDetection(config: LanguageDetectionConfig = {}): V
             }
 
             private performDetection(state: EditorState): void {
-                const selection = state.selection.asSingle().ranges[0];
-                const blocks = state.field(blockState);
-                
-                const block = blocks.find(b => 
-                    b.content.from <= selection.from && b.content.to >= selection.from
-                );
+                const block = getActiveNoteBlock(state);
                 
                 if (!block || !block.language.auto) return;
 
+                const blocks = state.field(blockState);
                 const blockIndex = blocks.indexOf(block);
                 const content = state.doc.sliceString(block.content.from, block.content.to);
 
                 // 内容为空时重置为默认语言
-                if (content === "") {
+                if (content === "" && redoDepth(state) === 0) {
                     if (block.language.name !== finalConfig.defaultLanguage) {
-                        updateBlockLanguage(state, this.view.dispatch, block, finalConfig.defaultLanguage);
+                        changeLanguageTo(state, this.view.dispatch, block, finalConfig.defaultLanguage, true);
                     }
                     contentCache.delete(blockIndex);
                     return;
@@ -281,7 +258,10 @@ export function createLanguageDetection(config: LanguageDetectionConfig = {}): V
                         SUPPORTED_LANGUAGES.has(result.language) &&
                         LANGUAGE_MAP.has(result.language)) {
                         
-                        updateBlockLanguage(state, this.view.dispatch, block, result.language);
+                        // 只有在用户没有撤销操作时才更改语言
+                        if (redoDepth(state) === 0) {
+                            changeLanguageTo(state, this.view.dispatch, block, result.language, true);
+                        }
                     }
 
                     contentCache.set(blockIndex, content);

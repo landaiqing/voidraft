@@ -23,7 +23,9 @@ export default {
     alwaysOnTop: '窗口置顶',
     blockLanguage: '块语言',
     searchLanguage: '搜索语言...',
-    noLanguageFound: '未找到匹配的语言'
+    noLanguageFound: '未找到匹配的语言',
+    autoDetected: '自动检测',
+    formatHint: '当前区块支持格式化，使用 Ctrl+Shift+F 进行格式化',
   },
   config: {
     loadSuccess: '配置加载成功',

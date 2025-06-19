@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, watch } from 'vue';
+import { computed } from 'vue';
 import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
 import { useConfigStore } from './configStore';
 

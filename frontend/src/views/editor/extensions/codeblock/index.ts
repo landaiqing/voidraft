@@ -214,6 +214,13 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
                 run: transposeChars,
                 preventDefault: true
             },
+            
+            // 代码格式化命令
+            {
+                key: 'Mod-Shift-f',  // 格式化代码
+                run: commands.formatCurrentBlock,
+                preventDefault: true
+            },
         ])
     ];
 
@@ -248,6 +255,9 @@ export {
 
 // 命令
 export * from './commands';
+
+// 格式化功能
+export { formatBlockContent } from './formatCode';
 
 // 选择功能
 export {

@@ -29,8 +29,16 @@ import { groovy } from "@codemirror/legacy-modes/mode/groovy";
 import { powerShell } from "@codemirror/legacy-modes/mode/powershell";
 import { scala } from "@codemirror/legacy-modes/mode/clike";
 import { toml } from "@codemirror/legacy-modes/mode/toml";
-
+import { elixir } from "codemirror-lang-elixir";
 import { SupportedLanguage } from '../types';
+
+import typescriptPlugin from "prettier/plugins/typescript"
+import babelPrettierPlugin from "prettier/plugins/babel"
+import htmlPrettierPlugin from "prettier/plugins/html"
+import cssPrettierPlugin from "prettier/plugins/postcss"
+import markdownPrettierPlugin from "prettier/plugins/markdown"
+import yamlPrettierPlugin from "prettier/plugins/yaml"
+import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
  * 语言信息类
@@ -39,7 +47,11 @@ export class LanguageInfo {
   constructor(
     public token: SupportedLanguage,
     public name: string,
-    public parser: any
+    public parser: any,
+    public prettier?: {
+      parser: string;
+      plugins: any[];
+    }
   ) {}
 }
 
@@ -48,28 +60,49 @@ export class LanguageInfo {
  */
 export const LANGUAGES: LanguageInfo[] = [
   new LanguageInfo("text", "Plain Text", null),
-  new LanguageInfo("json", "JSON", jsonLanguage.parser),
+  new LanguageInfo("json", "JSON", jsonLanguage.parser, {
+    parser: "json",
+    plugins: [babelPrettierPlugin, prettierPluginEstree]
+  }),
   new LanguageInfo("py", "Python", pythonLanguage.parser),
-  new LanguageInfo("html", "HTML", htmlLanguage.parser),
+  new LanguageInfo("html", "HTML", htmlLanguage.parser, {
+    parser: "html",
+    plugins: [htmlPrettierPlugin]
+  }),
   new LanguageInfo("sql", "SQL", StandardSQL.language.parser),
-  new LanguageInfo("md", "Markdown", markdownLanguage.parser),
+  new LanguageInfo("md", "Markdown", markdownLanguage.parser, {
+    parser: "markdown",
+    plugins: [markdownPrettierPlugin]
+  }),
   new LanguageInfo("java", "Java", javaLanguage.parser),
   new LanguageInfo("php", "PHP", phpLanguage.configure({top:"Program"}).parser),
-  new LanguageInfo("css", "CSS", cssLanguage.parser),
+  new LanguageInfo("css", "CSS", cssLanguage.parser, {
+    parser: "css",
+    plugins: [cssPrettierPlugin]
+  }),
   new LanguageInfo("xml", "XML", xmlLanguage.parser),
   new LanguageInfo("cpp", "C++", cppLanguage.parser),
   new LanguageInfo("rs", "Rust", rustLanguage.parser),
   new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser),
   new LanguageInfo("rb", "Ruby", StreamLanguage.define(ruby).parser),
   new LanguageInfo("sh", "Shell", StreamLanguage.define(shell).parser),
-  new LanguageInfo("yaml", "YAML", yamlLanguage.parser),
+  new LanguageInfo("yaml", "YAML", yamlLanguage.parser, {
+    parser: "yaml",
+    plugins: [yamlPrettierPlugin]
+  }),
   new LanguageInfo("toml", "TOML", StreamLanguage.define(toml).parser),
   new LanguageInfo("go", "Go", StreamLanguage.define(go).parser),
   new LanguageInfo("clj", "Clojure", StreamLanguage.define(clojure).parser),
-  new LanguageInfo("ex", "Elixir", null), // 暂无解析器
+  new LanguageInfo("ex", "Elixir", elixir().language.parser),
   new LanguageInfo("erl", "Erlang", StreamLanguage.define(erlang).parser),
-  new LanguageInfo("js", "JavaScript", javascriptLanguage.parser),
-  new LanguageInfo("ts", "TypeScript", typescriptLanguage.parser),
+  new LanguageInfo("js", "JavaScript", javascriptLanguage.parser, {
+    parser: "babel",
+    plugins: [babelPrettierPlugin, prettierPluginEstree]
+  }),
+  new LanguageInfo("ts", "TypeScript", typescriptLanguage.parser, {
+    parser: "typescript",
+    plugins: [typescriptPlugin, prettierPluginEstree]
+  }),
   new LanguageInfo("swift", "Swift", StreamLanguage.define(swift).parser),
   new LanguageInfo("kt", "Kotlin", StreamLanguage.define(kotlin).parser),
   new LanguageInfo("groovy", "Groovy", StreamLanguage.define(groovy).parser),
