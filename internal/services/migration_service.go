@@ -32,12 +32,11 @@ type MigrationProgress struct {
 
 // MigrationService 迁移服务
 type MigrationService struct {
-	logger              *log.LoggerService
-	mu                  sync.RWMutex
-	currentProgress     MigrationProgress
-	cancelFunc          context.CancelFunc
-	ctx                 context.Context
-	progressBroadcaster func(MigrationProgress) // WebSocket广播函数
+	logger          *log.LoggerService
+	mu              sync.RWMutex
+	currentProgress MigrationProgress
+	cancelFunc      context.CancelFunc
+	ctx             context.Context
 }
 
 // NewMigrationService 创建迁移服务
@@ -67,11 +66,6 @@ func (ms *MigrationService) updateProgress(progress MigrationProgress) {
 	ms.mu.Lock()
 	ms.currentProgress = progress
 	ms.mu.Unlock()
-
-	// 通过WebSocket广播进度
-	if ms.progressBroadcaster != nil {
-		ms.progressBroadcaster(progress)
-	}
 }
 
 // MigrateDirectory 迁移目录
@@ -405,13 +399,6 @@ func (ms *MigrationService) CancelMigration() error {
 	}
 
 	return fmt.Errorf("No active migration to cancel")
-}
-
-// SetProgressBroadcaster 设置进度广播函数
-func (ms *MigrationService) SetProgressBroadcaster(broadcaster func(MigrationProgress)) {
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-	ms.progressBroadcaster = broadcaster
 }
 
 // ServiceShutdown 服务关闭

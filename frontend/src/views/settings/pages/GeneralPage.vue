@@ -6,19 +6,51 @@ import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 import {useErrorHandler} from '@/utils/errorHandler';
-import {DialogService, MigrationService} from '@/../bindings/voidraft/internal/services';
-import {useWebSocket} from '@/composables/useWebSocket';
+import {DialogService, MigrationService, MigrationProgress, MigrationStatus} from '@/../bindings/voidraft/internal/services';
 import * as runtime from '@wailsio/runtime';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
 const {safeCall} = useErrorHandler();
 
-// WebSocket连接
-const {migrationProgress, isConnected, connectionState, connect, disconnect, on} = useWebSocket({
-  debug: true,
-  autoConnect: false // 手动控制连接
-});
+// 迁移进度状态
+const migrationProgress = ref<MigrationProgress>(new MigrationProgress({
+  status: MigrationStatus.MigrationStatusCompleted,
+  progress: 0
+}));
+
+// 轮询相关
+let pollingTimer: number | null = null;
+const isPolling = ref(false);
+
+// 开始轮询迁移进度
+const startPolling = () => {
+  if (isPolling.value) return;
+  
+  isPolling.value = true;
+  pollingTimer = window.setInterval(async () => {
+    try {
+      const progress = await MigrationService.GetProgress();
+      migrationProgress.value = progress;
+      
+      // 如果迁移完成或失败，停止轮询
+      if (progress.status === MigrationStatus.MigrationStatusCompleted || progress.status === MigrationStatus.MigrationStatusFailed) {
+        stopPolling();
+      }
+    } catch (error) {
+      stopPolling();
+    }
+  }, 500); // 每500ms轮询一次
+};
+
+// 停止轮询
+const stopPolling = () => {
+  if (pollingTimer) {
+    clearInterval(pollingTimer);
+    pollingTimer = null;
+  }
+  isPolling.value = false;
+};
 
 // 迁移消息链
 interface MigrationMessage {
@@ -52,26 +84,15 @@ const clearMigrationMessages = () => {
   showMessages.value = false;
 };
 
-// 监听连接状态变化
-const connectionWatcher = computed(() => isConnected.value);
-watch(connectionWatcher, (connected) => {
-  if (connected && isMigrating.value) {
-    // 如果连接成功且正在迁移，添加连接消息
-    if (!migrationMessages.value.some(msg => msg.content === '实时连接中')) {
-      addMigrationMessage('实时连接中', 'progress');
-    }
-  }
-});
-
 // 监听迁移进度变化
-on('migration_progress', (data) => {
+watch(() => migrationProgress.value, (progress, oldProgress) => {
   // 清除之前的隐藏定时器
   if (hideMessagesTimer) {
     clearTimeout(hideMessagesTimer);
     hideMessagesTimer = null;
   }
   
-  if (data.status === 'migrating') {
+  if (progress.status === MigrationStatus.MigrationStatusMigrating) {
     // 如果是第一次收到迁移状态，添加开始消息
     if (migrationMessages.value.length === 0) {
       addMigrationMessage(t('migration.started'), 'start');
@@ -80,34 +101,24 @@ on('migration_progress', (data) => {
     if (!migrationMessages.value.some(msg => msg.type === 'progress' && msg.content === t('migration.migrating'))) {
       addMigrationMessage(t('migration.migrating'), 'progress');
     }
-  } else if (data.status === 'completed') {
+  } else if (progress.status === MigrationStatus.MigrationStatusCompleted && oldProgress?.status === MigrationStatus.MigrationStatusMigrating) {
     addMigrationMessage(t('migration.completed'), 'success');
-    
-    // 3秒后断开连接
-    setTimeout(() => {
-      disconnect();
-    }, 3000);
     
     // 5秒后开始逐个隐藏消息
     hideMessagesTimer = setTimeout(() => {
       hideMessagesSequentially();
     }, 5000);
     
-  } else if (data.status === 'failed') {
-    const errorMsg = data.error || t('migration.failed');
+  } else if (progress.status === MigrationStatus.MigrationStatusFailed && oldProgress?.status === MigrationStatus.MigrationStatusMigrating) {
+    const errorMsg = progress.error || t('migration.failed');
     addMigrationMessage(errorMsg, 'error');
-    
-    // 3秒后断开连接
-    setTimeout(() => {
-      disconnect();
-    }, 3000);
     
     // 8秒后开始逐个隐藏消息
     hideMessagesTimer = setTimeout(() => {
       hideMessagesSequentially();
     }, 8000);
   }
-});
+}, { deep: true });
 
 // 逐个隐藏消息
 const hideMessagesSequentially = () => {
@@ -129,18 +140,18 @@ const hideMessagesSequentially = () => {
 };
 
 // 迁移状态
-const isMigrating = computed(() => migrationProgress.status === 'migrating');
-const migrationComplete = computed(() => migrationProgress.status === 'completed');
-const migrationFailed = computed(() => migrationProgress.status === 'failed');
+const isMigrating = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusMigrating);
+const migrationComplete = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusCompleted);
+const migrationFailed = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusFailed);
 
 // 进度条样式和宽度
 const progressBarClass = computed(() => {
-  switch (migrationProgress.status) {
-    case 'migrating':
+  switch (migrationProgress.value.status) {
+    case MigrationStatus.MigrationStatusMigrating:
       return 'migrating';
-    case 'completed':
+    case MigrationStatus.MigrationStatusCompleted:
       return 'success';
-    case 'failed':
+    case MigrationStatus.MigrationStatusFailed:
       return 'error';
     default:
       return '';
@@ -150,7 +161,7 @@ const progressBarClass = computed(() => {
 const progressBarWidth = computed(() => {
   // 只有在显示消息且正在迁移时才显示进度条
   if (showMessages.value && isMigrating.value) {
-    return migrationProgress.progress + '%';
+    return migrationProgress.value.progress + '%';
   } else if (showMessages.value && (migrationComplete.value || migrationFailed.value)) {
     // 迁移完成或失败时，短暂显示100%，然后随着消息隐藏而隐藏
     return '100%';
@@ -264,17 +275,17 @@ const currentDataPath = computed(() => configStore.config.general.dataPath);
 const selectDataDirectory = async () => {
   if (isMigrating.value) return;
   
-    const selectedPath = await DialogService.SelectDirectory();
+  const selectedPath = await DialogService.SelectDirectory();
+  
+  if (selectedPath && selectedPath.trim() && selectedPath !== currentDataPath.value) {
+    // 清除之前的消息
+    clearMigrationMessages();
     
-    if (selectedPath && selectedPath.trim() && selectedPath !== currentDataPath.value) {
-      // 清除之前的消息
-      clearMigrationMessages();
-      
-      // 连接WebSocket以接收迁移进度
-      await connect();
-      
-      // 开始迁移
-      try {
+    // 开始轮询迁移进度
+    startPolling();
+    
+    // 开始迁移
+    try {
       await safeCall(async () => {
         const oldPath = currentDataPath.value;
         const newPath = selectedPath.trim();
@@ -282,16 +293,17 @@ const selectDataDirectory = async () => {
         await MigrationService.MigrateDirectory(oldPath, newPath);
         await configStore.setDataPath(newPath);
       }, '');
-  } catch (error) {
-        // 发生错误时清除消息
-        clearMigrationMessages();
+    } catch (error) {
+      // 发生错误时清除消息并停止轮询
+      clearMigrationMessages();
+      stopPolling();
     }
   }
 };
 
-// 清理定时器和WebSocket连接
+// 清理定时器
 onUnmounted(() => {
-  disconnect();
+  stopPolling();
   if (resetConfirmTimer) {
     clearTimeout(resetConfirmTimer);
   }

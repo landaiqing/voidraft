@@ -50,13 +50,5 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     return $resultPromise;
 }
 
-/**
- * SetProgressBroadcaster 设置进度广播函数
- */
-export function SetProgressBroadcaster(broadcaster: any): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3244071921, broadcaster) as any;
-    return $resultPromise;
-}
-
 // Private type creation functions
 const $$createType0 = $models.MigrationProgress.createFrom;

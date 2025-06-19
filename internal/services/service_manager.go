@@ -15,8 +15,6 @@ type ServiceManager struct {
 	systemService    *SystemService
 	hotkeyService    *HotkeyService
 	dialogService    *DialogService
-	websocketService *WebSocketService
-	httpService      *HTTPService
 	trayService      *TrayService
 	logger           *log.LoggerService
 }
@@ -44,29 +42,11 @@ func NewServiceManager() *ServiceManager {
 	// 初始化对话服务
 	dialogService := NewDialogService(logger)
 
-	// 初始化 WebSocket 服务
-	websocketService := NewWebSocketService(logger)
-
-	// 初始化 HTTP 服务
-	httpService := NewHTTPService(logger, websocketService)
-
 	// 初始化托盘服务
 	trayService := NewTrayService(logger, configService)
 
-	// 设置迁移服务的WebSocket广播
-	migrationService.SetProgressBroadcaster(func(progress MigrationProgress) {
-		websocketService.BroadcastMigrationProgress(progress)
-	})
-
-	// 启动 HTTP 服务器
-	err := httpService.StartServer("8899")
-	if err != nil {
-		logger.Error("Failed to start HTTP server", "error", err)
-		panic(err)
-	}
-
 	// 使用新的配置通知系统设置热键配置变更监听
-	err = configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
+	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
 	})
 	if err != nil {
@@ -97,8 +77,6 @@ func NewServiceManager() *ServiceManager {
 		systemService:    systemService,
 		hotkeyService:    hotkeyService,
 		dialogService:    dialogService,
-		websocketService: websocketService,
-		httpService:      httpService,
 		trayService:      trayService,
 		logger:           logger,
 	}
