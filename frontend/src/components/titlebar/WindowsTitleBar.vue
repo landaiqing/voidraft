@@ -126,11 +126,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--toolbar-border);
   user-select: none;
   -webkit-user-select: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  width: 100%;
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
 
   -webkit-context-menu: none;

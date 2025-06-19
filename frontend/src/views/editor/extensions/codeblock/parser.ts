@@ -90,7 +90,13 @@ export function getBlocksFromSyntaxTree(state: EditorState): Block[] | null {
         }
     });
 
-    return blocks.length > 0 ? blocks : null;
+    if (blocks.length > 0) {
+        // 设置第一个块分隔符的大小
+        firstBlockDelimiterSize = blocks[0].delimiter.to;
+        return blocks;
+    }
+
+    return null;
 }
 
 // 跟踪第一个分隔符的大小
@@ -129,13 +135,20 @@ export function getBlocksFromString(state: EditorState): Block[] {
   const delim = "\n∞∞∞";
   let pos = 0;
 
-  // 检查文档是否以分隔符开始
-  if (!content.startsWith("∞∞∞")) {
+  // 检查文档是否以分隔符开始（不带前导换行符）
+  if (content.startsWith("∞∞∞")) {
+    // 文档直接以分隔符开始，调整为标准格式
+    pos = 0;
+  } else if (content.startsWith("\n∞∞∞")) {
+    // 文档以换行符+分隔符开始，这是标准格式，从位置0开始解析
+    pos = 0;
+  } else {
     // 如果文档不以分隔符开始，查找第一个分隔符
     const firstDelimPos = content.indexOf(delim);
     
     if (firstDelimPos === -1) {
       // 如果没有找到分隔符，整个文档作为一个文本块
+      firstBlockDelimiterSize = 0;
       return [{
         language: {
           name: 'text',
@@ -181,13 +194,32 @@ export function getBlocksFromString(state: EditorState): Block[] {
   }
   
   while (pos < doc.length) {
-    const blockStart = content.indexOf(delim, pos);
-    if (blockStart !== pos) {
-      // 如果在当前位置没有找到分隔符，可能是文档结尾
-      break;
+    let blockStart: number;
+    
+    if (pos === 0 && content.startsWith("∞∞∞")) {
+      // 处理文档开头直接是分隔符的情况（不带前导换行符）
+      blockStart = 0;
+    } else if (pos === 0 && content.startsWith("\n∞∞∞")) {
+      // 处理文档开头是换行符+分隔符的情况（标准格式）
+      blockStart = 0;
+    } else {
+      blockStart = content.indexOf(delim, pos);
+      if (blockStart !== pos) {
+        // 如果在当前位置没有找到分隔符，可能是文档结尾
+        break;
+      }
     }
     
-    const langStart = blockStart + delim.length;
+    // 确定语言开始位置
+    let langStart: number;
+    if (pos === 0 && content.startsWith("∞∞∞")) {
+      // 文档直接以分隔符开始，跳过 ∞∞∞
+      langStart = blockStart + 3;
+    } else {
+      // 标准情况，跳过 \n∞∞∞
+      langStart = blockStart + delim.length;
+    }
+    
     const delimiterEnd = content.indexOf("\n", langStart);
     if (delimiterEnd < 0) {
       console.error("Error parsing blocks. Delimiter didn't end with newline");
@@ -230,11 +262,6 @@ export function getBlocksFromString(state: EditorState): Block[] {
     
     blocks.push(block);
     pos = blockEnd;
-    
-    // 设置第一个块分隔符的大小（只有当这是第一个有分隔符的块时）
-    if (blocks.length === 1 && firstBlockDelimiterSize === undefined) {
-      firstBlockDelimiterSize = block.delimiter.to;
-    }
   }
   
   // 如果没有找到任何块，创建一个默认块
@@ -258,7 +285,10 @@ export function getBlocksFromString(state: EditorState): Block[] {
       },
     });
     firstBlockDelimiterSize = 0;
-    }
+  } else {
+    // 设置第一个块分隔符的大小
+    firstBlockDelimiterSize = blocks[0].delimiter.to;
+  }
 
     return blocks;
 }

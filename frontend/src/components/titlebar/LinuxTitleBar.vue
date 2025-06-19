@@ -127,11 +127,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--toolbar-border, #d0d0d0);
   user-select: none;
   -webkit-user-select: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  width: 100%;
   font-family: 'Ubuntu', 'Cantarell', 'DejaVu Sans', system-ui, sans-serif;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   

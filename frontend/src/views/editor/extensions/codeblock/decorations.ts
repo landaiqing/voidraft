@@ -182,13 +182,15 @@ const blockLayer = layer({
 const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) => {
   const protect: number[] = [];
   
-  // 获取块状态
+  // 获取块状态并获取第一个块的分隔符大小
   const blocks = tr.startState.field(blockState);
   if (blocks && blocks.length > 0) {
     const firstBlock = blocks[0];
-    // 保护第一个块的分隔符区域
-    if (firstBlock && firstBlock.delimiter) {
-      protect.push(firstBlock.delimiter.from, firstBlock.delimiter.to);
+    const firstBlockDelimiterSize = firstBlock.delimiter.to;
+    
+    // 保护第一个块分隔符区域（从 0 到 firstBlockDelimiterSize）
+    if (firstBlockDelimiterSize > 0) {
+      protect.push(0, firstBlockDelimiterSize);
     }
   }
   
@@ -210,18 +212,18 @@ const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) 
  * 使用 transactionFilter 来确保选择不会在第一个块之前
  */
 const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: any) => {
-  // 获取块状态
+  // 获取块状态并获取第一个块的分隔符大小
   const blocks = tr.startState.field(blockState);
   if (!blocks || blocks.length === 0) {
     return tr;
   }
   
   const firstBlock = blocks[0];
-  if (!firstBlock || !firstBlock.delimiter) {
+  const firstBlockDelimiterSize = firstBlock.delimiter.to;
+  
+  if (firstBlockDelimiterSize <= 0) {
     return tr;
   }
-  
-  const firstBlockDelimiterSize = firstBlock.delimiter.to;
   
   // 检查选择范围，如果在第一个块之前，则调整到第一个块的内容开始位置
   if (tr.selection) {

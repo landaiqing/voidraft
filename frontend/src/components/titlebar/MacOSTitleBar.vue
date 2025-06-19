@@ -132,11 +132,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--toolbar-border, rgba(0, 0, 0, 0.1));
   user-select: none;
   -webkit-user-select: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 1000;
+  width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
   
   -webkit-context-menu: none;

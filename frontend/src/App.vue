@@ -22,7 +22,7 @@ onMounted(async () => {
 <template>
   <div class="app-container">
     <WindowTitleBar />
-    <div class="app-content" :style="{ marginTop: systemStore.titleBarHeight }">
+    <div class="app-content">
       <router-view/>
     </div>
   </div>
