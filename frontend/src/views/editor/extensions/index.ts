@@ -6,4 +6,5 @@ export * from './autoSaveExtension';
 export * from './fontExtension';
 export * from './themeExtension';
 export * from './codeblast';
-export * from './codeblock'; 
+export * from './codeblock';
+export * from './keymap'; 

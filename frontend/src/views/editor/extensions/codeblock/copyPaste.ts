@@ -209,26 +209,3 @@ export function getCopyPasteExtensions() {
     codeBlockCopyCut,
   ];
 }
-
-/**
- * 获取复制粘贴键盘映射
- */
-export function getCopyPasteKeymap() {
-  return [
-    {
-      key: 'Mod-c',
-      run: copyCommand,
-      preventDefault: true
-    },
-    {
-      key: 'Mod-x',
-      run: cutCommand,
-      preventDefault: true
-    },
-    {
-      key: 'Mod-v',
-      run: pasteCommand,
-      preventDefault: true
-    }
-  ];
-} 

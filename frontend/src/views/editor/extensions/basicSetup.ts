@@ -15,15 +15,13 @@ import {
     bracketMatching,
     defaultHighlightStyle,
     foldGutter,
-    foldKeymap,
     indentOnInput,
     syntaxHighlighting,
 } from '@codemirror/language';
-import {defaultKeymap, history, historyKeymap,} from '@codemirror/commands';
+import {history} from '@codemirror/commands';
 import {highlightSelectionMatches} from '@codemirror/search';
-import {autocompletion, closeBrackets, closeBracketsKeymap, completionKeymap} from '@codemirror/autocomplete';
-import {lintKeymap} from '@codemirror/lint';
-import {customSearchKeymap, searchVisibilityField, vscodeSearch} from './vscodeSearch';
+import {autocompletion, closeBrackets, closeBracketsKeymap} from '@codemirror/autocomplete';
+import {searchVisibilityField, vscodeSearch} from './vscodeSearch';
 
 import {hyperLink} from './hyperlink';
 import {color} from './colorSelector';
@@ -91,13 +89,7 @@ export const createBasicSetup = (): Extension[] => {
 
         // 键盘映射
         keymap.of([
-            ...customSearchKeymap,
             ...closeBracketsKeymap,
-            ...defaultKeymap,
-            ...historyKeymap,
-            ...foldKeymap,
-            ...completionKeymap,
-            ...lintKeymap
         ]),
     ];
 };

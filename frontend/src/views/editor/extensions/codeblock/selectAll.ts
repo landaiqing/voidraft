@@ -218,7 +218,5 @@ function isInDelimiter(state: any, pos: number) {
 export function getBlockSelectExtensions() {
   return [
     emptyBlockSelected,
-    // 禁用块边界检查以避免递归更新问题
-    // blockAwareSelection,
   ];
 } 

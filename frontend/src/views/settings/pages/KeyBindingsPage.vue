@@ -1,74 +1,196 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { onMounted, computed } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
+import { useKeybindingStore } from '@/stores/keybindingStore';
+import { useSystemStore } from '@/stores/systemStore';
+import { getCommandDescription } from '@/views/editor/extensions/keymap/commandRegistry';
+import {KeyBindingCommand} from "@/../bindings/voidraft/internal/models";
 
 const { t } = useI18n();
+const keybindingStore = useKeybindingStore();
+const systemStore = useSystemStore();
 
-interface KeyBinding {
-  id: string;
-  name: string;
-  keys: string[];
-  isEditing: boolean;
-}
 
-// 示例快捷键列表（仅用于界面展示）
-const keyBindings = ref<KeyBinding[]>([
-  { id: 'save', name: '保存文档', keys: ['Ctrl', 'S'], isEditing: false },
-  { id: 'new', name: '新建文档', keys: ['Ctrl', 'N'], isEditing: false },
-  { id: 'open', name: '打开文档', keys: ['Ctrl', 'O'], isEditing: false },
-  { id: 'find', name: '查找', keys: ['Ctrl', 'F'], isEditing: false },
-  { id: 'replace', name: '替换', keys: ['Ctrl', 'H'], isEditing: false },
-]);
+// 从store中获取快捷键数据并转换为显示格式
+const keyBindings = computed(() => {
+  return keybindingStore.keyBindings
+    .filter(kb => kb.enabled)
+    .map(kb => ({
+      id: kb.command,
+      keys: parseKeyBinding(kb.key, kb.command),
+      category: kb.category,
+      description: getCommandDescription(kb.command) || kb.command
+    }));
+});
 
-// 切换编辑状态
-const toggleEdit = (binding: KeyBinding) => {
-  // 先关闭其他所有编辑中的项
-  keyBindings.value.forEach(item => {
-    if (item.id !== binding.id) {
-      item.isEditing = false;
+// 解析快捷键字符串为显示数组
+const parseKeyBinding = (keyStr: string, command?: string): string[] => {
+  if (!keyStr) return [];
+  
+  // 特殊处理重做快捷键的操作系统差异
+  if (command === KeyBindingCommand.HistoryRedoCommand && keyStr === 'Mod-Shift-z') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '⇧', 'Z']; // macOS: Cmd+Shift+Z
+    } else {
+      return ['Ctrl', 'Y']; // Windows/Linux: Ctrl+Y
     }
-  });
-  
-  // 切换当前项
-  binding.isEditing = !binding.isEditing;
-};
-
-// 编辑模式下按键事件处理
-const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
-  if (!binding.isEditing) return;
-  
-  event.preventDefault();
-  event.stopPropagation();
-  
-  const newKeys: string[] = [];
-  if (event.ctrlKey) newKeys.push('Ctrl');
-  if (event.shiftKey) newKeys.push('Shift');
-  if (event.altKey) newKeys.push('Alt');
-  
-  // 获取按键
-  let keyName = event.key;
-  if (keyName === ' ') keyName = 'Space';
-  if (keyName.length === 1) keyName = keyName.toUpperCase();
-  
-  // 如果有修饰键，就添加主键
-  if (event.ctrlKey || event.shiftKey || event.altKey) {
-    if (!['Control', 'Shift', 'Alt'].includes(keyName)) {
-      newKeys.push(keyName);
-    }
-  } else {
-    // 没有修饰键，直接使用主键
-    newKeys.push(keyName);
   }
   
-  // 唯一按键，不增加空字段
-  if (newKeys.length > 0) {
-    binding.keys = [...new Set(newKeys)];
+  // 特殊处理重做选择快捷键的操作系统差异
+  if (command === KeyBindingCommand.HistoryRedoSelectionCommand && keyStr === 'Mod-Shift-u') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '⇧', 'U']; // macOS: Cmd+Shift+U
+    } else {
+      return ['Alt', 'U']; // Windows/Linux: Alt+U
+    }
   }
   
-  // 完成编辑
-  binding.isEditing = false;
+  // 特殊处理代码折叠快捷键的操作系统差异
+  if (command === KeyBindingCommand.FoldCodeCommand && keyStr === 'Ctrl-Shift-[') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '⌥', '[']; // macOS: Cmd+Alt+[
+    } else {
+      return ['Ctrl', '⇧', '[']; // Windows/Linux: Ctrl+Shift+[
+    }
+  }
+  
+  if (command === KeyBindingCommand.UnfoldCodeCommand && keyStr === 'Ctrl-Shift-]') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '⌥', ']']; // macOS: Cmd+Alt+]
+    } else {
+      return ['Ctrl', '⇧', ']']; // Windows/Linux: Ctrl+Shift+]
+    }
+  }
+  
+  // 特殊处理编辑快捷键的操作系统差异
+  if (command === KeyBindingCommand.CursorSyntaxLeftCommand && keyStr === 'Alt-ArrowLeft') {
+    if (systemStore.isMacOS) {
+      return ['Ctrl', '←']; // macOS: Ctrl+ArrowLeft
+    } else {
+      return ['Alt', '←']; // Windows/Linux: Alt+ArrowLeft
+    }
+  }
+  
+  if (command === KeyBindingCommand.CursorSyntaxRightCommand && keyStr === 'Alt-ArrowRight') {
+    if (systemStore.isMacOS) {
+      return ['Ctrl', '→']; // macOS: Ctrl+ArrowRight
+    } else {
+      return ['Alt', '→']; // Windows/Linux: Alt+ArrowRight
+    }
+  }
+  
+  if (command === KeyBindingCommand.InsertBlankLineCommand && keyStr === 'Ctrl-Enter') {
+    if (systemStore.isMacOS) {
+      return ['⌘', 'Enter']; // macOS: Cmd+Enter
+    } else {
+      return ['Ctrl', 'Enter']; // Windows/Linux: Ctrl+Enter
+    }
+  }
+  
+  if (command === KeyBindingCommand.SelectLineCommand && keyStr === 'Alt-l') {
+    if (systemStore.isMacOS) {
+      return ['Ctrl', 'L']; // macOS: Ctrl+l
+    } else {
+      return ['Alt', 'L']; // Windows/Linux: Alt+l
+    }
+  }
+  
+  if (command === KeyBindingCommand.SelectParentSyntaxCommand && keyStr === 'Ctrl-i') {
+    if (systemStore.isMacOS) {
+      return ['⌘', 'I']; // macOS: Cmd+i
+    } else {
+      return ['Ctrl', 'I']; // Windows/Linux: Ctrl+i
+    }
+  }
+  
+  if (command === KeyBindingCommand.IndentLessCommand && keyStr === 'Ctrl-[') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '[']; // macOS: Cmd+[
+    } else {
+      return ['Ctrl', '[']; // Windows/Linux: Ctrl+[
+    }
+  }
+  
+  if (command === KeyBindingCommand.IndentMoreCommand && keyStr === 'Ctrl-]') {
+    if (systemStore.isMacOS) {
+      return ['⌘', ']']; // macOS: Cmd+]
+    } else {
+      return ['Ctrl', ']']; // Windows/Linux: Ctrl+]
+    }
+  }
+  
+  if (command === KeyBindingCommand.IndentSelectionCommand && keyStr === 'Ctrl-Alt-\\') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '⌥', '\\']; // macOS: Cmd+Alt+\
+    } else {
+      return ['Ctrl', 'Alt', '\\']; // Windows/Linux: Ctrl+Alt+\
+    }
+  }
+  
+  if (command === KeyBindingCommand.CursorMatchingBracketCommand && keyStr === 'Shift-Ctrl-\\') {
+    if (systemStore.isMacOS) {
+      return ['⇧', '⌘', '\\']; // macOS: Shift+Cmd+\
+    } else {
+      return ['⇧', 'Ctrl', '\\']; // Windows/Linux: Shift+Ctrl+\
+    }
+  }
+  
+  if (command === KeyBindingCommand.ToggleCommentCommand && keyStr === 'Ctrl-/') {
+    if (systemStore.isMacOS) {
+      return ['⌘', '/']; // macOS: Cmd+/
+    } else {
+      return ['Ctrl', '/']; // Windows/Linux: Ctrl+/
+    }
+  }
+  
+  // 特殊处理删除快捷键的操作系统差异
+  if (command === KeyBindingCommand.DeleteGroupBackwardCommand && keyStr === 'Ctrl-Backspace') {
+    if (systemStore.isMacOS) {
+      return ['⌘', 'Backspace']; // macOS: Cmd+Backspace
+    } else {
+      return ['Ctrl', 'Backspace']; // Windows/Linux: Ctrl+Backspace
+    }
+  }
+  
+  if (command === KeyBindingCommand.DeleteGroupForwardCommand && keyStr === 'Ctrl-Delete') {
+    if (systemStore.isMacOS) {
+      return ['⌘', 'Delete']; // macOS: Cmd+Delete
+    } else {
+      return ['Ctrl', 'Delete']; // Windows/Linux: Ctrl+Delete
+    }
+  }
+  
+  // 处理常见的快捷键格式
+  const parts = keyStr.split(/[-+]/);
+  return parts.map(part => {
+    // 根据操作系统将 Mod 替换为相应的键
+    if (part === 'Mod') {
+      if (systemStore.isMacOS) {
+        return '⌘'; // macOS 使用 Command 键符号
+      } else {
+        return 'Ctrl'; // Windows/Linux 使用 Ctrl
+      }
+    }
+    
+    // 处理其他键名的操作系统差异
+    if (part === 'Alt' && systemStore.isMacOS) {
+      return '⌥'; // macOS 使用 Option 键符号
+    }
+    
+    if (part === 'Shift') {
+      return systemStore.isMacOS ? '⇧' : 'Shift'; // macOS 使用符号
+    }
+    
+    // 首字母大写
+    return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
+  }).filter(part => part.length > 0);
 };
+
+// 组件挂载时加载快捷键数据
+onMounted(async () => {
+  await keybindingStore.loadKeyBindings();
+});
 </script>
 
 <template>
@@ -76,42 +198,27 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     <SettingSection :title="t('settings.keyBindings')">
       <div class="key-bindings-container">
         <div class="key-bindings-header">
-          <div class="command-col">命令</div>
-          <div class="keybinding-col">快捷键</div>
-          <div class="action-col">操作</div>
+          <div class="keybinding-col">{{ t('keybindings.headers.shortcut') }}</div>
+          <div class="category-col">{{ t('keybindings.headers.category') }}</div>
+          <div class="description-col">{{ t('keybindings.headers.description') }}</div>
         </div>
         
         <div
           v-for="binding in keyBindings"
           :key="binding.id"
           class="key-binding-row"
-          :class="{ 'is-editing': binding.isEditing }"
-          @keydown="(e) => handleKeyDown(e, binding)"
-          tabindex="0"
         >
-          <div class="command-col">{{ binding.name }}</div>
-          <div class="keybinding-col" :class="{ 'is-editing': binding.isEditing }">
-            <template v-if="binding.isEditing">
-              按下快捷键...
-            </template>
-            <template v-else>
-              <span 
-                v-for="(key, index) in binding.keys" 
-                :key="index"
-                class="key-badge"
-              >
-                {{ key }}
-              </span>
-            </template>
-          </div>
-          <div class="action-col">
-            <button 
-              class="edit-button"
-              @click="toggleEdit(binding)"
+          <div class="keybinding-col">
+            <span 
+              v-for="(key, index) in binding.keys" 
+              :key="index"
+              class="key-badge"
             >
-              {{ binding.isEditing ? '取消' : '编辑' }}
-            </button>
+              {{ key }}
+            </span>
           </div>
+          <div class="category-col">{{ binding.category }}</div>
+          <div class="description-col">{{ binding.description }}</div>
         </div>
       </div>
     </SettingSection>
@@ -143,36 +250,17 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     align-items: center;
     transition: background-color 0.2s ease;
     
-    &:focus {
-      outline: none;
-    }
-    
     &:hover {
       background-color: var(--settings-hover);
     }
-    
-    &.is-editing {
-      background-color: rgba(74, 158, 255, 0.1);
-    }
-  }
-  
-  .command-col {
-    flex: 1;
-    padding-right: 10px;
-    font-size: 13px;
-    color: var(--settings-text);
   }
   
   .keybinding-col {
-    width: 200px;
+    width: 150px;
     display: flex;
     gap: 5px;
-    padding: 0 10px;
-    
-    &.is-editing {
-      font-style: italic;
-      color: var(--text-muted);
-    }
+    padding: 0 10px 0 0;
+    color: var(--settings-text);
     
     .key-badge {
       background-color: var(--settings-input-bg);
@@ -184,29 +272,18 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     }
   }
   
-  .action-col {
+  .category-col {
     width: 80px;
-    text-align: right;
-    
-    .edit-button {
-      padding: 5px 10px;
-      background-color: var(--settings-input-bg);
-      border: 1px solid var(--settings-input-border);
-      border-radius: 4px;
-      color: var(--settings-text);
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s ease;
-      
-      &:hover {
-        background-color: var(--settings-hover);
-        border-color: var(--settings-border);
-      }
-      
-      &:active {
-        transform: translateY(1px);
-      }
-    }
+    padding: 0 10px 0 0;
+    font-size: 13px;
+    color: var(--settings-text);
+    text-transform: capitalize;
+  }
+  
+  .description-col {
+    flex: 1;
+    font-size: 13px;
+    color: var(--settings-text);
   }
 }
 

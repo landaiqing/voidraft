@@ -456,17 +456,12 @@ export class KeyBinding {
     /**
      * 快捷键动作
      */
-    "action": KeyBindingAction;
+    "command": KeyBindingCommand;
 
     /**
      * 快捷键分类
      */
     "category": KeyBindingCategory;
-
-    /**
-     * 快捷键作用域
-     */
-    "scope": KeyBindingScope;
 
     /**
      * 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
@@ -485,14 +480,11 @@ export class KeyBinding {
 
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
-        if (!("action" in $$source)) {
-            this["action"] = ("" as KeyBindingAction);
+        if (!("command" in $$source)) {
+            this["command"] = ("" as KeyBindingCommand);
         }
         if (!("category" in $$source)) {
             this["category"] = ("" as KeyBindingCategory);
-        }
-        if (!("scope" in $$source)) {
-            this["scope"] = ("" as KeyBindingScope);
         }
         if (!("key" in $$source)) {
             this["key"] = "";
@@ -517,212 +509,6 @@ export class KeyBinding {
 }
 
 /**
- * KeyBindingAction 快捷键动作类型
- */
-export enum KeyBindingAction {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * 搜索相关
-     * 显示搜索
-     */
-    ActionShowSearch = "showSearch",
-
-    /**
-     * 隐藏搜索
-     */
-    ActionHideSearch = "hideSearch",
-
-    /**
-     * 查找下一个
-     */
-    ActionFindNext = "findNext",
-
-    /**
-     * 查找上一个
-     */
-    ActionFindPrevious = "findPrevious",
-
-    /**
-     * 显示替换
-     */
-    ActionShowReplace = "showReplace",
-
-    /**
-     * 替换下一个
-     */
-    ActionReplaceNext = "replaceNext",
-
-    /**
-     * 替换全部
-     */
-    ActionReplaceAll = "replaceAll",
-
-    /**
-     * 切换大小写匹配
-     */
-    ActionToggleCase = "toggleCase",
-
-    /**
-     * 切换全词匹配
-     */
-    ActionToggleWholeWord = "toggleWholeWord",
-
-    /**
-     * 切换正则表达式
-     */
-    ActionToggleRegex = "toggleRegex",
-
-    /**
-     * 编辑相关
-     * 全选
-     */
-    ActionSelectAll = "selectAll",
-
-    /**
-     * 复制
-     */
-    ActionCopy = "copy",
-
-    /**
-     * 剪切
-     */
-    ActionCut = "cut",
-
-    /**
-     * 粘贴
-     */
-    ActionPaste = "paste",
-
-    /**
-     * 撤销
-     */
-    ActionUndo = "undo",
-
-    /**
-     * 重做
-     */
-    ActionRedo = "redo",
-
-    /**
-     * 复制行
-     */
-    ActionDuplicateLine = "duplicateLine",
-
-    /**
-     * 删除行
-     */
-    ActionDeleteLine = "deleteLine",
-
-    /**
-     * 上移行
-     */
-    ActionMoveLineUp = "moveLineUp",
-
-    /**
-     * 下移行
-     */
-    ActionMoveLineDown = "moveLineDown",
-
-    /**
-     * 切换注释
-     */
-    ActionToggleComment = "toggleComment",
-
-    /**
-     * 缩进
-     */
-    ActionIndent = "indent",
-
-    /**
-     * 取消缩进
-     */
-    ActionOutdent = "outdent",
-
-    /**
-     * 代码块相关
-     * 新建代码块
-     */
-    ActionNewCodeBlock = "newCodeBlock",
-
-    /**
-     * 删除代码块
-     */
-    ActionDeleteCodeBlock = "deleteCodeBlock",
-
-    /**
-     * 选择代码块
-     */
-    ActionSelectCodeBlock = "selectCodeBlock",
-
-    /**
-     * 格式化代码
-     */
-    ActionFormatCode = "formatCode",
-
-    /**
-     * 更改语言
-     */
-    ActionChangeLanguage = "changeLanguage",
-
-    /**
-     * 导航相关
-     * 跳转到行
-     */
-    ActionGoToLine = "goToLine",
-
-    /**
-     * 折叠所有
-     */
-    ActionFoldAll = "foldAll",
-
-    /**
-     * 展开所有
-     */
-    ActionUnfoldAll = "unfoldAll",
-
-    /**
-     * 切换折叠
-     */
-    ActionToggleFold = "toggleFold",
-
-    /**
-     * 视图相关
-     * 放大
-     */
-    ActionZoomIn = "zoomIn",
-
-    /**
-     * 缩小
-     */
-    ActionZoomOut = "zoomOut",
-
-    /**
-     * 重置缩放
-     */
-    ActionResetZoom = "resetZoom",
-
-    /**
-     * 切换小地图
-     */
-    ActionToggleMinimap = "toggleMinimap",
-
-    /**
-     * 切换行号
-     */
-    ActionToggleLineNumbers = "toggleLineNumbers",
-
-    /**
-     * 文件相关
-     * 保存
-     */
-    ActionSave = "save",
-};
-
-/**
  * KeyBindingCategory 快捷键分类
  */
 export enum KeyBindingCategory {
@@ -744,27 +530,302 @@ export enum KeyBindingCategory {
     /**
      * 代码块相关
      */
-    CategoryCodeBlock = "codeblock",
+    CategoryCodeBlock = "block",
 
     /**
-     * 导航相关
+     * 历史记录相关
      */
-    CategoryNavigation = "navigation",
+    CategoryHistory = "history",
 
     /**
-     * 视图相关
+     * 代码折叠相关
      */
-    CategoryView = "view",
+    CategoryFold = "fold",
+};
+
+/**
+ * KeyBindingCommand 快捷键命令
+ */
+export enum KeyBindingCommand {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
 
     /**
-     * 文件相关
+     * 搜索相关
+     * 显示搜索
      */
-    CategoryFile = "file",
+    ShowSearchCommand = "showSearch",
 
     /**
-     * 应用相关
+     * 隐藏搜索
      */
-    CategoryApp = "app",
+    HideSearchCommand = "hideSearch",
+
+    /**
+     * 搜索切换大小写
+     */
+    SearchToggleCaseCommand = "searchToggleCase",
+
+    /**
+     * 搜索切换整词
+     */
+    SearchToggleWordCommand = "searchToggleWord",
+
+    /**
+     * 搜索切换正则
+     */
+    SearchToggleRegexCommand = "searchToggleRegex",
+
+    /**
+     * 显示替换
+     */
+    SearchShowReplaceCommand = "searchShowReplace",
+
+    /**
+     * 替换全部
+     */
+    SearchReplaceAllCommand = "searchReplaceAll",
+
+    /**
+     * 代码块相关
+     * 块内选择全部
+     */
+    BlockSelectAllCommand = "blockSelectAll",
+
+    /**
+     * 在当前块后添加新块
+     */
+    BlockAddAfterCurrentCommand = "blockAddAfterCurrent",
+
+    /**
+     * 在最后添加新块
+     */
+    BlockAddAfterLastCommand = "blockAddAfterLast",
+
+    /**
+     * 在当前块前添加新块
+     */
+    BlockAddBeforeCurrentCommand = "blockAddBeforeCurrent",
+
+    /**
+     * 跳转到上一个块
+     */
+    BlockGotoPreviousCommand = "blockGotoPrevious",
+
+    /**
+     * 跳转到下一个块
+     */
+    BlockGotoNextCommand = "blockGotoNext",
+
+    /**
+     * 选择上一个块
+     */
+    BlockSelectPreviousCommand = "blockSelectPrevious",
+
+    /**
+     * 选择下一个块
+     */
+    BlockSelectNextCommand = "blockSelectNext",
+
+    /**
+     * 删除当前块
+     */
+    BlockDeleteCommand = "blockDelete",
+
+    /**
+     * 向上移动当前块
+     */
+    BlockMoveUpCommand = "blockMoveUp",
+
+    /**
+     * 向下移动当前块
+     */
+    BlockMoveDownCommand = "blockMoveDown",
+
+    /**
+     * 删除行
+     */
+    BlockDeleteLineCommand = "blockDeleteLine",
+
+    /**
+     * 向上移动行
+     */
+    BlockMoveLineUpCommand = "blockMoveLineUp",
+
+    /**
+     * 向下移动行
+     */
+    BlockMoveLineDownCommand = "blockMoveLineDown",
+
+    /**
+     * 字符转置
+     */
+    BlockTransposeCharsCommand = "blockTransposeChars",
+
+    /**
+     * 格式化代码块
+     */
+    BlockFormatCommand = "blockFormat",
+
+    /**
+     * 复制
+     */
+    BlockCopyCommand = "blockCopy",
+
+    /**
+     * 剪切
+     */
+    BlockCutCommand = "blockCut",
+
+    /**
+     * 粘贴
+     */
+    BlockPasteCommand = "blockPaste",
+
+    /**
+     * 历史记录相关
+     * 撤销
+     */
+    HistoryUndoCommand = "historyUndo",
+
+    /**
+     * 重做
+     */
+    HistoryRedoCommand = "historyRedo",
+
+    /**
+     * 撤销选择
+     */
+    HistoryUndoSelectionCommand = "historyUndoSelection",
+
+    /**
+     * 重做选择
+     */
+    HistoryRedoSelectionCommand = "historyRedoSelection",
+
+    /**
+     * 代码折叠相关
+     * 折叠代码
+     */
+    FoldCodeCommand = "foldCode",
+
+    /**
+     * 展开代码
+     */
+    UnfoldCodeCommand = "unfoldCode",
+
+    /**
+     * 折叠全部
+     */
+    FoldAllCommand = "foldAll",
+
+    /**
+     * 展开全部
+     */
+    UnfoldAllCommand = "unfoldAll",
+
+    /**
+     * 编辑相关
+     * 光标按语法左移
+     */
+    CursorSyntaxLeftCommand = "cursorSyntaxLeft",
+
+    /**
+     * 光标按语法右移
+     */
+    CursorSyntaxRightCommand = "cursorSyntaxRight",
+
+    /**
+     * 按语法选择左侧
+     */
+    SelectSyntaxLeftCommand = "selectSyntaxLeft",
+
+    /**
+     * 按语法选择右侧
+     */
+    SelectSyntaxRightCommand = "selectSyntaxRight",
+
+    /**
+     * 向上复制行
+     */
+    CopyLineUpCommand = "copyLineUp",
+
+    /**
+     * 向下复制行
+     */
+    CopyLineDownCommand = "copyLineDown",
+
+    /**
+     * 插入空行
+     */
+    InsertBlankLineCommand = "insertBlankLine",
+
+    /**
+     * 选择行
+     */
+    SelectLineCommand = "selectLine",
+
+    /**
+     * 选择父级语法
+     */
+    SelectParentSyntaxCommand = "selectParentSyntax",
+
+    /**
+     * 减少缩进
+     */
+    IndentLessCommand = "indentLess",
+
+    /**
+     * 增加缩进
+     */
+    IndentMoreCommand = "indentMore",
+
+    /**
+     * 缩进选择
+     */
+    IndentSelectionCommand = "indentSelection",
+
+    /**
+     * 光标到匹配括号
+     */
+    CursorMatchingBracketCommand = "cursorMatchingBracket",
+
+    /**
+     * 切换注释
+     */
+    ToggleCommentCommand = "toggleComment",
+
+    /**
+     * 切换块注释
+     */
+    ToggleBlockCommentCommand = "toggleBlockComment",
+
+    /**
+     * 插入新行并缩进
+     */
+    InsertNewlineAndIndentCommand = "insertNewlineAndIndent",
+
+    /**
+     * 向后删除字符
+     */
+    DeleteCharBackwardCommand = "deleteCharBackward",
+
+    /**
+     * 向前删除字符
+     */
+    DeleteCharForwardCommand = "deleteCharForward",
+
+    /**
+     * 向后删除组
+     */
+    DeleteGroupBackwardCommand = "deleteGroupBackward",
+
+    /**
+     * 向前删除组
+     */
+    DeleteGroupForwardCommand = "deleteGroupForward",
 };
 
 /**
@@ -836,31 +897,6 @@ export class KeyBindingMetadata {
         return new KeyBindingMetadata($$parsedSource as Partial<KeyBindingMetadata>);
     }
 }
-
-/**
- * KeyBindingScope 快捷键作用域
- */
-export enum KeyBindingScope {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * 全局作用域
-     */
-    ScopeGlobal = "global",
-
-    /**
-     * 编辑器作用域
-     */
-    ScopeEditor = "editor",
-
-    /**
-     * 搜索面板作用域
-     */
-    ScopeSearch = "search",
-};
 
 /**
  * LanguageType 语言类型定义

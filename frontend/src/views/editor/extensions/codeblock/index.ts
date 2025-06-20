@@ -13,17 +13,14 @@
  */
 
 import {Extension} from '@codemirror/state';
-import {keymap, lineNumbers} from '@codemirror/view';
+import {lineNumbers} from '@codemirror/view';
 
 // 导入核心模块
 import {blockState} from './state';
 import {getBlockDecorationExtensions} from './decorations';
-import * as commands from './commands';
-import {getBlockSelectExtensions, selectAll} from './selectAll';
-import {getCopyPasteExtensions, getCopyPasteKeymap} from './copyPaste';
-import {deleteLineCommand} from './deleteLine';
+import {getBlockSelectExtensions} from './selectAll';
+import {getCopyPasteExtensions} from './copyPaste';
 import {moveLineDown, moveLineUp} from './moveLines';
-import {transposeChars} from './transposeChars';
 import {getCodeBlockLanguageExtension} from './lang-parser';
 import {createLanguageDetection} from './language-detection';
 import {EditorOptions, SupportedLanguage} from './types';
@@ -92,13 +89,7 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         defaultAutoDetect = true,
     } = options;
 
-    // 将简化的配置转换为内部使用的EditorOptions
-    const editorOptions: EditorOptions = {
-        defaultBlockToken: defaultLanguage,
-        defaultBlockAutoDetect: defaultAutoDetect,
-    };
-
-    const extensions: Extension[] = [
+    return [
         // 核心状态管理
         blockState,
 
@@ -126,105 +117,7 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         // 复制粘贴功能
         ...getCopyPasteExtensions(),
 
-        // 键盘映射
-        keymap.of([
-            // 复制粘贴命令
-            ...getCopyPasteKeymap(),
-
-            // 块隔离选择命令
-            {
-                key: 'Mod-a',
-                run: selectAll,
-                preventDefault: true
-            },
-            // 块创建命令
-            {
-                key: 'Mod-Enter',
-                run: commands.addNewBlockAfterCurrent(editorOptions),
-                preventDefault: true
-            },
-            {
-                key: 'Mod-Shift-Enter',
-                run: commands.addNewBlockAfterLast(editorOptions),
-                preventDefault: true
-            },
-            {
-                key: 'Alt-Enter',
-                run: commands.addNewBlockBeforeCurrent(editorOptions),
-                preventDefault: true
-            },
-
-            // 块导航命令
-            {
-                key: 'Mod-ArrowUp',
-                run: commands.gotoPreviousBlock,
-                preventDefault: true
-            },
-            {
-                key: 'Mod-ArrowDown',
-                run: commands.gotoNextBlock,
-                preventDefault: true
-            },
-            {
-                key: 'Mod-Shift-ArrowUp',
-                run: commands.selectPreviousBlock,
-                preventDefault: true
-            },
-            {
-                key: 'Mod-Shift-ArrowDown',
-                run: commands.selectNextBlock,
-                preventDefault: true
-            },
-
-            // 块编辑命令
-            {
-                key: 'Mod-Shift-d',
-                run: commands.deleteBlock(editorOptions),
-                preventDefault: true
-            },
-            {
-                key: 'Alt-Mod-ArrowUp',
-                run: commands.moveCurrentBlockUp,
-                preventDefault: true
-            },
-            {
-                key: 'Alt-Mod-ArrowDown',
-                run: commands.moveCurrentBlockDown,
-                preventDefault: true
-            },
-
-            // 行编辑命令
-            {
-                key: 'Mod-Shift-k',  // 删除行
-                run: deleteLineCommand,
-                preventDefault: true
-            },
-            {
-                key: 'Alt-ArrowUp',  // 向上移动行
-                run: moveLineUp,
-                preventDefault: true
-            },
-            {
-                key: 'Alt-ArrowDown',  // 向下移动行
-                run: moveLineDown,
-                preventDefault: true
-            },
-            {
-                key: 'Ctrl-t',  // 字符转置
-                run: transposeChars,
-                preventDefault: true
-            },
-            
-            // 代码格式化命令
-            {
-                key: 'Mod-Shift-f',  // 格式化代码
-                run: commands.formatCurrentBlock,
-                preventDefault: true
-            },
-        ])
     ];
-
-    return extensions;
 }
 
 
@@ -271,7 +164,6 @@ export {
     cutCommand,
     pasteCommand,
     getCopyPasteExtensions,
-    getCopyPasteKeymap
 } from './copyPaste';
 
 // 删除行功能

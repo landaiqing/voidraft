@@ -15,6 +15,7 @@ import {
   createSaveShortcutPlugin,
   createFontExtensionFromBackend,
   updateFontConfig,
+  createDynamicKeymapExtension,
 } from '@/views/editor/extensions';
 import { createThemeExtension, updateEditorTheme } from '@/views/editor/extensions/themeExtension';
 import { useThemeStore } from './themeStore';
@@ -169,8 +170,12 @@ export const useEditorStore = defineStore('editor', () => {
             }
         });
 
+        // 创建动态快捷键扩展
+        const keymapExtension = await createDynamicKeymapExtension();
+
         // 组合所有扩展
         const extensions: Extension[] = [
+            keymapExtension,
             themeExtension,
             ...basicExtensions,
             ...tabExtensions,

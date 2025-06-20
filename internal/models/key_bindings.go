@@ -4,9 +4,8 @@ import "time"
 
 // KeyBinding 单个快捷键绑定
 type KeyBinding struct {
-	Action    KeyBindingAction   `json:"action"`    // 快捷键动作
+	Command   KeyBindingCommand  `json:"command"`   // 快捷键动作
 	Category  KeyBindingCategory `json:"category"`  // 快捷键分类
-	Scope     KeyBindingScope    `json:"scope"`     // 快捷键作用域
 	Key       string             `json:"key"`       // 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
 	Enabled   bool               `json:"enabled"`   // 是否启用
 	IsDefault bool               `json:"isDefault"` // 是否为默认快捷键
@@ -16,77 +15,80 @@ type KeyBinding struct {
 type KeyBindingCategory string
 
 const (
-	CategorySearch     KeyBindingCategory = "search"     // 搜索相关
-	CategoryEdit       KeyBindingCategory = "edit"       // 编辑相关
-	CategoryCodeBlock  KeyBindingCategory = "codeblock"  // 代码块相关
-	CategoryNavigation KeyBindingCategory = "navigation" // 导航相关
-	CategoryView       KeyBindingCategory = "view"       // 视图相关
-	CategoryFile       KeyBindingCategory = "file"       // 文件相关
-	CategoryApp        KeyBindingCategory = "app"        // 应用相关
+	CategorySearch    KeyBindingCategory = "search"  // 搜索相关
+	CategoryEdit      KeyBindingCategory = "edit"    // 编辑相关
+	CategoryCodeBlock KeyBindingCategory = "block"   // 代码块相关
+	CategoryHistory   KeyBindingCategory = "history" // 历史记录相关
+	CategoryFold      KeyBindingCategory = "fold"    // 代码折叠相关
 )
 
-// KeyBindingScope 快捷键作用域
-type KeyBindingScope string
-
-const (
-	ScopeGlobal KeyBindingScope = "global" // 全局作用域
-	ScopeEditor KeyBindingScope = "editor" // 编辑器作用域
-	ScopeSearch KeyBindingScope = "search" // 搜索面板作用域
-)
-
-// KeyBindingAction 快捷键动作类型
-type KeyBindingAction string
+// KeyBindingCommand 快捷键命令
+type KeyBindingCommand string
 
 const (
 	// 搜索相关
-	ActionShowSearch      KeyBindingAction = "showSearch"      // 显示搜索
-	ActionHideSearch      KeyBindingAction = "hideSearch"      // 隐藏搜索
-	ActionFindNext        KeyBindingAction = "findNext"        // 查找下一个
-	ActionFindPrevious    KeyBindingAction = "findPrevious"    // 查找上一个
-	ActionShowReplace     KeyBindingAction = "showReplace"     // 显示替换
-	ActionReplaceNext     KeyBindingAction = "replaceNext"     // 替换下一个
-	ActionReplaceAll      KeyBindingAction = "replaceAll"      // 替换全部
-	ActionToggleCase      KeyBindingAction = "toggleCase"      // 切换大小写匹配
-	ActionToggleWholeWord KeyBindingAction = "toggleWholeWord" // 切换全词匹配
-	ActionToggleRegex     KeyBindingAction = "toggleRegex"     // 切换正则表达式
-
-	// 编辑相关
-	ActionSelectAll     KeyBindingAction = "selectAll"     // 全选
-	ActionCopy          KeyBindingAction = "copy"          // 复制
-	ActionCut           KeyBindingAction = "cut"           // 剪切
-	ActionPaste         KeyBindingAction = "paste"         // 粘贴
-	ActionUndo          KeyBindingAction = "undo"          // 撤销
-	ActionRedo          KeyBindingAction = "redo"          // 重做
-	ActionDuplicateLine KeyBindingAction = "duplicateLine" // 复制行
-	ActionDeleteLine    KeyBindingAction = "deleteLine"    // 删除行
-	ActionMoveLineUp    KeyBindingAction = "moveLineUp"    // 上移行
-	ActionMoveLineDown  KeyBindingAction = "moveLineDown"  // 下移行
-	ActionToggleComment KeyBindingAction = "toggleComment" // 切换注释
-	ActionIndent        KeyBindingAction = "indent"        // 缩进
-	ActionOutdent       KeyBindingAction = "outdent"       // 取消缩进
+	ShowSearchCommand        KeyBindingCommand = "showSearch"        // 显示搜索
+	HideSearchCommand        KeyBindingCommand = "hideSearch"        // 隐藏搜索
+	SearchToggleCaseCommand  KeyBindingCommand = "searchToggleCase"  // 搜索切换大小写
+	SearchToggleWordCommand  KeyBindingCommand = "searchToggleWord"  // 搜索切换整词
+	SearchToggleRegexCommand KeyBindingCommand = "searchToggleRegex" // 搜索切换正则
+	SearchShowReplaceCommand KeyBindingCommand = "searchShowReplace" // 显示替换
+	SearchReplaceAllCommand  KeyBindingCommand = "searchReplaceAll"  // 替换全部
 
 	// 代码块相关
-	ActionNewCodeBlock    KeyBindingAction = "newCodeBlock"    // 新建代码块
-	ActionDeleteCodeBlock KeyBindingAction = "deleteCodeBlock" // 删除代码块
-	ActionSelectCodeBlock KeyBindingAction = "selectCodeBlock" // 选择代码块
-	ActionFormatCode      KeyBindingAction = "formatCode"      // 格式化代码
-	ActionChangeLanguage  KeyBindingAction = "changeLanguage"  // 更改语言
+	BlockSelectAllCommand        KeyBindingCommand = "blockSelectAll"        // 块内选择全部
+	BlockAddAfterCurrentCommand  KeyBindingCommand = "blockAddAfterCurrent"  // 在当前块后添加新块
+	BlockAddAfterLastCommand     KeyBindingCommand = "blockAddAfterLast"     // 在最后添加新块
+	BlockAddBeforeCurrentCommand KeyBindingCommand = "blockAddBeforeCurrent" // 在当前块前添加新块
+	BlockGotoPreviousCommand     KeyBindingCommand = "blockGotoPrevious"     // 跳转到上一个块
+	BlockGotoNextCommand         KeyBindingCommand = "blockGotoNext"         // 跳转到下一个块
+	BlockSelectPreviousCommand   KeyBindingCommand = "blockSelectPrevious"   // 选择上一个块
+	BlockSelectNextCommand       KeyBindingCommand = "blockSelectNext"       // 选择下一个块
+	BlockDeleteCommand           KeyBindingCommand = "blockDelete"           // 删除当前块
+	BlockMoveUpCommand           KeyBindingCommand = "blockMoveUp"           // 向上移动当前块
+	BlockMoveDownCommand         KeyBindingCommand = "blockMoveDown"         // 向下移动当前块
+	BlockDeleteLineCommand       KeyBindingCommand = "blockDeleteLine"       // 删除行
+	BlockMoveLineUpCommand       KeyBindingCommand = "blockMoveLineUp"       // 向上移动行
+	BlockMoveLineDownCommand     KeyBindingCommand = "blockMoveLineDown"     // 向下移动行
+	BlockTransposeCharsCommand   KeyBindingCommand = "blockTransposeChars"   // 字符转置
+	BlockFormatCommand           KeyBindingCommand = "blockFormat"           // 格式化代码块
+	BlockCopyCommand             KeyBindingCommand = "blockCopy"             // 复制
+	BlockCutCommand              KeyBindingCommand = "blockCut"              // 剪切
+	BlockPasteCommand            KeyBindingCommand = "blockPaste"            // 粘贴
 
-	// 导航相关
-	ActionGoToLine   KeyBindingAction = "goToLine"   // 跳转到行
-	ActionFoldAll    KeyBindingAction = "foldAll"    // 折叠所有
-	ActionUnfoldAll  KeyBindingAction = "unfoldAll"  // 展开所有
-	ActionToggleFold KeyBindingAction = "toggleFold" // 切换折叠
+	// 历史记录相关
+	HistoryUndoCommand          KeyBindingCommand = "historyUndo"          // 撤销
+	HistoryRedoCommand          KeyBindingCommand = "historyRedo"          // 重做
+	HistoryUndoSelectionCommand KeyBindingCommand = "historyUndoSelection" // 撤销选择
+	HistoryRedoSelectionCommand KeyBindingCommand = "historyRedoSelection" // 重做选择
 
-	// 视图相关
-	ActionZoomIn            KeyBindingAction = "zoomIn"            // 放大
-	ActionZoomOut           KeyBindingAction = "zoomOut"           // 缩小
-	ActionResetZoom         KeyBindingAction = "resetZoom"         // 重置缩放
-	ActionToggleMinimap     KeyBindingAction = "toggleMinimap"     // 切换小地图
-	ActionToggleLineNumbers KeyBindingAction = "toggleLineNumbers" // 切换行号
+	// 代码折叠相关
+	FoldCodeCommand   KeyBindingCommand = "foldCode"   // 折叠代码
+	UnfoldCodeCommand KeyBindingCommand = "unfoldCode" // 展开代码
+	FoldAllCommand    KeyBindingCommand = "foldAll"    // 折叠全部
+	UnfoldAllCommand  KeyBindingCommand = "unfoldAll"  // 展开全部
 
-	// 文件相关
-	ActionSave KeyBindingAction = "save" // 保存
+	// 编辑相关
+	CursorSyntaxLeftCommand       KeyBindingCommand = "cursorSyntaxLeft"       // 光标按语法左移
+	CursorSyntaxRightCommand      KeyBindingCommand = "cursorSyntaxRight"      // 光标按语法右移
+	SelectSyntaxLeftCommand       KeyBindingCommand = "selectSyntaxLeft"       // 按语法选择左侧
+	SelectSyntaxRightCommand      KeyBindingCommand = "selectSyntaxRight"      // 按语法选择右侧
+	CopyLineUpCommand             KeyBindingCommand = "copyLineUp"             // 向上复制行
+	CopyLineDownCommand           KeyBindingCommand = "copyLineDown"           // 向下复制行
+	InsertBlankLineCommand        KeyBindingCommand = "insertBlankLine"        // 插入空行
+	SelectLineCommand             KeyBindingCommand = "selectLine"             // 选择行
+	SelectParentSyntaxCommand     KeyBindingCommand = "selectParentSyntax"     // 选择父级语法
+	IndentLessCommand             KeyBindingCommand = "indentLess"             // 减少缩进
+	IndentMoreCommand             KeyBindingCommand = "indentMore"             // 增加缩进
+	IndentSelectionCommand        KeyBindingCommand = "indentSelection"        // 缩进选择
+	CursorMatchingBracketCommand  KeyBindingCommand = "cursorMatchingBracket"  // 光标到匹配括号
+	ToggleCommentCommand          KeyBindingCommand = "toggleComment"          // 切换注释
+	ToggleBlockCommentCommand     KeyBindingCommand = "toggleBlockComment"     // 切换块注释
+	InsertNewlineAndIndentCommand KeyBindingCommand = "insertNewlineAndIndent" // 插入新行并缩进
+	DeleteCharBackwardCommand     KeyBindingCommand = "deleteCharBackward"     // 向后删除字符
+	DeleteCharForwardCommand      KeyBindingCommand = "deleteCharForward"      // 向前删除字符
+	DeleteGroupBackwardCommand    KeyBindingCommand = "deleteGroupBackward"    // 向后删除组
+	DeleteGroupForwardCommand     KeyBindingCommand = "deleteGroupForward"     // 向前删除组
 )
 
 // KeyBindingMetadata 快捷键配置元数据
@@ -115,308 +117,388 @@ func NewDefaultKeyBindings() []KeyBinding {
 	return []KeyBinding{
 		// 搜索相关快捷键
 		{
-			Action:    ActionShowSearch,
+			Command:   ShowSearchCommand,
 			Category:  CategorySearch,
-			Scope:     ScopeGlobal,
 			Key:       "Mod-f",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionHideSearch,
+			Command:   HideSearchCommand,
 			Category:  CategorySearch,
-			Scope:     ScopeSearch,
 			Key:       "Escape",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionFindNext,
+			Command:   SearchToggleCaseCommand,
 			Category:  CategorySearch,
-			Scope:     ScopeSearch,
-			Key:       "Enter",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionFindPrevious,
-			Category:  CategorySearch,
-			Scope:     ScopeSearch,
-			Key:       "Shift-Enter",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionShowReplace,
-			Category:  CategorySearch,
-			Scope:     ScopeSearch,
-			Key:       "Mod-h",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionReplaceAll,
-			Category:  CategorySearch,
-			Scope:     ScopeSearch,
-			Key:       "Mod-Alt-Enter",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionToggleCase,
-			Category:  CategorySearch,
-			Scope:     ScopeSearch,
 			Key:       "Alt-c",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionToggleWholeWord,
+			Command:   SearchToggleWordCommand,
 			Category:  CategorySearch,
-			Scope:     ScopeSearch,
 			Key:       "Alt-w",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionToggleRegex,
+			Command:   SearchToggleRegexCommand,
 			Category:  CategorySearch,
-			Scope:     ScopeSearch,
 			Key:       "Alt-r",
 			Enabled:   true,
 			IsDefault: true,
 		},
-
-		// 编辑相关快捷键
 		{
-			Action:    ActionSelectAll,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-a",
+			Command:   SearchShowReplaceCommand,
+			Category:  CategorySearch,
+			Key:       "Mod-h",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionCopy,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-c",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionCut,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-x",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionPaste,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-v",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionUndo,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-z",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionRedo,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-y",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionDuplicateLine,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-d",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionDeleteLine,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-Shift-k",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionMoveLineUp,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Alt-ArrowUp",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionMoveLineDown,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Alt-ArrowDown",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionToggleComment,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Mod-/",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionIndent,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Tab",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionOutdent,
-			Category:  CategoryEdit,
-			Scope:     ScopeEditor,
-			Key:       "Shift-Tab",
+			Command:   SearchReplaceAllCommand,
+			Category:  CategorySearch,
+			Key:       "Mod-Alt-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
 		// 代码块相关快捷键
 		{
-			Action:    ActionNewCodeBlock,
+			Command:   BlockSelectAllCommand,
 			Category:  CategoryCodeBlock,
-			Scope:     ScopeEditor,
-			Key:       "Mod-Alt-n",
+			Key:       "Mod-a",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionDeleteCodeBlock,
+			Command:   BlockAddAfterCurrentCommand,
 			Category:  CategoryCodeBlock,
-			Scope:     ScopeEditor,
-			Key:       "Mod-Alt-d",
+			Key:       "Mod-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionSelectCodeBlock,
+			Command:   BlockAddAfterLastCommand,
 			Category:  CategoryCodeBlock,
-			Scope:     ScopeEditor,
-			Key:       "Mod-Alt-a",
+			Key:       "Mod-Shift-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionFormatCode,
+			Command:   BlockAddBeforeCurrentCommand,
 			Category:  CategoryCodeBlock,
-			Scope:     ScopeEditor,
-			Key:       "Mod-Alt-f",
+			Key:       "Alt-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionChangeLanguage,
+			Command:   BlockGotoPreviousCommand,
 			Category:  CategoryCodeBlock,
-			Scope:     ScopeEditor,
-			Key:       "Mod-Alt-l",
+			Key:       "Mod-ArrowUp",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockGotoNextCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-ArrowDown",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockSelectPreviousCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-Shift-ArrowUp",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockSelectNextCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-Shift-ArrowDown",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockDeleteCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-Shift-d",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockMoveUpCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Alt-Mod-ArrowUp",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockMoveDownCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Alt-Mod-ArrowDown",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockDeleteLineCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-Shift-k",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockMoveLineUpCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Alt-ArrowUp",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockMoveLineDownCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Alt-ArrowDown",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockTransposeCharsCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Ctrl-t",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockFormatCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-Shift-f",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockCopyCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-c",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockCutCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-x",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   BlockPasteCommand,
+			Category:  CategoryCodeBlock,
+			Key:       "Mod-v",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
-		// 导航相关快捷键
+		// 历史记录相关快捷键
 		{
-			Action:    ActionGoToLine,
-			Category:  CategoryNavigation,
-			Scope:     ScopeEditor,
-			Key:       "Mod-g",
+			Command:   HistoryUndoCommand,
+			Category:  CategoryHistory,
+			Key:       "Mod-z",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionFoldAll,
-			Category:  CategoryNavigation,
-			Scope:     ScopeEditor,
-			Key:       "Mod-k Mod-0",
+			Command:   HistoryRedoCommand,
+			Category:  CategoryHistory,
+			Key:       "Mod-Shift-z",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionUnfoldAll,
-			Category:  CategoryNavigation,
-			Scope:     ScopeEditor,
-			Key:       "Mod-k Mod-j",
+			Command:   HistoryUndoSelectionCommand,
+			Category:  CategoryHistory,
+			Key:       "Mod-u",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionToggleFold,
-			Category:  CategoryNavigation,
-			Scope:     ScopeEditor,
-			Key:       "Mod-k Mod-l",
+			Command:   HistoryRedoSelectionCommand,
+			Category:  CategoryHistory,
+			Key:       "Mod-Shift-u",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
-		// 视图相关快捷键
+		// 代码折叠相关快捷键
 		{
-			Action:    ActionZoomIn,
-			Category:  CategoryView,
-			Scope:     ScopeGlobal,
-			Key:       "Mod-=",
+			Command:   FoldCodeCommand,
+			Category:  CategoryFold,
+			Key:       "Ctrl-Shift-[",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionZoomOut,
-			Category:  CategoryView,
-			Scope:     ScopeGlobal,
-			Key:       "Mod--",
+			Command:   UnfoldCodeCommand,
+			Category:  CategoryFold,
+			Key:       "Ctrl-Shift-]",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionResetZoom,
-			Category:  CategoryView,
-			Scope:     ScopeGlobal,
-			Key:       "Mod-0",
+			Command:   FoldAllCommand,
+			Category:  CategoryFold,
+			Key:       "Ctrl-Alt-[",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
-			Action:    ActionToggleMinimap,
-			Category:  CategoryView,
-			Scope:     ScopeGlobal,
-			Key:       "Mod-m",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Action:    ActionToggleLineNumbers,
-			Category:  CategoryView,
-			Scope:     ScopeGlobal,
-			Key:       "Mod-l",
+			Command:   UnfoldAllCommand,
+			Category:  CategoryFold,
+			Key:       "Ctrl-Alt-]",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
-		// 文件相关快捷键
+		// 编辑相关快捷键 (避免冲突的快捷键)
 		{
-			Action:    ActionSave,
-			Category:  CategoryFile,
-			Scope:     ScopeGlobal,
-			Key:       "Mod-s",
+			Command:   CursorSyntaxLeftCommand,
+			Category:  CategoryEdit,
+			Key:       "Alt-ArrowLeft",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   CursorSyntaxRightCommand,
+			Category:  CategoryEdit,
+			Key:       "Alt-ArrowRight",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   SelectSyntaxLeftCommand,
+			Category:  CategoryEdit,
+			Key:       "Shift-Alt-ArrowLeft",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   SelectSyntaxRightCommand,
+			Category:  CategoryEdit,
+			Key:       "Shift-Alt-ArrowRight",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   CopyLineUpCommand,
+			Category:  CategoryEdit,
+			Key:       "Shift-Alt-ArrowUp",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   CopyLineDownCommand,
+			Category:  CategoryEdit,
+			Key:       "Shift-Alt-ArrowDown",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   InsertBlankLineCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-Enter",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   SelectLineCommand,
+			Category:  CategoryEdit,
+			Key:       "Alt-l",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   SelectParentSyntaxCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-i",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   IndentLessCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-[",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   IndentMoreCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-]",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   IndentSelectionCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-Alt-\\",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   CursorMatchingBracketCommand,
+			Category:  CategoryEdit,
+			Key:       "Shift-Ctrl-\\",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   ToggleCommentCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-/",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   ToggleBlockCommentCommand,
+			Category:  CategoryEdit,
+			Key:       "Shift-Alt-a",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   InsertNewlineAndIndentCommand,
+			Category:  CategoryEdit,
+			Key:       "Enter",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   DeleteCharBackwardCommand,
+			Category:  CategoryEdit,
+			Key:       "Backspace",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   DeleteCharForwardCommand,
+			Category:  CategoryEdit,
+			Key:       "Delete",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   DeleteGroupBackwardCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-Backspace",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   DeleteGroupForwardCommand,
+			Category:  CategoryEdit,
+			Key:       "Ctrl-Delete",
 			Enabled:   true,
 			IsDefault: true,
 		},

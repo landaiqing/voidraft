@@ -17,16 +17,16 @@ import * as models$0 from "../models/models.js";
 /**
  * DisableKeyBinding 禁用快捷键
  */
-export function DisableKeyBinding(action: models$0.KeyBindingAction): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1594003006, action) as any;
+export function DisableKeyBinding(command: models$0.KeyBindingCommand): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1594003006, command) as any;
     return $resultPromise;
 }
 
 /**
  * EnableKeyBinding 启用快捷键
  */
-export function EnableKeyBinding(action: models$0.KeyBindingAction): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1462644129, action) as any;
+export function EnableKeyBinding(command: models$0.KeyBindingCommand): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1462644129, command) as any;
     return $resultPromise;
 }
 
@@ -55,10 +55,10 @@ export function GetAllKeyBindings(): Promise<models$0.KeyBinding[]> & { cancel()
 }
 
 /**
- * GetKeyBindingByAction 根据动作获取快捷键
+ * GetKeyBindingByCommand 根据命令获取快捷键
  */
-export function GetKeyBindingByAction(action: models$0.KeyBindingAction): Promise<models$0.KeyBinding | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(752637777, action) as any;
+export function GetKeyBindingByCommand(command: models$0.KeyBindingCommand): Promise<models$0.KeyBinding | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3066982544, command) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType2($result);
     }) as any;
@@ -91,34 +91,10 @@ export function GetKeyBindingConfig(): Promise<models$0.KeyBindingConfig | null>
 }
 
 /**
- * GetKeyBindingScopes 获取所有快捷键作用域
- */
-export function GetKeyBindingScopes(): Promise<models$0.KeyBindingScope[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2984736455) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType6($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
  * GetKeyBindingsByCategory 根据分类获取快捷键
  */
 export function GetKeyBindingsByCategory(category: models$0.KeyBindingCategory): Promise<models$0.KeyBinding[]> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1686146606, category) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetKeyBindingsByScope 根据作用域获取快捷键
- */
-export function GetKeyBindingsByScope(scope: models$0.KeyBindingScope): Promise<models$0.KeyBinding[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1179712594, scope) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;
@@ -145,16 +121,16 @@ export function ResetAllKeyBindings(): Promise<void> & { cancel(): void } {
 /**
  * ResetKeyBinding 重置快捷键到默认值
  */
-export function ResetKeyBinding(action: models$0.KeyBindingAction): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3466323405, action) as any;
+export function ResetKeyBinding(command: models$0.KeyBindingCommand): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3466323405, command) as any;
     return $resultPromise;
 }
 
 /**
  * UpdateKeyBinding 更新快捷键
  */
-export function UpdateKeyBinding(action: models$0.KeyBindingAction, newKey: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1469368983, action, newKey) as any;
+export function UpdateKeyBinding(command: models$0.KeyBindingCommand, newKey: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1469368983, command, newKey) as any;
     return $resultPromise;
 }
 
@@ -165,4 +141,3 @@ const $$createType2 = $Create.Nullable($$createType0);
 const $$createType3 = $Create.Array($Create.Any);
 const $$createType4 = models$0.KeyBindingConfig.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $Create.Array($Create.Any);
