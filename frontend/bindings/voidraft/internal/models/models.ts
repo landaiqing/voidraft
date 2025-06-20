@@ -454,11 +454,6 @@ export class HotkeyCombo {
  */
 export class KeyBinding {
     /**
-     * 快捷键唯一标识
-     */
-    "id": string;
-
-    /**
      * 快捷键动作
      */
     "action": KeyBindingAction;
@@ -490,9 +485,6 @@ export class KeyBinding {
 
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
         if (!("action" in $$source)) {
             this["action"] = ("" as KeyBindingAction);
         }

@@ -26,14 +26,14 @@ type KeyBindingService struct {
 // KeyBindingError 快捷键错误
 type KeyBindingError struct {
 	Operation string // 操作名称
-	KeyID     string // 快捷键ID
+	Action    string // 快捷键Action
 	Err       error  // 原始错误
 }
 
 // Error 实现error接口
 func (e *KeyBindingError) Error() string {
-	if e.KeyID != "" {
-		return fmt.Sprintf("keybinding error during %s for key %s: %v", e.Operation, e.KeyID, e.Err)
+	if e.Action != "" {
+		return fmt.Sprintf("keybinding error during %s for action %s: %v", e.Operation, e.Action, e.Err)
 	}
 	return fmt.Sprintf("keybinding error during %s: %v", e.Operation, e.Err)
 }
@@ -245,29 +245,6 @@ func (kbs *KeyBindingService) GetKeyBindingsByScope(scope models.KeyBindingScope
 	return result, nil
 }
 
-// GetKeyBindingByID 根据ID获取快捷键
-func (kbs *KeyBindingService) GetKeyBindingByID(id string) (*models.KeyBinding, error) {
-	kbs.mu.RLock()
-	defer kbs.mu.RUnlock()
-
-	allKeyBindings, err := kbs.GetAllKeyBindings()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, kb := range allKeyBindings {
-		if kb.ID == id {
-			return &kb, nil
-		}
-	}
-
-	return nil, &KeyBindingError{
-		Operation: "get_keybinding_by_id",
-		KeyID:     id,
-		Err:       errors.New("keybinding not found"),
-	}
-}
-
 // GetKeyBindingByAction 根据动作获取快捷键
 func (kbs *KeyBindingService) GetKeyBindingByAction(action models.KeyBindingAction) (*models.KeyBinding, error) {
 	kbs.mu.RLock()
@@ -291,7 +268,7 @@ func (kbs *KeyBindingService) GetKeyBindingByAction(action models.KeyBindingActi
 }
 
 // UpdateKeyBinding 更新快捷键
-func (kbs *KeyBindingService) UpdateKeyBinding(id string, newKey string) error {
+func (kbs *KeyBindingService) UpdateKeyBinding(action models.KeyBindingAction, newKey string) error {
 	kbs.mu.Lock()
 	defer kbs.mu.Unlock()
 
@@ -299,16 +276,16 @@ func (kbs *KeyBindingService) UpdateKeyBinding(id string, newKey string) error {
 	if err := kbs.validateKeyFormat(newKey); err != nil {
 		return &KeyBindingError{
 			Operation: "update_keybinding",
-			KeyID:     id,
+			Action:    string(action),
 			Err:       fmt.Errorf("invalid key format: %v", err),
 		}
 	}
 
 	// 检查快捷键冲突
-	if err := kbs.checkKeyConflict(id, newKey); err != nil {
+	if err := kbs.checkKeyConflict(action, newKey); err != nil {
 		return &KeyBindingError{
 			Operation: "update_keybinding",
-			KeyID:     id,
+			Action:    string(action),
 			Err:       fmt.Errorf("key conflict: %v", err),
 		}
 	}
@@ -316,13 +293,13 @@ func (kbs *KeyBindingService) UpdateKeyBinding(id string, newKey string) error {
 	// 获取当前配置
 	config, err := kbs.GetKeyBindingConfig()
 	if err != nil {
-		return &KeyBindingError{Operation: "update_keybinding", KeyID: id, Err: err}
+		return &KeyBindingError{Operation: "update_keybinding", Action: string(action), Err: err}
 	}
 
 	// 查找并更新快捷键
 	found := false
 	for i, kb := range config.KeyBindings {
-		if kb.ID == id {
+		if kb.Action == action {
 			config.KeyBindings[i].Key = newKey
 			config.KeyBindings[i].IsDefault = false // 标记为非默认
 			found = true
@@ -333,7 +310,7 @@ func (kbs *KeyBindingService) UpdateKeyBinding(id string, newKey string) error {
 	if !found {
 		return &KeyBindingError{
 			Operation: "update_keybinding",
-			KeyID:     id,
+			Action:    string(action),
 			Err:       errors.New("keybinding not found"),
 		}
 	}
@@ -343,38 +320,38 @@ func (kbs *KeyBindingService) UpdateKeyBinding(id string, newKey string) error {
 
 	// 保存配置
 	if err := kbs.saveConfig(config); err != nil {
-		return &KeyBindingError{Operation: "update_keybinding", KeyID: id, Err: err}
+		return &KeyBindingError{Operation: "update_keybinding", Action: string(action), Err: err}
 	}
 
-	kbs.logger.Info("KeyBinding: Updated keybinding", "id", id, "newKey", newKey)
+	kbs.logger.Info("KeyBinding: Updated keybinding", "action", action, "newKey", newKey)
 	return nil
 }
 
 // EnableKeyBinding 启用快捷键
-func (kbs *KeyBindingService) EnableKeyBinding(id string) error {
-	return kbs.setKeyBindingEnabled(id, true)
+func (kbs *KeyBindingService) EnableKeyBinding(action models.KeyBindingAction) error {
+	return kbs.setKeyBindingEnabled(action, true)
 }
 
 // DisableKeyBinding 禁用快捷键
-func (kbs *KeyBindingService) DisableKeyBinding(id string) error {
-	return kbs.setKeyBindingEnabled(id, false)
+func (kbs *KeyBindingService) DisableKeyBinding(action models.KeyBindingAction) error {
+	return kbs.setKeyBindingEnabled(action, false)
 }
 
 // setKeyBindingEnabled 设置快捷键启用状态
-func (kbs *KeyBindingService) setKeyBindingEnabled(id string, enabled bool) error {
+func (kbs *KeyBindingService) setKeyBindingEnabled(action models.KeyBindingAction, enabled bool) error {
 	kbs.mu.Lock()
 	defer kbs.mu.Unlock()
 
 	// 获取当前配置
 	config, err := kbs.GetKeyBindingConfig()
 	if err != nil {
-		return &KeyBindingError{Operation: "set_keybinding_enabled", KeyID: id, Err: err}
+		return &KeyBindingError{Operation: "set_keybinding_enabled", Action: string(action), Err: err}
 	}
 
 	// 查找并更新快捷键
 	found := false
 	for i, kb := range config.KeyBindings {
-		if kb.ID == id {
+		if kb.Action == action {
 			config.KeyBindings[i].Enabled = enabled
 			found = true
 			break
@@ -384,7 +361,7 @@ func (kbs *KeyBindingService) setKeyBindingEnabled(id string, enabled bool) erro
 	if !found {
 		return &KeyBindingError{
 			Operation: "set_keybinding_enabled",
-			KeyID:     id,
+			Action:    string(action),
 			Err:       errors.New("keybinding not found"),
 		}
 	}
@@ -394,19 +371,19 @@ func (kbs *KeyBindingService) setKeyBindingEnabled(id string, enabled bool) erro
 
 	// 保存配置
 	if err := kbs.saveConfig(config); err != nil {
-		return &KeyBindingError{Operation: "set_keybinding_enabled", KeyID: id, Err: err}
+		return &KeyBindingError{Operation: "set_keybinding_enabled", Action: string(action), Err: err}
 	}
 
-	action := "enabled"
+	status := "enabled"
 	if !enabled {
-		action = "disabled"
+		status = "disabled"
 	}
-	kbs.logger.Info("KeyBinding: "+action+" keybinding", "id", id)
+	kbs.logger.Info("KeyBinding: "+status+" keybinding", "action", action)
 	return nil
 }
 
 // ResetKeyBinding 重置快捷键到默认值
-func (kbs *KeyBindingService) ResetKeyBinding(id string) error {
+func (kbs *KeyBindingService) ResetKeyBinding(action models.KeyBindingAction) error {
 	kbs.mu.Lock()
 	defer kbs.mu.Unlock()
 
@@ -414,7 +391,7 @@ func (kbs *KeyBindingService) ResetKeyBinding(id string) error {
 	defaultKeyBindings := models.NewDefaultKeyBindings()
 	var defaultKeyBinding *models.KeyBinding
 	for _, kb := range defaultKeyBindings {
-		if kb.ID == id {
+		if kb.Action == action {
 			defaultKeyBinding = &kb
 			break
 		}
@@ -423,7 +400,7 @@ func (kbs *KeyBindingService) ResetKeyBinding(id string) error {
 	if defaultKeyBinding == nil {
 		return &KeyBindingError{
 			Operation: "reset_keybinding",
-			KeyID:     id,
+			Action:    string(action),
 			Err:       errors.New("default keybinding not found"),
 		}
 	}
@@ -431,13 +408,13 @@ func (kbs *KeyBindingService) ResetKeyBinding(id string) error {
 	// 获取当前配置
 	config, err := kbs.GetKeyBindingConfig()
 	if err != nil {
-		return &KeyBindingError{Operation: "reset_keybinding", KeyID: id, Err: err}
+		return &KeyBindingError{Operation: "reset_keybinding", Action: string(action), Err: err}
 	}
 
 	// 查找并重置快捷键
 	found := false
 	for i, kb := range config.KeyBindings {
-		if kb.ID == id {
+		if kb.Action == action {
 			config.KeyBindings[i].Key = defaultKeyBinding.Key
 			config.KeyBindings[i].Enabled = defaultKeyBinding.Enabled
 			config.KeyBindings[i].IsDefault = true
@@ -449,7 +426,7 @@ func (kbs *KeyBindingService) ResetKeyBinding(id string) error {
 	if !found {
 		return &KeyBindingError{
 			Operation: "reset_keybinding",
-			KeyID:     id,
+			Action:    string(action),
 			Err:       errors.New("keybinding not found"),
 		}
 	}
@@ -459,10 +436,10 @@ func (kbs *KeyBindingService) ResetKeyBinding(id string) error {
 
 	// 保存配置
 	if err := kbs.saveConfig(config); err != nil {
-		return &KeyBindingError{Operation: "reset_keybinding", KeyID: id, Err: err}
+		return &KeyBindingError{Operation: "reset_keybinding", Action: string(action), Err: err}
 	}
 
-	kbs.logger.Info("KeyBinding: Reset keybinding to default", "id", id, "key", defaultKeyBinding.Key)
+	kbs.logger.Info("KeyBinding: Reset keybinding to default", "action", action, "key", defaultKeyBinding.Key)
 	return nil
 }
 
@@ -538,15 +515,15 @@ func (kbs *KeyBindingService) validateKeyFormat(key string) error {
 }
 
 // checkKeyConflict 检查快捷键冲突
-func (kbs *KeyBindingService) checkKeyConflict(excludeID, key string) error {
+func (kbs *KeyBindingService) checkKeyConflict(excludeAction models.KeyBindingAction, key string) error {
 	allKeyBindings, err := kbs.GetAllKeyBindings()
 	if err != nil {
 		return err
 	}
 
 	for _, kb := range allKeyBindings {
-		if kb.ID != excludeID && kb.Key == key && kb.Enabled {
-			return fmt.Errorf("key %s is already used by %s", key, kb.ID)
+		if kb.Action != excludeAction && kb.Key == key && kb.Enabled {
+			return fmt.Errorf("key %s is already used by %s", key, kb.Action)
 		}
 	}
 
@@ -593,23 +570,23 @@ func (kbs *KeyBindingService) ImportKeyBindings(keyBindings []models.KeyBinding)
 		if err := kbs.validateKeyFormat(kb.Key); err != nil {
 			return &KeyBindingError{
 				Operation: "import_keybindings",
-				KeyID:     kb.ID,
-				Err:       fmt.Errorf("invalid key format for %s: %v", kb.ID, err),
+				Action:    string(kb.Action),
+				Err:       fmt.Errorf("invalid key format for %s: %v", kb.Action, err),
 			}
 		}
 	}
 
 	// 检查重复的快捷键
-	keyMap := make(map[string]string)
+	keyMap := make(map[string]models.KeyBindingAction)
 	for _, kb := range keyBindings {
 		if kb.Enabled {
-			if existingID, exists := keyMap[kb.Key]; exists {
+			if existingAction, exists := keyMap[kb.Key]; exists {
 				return &KeyBindingError{
 					Operation: "import_keybindings",
-					Err:       fmt.Errorf("duplicate key %s found in %s and %s", kb.Key, existingID, kb.ID),
+					Err:       fmt.Errorf("duplicate key %s found in %s and %s", kb.Key, existingAction, kb.Action),
 				}
 			}
-			keyMap[kb.Key] = kb.ID
+			keyMap[kb.Key] = kb.Action
 		}
 	}
 

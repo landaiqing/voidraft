@@ -4,7 +4,6 @@ import "time"
 
 // KeyBinding 单个快捷键绑定
 type KeyBinding struct {
-	ID        string             `json:"id"`        // 快捷键唯一标识
 	Action    KeyBindingAction   `json:"action"`    // 快捷键动作
 	Category  KeyBindingCategory `json:"category"`  // 快捷键分类
 	Scope     KeyBindingScope    `json:"scope"`     // 快捷键作用域
@@ -116,7 +115,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 	return []KeyBinding{
 		// 搜索相关快捷键
 		{
-			ID:        "search.show",
 			Action:    ActionShowSearch,
 			Category:  CategorySearch,
 			Scope:     ScopeGlobal,
@@ -125,7 +123,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.hide",
 			Action:    ActionHideSearch,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -134,7 +131,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.findNext",
 			Action:    ActionFindNext,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -143,7 +139,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.findPrevious",
 			Action:    ActionFindPrevious,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -152,7 +147,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.showReplace",
 			Action:    ActionShowReplace,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -161,7 +155,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.replaceAll",
 			Action:    ActionReplaceAll,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -170,7 +163,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.toggleCase",
 			Action:    ActionToggleCase,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -179,7 +171,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.toggleWholeWord",
 			Action:    ActionToggleWholeWord,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -188,7 +179,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "search.toggleRegex",
 			Action:    ActionToggleRegex,
 			Category:  CategorySearch,
 			Scope:     ScopeSearch,
@@ -199,7 +189,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 
 		// 编辑相关快捷键
 		{
-			ID:        "edit.selectAll",
 			Action:    ActionSelectAll,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -208,7 +197,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.copy",
 			Action:    ActionCopy,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -217,7 +205,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.cut",
 			Action:    ActionCut,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -226,7 +213,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.paste",
 			Action:    ActionPaste,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -235,7 +221,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.undo",
 			Action:    ActionUndo,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -244,7 +229,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.redo",
 			Action:    ActionRedo,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -253,7 +237,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.duplicateLine",
 			Action:    ActionDuplicateLine,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -262,7 +245,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.deleteLine",
 			Action:    ActionDeleteLine,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -271,7 +253,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.moveLineUp",
 			Action:    ActionMoveLineUp,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -280,7 +261,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.moveLineDown",
 			Action:    ActionMoveLineDown,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -289,7 +269,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.toggleComment",
 			Action:    ActionToggleComment,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -298,7 +277,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.indent",
 			Action:    ActionIndent,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -307,7 +285,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "edit.outdent",
 			Action:    ActionOutdent,
 			Category:  CategoryEdit,
 			Scope:     ScopeEditor,
@@ -318,7 +295,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 
 		// 代码块相关快捷键
 		{
-			ID:        "codeblock.new",
 			Action:    ActionNewCodeBlock,
 			Category:  CategoryCodeBlock,
 			Scope:     ScopeEditor,
@@ -327,7 +303,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "codeblock.delete",
 			Action:    ActionDeleteCodeBlock,
 			Category:  CategoryCodeBlock,
 			Scope:     ScopeEditor,
@@ -336,7 +311,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "codeblock.select",
 			Action:    ActionSelectCodeBlock,
 			Category:  CategoryCodeBlock,
 			Scope:     ScopeEditor,
@@ -345,7 +319,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "codeblock.format",
 			Action:    ActionFormatCode,
 			Category:  CategoryCodeBlock,
 			Scope:     ScopeEditor,
@@ -354,7 +327,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "codeblock.changeLanguage",
 			Action:    ActionChangeLanguage,
 			Category:  CategoryCodeBlock,
 			Scope:     ScopeEditor,
@@ -365,7 +337,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 
 		// 导航相关快捷键
 		{
-			ID:        "navigation.goToLine",
 			Action:    ActionGoToLine,
 			Category:  CategoryNavigation,
 			Scope:     ScopeEditor,
@@ -374,7 +345,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "navigation.foldAll",
 			Action:    ActionFoldAll,
 			Category:  CategoryNavigation,
 			Scope:     ScopeEditor,
@@ -383,7 +353,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "navigation.unfoldAll",
 			Action:    ActionUnfoldAll,
 			Category:  CategoryNavigation,
 			Scope:     ScopeEditor,
@@ -392,7 +361,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "navigation.toggleFold",
 			Action:    ActionToggleFold,
 			Category:  CategoryNavigation,
 			Scope:     ScopeEditor,
@@ -403,7 +371,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 
 		// 视图相关快捷键
 		{
-			ID:        "view.zoomIn",
 			Action:    ActionZoomIn,
 			Category:  CategoryView,
 			Scope:     ScopeGlobal,
@@ -412,7 +379,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "view.zoomOut",
 			Action:    ActionZoomOut,
 			Category:  CategoryView,
 			Scope:     ScopeGlobal,
@@ -421,7 +387,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "view.resetZoom",
 			Action:    ActionResetZoom,
 			Category:  CategoryView,
 			Scope:     ScopeGlobal,
@@ -430,7 +395,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "view.toggleMinimap",
 			Action:    ActionToggleMinimap,
 			Category:  CategoryView,
 			Scope:     ScopeGlobal,
@@ -439,7 +403,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 		{
-			ID:        "view.toggleLineNumbers",
 			Action:    ActionToggleLineNumbers,
 			Category:  CategoryView,
 			Scope:     ScopeGlobal,
@@ -450,7 +413,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 
 		// 文件相关快捷键
 		{
-			ID:        "file.save",
 			Action:    ActionSave,
 			Category:  CategoryFile,
 			Scope:     ScopeGlobal,

@@ -17,16 +17,16 @@ import * as models$0 from "../models/models.js";
 /**
  * DisableKeyBinding 禁用快捷键
  */
-export function DisableKeyBinding(id: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1594003006, id) as any;
+export function DisableKeyBinding(action: models$0.KeyBindingAction): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1594003006, action) as any;
     return $resultPromise;
 }
 
 /**
  * EnableKeyBinding 启用快捷键
  */
-export function EnableKeyBinding(id: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1462644129, id) as any;
+export function EnableKeyBinding(action: models$0.KeyBindingAction): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1462644129, action) as any;
     return $resultPromise;
 }
 
@@ -59,18 +59,6 @@ export function GetAllKeyBindings(): Promise<models$0.KeyBinding[]> & { cancel()
  */
 export function GetKeyBindingByAction(action: models$0.KeyBindingAction): Promise<models$0.KeyBinding | null> & { cancel(): void } {
     let $resultPromise = $Call.ByID(752637777, action) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType2($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetKeyBindingByID 根据ID获取快捷键
- */
-export function GetKeyBindingByID(id: string): Promise<models$0.KeyBinding | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1578192526, id) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType2($result);
     }) as any;
@@ -157,16 +145,16 @@ export function ResetAllKeyBindings(): Promise<void> & { cancel(): void } {
 /**
  * ResetKeyBinding 重置快捷键到默认值
  */
-export function ResetKeyBinding(id: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3466323405, id) as any;
+export function ResetKeyBinding(action: models$0.KeyBindingAction): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3466323405, action) as any;
     return $resultPromise;
 }
 
 /**
  * UpdateKeyBinding 更新快捷键
  */
-export function UpdateKeyBinding(id: string, newKey: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1469368983, id, newKey) as any;
+export function UpdateKeyBinding(action: models$0.KeyBindingAction, newKey: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1469368983, action, newKey) as any;
     return $resultPromise;
 }
 
