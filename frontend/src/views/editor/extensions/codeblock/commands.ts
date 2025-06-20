@@ -282,11 +282,20 @@ export const deleteBlock = (options: EditorOptions): Command => ({ state, dispat
     
     if (blockIndex === blocks.length - 1) {
         // 如果是最后一个块，将光标移到前一个块的末尾
-        newCursorPos = blocks[blockIndex - 1].content.to;
+        // 需要计算删除后的位置
+        const prevBlock = blocks[blockIndex - 1];
+        newCursorPos = prevBlock.content.to;
     } else {
         // 否则移到下一个块的开始
-        newCursorPos = blocks[blockIndex + 1].content.from;
+        // 需要计算删除后的位置，下一个块会向前移动
+        const nextBlock = blocks[blockIndex + 1];
+        const blockLength = block.range.to - block.range.from;
+        newCursorPos = nextBlock.content.from - blockLength;
     }
+    
+    // 确保光标位置在有效范围内
+    const docLengthAfterDelete = state.doc.length - (block.range.to - block.range.from);
+    newCursorPos = Math.max(0, Math.min(newCursorPos, docLengthAfterDelete));
     
     dispatch(state.update({
         changes: {
