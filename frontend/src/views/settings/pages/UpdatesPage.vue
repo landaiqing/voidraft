@@ -103,7 +103,7 @@ const downloadUpdate = () => {
     margin-bottom: 20px;
     
     .current-version {
-      font-size: 14px;
+      font-size: 13px;
       
       .label {
         color: var(--text-muted);
@@ -123,7 +123,7 @@ const downloadUpdate = () => {
       border-radius: 4px;
       color: var(--settings-text);
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       transition: all 0.2s ease;
       display: flex;
       align-items: center;
@@ -172,7 +172,7 @@ const downloadUpdate = () => {
       margin-bottom: 16px;
       
       .update-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 500;
         color: #4a9eff;
       }
@@ -184,7 +184,7 @@ const downloadUpdate = () => {
         border-radius: 4px;
         color: #ffffff;
         cursor: pointer;
-        font-size: 13px;
+        font-size: 12px;
         transition: all 0.2s ease;
         
         &:hover {
@@ -199,7 +199,7 @@ const downloadUpdate = () => {
     
     .update-notes {
       .notes-title {
-        font-size: 13px;
+        font-size: 12px;
         color: var(--settings-text-secondary);
         margin-bottom: 8px;
       }
@@ -209,7 +209,7 @@ const downloadUpdate = () => {
         padding-left: 20px;
         
         li {
-          font-size: 13px;
+          font-size: 12px;
           color: var(--settings-text-secondary);
           margin-bottom: 6px;
           

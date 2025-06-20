@@ -9,7 +9,7 @@ import {
     LanguageType,
     SystemThemeType,
     TabType,
-} from '../../bindings/voidraft/internal/models/models';
+} from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {useErrorHandler} from '@/utils/errorHandler';
 import {ConfigUtils} from '@/utils/configUtils';
@@ -47,27 +47,27 @@ type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
 
 // 配置键映射
 const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
-    alwaysOnTop: 'general.always_on_top',
-    dataPath: 'general.data_path',
-    enableSystemTray: 'general.enable_system_tray',
-    enableGlobalHotkey: 'general.enable_global_hotkey',
-    globalHotkey: 'general.global_hotkey'
+    alwaysOnTop: 'general.alwaysOnTop',
+    dataPath: 'general.dataPath',
+    enableSystemTray: 'general.enableSystemTray',
+    enableGlobalHotkey: 'general.enableGlobalHotkey',
+    globalHotkey: 'general.globalHotkey'
 } as const;
 
 const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
-    fontSize: 'editing.font_size',
-    fontFamily: 'editing.font_family',
-    fontWeight: 'editing.font_weight',
-    lineHeight: 'editing.line_height',
-    enableTabIndent: 'editing.enable_tab_indent',
-    tabSize: 'editing.tab_size',
-    tabType: 'editing.tab_type',
-    autoSaveDelay: 'editing.auto_save_delay'
+    fontSize: 'editing.fontSize',
+    fontFamily: 'editing.fontFamily',
+    fontWeight: 'editing.fontWeight',
+    lineHeight: 'editing.lineHeight',
+    enableTabIndent: 'editing.enableTabIndent',
+    tabSize: 'editing.tabSize',
+    tabType: 'editing.tabType',
+    autoSaveDelay: 'editing.autoSaveDelay'
 } as const;
 
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
     language: 'appearance.language',
-    systemTheme: 'appearance.system_theme'
+    systemTheme: 'appearance.systemTheme'
 } as const;
 
 // 配置限制
@@ -141,11 +141,9 @@ const DEFAULT_CONFIG: AppConfig = {
         language: LanguageType.LangZhCN,
         systemTheme: SystemThemeType.SystemThemeDark
     },
-    keyBindings: {},
     updates: {},
     metadata: {
-        version: '1.0.0',
-        lastUpdated: null
+        lastUpdated: new Date().toString()
     }
 };
 
@@ -226,7 +224,6 @@ export const useConfigStore = defineStore('config', () => {
                 if (appConfig.general) Object.assign(state.config.general, appConfig.general);
                 if (appConfig.editing) Object.assign(state.config.editing, appConfig.editing);
                 if (appConfig.appearance) Object.assign(state.config.appearance, appConfig.appearance);
-                if (appConfig.keyBindings) Object.assign(state.config.keyBindings, appConfig.keyBindings);
                 if (appConfig.updates) Object.assign(state.config.updates, appConfig.updates);
                 if (appConfig.metadata) Object.assign(state.config.metadata, appConfig.metadata);
             }

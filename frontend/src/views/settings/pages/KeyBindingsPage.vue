@@ -132,7 +132,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     padding: 0 0 10px 0;
     border-bottom: 1px solid var(--settings-border);
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 500;
   }
   
@@ -159,7 +159,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
   .command-col {
     flex: 1;
     padding-right: 10px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--settings-text);
   }
   
@@ -176,9 +176,9 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
     
     .key-badge {
       background-color: var(--settings-input-bg);
-      padding: 3px 8px;
+      padding: 2px 6px;
       border-radius: 3px;
-      font-size: 12px;
+      font-size: 11px;
       border: 1px solid var(--settings-input-border);
       color: var(--settings-text);
     }
@@ -195,7 +195,7 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
       border-radius: 4px;
       color: var(--settings-text);
       cursor: pointer;
-      font-size: 13px;
+      font-size: 12px;
       transition: all 0.2s ease;
       
       &:hover {
@@ -217,6 +217,6 @@ const handleKeyDown = (event: KeyboardEvent, binding: KeyBinding) => {
   color: var(--text-muted);
   text-align: center;
   font-style: italic;
-  font-size: 14px;
+  font-size: 13px;
 }
 </style> 

@@ -29,11 +29,6 @@ export class AppConfig {
     "appearance": AppearanceConfig;
 
     /**
-     * 快捷键设置
-     */
-    "keyBindings": KeyBindingsConfig;
-
-    /**
      * 更新设置
      */
     "updates": UpdatesConfig;
@@ -54,9 +49,6 @@ export class AppConfig {
         if (!("appearance" in $$source)) {
             this["appearance"] = (new AppearanceConfig());
         }
-        if (!("keyBindings" in $$source)) {
-            this["keyBindings"] = (new KeyBindingsConfig());
-        }
         if (!("updates" in $$source)) {
             this["updates"] = (new UpdatesConfig());
         }
@@ -76,7 +68,6 @@ export class AppConfig {
         const $$createField2_0 = $$createType2;
         const $$createField3_0 = $$createType3;
         const $$createField4_0 = $$createType4;
-        const $$createField5_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("general" in $$parsedSource) {
             $$parsedSource["general"] = $$createField0_0($$parsedSource["general"]);
@@ -87,14 +78,11 @@ export class AppConfig {
         if ("appearance" in $$parsedSource) {
             $$parsedSource["appearance"] = $$createField2_0($$parsedSource["appearance"]);
         }
-        if ("keyBindings" in $$parsedSource) {
-            $$parsedSource["keyBindings"] = $$createField3_0($$parsedSource["keyBindings"]);
-        }
         if ("updates" in $$parsedSource) {
-            $$parsedSource["updates"] = $$createField4_0($$parsedSource["updates"]);
+            $$parsedSource["updates"] = $$createField3_0($$parsedSource["updates"]);
         }
         if ("metadata" in $$parsedSource) {
-            $$parsedSource["metadata"] = $$createField5_0($$parsedSource["metadata"]);
+            $$parsedSource["metadata"] = $$createField4_0($$parsedSource["metadata"]);
         }
         return new AppConfig($$parsedSource as Partial<AppConfig>);
     }
@@ -140,22 +128,14 @@ export class AppearanceConfig {
  */
 export class ConfigMetadata {
     /**
-     * 配置版本
-     */
-    "version": string;
-
-    /**
      * 最后更新时间
      */
-    "lastUpdated": time$0.Time;
+    "lastUpdated": string;
 
     /** Creates a new ConfigMetadata instance. */
     constructor($$source: Partial<ConfigMetadata> = {}) {
-        if (!("version" in $$source)) {
-            this["version"] = "";
-        }
         if (!("lastUpdated" in $$source)) {
-            this["lastUpdated"] = null;
+            this["lastUpdated"] = "";
         }
 
         Object.assign(this, $$source);
@@ -200,7 +180,7 @@ export class Document {
      * Creates a new Document instance from a string or object.
      */
     static createFrom($$source: any = {}): Document {
-        const $$createField0_0 = $$createType6;
+        const $$createField0_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("meta" in $$parsedSource) {
             $$parsedSource["meta"] = $$createField0_0($$parsedSource["meta"]);
@@ -401,7 +381,7 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField4_0 = $$createType7;
+        const $$createField4_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
             $$parsedSource["globalHotkey"] = $$createField4_0($$parsedSource["globalHotkey"]);
@@ -470,24 +450,425 @@ export class HotkeyCombo {
 }
 
 /**
- * KeyBindingsConfig 快捷键设置配置
+ * KeyBinding 单个快捷键绑定
  */
-export class KeyBindingsConfig {
+export class KeyBinding {
+    /**
+     * 快捷键唯一标识
+     */
+    "id": string;
 
-    /** Creates a new KeyBindingsConfig instance. */
-    constructor($$source: Partial<KeyBindingsConfig> = {}) {
+    /**
+     * 快捷键动作
+     */
+    "action": KeyBindingAction;
+
+    /**
+     * 快捷键分类
+     */
+    "category": KeyBindingCategory;
+
+    /**
+     * 快捷键作用域
+     */
+    "scope": KeyBindingScope;
+
+    /**
+     * 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
+     */
+    "key": string;
+
+    /**
+     * 是否启用
+     */
+    "enabled": boolean;
+
+    /**
+     * 是否为默认快捷键
+     */
+    "isDefault": boolean;
+
+    /** Creates a new KeyBinding instance. */
+    constructor($$source: Partial<KeyBinding> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("action" in $$source)) {
+            this["action"] = ("" as KeyBindingAction);
+        }
+        if (!("category" in $$source)) {
+            this["category"] = ("" as KeyBindingCategory);
+        }
+        if (!("scope" in $$source)) {
+            this["scope"] = ("" as KeyBindingScope);
+        }
+        if (!("key" in $$source)) {
+            this["key"] = "";
+        }
+        if (!("enabled" in $$source)) {
+            this["enabled"] = false;
+        }
+        if (!("isDefault" in $$source)) {
+            this["isDefault"] = false;
+        }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new KeyBindingsConfig instance from a string or object.
+     * Creates a new KeyBinding instance from a string or object.
      */
-    static createFrom($$source: any = {}): KeyBindingsConfig {
+    static createFrom($$source: any = {}): KeyBinding {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new KeyBindingsConfig($$parsedSource as Partial<KeyBindingsConfig>);
+        return new KeyBinding($$parsedSource as Partial<KeyBinding>);
     }
 }
+
+/**
+ * KeyBindingAction 快捷键动作类型
+ */
+export enum KeyBindingAction {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * 搜索相关
+     * 显示搜索
+     */
+    ActionShowSearch = "showSearch",
+
+    /**
+     * 隐藏搜索
+     */
+    ActionHideSearch = "hideSearch",
+
+    /**
+     * 查找下一个
+     */
+    ActionFindNext = "findNext",
+
+    /**
+     * 查找上一个
+     */
+    ActionFindPrevious = "findPrevious",
+
+    /**
+     * 显示替换
+     */
+    ActionShowReplace = "showReplace",
+
+    /**
+     * 替换下一个
+     */
+    ActionReplaceNext = "replaceNext",
+
+    /**
+     * 替换全部
+     */
+    ActionReplaceAll = "replaceAll",
+
+    /**
+     * 切换大小写匹配
+     */
+    ActionToggleCase = "toggleCase",
+
+    /**
+     * 切换全词匹配
+     */
+    ActionToggleWholeWord = "toggleWholeWord",
+
+    /**
+     * 切换正则表达式
+     */
+    ActionToggleRegex = "toggleRegex",
+
+    /**
+     * 编辑相关
+     * 全选
+     */
+    ActionSelectAll = "selectAll",
+
+    /**
+     * 复制
+     */
+    ActionCopy = "copy",
+
+    /**
+     * 剪切
+     */
+    ActionCut = "cut",
+
+    /**
+     * 粘贴
+     */
+    ActionPaste = "paste",
+
+    /**
+     * 撤销
+     */
+    ActionUndo = "undo",
+
+    /**
+     * 重做
+     */
+    ActionRedo = "redo",
+
+    /**
+     * 复制行
+     */
+    ActionDuplicateLine = "duplicateLine",
+
+    /**
+     * 删除行
+     */
+    ActionDeleteLine = "deleteLine",
+
+    /**
+     * 上移行
+     */
+    ActionMoveLineUp = "moveLineUp",
+
+    /**
+     * 下移行
+     */
+    ActionMoveLineDown = "moveLineDown",
+
+    /**
+     * 切换注释
+     */
+    ActionToggleComment = "toggleComment",
+
+    /**
+     * 缩进
+     */
+    ActionIndent = "indent",
+
+    /**
+     * 取消缩进
+     */
+    ActionOutdent = "outdent",
+
+    /**
+     * 代码块相关
+     * 新建代码块
+     */
+    ActionNewCodeBlock = "newCodeBlock",
+
+    /**
+     * 删除代码块
+     */
+    ActionDeleteCodeBlock = "deleteCodeBlock",
+
+    /**
+     * 选择代码块
+     */
+    ActionSelectCodeBlock = "selectCodeBlock",
+
+    /**
+     * 格式化代码
+     */
+    ActionFormatCode = "formatCode",
+
+    /**
+     * 更改语言
+     */
+    ActionChangeLanguage = "changeLanguage",
+
+    /**
+     * 导航相关
+     * 跳转到行
+     */
+    ActionGoToLine = "goToLine",
+
+    /**
+     * 折叠所有
+     */
+    ActionFoldAll = "foldAll",
+
+    /**
+     * 展开所有
+     */
+    ActionUnfoldAll = "unfoldAll",
+
+    /**
+     * 切换折叠
+     */
+    ActionToggleFold = "toggleFold",
+
+    /**
+     * 视图相关
+     * 放大
+     */
+    ActionZoomIn = "zoomIn",
+
+    /**
+     * 缩小
+     */
+    ActionZoomOut = "zoomOut",
+
+    /**
+     * 重置缩放
+     */
+    ActionResetZoom = "resetZoom",
+
+    /**
+     * 切换小地图
+     */
+    ActionToggleMinimap = "toggleMinimap",
+
+    /**
+     * 切换行号
+     */
+    ActionToggleLineNumbers = "toggleLineNumbers",
+
+    /**
+     * 文件相关
+     * 保存
+     */
+    ActionSave = "save",
+};
+
+/**
+ * KeyBindingCategory 快捷键分类
+ */
+export enum KeyBindingCategory {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * 搜索相关
+     */
+    CategorySearch = "search",
+
+    /**
+     * 编辑相关
+     */
+    CategoryEdit = "edit",
+
+    /**
+     * 代码块相关
+     */
+    CategoryCodeBlock = "codeblock",
+
+    /**
+     * 导航相关
+     */
+    CategoryNavigation = "navigation",
+
+    /**
+     * 视图相关
+     */
+    CategoryView = "view",
+
+    /**
+     * 文件相关
+     */
+    CategoryFile = "file",
+
+    /**
+     * 应用相关
+     */
+    CategoryApp = "app",
+};
+
+/**
+ * KeyBindingConfig 快捷键配置
+ */
+export class KeyBindingConfig {
+    /**
+     * 快捷键列表
+     */
+    "keyBindings": KeyBinding[];
+
+    /**
+     * 配置元数据
+     */
+    "metadata": KeyBindingMetadata;
+
+    /** Creates a new KeyBindingConfig instance. */
+    constructor($$source: Partial<KeyBindingConfig> = {}) {
+        if (!("keyBindings" in $$source)) {
+            this["keyBindings"] = [];
+        }
+        if (!("metadata" in $$source)) {
+            this["metadata"] = (new KeyBindingMetadata());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new KeyBindingConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): KeyBindingConfig {
+        const $$createField0_0 = $$createType8;
+        const $$createField1_0 = $$createType9;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("keyBindings" in $$parsedSource) {
+            $$parsedSource["keyBindings"] = $$createField0_0($$parsedSource["keyBindings"]);
+        }
+        if ("metadata" in $$parsedSource) {
+            $$parsedSource["metadata"] = $$createField1_0($$parsedSource["metadata"]);
+        }
+        return new KeyBindingConfig($$parsedSource as Partial<KeyBindingConfig>);
+    }
+}
+
+/**
+ * KeyBindingMetadata 快捷键配置元数据
+ */
+export class KeyBindingMetadata {
+    /**
+     * 最后更新时间
+     */
+    "lastUpdated": string;
+
+    /** Creates a new KeyBindingMetadata instance. */
+    constructor($$source: Partial<KeyBindingMetadata> = {}) {
+        if (!("lastUpdated" in $$source)) {
+            this["lastUpdated"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new KeyBindingMetadata instance from a string or object.
+     */
+    static createFrom($$source: any = {}): KeyBindingMetadata {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new KeyBindingMetadata($$parsedSource as Partial<KeyBindingMetadata>);
+    }
+}
+
+/**
+ * KeyBindingScope 快捷键作用域
+ */
+export enum KeyBindingScope {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * 全局作用域
+     */
+    ScopeGlobal = "global",
+
+    /**
+     * 编辑器作用域
+     */
+    ScopeEditor = "editor",
+
+    /**
+     * 搜索面板作用域
+     */
+    ScopeSearch = "search",
+};
 
 /**
  * LanguageType 语言类型定义
@@ -578,8 +959,10 @@ export class UpdatesConfig {
 const $$createType0 = GeneralConfig.createFrom;
 const $$createType1 = EditingConfig.createFrom;
 const $$createType2 = AppearanceConfig.createFrom;
-const $$createType3 = KeyBindingsConfig.createFrom;
-const $$createType4 = UpdatesConfig.createFrom;
-const $$createType5 = ConfigMetadata.createFrom;
-const $$createType6 = DocumentMeta.createFrom;
-const $$createType7 = HotkeyCombo.createFrom;
+const $$createType3 = UpdatesConfig.createFrom;
+const $$createType4 = ConfigMetadata.createFrom;
+const $$createType5 = DocumentMeta.createFrom;
+const $$createType6 = HotkeyCombo.createFrom;
+const $$createType7 = KeyBinding.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = KeyBindingMetadata.createFrom;

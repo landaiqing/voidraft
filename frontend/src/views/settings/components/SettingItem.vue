@@ -20,7 +20,7 @@ defineProps<{
 <style scoped lang="scss">
 .setting-item {
   display: flex;
-  padding: 14px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--settings-border);
   transition: background-color 0.15s ease;
   
@@ -35,24 +35,24 @@ defineProps<{
   
   .setting-info {
     flex: 1;
-    padding-right: 20px;
+    padding-right: 16px;
     
     .setting-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       color: var(--settings-text);
     }
     
     .setting-description {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--settings-text-secondary);
-      line-height: 1.5;
+      line-height: 1.4;
     }
   }
   
   .setting-control {
-    width: 200px;
+    width: 180px;
     display: flex;
     align-items: center;
     justify-content: flex-end;

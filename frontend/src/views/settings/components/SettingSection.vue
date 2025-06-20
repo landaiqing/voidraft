@@ -15,7 +15,7 @@ defineProps<{
 
 <style scoped lang="scss">
 .setting-section {
-  margin-bottom: 30px;
+  margin-bottom: 24px;
   background-color: var(--settings-card-bg);
   border-radius: 6px;
   overflow: hidden;
@@ -23,17 +23,17 @@ defineProps<{
   border: 1px solid var(--settings-border);
   
   .section-title {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     margin: 0;
-    padding: 12px 16px;
+    padding: 10px 14px;
     background-color: var(--settings-hover);
     color: var(--settings-text);
     border-bottom: 1px solid var(--settings-border);
   }
   
   .section-content {
-    padding: 8px 16px;
+    padding: 6px 14px;
   }
 }
 </style> 

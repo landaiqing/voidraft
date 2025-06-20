@@ -9,14 +9,15 @@ import (
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	configService    *ConfigService
-	documentService  *DocumentService
-	migrationService *MigrationService
-	systemService    *SystemService
-	hotkeyService    *HotkeyService
-	dialogService    *DialogService
-	trayService      *TrayService
-	logger           *log.LoggerService
+	configService     *ConfigService
+	documentService   *DocumentService
+	migrationService  *MigrationService
+	systemService     *SystemService
+	hotkeyService     *HotkeyService
+	dialogService     *DialogService
+	trayService       *TrayService
+	keyBindingService *KeyBindingService
+	logger            *log.LoggerService
 }
 
 // NewServiceManager 创建新的服务管理器实例
@@ -45,6 +46,9 @@ func NewServiceManager() *ServiceManager {
 	// 初始化托盘服务
 	trayService := NewTrayService(logger, configService)
 
+	// 初始化快捷键服务
+	keyBindingService := NewKeyBindingService(logger)
+
 	// 使用新的配置通知系统设置热键配置变更监听
 	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
@@ -71,14 +75,15 @@ func NewServiceManager() *ServiceManager {
 	}
 
 	return &ServiceManager{
-		configService:    configService,
-		documentService:  documentService,
-		migrationService: migrationService,
-		systemService:    systemService,
-		hotkeyService:    hotkeyService,
-		dialogService:    dialogService,
-		trayService:      trayService,
-		logger:           logger,
+		configService:     configService,
+		documentService:   documentService,
+		migrationService:  migrationService,
+		systemService:     systemService,
+		hotkeyService:     hotkeyService,
+		dialogService:     dialogService,
+		trayService:       trayService,
+		keyBindingService: keyBindingService,
+		logger:            logger,
 	}
 }
 
@@ -92,6 +97,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.hotkeyService),
 		application.NewService(sm.dialogService),
 		application.NewService(sm.trayService),
+		application.NewService(sm.keyBindingService),
 	}
 }
 
@@ -118,4 +124,9 @@ func (sm *ServiceManager) GetConfigService() *ConfigService {
 // GetTrayService 获取托盘服务实例
 func (sm *ServiceManager) GetTrayService() *TrayService {
 	return sm.trayService
+}
+
+// GetKeyBindingService 获取快捷键服务实例
+func (sm *ServiceManager) GetKeyBindingService() *KeyBindingService {
+	return sm.keyBindingService
 }

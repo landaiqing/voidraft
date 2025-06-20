@@ -472,7 +472,7 @@ onUnmounted(() => {
         border: 1px solid var(--settings-input-border);
         border-radius: 4px;
         color: var(--settings-text-secondary);
-        font-size: 13px;
+        font-size: 12px;
         transition: all 0.2s ease;
         
         &:hover {
@@ -493,10 +493,10 @@ onUnmounted(() => {
     padding: 8px 12px;
     background-color: var(--settings-input-bg);
     border: 1px solid var(--settings-input-border);
-    border-radius: 4px;
-    color: var(--settings-text);
-    font-size: 13px;
-    appearance: none;
+      border-radius: 4px;
+  color: var(--settings-text);
+  font-size: 12px;
+  appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23999999' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 8px center;
@@ -530,17 +530,17 @@ onUnmounted(() => {
     border-radius: 4px;
     margin-top: 8px;
     
-    .preview-label {
-      font-size: 12px;
-      color: var(--settings-text-secondary);
-    }
-    
-    .preview-hotkey {
-      font-size: 13px;
-      color: var(--settings-text);
-      font-weight: 500;
-      font-family: 'Consolas', 'Courier New', monospace;
-    }
+      .preview-label {
+    font-size: 11px;
+    color: var(--settings-text-secondary);
+  }
+  
+  .preview-hotkey {
+    font-size: 12px;
+    color: var(--settings-text);
+    font-weight: 500;
+    font-family: 'Consolas', 'Courier New', monospace;
+  }
   }
 }
 
@@ -558,7 +558,7 @@ onUnmounted(() => {
     margin-bottom: 12px;
     
     .setting-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       color: var(--settings-text);
     }
@@ -583,7 +583,7 @@ onUnmounted(() => {
       border: 1px solid var(--settings-input-border);
       border-radius: 4px;
       color: var(--settings-text);
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.2;
       transition: all 0.2s ease;
       cursor: pointer;

@@ -79,19 +79,19 @@ const updateSystemTheme = async (event: Event) => {
 }
 
 .select-input {
-  min-width: 150px;
-  padding: 8px 12px;
+  min-width: 140px;
+  padding: 6px 10px;
   border: 1px solid var(--settings-input-border);
   border-radius: 4px;
   background-color: var(--settings-input-bg);
   color: var(--settings-text);
-  font-size: 13px;
+  font-size: 12px;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 16px;
-  padding-right: 30px;
+  background-position: right 6px center;
+  background-size: 14px;
+  padding-right: 26px;
   transition: border-color 0.2s ease;
   
   &:focus {

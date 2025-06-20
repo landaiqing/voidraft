@@ -123,7 +123,12 @@ const handleToggleTabType = async () => {
 // 创建双向绑定的计算属性
 const enableTabIndent = computed({
   get: () => configStore.config.editing.enableTabIndent,
-  set: (value: boolean) => configStore.setEnableTabIndent(value)
+  set: async (value: boolean) => {
+    await safeCall(
+      () => configStore.setEnableTabIndent(value),
+      'config.tabIndentToggleFailed'
+    );
+  }
 });
 
 // 保存选项处理器
@@ -138,31 +143,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
   }
 };
 
-// 动态字体预览文本
-const fontPreviewText = computed(() => {
-  const currentFont = configStore.config.editing.fontFamily;
-  
-  // 根据字体类型返回不同的预览文本
-  if (currentFont.includes('HarmonyOS')) {
-    return '鸿蒙字体测试';
-  } else if (currentFont.includes('Microsoft YaHei')) {
-    return '微软雅黑测试';
-  } else if (currentFont.includes('PingFang')) {
-    return '苹方字体测试';
-  } else if (currentFont.includes('JetBrains')) {
-    return 'JetBrains Mono';
-  } else if (currentFont.includes('Fira Code')) {
-    return 'Fira Code Test';
-  } else if (currentFont.includes('Source Code')) {
-    return 'Source Code Pro';
-  } else if (currentFont.includes('Cascadia')) {
-    return 'Cascadia Code';
-  } else if (currentFont.includes('SF Mono') || currentFont.includes('Monaco')) {
-    return 'System Monospace';
-  } else {
-    return 'Font Preview';
-  }
-});
+
 </script>
 
 <template>
@@ -228,20 +209,7 @@ const fontPreviewText = computed(() => {
         </div>
       </SettingItem>
 
-      <div class="font-preview" :style="{ 
-        fontSize: `${configStore.config.editing.fontSize}px`,
-        fontFamily: configStore.config.editing.fontFamily,
-        fontWeight: configStore.config.editing.fontWeight,
-        lineHeight: configStore.config.editing.lineHeight
-      }">
-        <div class="preview-label">字体预览</div>
-        <div class="preview-text">
-          <span>function example() {</span>
-          <span class="indent">console.log("Hello, 世界!");</span>
-          <span class="indent">const message = "{{ fontPreviewText }}";</span>
-          <span>}</span>
-        </div>
-      </div>
+
     </SettingSection>
     
     <SettingSection :title="t('settings.tabSettings')">
@@ -314,7 +282,7 @@ const fontPreviewText = computed(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.2s ease;
     
     &:hover:not(:disabled) {
@@ -335,7 +303,7 @@ const fontPreviewText = computed(() => {
   span {
     min-width: 50px;
     text-align: center;
-    font-size: 14px;
+    font-size: 12px;
     color: var(--settings-text);
     background-color: var(--settings-input-bg);
     border: 1px solid var(--settings-input-border);
@@ -344,65 +312,7 @@ const fontPreviewText = computed(() => {
   }
 }
 
-.font-size-preview {
-  margin: 15px 0 5px 20px;
-  padding: 15px;
-  background-color: var(--settings-card-bg);
-  border: 1px solid var(--settings-border);
-  border-radius: 4px;
-  font-family: 'Consolas', 'Courier New', monospace;
-  
-  .preview-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  
-  .preview-text {
-    display: flex;
-    flex-direction: column;
-    
-    span {
-      line-height: 1.4;
-      color: var(--settings-text-secondary);
-    }
-    
-    .indent {
-      padding-left: 20px;
-      color: #4a9eff;
-    }
-  }
-}
 
-.font-preview {
-  margin: 15px 0 5px 20px;
-  padding: 15px;
-  background-color: var(--settings-card-bg);
-  border: 1px solid var(--settings-border);
-  border-radius: 4px;
-  
-  .preview-label {
-    font-size: 12px;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  
-  .preview-text {
-    display: flex;
-    flex-direction: column;
-    
-    span {
-      color: var(--settings-text-secondary);
-    }
-    
-    .indent {
-      padding-left: 20px;
-      color: #4a9eff;
-    }
-  }
-}
 
 .font-family-select,
 .font-weight-select {
@@ -412,7 +322,7 @@ const fontPreviewText = computed(() => {
   border-radius: 4px;
   background-color: var(--settings-input-bg);
   color: var(--settings-text);
-  font-size: 13px;
+  font-size: 12px;
   cursor: pointer;
   
   &:focus {
@@ -439,7 +349,7 @@ const fontPreviewText = computed(() => {
   border-radius: 4px;
   color: var(--settings-text);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
   text-align: center;
   transition: all 0.2s ease;
   
@@ -460,7 +370,7 @@ const fontPreviewText = computed(() => {
   border-radius: 4px;
   background-color: var(--settings-input-bg);
   color: var(--settings-text);
-  font-size: 13px;
+  font-size: 12px;
   
   &:focus {
     outline: none;

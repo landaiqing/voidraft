@@ -83,7 +83,7 @@ const goBackToEditor = async () => {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   .settings-sidebar {
-    width: 200px;
+    width: 180px;
     height: 100%;
     background-color: var(--settings-card-bg);
     border-right: 1px solid var(--settings-border);
@@ -92,7 +92,7 @@ const goBackToEditor = async () => {
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     
     .settings-header {
-      padding: 20px 16px;
+      padding: 16px 14px;
       border-bottom: 1px solid var(--settings-border);
       background-color: var(--settings-card-bg);
       
@@ -125,7 +125,7 @@ const goBackToEditor = async () => {
         }
         
         h1 {
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 600;
           margin: 0;
           color: var(--settings-text);
@@ -138,10 +138,10 @@ const goBackToEditor = async () => {
       padding: 10px 0;
       overflow-y: auto;
       
-      .nav-item {
+              .nav-item {
         display: flex;
         align-items: center;
-        padding: 12px 16px;
+        padding: 10px 14px;
         cursor: pointer;
         transition: all 0.2s ease;
         border-left: 3px solid transparent;
@@ -157,19 +157,19 @@ const goBackToEditor = async () => {
         }
         
         .nav-icon {
-          margin-right: 10px;
-          font-size: 16px;
+          margin-right: 8px;
+          font-size: 14px;
           opacity: 0.9;
         }
         
         .nav-text {
-          font-size: 14px;
+          font-size: 13px;
         }
       }
     }
     
     .settings-footer {
-      padding: 12px 16px 16px 16px;
+      padding: 10px 14px 14px 14px;
       border-top: 1px solid var(--settings-border);
       background-color: var(--settings-card-bg);
       
@@ -179,7 +179,7 @@ const goBackToEditor = async () => {
         gap: 8px;
         
         .section-title {
-          font-size: 10px;
+          font-size: 9px;
           color: var(--settings-text-secondary);
           font-weight: 500;
           margin-bottom: 0;
@@ -193,7 +193,7 @@ const goBackToEditor = async () => {
   .settings-content {
     flex: 1;
     height: 100%;
-    padding: 24px 24px 48px 24px;
+    padding: 20px 20px 40px 20px;
     overflow-y: auto;
     background-color: var(--settings-bg);
   }

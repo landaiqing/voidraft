@@ -1,6 +1,7 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -62,14 +63,14 @@ func NewConfigService(logger *log.LoggerService) *ConfigService {
 
 	// 固定配置路径和文件名
 	configPath := filepath.Join(currentDir, "config")
-	configName := "config"
+	configName := "settings"
 
 	// 创建 Viper 实例
 	v := viper.New()
 
 	// 配置 Viper
 	v.SetConfigName(configName)
-	v.SetConfigType("yaml")
+	v.SetConfigType("json")
 	v.AddConfigPath(configPath)
 
 	// 设置环境变量前缀
@@ -104,33 +105,32 @@ func setDefaults(v *viper.Viper) {
 	defaultConfig := models.NewDefaultAppConfig()
 
 	// 通用设置默认值
-	v.SetDefault("general.always_on_top", defaultConfig.General.AlwaysOnTop)
-	v.SetDefault("general.data_path", defaultConfig.General.DataPath)
-	v.SetDefault("general.enable_system_tray", defaultConfig.General.EnableSystemTray)
-	v.SetDefault("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
-	v.SetDefault("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
-	v.SetDefault("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
-	v.SetDefault("general.global_hotkey.alt", defaultConfig.General.GlobalHotkey.Alt)
-	v.SetDefault("general.global_hotkey.win", defaultConfig.General.GlobalHotkey.Win)
-	v.SetDefault("general.global_hotkey.key", defaultConfig.General.GlobalHotkey.Key)
+	v.SetDefault("general.alwaysOnTop", defaultConfig.General.AlwaysOnTop)
+	v.SetDefault("general.dataPath", defaultConfig.General.DataPath)
+	v.SetDefault("general.enableSystemTray", defaultConfig.General.EnableSystemTray)
+	v.SetDefault("general.enableGlobalHotkey", defaultConfig.General.EnableGlobalHotkey)
+	v.SetDefault("general.globalHotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
+	v.SetDefault("general.globalHotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
+	v.SetDefault("general.globalHotkey.alt", defaultConfig.General.GlobalHotkey.Alt)
+	v.SetDefault("general.globalHotkey.win", defaultConfig.General.GlobalHotkey.Win)
+	v.SetDefault("general.globalHotkey.key", defaultConfig.General.GlobalHotkey.Key)
 
 	// 编辑设置默认值
-	v.SetDefault("editing.font_size", defaultConfig.Editing.FontSize)
-	v.SetDefault("editing.font_family", defaultConfig.Editing.FontFamily)
-	v.SetDefault("editing.font_weight", defaultConfig.Editing.FontWeight)
-	v.SetDefault("editing.line_height", defaultConfig.Editing.LineHeight)
-	v.SetDefault("editing.enable_tab_indent", defaultConfig.Editing.EnableTabIndent)
-	v.SetDefault("editing.tab_size", defaultConfig.Editing.TabSize)
-	v.SetDefault("editing.tab_type", defaultConfig.Editing.TabType)
-	v.SetDefault("editing.auto_save_delay", defaultConfig.Editing.AutoSaveDelay)
+	v.SetDefault("editing.fontSize", defaultConfig.Editing.FontSize)
+	v.SetDefault("editing.fontFamily", defaultConfig.Editing.FontFamily)
+	v.SetDefault("editing.fontWeight", defaultConfig.Editing.FontWeight)
+	v.SetDefault("editing.lineHeight", defaultConfig.Editing.LineHeight)
+	v.SetDefault("editing.enableTabIndent", defaultConfig.Editing.EnableTabIndent)
+	v.SetDefault("editing.tabSize", defaultConfig.Editing.TabSize)
+	v.SetDefault("editing.tabType", defaultConfig.Editing.TabType)
+	v.SetDefault("editing.autoSaveDelay", defaultConfig.Editing.AutoSaveDelay)
 
 	// 外观设置默认值
 	v.SetDefault("appearance.language", defaultConfig.Appearance.Language)
-	v.SetDefault("appearance.system_theme", defaultConfig.Appearance.SystemTheme)
+	v.SetDefault("appearance.systemTheme", defaultConfig.Appearance.SystemTheme)
 
 	// 元数据默认值
-	v.SetDefault("metadata.version", defaultConfig.Metadata.Version)
-	v.SetDefault("metadata.last_updated", defaultConfig.Metadata.LastUpdated)
+	v.SetDefault("metadata.lastUpdated", defaultConfig.Metadata.LastUpdated)
 }
 
 // initConfig 初始化配置
@@ -162,19 +162,30 @@ func (cs *ConfigService) createDefaultConfig() error {
 		currentDir = "."
 	}
 	configDir := filepath.Join(currentDir, "config")
-	configPath := filepath.Join(configDir, "config.yaml")
+	configPath := filepath.Join(configDir, "settings.json")
 
 	// 确保配置目录存在
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return &ConfigError{Operation: "create_config_dir", Err: err}
 	}
 
-	// 设置当前时间为最后更新时间
-	cs.viper.Set("metadata.last_updated", time.Now())
+	// 获取默认配置
+	defaultConfig := models.NewDefaultAppConfig()
 
-	// 使用 SafeWriteConfigAs 写入配置文件（如果文件不存在则创建）
-	if err := cs.viper.SafeWriteConfigAs(configPath); err != nil {
+	// 使用 JSON marshal 方式设置完整的默认配置
+	configBytes, err := json.MarshalIndent(defaultConfig, "", "  ")
+	if err != nil {
+		return &ConfigError{Operation: "marshal_default_config", Err: err}
+	}
+
+	// 写入配置文件
+	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
 		return &ConfigError{Operation: "write_default_config", Err: err}
+	}
+
+	// 重新读取配置文件到viper
+	if err := cs.viper.ReadInConfig(); err != nil {
+		return &ConfigError{Operation: "read_created_config", Err: err}
 	}
 
 	cs.logger.Info("Config: Created default config file", "path", configPath)
@@ -213,11 +224,21 @@ func (cs *ConfigService) GetConfig() (*models.AppConfig, error) {
 func (cs *ConfigService) Set(key string, value interface{}) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
-	// 设置验证后的值
+
+	// 设置值到viper
 	cs.viper.Set(key, value)
 
-	// 使用 WriteConfig 写入配置文件（会触发文件监听）
-	if err := cs.viper.WriteConfig(); err != nil {
+	// 直接从viper获取配置并构建AppConfig结构
+	var config models.AppConfig
+	if err := cs.viper.Unmarshal(&config); err != nil {
+		return &ConfigError{Operation: "unmarshal_config_for_set", Err: err}
+	}
+
+	// 更新时间戳
+	config.Metadata.LastUpdated = time.Now().Format(time.RFC3339)
+
+	// 直接写入JSON文件
+	if err := cs.writeConfigToFile(&config); err != nil {
 		return &ConfigError{Operation: "set_config", Err: err}
 	}
 
@@ -238,43 +259,49 @@ func (cs *ConfigService) ResetConfig() {
 
 	defaultConfig := models.NewDefaultAppConfig()
 
-	// 通用设置 - 批量设置到viper中
-	cs.viper.Set("general.always_on_top", defaultConfig.General.AlwaysOnTop)
-	cs.viper.Set("general.data_path", defaultConfig.General.DataPath)
-	cs.viper.Set("general.enable_system_tray", defaultConfig.General.EnableSystemTray)
-	cs.viper.Set("general.enable_global_hotkey", defaultConfig.General.EnableGlobalHotkey)
-	cs.viper.Set("general.global_hotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
-	cs.viper.Set("general.global_hotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
-	cs.viper.Set("general.global_hotkey.alt", defaultConfig.General.GlobalHotkey.Alt)
-	cs.viper.Set("general.global_hotkey.win", defaultConfig.General.GlobalHotkey.Win)
-	cs.viper.Set("general.global_hotkey.key", defaultConfig.General.GlobalHotkey.Key)
-
-	// 编辑设置 - 批量设置到viper中
-	cs.viper.Set("editing.font_size", defaultConfig.Editing.FontSize)
-	cs.viper.Set("editing.font_family", defaultConfig.Editing.FontFamily)
-	cs.viper.Set("editing.font_weight", defaultConfig.Editing.FontWeight)
-	cs.viper.Set("editing.line_height", defaultConfig.Editing.LineHeight)
-	cs.viper.Set("editing.enable_tab_indent", defaultConfig.Editing.EnableTabIndent)
-	cs.viper.Set("editing.tab_size", defaultConfig.Editing.TabSize)
-	cs.viper.Set("editing.tab_type", defaultConfig.Editing.TabType)
-	cs.viper.Set("editing.auto_save_delay", defaultConfig.Editing.AutoSaveDelay)
-
-	// 外观设置 - 批量设置到viper中
-	cs.viper.Set("appearance.language", defaultConfig.Appearance.Language)
-	cs.viper.Set("appearance.system_theme", defaultConfig.Appearance.SystemTheme)
-
-	// 元数据 - 批量设置到viper中
-	cs.viper.Set("metadata.version", defaultConfig.Metadata.Version)
-	cs.viper.Set("metadata.last_updated", time.Now())
-
-	// 一次性写入配置文件，触发配置变更通知
-	if err := cs.viper.WriteConfig(); err != nil {
+	// 直接写入JSON文件
+	if err := cs.writeConfigToFile(defaultConfig); err != nil {
 		cs.logger.Error("Config: Failed to write config during reset", "error", err)
-	} else {
-		cs.logger.Info("Config: All settings have been reset to defaults")
-		// 手动触发配置变更检查，确保通知系统能感知到变更
-		cs.notificationService.CheckConfigChanges()
+		return
 	}
+
+	// 重新读取配置文件到viper
+	if err := cs.viper.ReadInConfig(); err != nil {
+		cs.logger.Error("Config: Failed to reload config after reset", "error", err)
+		return
+	}
+
+	cs.logger.Info("Config: All settings have been reset to defaults")
+	// 手动触发配置变更检查，确保通知系统能感知到变更
+	cs.notificationService.CheckConfigChanges()
+}
+
+// writeConfigToFile 直接写入配置到JSON文件
+func (cs *ConfigService) writeConfigToFile(config *models.AppConfig) error {
+	// 获取配置文件路径
+	currentDir, err := os.Getwd()
+	if err != nil {
+		currentDir = "."
+	}
+	configPath := filepath.Join(currentDir, "config", "settings.json")
+
+	// 序列化为JSON
+	configBytes, err := json.MarshalIndent(config, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %v", err)
+	}
+
+	// 写入文件
+	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
+		return fmt.Errorf("failed to write config file: %v", err)
+	}
+
+	// 重新读取到viper中
+	if err := cs.viper.ReadInConfig(); err != nil {
+		return fmt.Errorf("failed to reload config: %v", err)
+	}
+
+	return nil
 }
 
 // SetHotkeyChangeCallback 设置热键配置变更回调
