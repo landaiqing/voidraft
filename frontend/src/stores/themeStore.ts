@@ -23,6 +23,12 @@ export const useThemeStore = defineStore('theme', () => {
     );
   };
 
+  // 初始化主题
+  const initializeTheme = () => {
+    const theme = configStore.config?.appearance?.systemTheme || SystemThemeType.SystemThemeAuto;
+    applyThemeToDOM(theme);
+  };
+
   // 设置主题
   const setTheme = async (theme: SystemThemeType) => {
     await configStore.setSystemTheme(theme);
@@ -32,5 +38,7 @@ export const useThemeStore = defineStore('theme', () => {
   return {
     currentTheme,
     setTheme,
+    initializeTheme,
+    applyThemeToDOM,
   };
 }); 

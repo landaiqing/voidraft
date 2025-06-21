@@ -3,7 +3,7 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: ""
+name: "Voidraft"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.0.1.0"
@@ -17,12 +17,12 @@ license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/"
-    dst: "/usr/local/bin/"
+  - src: "./bin/Voidraft"
+    dst: "/usr/local/bin/Voidraft"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/.png"
-  - src: "./build/linux/.desktop"
-    dst: "/usr/share/applications/.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/Voidraft.png"
+  - src: "./build/linux/Voidraft.desktop"
+    dst: "/usr/share/applications/Voidraft.desktop"
 
 depends:
   - gtk3

@@ -6,7 +6,7 @@
         <key>CFBundleName</key>
         <string>Voidraft</string>
         <key>CFBundleExecutable</key>
-        <string></string>
+        <string>Voidraft</string>
         <key>CFBundleIdentifier</key>
         <string>landaiqing</string>
         <key>CFBundleVersion</key>

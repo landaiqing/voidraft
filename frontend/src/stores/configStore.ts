@@ -141,7 +141,7 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     appearance: {
         language: LanguageType.LangZhCN,
-        systemTheme: SystemThemeType.SystemThemeDark
+        systemTheme: SystemThemeType.SystemThemeAuto
     },
     updates: {},
     metadata: {

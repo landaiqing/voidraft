@@ -130,7 +130,7 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 获取主题扩展
         const themeExtension = createThemeExtension(
-            configStore.config.appearance.systemTheme || SystemThemeType.SystemThemeDark
+            configStore.config.appearance.systemTheme || SystemThemeType.SystemThemeAuto
         );
 
         // 获取Tab相关扩展
