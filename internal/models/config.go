@@ -43,6 +43,7 @@ type GeneralConfig struct {
 	AlwaysOnTop      bool   `json:"alwaysOnTop"`      // 窗口是否置顶
 	DataPath         string `json:"dataPath"`         // 数据存储路径
 	EnableSystemTray bool   `json:"enableSystemTray"` // 是否启用系统托盘
+	StartAtLogin     bool   `json:"startAtLogin"`     // 开机启动设置
 
 	// 全局热键设置
 	EnableGlobalHotkey bool        `json:"enableGlobalHotkey"` // 是否启用全局热键
@@ -115,7 +116,8 @@ func NewDefaultAppConfig() *AppConfig {
 		General: GeneralConfig{
 			AlwaysOnTop:        false,
 			DataPath:           dataDir,
-			EnableSystemTray:   true, // 默认启用系统托盘
+			EnableSystemTray:   true,
+			StartAtLogin:       false,
 			EnableGlobalHotkey: false,
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,
@@ -140,7 +142,7 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 		Appearance: AppearanceConfig{
 			Language:    LangZhCN,
-			SystemTheme: SystemThemeDark, // 默认使用深色系统主题
+			SystemTheme: SystemThemeAuto, // 默认使用深色系统主题
 		},
 		Updates: UpdatesConfig{},
 		Metadata: ConfigMetadata{

@@ -6,13 +6,13 @@
         <key>CFBundleName</key>
         <string>Voidraft</string>
         <key>CFBundleExecutable</key>
-        <string>voidraft</string>
+        <string></string>
         <key>CFBundleIdentifier</key>
         <string>landaiqing</string>
         <key>CFBundleVersion</key>
         <string>0.0.1.0</string>
         <key>CFBundleGetInfoString</key>
-        <string>Effortlessly capture and organize fleeting ideas with minimal design</string>
+        <string>Voidraft</string>
         <key>CFBundleShortVersionString</key>
         <string>0.0.1.0</string>
         <key>CFBundleIconFile</key>

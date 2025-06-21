@@ -29,8 +29,6 @@ func RegisterTrayEvents(app *application.App, systray *application.SystemTray, m
 		trayService.HandleWindowClose()
 	})
 
-	// 不再拦截窗口最小化事件，让任务栏点击保持正常行为
-	// 最小化到托盘的逻辑由前端标题栏按钮直接处理
 }
 
 // RegisterTrayMenuEvents 注册系统托盘菜单事件

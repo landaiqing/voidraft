@@ -346,6 +346,11 @@ export class GeneralConfig {
     "enableSystemTray": boolean;
 
     /**
+     * 开机启动设置
+     */
+    "startAtLogin": boolean;
+
+    /**
      * 全局热键设置
      * 是否启用全局热键
      */
@@ -367,6 +372,9 @@ export class GeneralConfig {
         if (!("enableSystemTray" in $$source)) {
             this["enableSystemTray"] = false;
         }
+        if (!("startAtLogin" in $$source)) {
+            this["startAtLogin"] = false;
+        }
         if (!("enableGlobalHotkey" in $$source)) {
             this["enableGlobalHotkey"] = false;
         }
@@ -381,10 +389,10 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField4_0 = $$createType6;
+        const $$createField5_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
-            $$parsedSource["globalHotkey"] = $$createField4_0($$parsedSource["globalHotkey"]);
+            $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
         }
         return new GeneralConfig($$parsedSource as Partial<GeneralConfig>);
     }

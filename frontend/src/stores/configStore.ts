@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
 import {computed, reactive} from 'vue';
-import {ConfigService} from '../../bindings/voidraft/internal/services';
+import {ConfigService, StartupService} from '../../bindings/voidraft/internal/services';
 import {
     AppConfig,
     AppearanceConfig,
@@ -50,6 +50,7 @@ const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     alwaysOnTop: 'general.alwaysOnTop',
     dataPath: 'general.dataPath',
     enableSystemTray: 'general.enableSystemTray',
+    startAtLogin: 'general.startAtLogin',
     enableGlobalHotkey: 'general.enableGlobalHotkey',
     globalHotkey: 'general.globalHotkey'
 } as const;
@@ -118,6 +119,7 @@ const DEFAULT_CONFIG: AppConfig = {
         alwaysOnTop: false,
         dataPath: '',
         enableSystemTray: true,
+        startAtLogin: false,
         enableGlobalHotkey: false,
         globalHotkey: {
             ctrl: false,
@@ -408,6 +410,15 @@ export const useConfigStore = defineStore('config', () => {
         setGlobalHotkey: (hotkey: any) => safeCall(() => updateGeneralConfig('globalHotkey', hotkey), 'config.saveFailed', 'config.saveSuccess'),
 
         // 系统托盘配置相关方法
-        setEnableSystemTray: (value: boolean) => safeCall(() => updateGeneralConfig('enableSystemTray', value), 'config.saveFailed', 'config.saveSuccess')
+        setEnableSystemTray: (value: boolean) => safeCall(() => updateGeneralConfig('enableSystemTray', value), 'config.saveFailed', 'config.saveSuccess'),
+
+        // 开机启动配置相关方法
+        setStartAtLogin: async (value: boolean) => {
+            await safeCall(async () => {
+                // 先调用系统设置
+                await StartupService.SetEnabled(value);
+                state.config.general.startAtLogin = value;
+            }, 'config.startupFailed', 'config.startupSuccess');
+        }
     };
 });

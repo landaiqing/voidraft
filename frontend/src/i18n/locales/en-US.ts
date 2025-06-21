@@ -44,7 +44,9 @@ export default {
     themeChanged: 'Theme setting updated',
     themeChangeFailed: 'Failed to update theme setting',
     systemThemeChanged: 'System theme setting updated',
-    systemThemeChangeFailed: 'Failed to update system theme setting'
+    systemThemeChangeFailed: 'Failed to update system theme setting',
+    startupSuccess: 'Startup setting updated',
+    startupFailed: 'Failed to update startup setting'
   },
   languages: {
     'zh-CN': '简体中文',
@@ -162,6 +164,8 @@ export default {
     showInSystemTray: 'Show in System Tray',
     enableSystemTray: 'Enable System Tray',
     alwaysOnTop: 'Always on Top',
+    startup: 'Startup Settings',
+    startAtLogin: 'Start at Login',
     dataStorage: 'Data Storage',
     dataPath: 'Data Storage Path',
     clickToSelectPath: 'Click to select path',

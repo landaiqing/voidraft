@@ -36,6 +36,6 @@ func NewDefaultDocument() *Document {
 			LastUpdated: now,
 			CreatedAt:   now,
 		},
-		Content: "// 在此处编写文本...",
+		Content: "\n∞∞∞text-a\n",
 	}
 }

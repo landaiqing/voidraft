@@ -5,7 +5,7 @@
 !include "FileFunc.nsh"
 
 !ifndef INFO_PROJECTNAME
-    !define INFO_PROJECTNAME "voidraft"
+    !define INFO_PROJECTNAME ""
 !endif
 !ifndef INFO_COMPANYNAME
     !define INFO_COMPANYNAME "Voidraft"

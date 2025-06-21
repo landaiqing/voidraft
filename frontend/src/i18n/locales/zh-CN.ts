@@ -44,7 +44,9 @@ export default {
     themeChanged: '主题设置已更新',
     themeChangeFailed: '主题设置更新失败',
     systemThemeChanged: '系统主题设置已更新',
-    systemThemeChangeFailed: '系统主题设置更新失败'
+    systemThemeChangeFailed: '系统主题设置更新失败',
+    startupSuccess: '开机启动设置已更新',
+    startupFailed: '开机启动设置失败'
   },
   languages: {
     'zh-CN': '简体中文',
@@ -162,6 +164,8 @@ export default {
     showInSystemTray: '在系统托盘中显示',
     enableSystemTray: '启用系统托盘',
     alwaysOnTop: '窗口始终置顶',
+    startup: '启动设置',
+    startAtLogin: '开机自启动',
     dataStorage: '数据存储',
     dataPath: '数据存储路径',
     clickToSelectPath: '点击选择路径',

@@ -23,24 +23,57 @@ const migrationProgress = ref<MigrationProgress>(new MigrationProgress({
 let pollingTimer: number | null = null;
 const isPolling = ref(false);
 
+// 进度条显示控制
+const showProgress = ref(false);
+const progressError = ref('');
+let hideProgressTimer: any = null;
+
 // 开始轮询迁移进度
 const startPolling = () => {
   if (isPolling.value) return;
   
   isPolling.value = true;
+  showProgress.value = true;
+  progressError.value = '';
+  
+  // 立即重置迁移进度状态，避免从之前的失败状态渐变
+  migrationProgress.value = new MigrationProgress({
+    status: MigrationStatus.MigrationStatusMigrating,
+    progress: 0
+  });
+  
   pollingTimer = window.setInterval(async () => {
     try {
       const progress = await MigrationService.GetProgress();
       migrationProgress.value = progress;
+
+      const { status, error } = progress;
+      const isCompleted = [MigrationStatus.MigrationStatusCompleted, MigrationStatus.MigrationStatusFailed].includes(status);
       
-      // 如果迁移完成或失败，停止轮询
-      if (progress.status === MigrationStatus.MigrationStatusCompleted || progress.status === MigrationStatus.MigrationStatusFailed) {
+      if (isCompleted) {
         stopPolling();
+        
+        // 设置错误信息（如果是失败状态）
+        progressError.value = (status === MigrationStatus.MigrationStatusFailed) ? (error || 'Migration failed') : '';
+
+        const delay = status === MigrationStatus.MigrationStatusCompleted ? 3000 : 5000;
+        hideProgressTimer = setTimeout(hideProgress, delay);
       }
     } catch (error) {
       stopPolling();
+      
+      // 使用常量简化错误处理
+      const errorMsg = 'Failed to get migration progress';
+      Object.assign(migrationProgress.value, {
+        status: MigrationStatus.MigrationStatusFailed,
+        progress: 0,
+        error: errorMsg
+      });
+      progressError.value = errorMsg;
+      
+      hideProgressTimer = setTimeout(hideProgress, 5000);
     }
-  }, 500); // 每500ms轮询一次
+  }, 200);
 };
 
 // 停止轮询
@@ -52,121 +85,40 @@ const stopPolling = () => {
   isPolling.value = false;
 };
 
-// 迁移消息链
-interface MigrationMessage {
-  id: number;
-  content: string;
-  type: 'start' | 'progress' | 'success' | 'error';
-  timestamp: number;
-}
-
-const migrationMessages = ref<MigrationMessage[]>([]);
-const showMessages = ref(false);
-let messageIdCounter = 0;
-let hideMessagesTimer: any = null;
-
-// 添加迁移消息
-const addMigrationMessage = (content: string, type: MigrationMessage['type']) => {
-  const message: MigrationMessage = {
-    id: ++messageIdCounter,
-    content,
-    type,
-    timestamp: Date.now()
-  };
+// 隐藏进度条
+const hideProgress = () => {
+  showProgress.value = false;
+  progressError.value = '';
   
-  migrationMessages.value.push(message);
-  showMessages.value = true;
-};
-
-// 清除所有消息
-const clearMigrationMessages = () => {
-  migrationMessages.value = [];
-  showMessages.value = false;
-};
-
-// 监听迁移进度变化
-watch(() => migrationProgress.value, (progress, oldProgress) => {
-  // 清除之前的隐藏定时器
-  if (hideMessagesTimer) {
-    clearTimeout(hideMessagesTimer);
-    hideMessagesTimer = null;
+  // 重置迁移状态，避免下次显示时状态不正确
+  migrationProgress.value = new MigrationProgress({
+    status: MigrationStatus.MigrationStatusCompleted,
+    progress: 0
+  });
+  
+  if (hideProgressTimer) {
+    clearTimeout(hideProgressTimer);
+    hideProgressTimer = null;
   }
-  
-  if (progress.status === MigrationStatus.MigrationStatusMigrating) {
-    // 如果是第一次收到迁移状态，添加开始消息
-    if (migrationMessages.value.length === 0) {
-      addMigrationMessage(t('migration.started'), 'start');
-    }
-    // 如果还没有迁移中消息，添加迁移中消息
-    if (!migrationMessages.value.some(msg => msg.type === 'progress' && msg.content === t('migration.migrating'))) {
-      addMigrationMessage(t('migration.migrating'), 'progress');
-    }
-  } else if (progress.status === MigrationStatus.MigrationStatusCompleted && oldProgress?.status === MigrationStatus.MigrationStatusMigrating) {
-    addMigrationMessage(t('migration.completed'), 'success');
-    
-    // 5秒后开始逐个隐藏消息
-    hideMessagesTimer = setTimeout(() => {
-      hideMessagesSequentially();
-    }, 5000);
-    
-  } else if (progress.status === MigrationStatus.MigrationStatusFailed && oldProgress?.status === MigrationStatus.MigrationStatusMigrating) {
-    const errorMsg = progress.error || t('migration.failed');
-    addMigrationMessage(errorMsg, 'error');
-    
-    // 8秒后开始逐个隐藏消息
-    hideMessagesTimer = setTimeout(() => {
-      hideMessagesSequentially();
-    }, 8000);
-  }
-}, { deep: true });
-
-// 逐个隐藏消息
-const hideMessagesSequentially = () => {
-  const hideNextMessage = () => {
-    if (migrationMessages.value.length > 0) {
-      migrationMessages.value.shift(); // 移除第一条消息
-      
-      if (migrationMessages.value.length > 0) {
-        // 如果还有消息，1秒后隐藏下一条
-        setTimeout(hideNextMessage, 1000);
-      } else {
-        // 所有消息都隐藏完了，同时隐藏进度条
-        showMessages.value = false;
-      }
-    }
-  };
-  
-  hideNextMessage();
 };
 
-// 迁移状态
+// 简化的迁移状态管理
 const isMigrating = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusMigrating);
-const migrationComplete = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusCompleted);
-const migrationFailed = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusFailed);
 
-// 进度条样式和宽度
-const progressBarClass = computed(() => {
-  switch (migrationProgress.value.status) {
-    case MigrationStatus.MigrationStatusMigrating:
-      return 'migrating';
-    case MigrationStatus.MigrationStatusCompleted:
-      return 'success';
-    case MigrationStatus.MigrationStatusFailed:
-      return 'error';
-    default:
-      return '';
-  }
-});
+// 进度条样式 - 使用 Map 简化条件判断
+const statusClassMap = new Map([
+  [MigrationStatus.MigrationStatusMigrating, 'migrating'],
+  [MigrationStatus.MigrationStatusCompleted, 'success'],
+  [MigrationStatus.MigrationStatusFailed, 'error']
+]);
+
+const progressBarClass = computed(() => 
+  showProgress.value ? statusClassMap.get(migrationProgress.value.status) ?? '' : ''
+);
 
 const progressBarWidth = computed(() => {
-  // 只有在显示消息且正在迁移时才显示进度条
-  if (showMessages.value && isMigrating.value) {
-    return migrationProgress.value.progress + '%';
-  } else if (showMessages.value && (migrationComplete.value || migrationFailed.value)) {
-    // 迁移完成或失败时，短暂显示100%，然后随着消息隐藏而隐藏
-    return '100%';
-  }
-  return '0%';
+  if (!showProgress.value) return '0%';
+  return isMigrating.value ? `${migrationProgress.value.progress}%` : '100%';
 });
 
 // 重置确认状态
@@ -204,6 +156,12 @@ const alwaysOnTop = computed({
 const enableSystemTray = computed({
   get: () => configStore.config.general.enableSystemTray,
   set: (value: boolean) => configStore.setEnableSystemTray(value)
+});
+
+// 计算属性 - 开机启动
+const startAtLogin = computed({
+  get: () => configStore.config.general.startAtLogin,
+  set: (value: boolean) => configStore.setStartAtLogin(value)
 });
 
 // 修饰键配置 - 只读计算属性
@@ -253,19 +211,20 @@ const confirmReset = async () => {
   await configStore.resetConfig();
 };
 
-// 计算热键预览文本
+// 计算热键预览文本 - 使用现代语法简化
 const hotkeyPreview = computed(() => {
   if (!enableGlobalHotkey.value) return '';
   
-  const hotkey = configStore.config.general.globalHotkey;
-  const parts: string[] = [];
-  if (hotkey.ctrl) parts.push('Ctrl');
-  if (hotkey.shift) parts.push('Shift');
-  if (hotkey.alt) parts.push('Alt');
-  if (hotkey.win) parts.push('Win');
-  if (hotkey.key) parts.push(hotkey.key);
+  const { ctrl, shift, alt, win, key } = configStore.config.general.globalHotkey;
+  const modifiers = [
+    ctrl && 'Ctrl',
+    shift && 'Shift', 
+    alt && 'Alt',
+    win && 'Win',
+    key
+  ].filter(Boolean);
   
-  return parts.join(' + ');
+  return modifiers.join(' + ');
 });
 
 // 数据路径配置
@@ -275,40 +234,53 @@ const currentDataPath = computed(() => configStore.config.general.dataPath);
 const selectDataDirectory = async () => {
   if (isMigrating.value) return;
   
-  const selectedPath = await DialogService.SelectDirectory();
-  
-  if (selectedPath && selectedPath.trim() && selectedPath !== currentDataPath.value) {
-    // 清除之前的消息
-    clearMigrationMessages();
+  try {
+    const selectedPath = await DialogService.SelectDirectory();
+    
+    // 检查用户是否取消了选择或路径为空
+    if (!selectedPath || !selectedPath.trim() || selectedPath === currentDataPath.value) {
+      return;
+    }
+    const oldPath = currentDataPath.value;
+    const newPath = selectedPath.trim();
+
+    // 清除之前的进度状态
+    hideProgress();
     
     // 开始轮询迁移进度
     startPolling();
     
     // 开始迁移
     try {
-      await safeCall(async () => {
-        const oldPath = currentDataPath.value;
-        const newPath = selectedPath.trim();
-        
-        await MigrationService.MigrateDirectory(oldPath, newPath);
-        await configStore.setDataPath(newPath);
-      }, '');
+      await MigrationService.MigrateDirectory(oldPath, newPath);
+      await configStore.setDataPath(newPath);
     } catch (error) {
-      // 发生错误时清除消息并停止轮询
-      clearMigrationMessages();
       stopPolling();
+      
+      // 使用解构和默认值简化错误处理
+      const errorMsg = error?.toString() || 'Migration failed';
+      showProgress.value = true;
+      
+      Object.assign(migrationProgress.value, {
+        status: MigrationStatus.MigrationStatusFailed,
+        progress: 0,
+        error: errorMsg
+      });
+      progressError.value = errorMsg;
+      
+      hideProgressTimer = setTimeout(hideProgress, 5000);
     }
+  } catch (dialogError) {
+    console.error(dialogError);
   }
 };
 
 // 清理定时器
 onUnmounted(() => {
   stopPolling();
+  hideProgress();
   if (resetConfirmTimer) {
     clearTimeout(resetConfirmTimer);
-  }
-  if (hideMessagesTimer) {
-    clearTimeout(hideMessagesTimer);
   }
 });
 </script>
@@ -363,6 +335,12 @@ onUnmounted(() => {
       </SettingItem>
     </SettingSection>
     
+    <SettingSection :title="t('settings.startup')">
+      <SettingItem :title="t('settings.startAtLogin')">
+        <ToggleSwitch v-model="startAtLogin"/>
+      </SettingItem>
+    </SettingSection>
+    
     <SettingSection :title="t('settings.dataStorage')">
       <div class="data-path-setting">
         <div class="setting-header">
@@ -380,27 +358,23 @@ onUnmounted(() => {
               :title="t('settings.clickToSelectPath')"
               :disabled="isMigrating"
             />
+            <!-- 简洁的进度条 -->
             <div 
               class="progress-bar" 
               :class="[
-                { 'active': showMessages && (isMigrating || migrationComplete || migrationFailed) },
+                { 'active': showProgress },
                 progressBarClass
               ]"
               :style="{ width: progressBarWidth }"
             ></div>
           </div>
-          <div class="migration-status-container">
-            <Transition name="fade-slide" mode="out-in">
-              <div v-if="showMessages" class="migration-messages">
-                <TransitionGroup name="message-list" tag="div">
-                  <div v-for="message in migrationMessages" :key="message.id" class="migration-message" :class="message.type">
-                    {{ message.content }}
-                  </div>
-                </TransitionGroup>
-              </div>
-            </Transition>
-
-          </div>
+          
+          <!-- 错误提示 -->
+          <Transition name="error-fade">
+            <div v-if="progressError" class="progress-error">
+              {{ progressError }}
+            </div>
+          </Transition>
         </div>
       </div>
     </SettingSection>
@@ -612,108 +586,46 @@ onUnmounted(() => {
       position: absolute;
       bottom: 0;
       left: 0;
-      height: 2px;
+      height: 3px;
       background-color: transparent;
       border-radius: 0 0 4px 4px;
-      transition: all 0.3s ease;
+      transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
       width: 0;
       opacity: 0;
+      z-index: 1;
       
       &.active {
         opacity: 1;
         
         &.migrating {
-          background-color: #3b82f6;
-          animation: progress-wave 2s infinite;
+          background: linear-gradient(90deg, #22c55e, #16a34a);
+          animation: progress-pulse 2s ease-in-out infinite;
+          transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         &.success {
           background-color: #22c55e;
+          animation: none;
+          transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
 
         &.error {
           background-color: #ef4444;
+          animation: none;
+          transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
       }
     }
   }
 
-      .migration-status-container {
-    margin-top: 8px;
-    min-height: 0;
-    overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  
-    .migration-messages {
-    margin-bottom: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-  
-  .migration-message {
-    font-size: 11px;
-    padding: 2px 0;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    transform: translateY(0);
+  .progress-error {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #ef4444;
+    padding: 0 2px;
+    line-height: 1.4;
     opacity: 1;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-    
-    &::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-      
-    &.start {
-      color: var(--text-muted);
-      
-      &::before {
-        background-color: var(--text-muted);
-      }
-    }
-      
-    &.progress {
-      color: #3b82f6;
-      
-      &::before {
-        background-color: #3b82f6;
-        animation: pulse-dot 1.5s infinite;
-      }
-    }
-      
-    &.success {
-      color: #22c55e;
-      
-      &::before {
-        background-color: #22c55e;
-      }
-    }
-      
-    &.error {
-      color: #ef4444;
-      
-      &::before {
-        background-color: #ef4444;
-      }
-    }
-              
-    &.v-enter-from, &.v-leave-to {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-  }
-  
-
-    
-    &:empty {
-      min-height: 0;
-      margin-top: 0;
-    }
+    transition: all 0.3s ease;
   }
 }
 
@@ -749,16 +661,15 @@ onUnmounted(() => {
   }
 }
 
-// 进度条波浪动画
-@keyframes progress-wave {
-  0% {
-    background-position: 0% 50%;
+// 进度条脉冲动画
+@keyframes progress-pulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scaleY(1);
   }
   50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
+    opacity: 1;
+    transform: scaleY(1.1);
   }
 }
 
@@ -787,58 +698,22 @@ onUnmounted(() => {
   }
 }
 
-// Vue Transition 动画
-.fade-slide-enter-active {
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+// 错误提示动画
+.error-fade-enter-active {
+  transition: all 0.3s ease;
 }
 
-.fade-slide-leave-active {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.6, 1);
+.error-fade-leave-active {
+  transition: all 0.3s ease;
 }
 
-.fade-slide-enter-from {
+.error-fade-enter-from {
   opacity: 0;
-  transform: translateY(-8px);
-  max-height: 0;
-  margin-top: 0;
-  margin-bottom: 0;
+  transform: translateY(-4px);
 }
 
-.fade-slide-leave-to {
+.error-fade-leave-to {
   opacity: 0;
-  transform: translateY(-5px);
-  max-height: 0;
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-.fade-slide-enter-to,
-.fade-slide-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-  max-height: 150px;
-}
-
-// 消息列表动画
-.message-list-enter-active {
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-}
-
-.message-list-leave-active {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.6, 1);
-}
-
-.message-list-enter-from {
-  opacity: 0;
-  transform: translateX(-16px);
-}
-
-.message-list-leave-to {
-  opacity: 0;
-  transform: translateX(16px);
-}
-
-.message-list-move {
-  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transform: translateY(-4px);
 }
 </style> 

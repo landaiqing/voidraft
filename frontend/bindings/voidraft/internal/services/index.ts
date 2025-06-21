@@ -7,6 +7,7 @@ import * as DocumentService from "./documentservice.js";
 import * as HotkeyService from "./hotkeyservice.js";
 import * as KeyBindingService from "./keybindingservice.js";
 import * as MigrationService from "./migrationservice.js";
+import * as StartupService from "./startupservice.js";
 import * as SystemService from "./systemservice.js";
 import * as TrayService from "./trayservice.js";
 export {
@@ -16,6 +17,7 @@ export {
     HotkeyService,
     KeyBindingService,
     MigrationService,
+    StartupService,
     SystemService,
     TrayService
 };
