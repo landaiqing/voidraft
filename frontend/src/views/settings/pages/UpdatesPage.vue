@@ -89,7 +89,6 @@ const downloadUpdate = () => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
-  padding-bottom: 48px;
 }
 
 .update-info {

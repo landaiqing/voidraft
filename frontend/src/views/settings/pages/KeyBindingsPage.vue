@@ -228,7 +228,6 @@ onMounted(async () => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
-  padding-bottom: 48px;
 }
 
 .key-bindings-container {

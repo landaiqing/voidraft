@@ -34,7 +34,7 @@ export default defineConfig(({mode}: { mode: string }): object => {
             write: true,
             emptyOutDir: true,
             brotliSize: true,
-            chunkSizeWarningLimit: 1500,
+            chunkSizeWarningLimit: 2000,
             watch: null,
             rollupOptions: {
                 output: {

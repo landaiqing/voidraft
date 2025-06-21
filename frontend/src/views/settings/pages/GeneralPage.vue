@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {useConfigStore} from '@/stores/configStore';
 import {useI18n} from 'vue-i18n';
-import {computed, onUnmounted, ref, watch} from 'vue';
+import {computed, onUnmounted, ref} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
@@ -403,7 +403,6 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
-  padding-bottom: 48px;
 }
 
 .hotkey-selector {

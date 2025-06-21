@@ -73,7 +73,7 @@ const goBackToEditor = async () => {
 <style scoped lang="scss">
 .settings-container {
   width: 100%;
-  height: 100vh;
+  height: 100%;
   margin: 0;
   padding: 0;
   background-color: var(--settings-bg);
@@ -193,7 +193,7 @@ const goBackToEditor = async () => {
   .settings-content {
     flex: 1;
     height: 100%;
-    padding: 20px 20px 40px 20px;
+    padding: 20px;
     overflow-y: auto;
     background-color: var(--settings-bg);
   }

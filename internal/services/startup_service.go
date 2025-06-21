@@ -43,11 +43,5 @@ func (s *StartupService) SetEnabled(enabled bool) error {
 	if err := s.impl.SetEnabled(enabled); err != nil {
 		return err
 	}
-
-	// 更新配置文件
-	if s.configService != nil {
-		s.configService.Set("general.startAtLogin", enabled)
-	}
-
 	return nil
 }

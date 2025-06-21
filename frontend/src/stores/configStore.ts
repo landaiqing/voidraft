@@ -415,9 +415,10 @@ export const useConfigStore = defineStore('config', () => {
         // 开机启动配置相关方法
         setStartAtLogin: async (value: boolean) => {
             await safeCall(async () => {
-                // 先调用系统设置
+                // 先更新配置文件
+                await updateGeneralConfig('startAtLogin', value);
+                // 再调用系统设置API
                 await StartupService.SetEnabled(value);
-                state.config.general.startAtLogin = value;
             }, 'config.startupFailed', 'config.startupSuccess');
         }
     };

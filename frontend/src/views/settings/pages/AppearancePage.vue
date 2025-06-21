@@ -75,7 +75,6 @@ const updateSystemTheme = async (event: Event) => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 1000px;
-  padding-bottom: 48px;
 }
 
 .select-input {
