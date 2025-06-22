@@ -1,7 +1,6 @@
 package services
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -9,17 +8,20 @@ import (
 	"time"
 	"voidraft/internal/models"
 
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/viper"
+	jsonparser "github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/structs"
+	"github.com/knadh/koanf/v2"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
-// ConfigService 提供基于 Viper 的配置管理功能
+// ConfigService 应用配置服务
 type ConfigService struct {
-	viper       *viper.Viper       // Viper 实例
-	logger      *log.LoggerService // 日志服务
-	pathManager *PathManager       // 路径管理器
-	mu          sync.RWMutex       // 读写锁
+	koanf        *koanf.Koanf       // koanf 实例
+	logger       *log.LoggerService // 日志服务
+	pathManager  *PathManager       // 路径管理器
+	mu           sync.RWMutex       // 读写锁
+	fileProvider *file.File         // 文件提供器，用于监听
 
 	// 配置通知服务
 	notificationService *ConfigNotificationService
@@ -60,34 +62,22 @@ func NewConfigService(logger *log.LoggerService, pathManager *PathManager) *Conf
 		pathManager = NewPathManager()
 	}
 
-	// 创建 Viper 实例
-	v := viper.New()
-
-	// 配置 Viper
-	v.SetConfigName(pathManager.GetConfigName())
-	v.SetConfigType("json")
-	v.AddConfigPath(pathManager.GetConfigDir())
-
-	// 设置环境变量前缀
-	v.SetEnvPrefix("VOIDRAFT")
-	v.AutomaticEnv()
-
-	// 设置默认值
-	setDefaults(v)
+	// 使用"."作为键路径分隔符
+	k := koanf.New(".")
 
 	// 构造配置服务实例
 	service := &ConfigService{
-		viper:       v,
+		koanf:       k,
 		logger:      logger,
 		pathManager: pathManager,
 	}
 
 	// 初始化配置通知服务
-	service.notificationService = NewConfigNotificationService(v, logger)
+	service.notificationService = NewConfigNotificationService(k, logger)
 
 	// 初始化配置
 	if err := service.initConfig(); err != nil {
-		service.logger.Error("Failed to initialize config", "error", err)
+		panic(err)
 	}
 
 	// 启动配置文件监听
@@ -96,37 +86,15 @@ func NewConfigService(logger *log.LoggerService, pathManager *PathManager) *Conf
 	return service
 }
 
-// setDefaults 设置默认配置值
-func setDefaults(v *viper.Viper) {
+// setDefaults 设置默认配置
+func (cs *ConfigService) setDefaults() error {
 	defaultConfig := models.NewDefaultAppConfig()
 
-	// 通用设置默认值
-	v.SetDefault("general.alwaysOnTop", defaultConfig.General.AlwaysOnTop)
-	v.SetDefault("general.dataPath", defaultConfig.General.DataPath)
-	v.SetDefault("general.enableSystemTray", defaultConfig.General.EnableSystemTray)
-	v.SetDefault("general.enableGlobalHotkey", defaultConfig.General.EnableGlobalHotkey)
-	v.SetDefault("general.globalHotkey.ctrl", defaultConfig.General.GlobalHotkey.Ctrl)
-	v.SetDefault("general.globalHotkey.shift", defaultConfig.General.GlobalHotkey.Shift)
-	v.SetDefault("general.globalHotkey.alt", defaultConfig.General.GlobalHotkey.Alt)
-	v.SetDefault("general.globalHotkey.win", defaultConfig.General.GlobalHotkey.Win)
-	v.SetDefault("general.globalHotkey.key", defaultConfig.General.GlobalHotkey.Key)
+	if err := cs.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
+		return &ConfigError{Operation: "load_defaults", Err: err}
+	}
 
-	// 编辑设置默认值
-	v.SetDefault("editing.fontSize", defaultConfig.Editing.FontSize)
-	v.SetDefault("editing.fontFamily", defaultConfig.Editing.FontFamily)
-	v.SetDefault("editing.fontWeight", defaultConfig.Editing.FontWeight)
-	v.SetDefault("editing.lineHeight", defaultConfig.Editing.LineHeight)
-	v.SetDefault("editing.enableTabIndent", defaultConfig.Editing.EnableTabIndent)
-	v.SetDefault("editing.tabSize", defaultConfig.Editing.TabSize)
-	v.SetDefault("editing.tabType", defaultConfig.Editing.TabType)
-	v.SetDefault("editing.autoSaveDelay", defaultConfig.Editing.AutoSaveDelay)
-
-	// 外观设置默认值
-	v.SetDefault("appearance.language", defaultConfig.Appearance.Language)
-	v.SetDefault("appearance.systemTheme", defaultConfig.Appearance.SystemTheme)
-
-	// 元数据默认值
-	v.SetDefault("metadata.lastUpdated", defaultConfig.Metadata.LastUpdated)
+	return nil
 }
 
 // initConfig 初始化配置
@@ -134,15 +102,16 @@ func (cs *ConfigService) initConfig() error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	// 尝试读取配置文件
-	if err := cs.viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
-			// 配置文件不存在，创建默认配置文件
-			return cs.createDefaultConfig()
-		}
-		// 配置文件存在但读取失败
-		return &ConfigError{Operation: "read_config", Err: err}
+	// 检查配置文件是否存在
+	configPath := cs.pathManager.GetSettingsPath()
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return cs.createDefaultConfig()
+	}
+
+	// 配置文件存在，直接加载
+	cs.fileProvider = file.Provider(configPath)
+	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
+		return &ConfigError{Operation: "load_config_file", Err: err}
 	}
 
 	return nil
@@ -155,38 +124,50 @@ func (cs *ConfigService) createDefaultConfig() error {
 		return &ConfigError{Operation: "create_config_dir", Err: err}
 	}
 
-	// 获取默认配置
-	defaultConfig := models.NewDefaultAppConfig()
-
-	// 使用 JSON marshal 方式设置完整的默认配置
-	configBytes, err := json.MarshalIndent(defaultConfig, "", "  ")
-	if err != nil {
-		return &ConfigError{Operation: "marshal_default_config", Err: err}
+	if err := cs.setDefaults(); err != nil {
+		return err
 	}
 
-	// 写入配置文件
-	if err := os.WriteFile(cs.pathManager.GetSettingsPath(), configBytes, 0644); err != nil {
-		return &ConfigError{Operation: "write_default_config", Err: err}
+	if err := cs.writeConfigToFile(); err != nil {
+		return err
 	}
 
-	// 重新读取配置文件到viper
-	if err := cs.viper.ReadInConfig(); err != nil {
-		return &ConfigError{Operation: "read_created_config", Err: err}
-	}
+	// 创建文件提供器
+	cs.fileProvider = file.Provider(cs.pathManager.GetSettingsPath())
 
+	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
+		return &ConfigError{Operation: "load_config_file", Err: err}
+	}
 	return nil
 }
 
 // startWatching 启动配置文件监听
 func (cs *ConfigService) startWatching() {
-	// 设置配置变化回调
-	cs.viper.OnConfigChange(func(e fsnotify.Event) {
+	if cs.fileProvider == nil {
+		return
+	}
+	err := cs.fileProvider.Watch(func(event interface{}, err error) {
+		if err != nil {
+			return
+		}
+		cs.koanf.Load(cs.fileProvider, jsonparser.Parser())
+
 		// 使用配置通知服务检查所有已注册的配置变更
-		cs.notificationService.CheckConfigChanges()
+		if cs.notificationService != nil {
+			cs.notificationService.CheckConfigChanges()
+		}
 	})
 
-	// 启动配置文件监听
-	cs.viper.WatchConfig()
+	if err != nil {
+		cs.logger.Error("Failed to setup config file watcher", "error", err)
+	}
+}
+
+// stopWatching 停止配置文件监听
+func (cs *ConfigService) stopWatching() {
+	if cs.fileProvider != nil {
+		cs.fileProvider.Unwatch()
+	}
 }
 
 // GetConfig 获取完整应用配置
@@ -195,7 +176,7 @@ func (cs *ConfigService) GetConfig() (*models.AppConfig, error) {
 	defer cs.mu.RUnlock()
 
 	var config models.AppConfig
-	if err := cs.viper.Unmarshal(&config); err != nil {
+	if err := cs.koanf.Unmarshal("", &config); err != nil {
 		return nil, &ConfigError{Operation: "unmarshal_config", Err: err}
 	}
 
@@ -207,70 +188,80 @@ func (cs *ConfigService) Set(key string, value interface{}) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	// 设置值到viper
-	cs.viper.Set(key, value)
-
-	// 直接从viper获取配置并构建AppConfig结构
-	var config models.AppConfig
-	if err := cs.viper.Unmarshal(&config); err != nil {
-		return &ConfigError{Operation: "unmarshal_config_for_set", Err: err}
-	}
+	// 设置值到koanf
+	cs.koanf.Set(key, value)
 
 	// 更新时间戳
-	config.Metadata.LastUpdated = time.Now().Format(time.RFC3339)
+	cs.koanf.Set("metadata.lastUpdated", time.Now().Format(time.RFC3339))
 
-	// 直接写入JSON文件
-	if err := cs.writeConfigToFile(&config); err != nil {
-		return &ConfigError{Operation: "set_config", Err: err}
-	}
-
-	return nil
+	// 将配置写回文件
+	return cs.writeConfigToFile()
 }
 
 // Get 获取配置项
 func (cs *ConfigService) Get(key string) interface{} {
 	cs.mu.RLock()
 	defer cs.mu.RUnlock()
-	return cs.viper.Get(key)
+	return cs.koanf.Get(key)
 }
 
 // ResetConfig 强制重置所有配置为默认值
-func (cs *ConfigService) ResetConfig() {
+func (cs *ConfigService) ResetConfig() error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	defaultConfig := models.NewDefaultAppConfig()
-
-	// 直接写入JSON文件
-	if err := cs.writeConfigToFile(defaultConfig); err != nil {
-		return
+	// 停止文件监听
+	if cs.fileProvider != nil {
+		cs.fileProvider.Unwatch()
+		cs.fileProvider = nil
 	}
 
-	// 重新读取配置文件到viper
-	if err := cs.viper.ReadInConfig(); err != nil {
-		return
+	// 设置默认配置
+	if err := cs.setDefaults(); err != nil {
+		return &ConfigError{Operation: "reset_set_defaults", Err: err}
 	}
+
+	// 写入配置文件
+	if err := cs.writeConfigToFile(); err != nil {
+		return &ConfigError{Operation: "reset_write_config", Err: err}
+	}
+
+	// 重新创建koanf实例
+	cs.koanf = koanf.New(".")
+
+	// 重新加载默认配置到koanf
+	if err := cs.setDefaults(); err != nil {
+		return &ConfigError{Operation: "reset_reload_defaults", Err: err}
+	}
+
+	// 重新创建文件提供器
+	cs.fileProvider = file.Provider(cs.pathManager.GetSettingsPath())
+
+	// 重新加载配置文件
+	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
+		return &ConfigError{Operation: "reset_reload_config", Err: err}
+	}
+
+	// 重新启动文件监听
+	cs.startWatching()
 
 	// 手动触发配置变更检查，确保通知系统能感知到变更
-	cs.notificationService.CheckConfigChanges()
+	if cs.notificationService != nil {
+		cs.notificationService.CheckConfigChanges()
+	}
+
+	return nil
 }
 
-// writeConfigToFile 直接写入配置到JSON文件
-func (cs *ConfigService) writeConfigToFile(config *models.AppConfig) error {
-	// 序列化为JSON
-	configBytes, err := json.MarshalIndent(config, "", "  ")
+// writeConfigToFile 将配置写回JSON文件
+func (cs *ConfigService) writeConfigToFile() error {
+	configBytes, err := cs.koanf.Marshal(jsonparser.Parser())
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %v", err)
+		return &ConfigError{Operation: "marshal_config", Err: err}
 	}
 
-	// 写入文件
 	if err := os.WriteFile(cs.pathManager.GetSettingsPath(), configBytes, 0644); err != nil {
-		return fmt.Errorf("failed to write config file: %v", err)
-	}
-
-	// 重新读取到viper中
-	if err := cs.viper.ReadInConfig(); err != nil {
-		return fmt.Errorf("failed to reload config: %v", err)
+		return &ConfigError{Operation: "write_config_file", Err: err}
 	}
 
 	return nil
@@ -294,4 +285,13 @@ func (cs *ConfigService) SetDataPathChangeCallback(callback func(oldPath, newPat
 	// 创建数据路径监听器并注册
 	dataPathListener := CreateDataPathListener(callback)
 	return cs.notificationService.RegisterListener(dataPathListener)
+}
+
+// ServiceShutdown 关闭服务
+func (cs *ConfigService) ServiceShutdown() error {
+	cs.stopWatching()
+	if cs.notificationService != nil {
+		cs.notificationService.Cleanup()
+	}
+	return nil
 }

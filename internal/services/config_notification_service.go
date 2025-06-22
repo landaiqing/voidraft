@@ -9,7 +9,7 @@ import (
 	"time"
 	"voidraft/internal/models"
 
-	"github.com/spf13/viper"
+	"github.com/knadh/koanf/v2"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
@@ -32,7 +32,7 @@ type ConfigListener struct {
 	ChangeType    ConfigChangeType                     // 监听的配置变更类型
 	Callback      ConfigChangeCallback                 // 回调函数（现在包含新旧配置）
 	DebounceDelay time.Duration                        // 防抖延迟时间
-	GetConfigFunc func(*viper.Viper) *models.AppConfig // 获取相关配置的函数
+	GetConfigFunc func(*koanf.Koanf) *models.AppConfig // 获取相关配置的函数
 
 	// 内部状态
 	mu             sync.RWMutex      // 监听器状态锁
@@ -47,18 +47,18 @@ type ConfigListener struct {
 type ConfigNotificationService struct {
 	listeners sync.Map           // 使用sync.Map替代普通map+锁
 	logger    *log.LoggerService // 日志服务
-	viper     *viper.Viper       // Viper实例
+	koanf     *koanf.Koanf       // koanf实例
 	ctx       context.Context
 	cancel    context.CancelFunc
 	wg        sync.WaitGroup
 }
 
 // NewConfigNotificationService 创建配置通知服务
-func NewConfigNotificationService(viper *viper.Viper, logger *log.LoggerService) *ConfigNotificationService {
+func NewConfigNotificationService(k *koanf.Koanf, logger *log.LoggerService) *ConfigNotificationService {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ConfigNotificationService{
 		logger: logger,
-		viper:  viper,
+		koanf:  k,
 		ctx:    ctx,
 		cancel: cancel,
 	}
@@ -90,7 +90,7 @@ func (cns *ConfigNotificationService) initializeListenerState(listener *ConfigLi
 		return fmt.Errorf("GetConfigFunc is required")
 	}
 
-	if config := listener.GetConfigFunc(cns.viper); config != nil {
+	if config := listener.GetConfigFunc(cns.koanf); config != nil {
 		listener.mu.Lock()
 		listener.lastConfig = deepCopyConfig(config)
 		listener.lastConfigHash = computeConfigHash(config)
@@ -125,7 +125,7 @@ func (cns *ConfigNotificationService) checkAndNotify(listener *ConfigListener) {
 		return
 	}
 
-	currentConfig := listener.GetConfigFunc(cns.viper)
+	currentConfig := listener.GetConfigFunc(cns.koanf)
 
 	listener.mu.RLock()
 	lastHash := listener.lastConfigHash
@@ -268,9 +268,9 @@ func CreateHotkeyListener(callback func(enable bool, hotkey *models.HotkeyCombo)
 			return callback(defaultConfig.General.EnableGlobalHotkey, &defaultConfig.General.GlobalHotkey)
 		},
 		DebounceDelay: 200 * time.Millisecond,
-		GetConfigFunc: func(v *viper.Viper) *models.AppConfig {
+		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {
 			var config models.AppConfig
-			if err := v.Unmarshal(&config); err != nil {
+			if err := k.Unmarshal("", &config); err != nil {
 				return nil
 			}
 			return &config
@@ -303,9 +303,9 @@ func CreateDataPathListener(callback func(oldPath, newPath string) error) *Confi
 			return nil
 		},
 		DebounceDelay: 100 * time.Millisecond,
-		GetConfigFunc: func(v *viper.Viper) *models.AppConfig {
+		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {
 			var config models.AppConfig
-			if err := v.Unmarshal(&config); err != nil {
+			if err := k.Unmarshal("", &config); err != nil {
 				return nil
 			}
 			return &config

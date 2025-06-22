@@ -5,13 +5,11 @@ import {computed, onUnmounted, ref} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import {useErrorHandler} from '@/utils/errorHandler';
 import {DialogService, MigrationService, MigrationProgress, MigrationStatus} from '@/../bindings/voidraft/internal/services';
 import * as runtime from '@wailsio/runtime';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
-const {safeCall} = useErrorHandler();
 
 // 迁移进度状态
 const migrationProgress = ref<MigrationProgress>(new MigrationProgress({
@@ -143,12 +141,10 @@ const enableGlobalHotkey = computed({
 const alwaysOnTop = computed({
   get: () => configStore.config.general.alwaysOnTop,
   set: async (value: boolean) => {
-    await safeCall(async () => {
-      // 先更新配置
-      await configStore.setAlwaysOnTop(value);
-      // 然后立即应用窗口置顶状态
-      await runtime.Window.SetAlwaysOnTop(value);
-    }, 'config.alwaysOnTopFailed', 'config.alwaysOnTopSuccess');
+    // 先更新配置
+    await configStore.setAlwaysOnTop(value);
+    // 然后立即应用窗口置顶状态
+    await runtime.Window.SetAlwaysOnTop(value);
   }
 });
 

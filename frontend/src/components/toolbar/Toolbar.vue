@@ -3,7 +3,6 @@ import {useI18n} from 'vue-i18n';
 import {onMounted, onUnmounted, ref, watch} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
-import {useErrorHandler} from '@/utils/errorHandler';
 import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
@@ -12,25 +11,20 @@ import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/langu
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
-const {safeCall} = useErrorHandler();
 const {t} = useI18n();
 const router = useRouter();
 
 
 // 设置窗口置顶
 const setWindowAlwaysOnTop = async (isTop: boolean) => {
-  await safeCall(async () => {
-    await runtime.Window.SetAlwaysOnTop(isTop);
-  }, 'window.setTopFailed');
+  await runtime.Window.SetAlwaysOnTop(isTop);
 };
 
 // 切换窗口置顶
 const toggleAlwaysOnTop = async () => {
-  await safeCall(async () => {
-    await configStore.toggleAlwaysOnTop();
-    // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
-    await runtime.Window.SetAlwaysOnTop(configStore.config.general.alwaysOnTop);
-  }, 'config.alwaysOnTopFailed');
+  await configStore.toggleAlwaysOnTop();
+  // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
+  await runtime.Window.SetAlwaysOnTop(configStore.config.general.alwaysOnTop);
 };
 
 // 跳转到设置页面

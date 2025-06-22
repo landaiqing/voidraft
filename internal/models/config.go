@@ -84,7 +84,7 @@ type AppearanceConfig struct {
 
 // UpdatesConfig 更新设置配置
 type UpdatesConfig struct {
-	Version     string `json:"Version"`     // 当前版本号
+	Version     string `json:"version"`     // 当前版本号
 	AutoUpdate  bool   `json:"autoUpdate"`  // 是否自动更新
 	BetaChannel bool   `json:"betaChannel"` // 是否启用测试版
 }
@@ -101,6 +101,7 @@ type AppConfig struct {
 // ConfigMetadata 配置元数据
 type ConfigMetadata struct {
 	LastUpdated string `json:"lastUpdated"` // 最后更新时间
+	Version     string `json:"version"`     // 配置版本号
 }
 
 // NewDefaultAppConfig 创建默认应用配置
@@ -148,6 +149,7 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),
+			Version:     "1.0.0",
 		},
 	}
 }

@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
 import {computed, reactive} from 'vue';
-import {ConfigService, StartupService} from '../../bindings/voidraft/internal/services';
+import {ConfigService, StartupService} from '@/../bindings/voidraft/internal/services';
 import {
     AppConfig,
     AppearanceConfig,
@@ -11,7 +11,6 @@ import {
     TabType,
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
-import {useErrorHandler} from '@/utils/errorHandler';
 import {ConfigUtils} from '@/utils/configUtils';
 import {WindowController} from '@/utils/windowController';
 import * as runtime from '@wailsio/runtime';
@@ -144,11 +143,12 @@ const DEFAULT_CONFIG: AppConfig = {
         systemTheme: SystemThemeType.SystemThemeAuto
     },
     updates: {
-        Version: "1.0.0",
+        version: "1.0.0",
         autoUpdate: true,
         betaChannel: false
     },
     metadata: {
+        version: '1.0.0',
         lastUpdated: new Date().toString()
     }
 };
@@ -156,7 +156,6 @@ const DEFAULT_CONFIG: AppConfig = {
 
 export const useConfigStore = defineStore('config', () => {
     const {locale} = useI18n();
-    const {safeCall} = useErrorHandler();
 
     // 响应式状态
     const state = reactive({
@@ -250,26 +249,26 @@ export const useConfigStore = defineStore('config', () => {
         const clamp = (value: number) => ConfigUtils.clamp(value, limit.min, limit.max);
 
         return {
-            increase: () => safeCall(() => updateEditingConfig(key, clamp(state.config.editing[key] + 1)), 'config.saveFailed', 'config.saveSuccess'),
-            decrease: () => safeCall(() => updateEditingConfig(key, clamp(state.config.editing[key] - 1)), 'config.saveFailed', 'config.saveSuccess'),
-            set: (value: number) => safeCall(() => updateEditingConfig(key, clamp(value)), 'config.saveFailed', 'config.saveSuccess'),
-            reset: () => safeCall(() => updateEditingConfig(key, limit.default), 'config.saveFailed', 'config.saveSuccess')
+            increase: async () => await updateEditingConfig(key, clamp(state.config.editing[key] + 1)),
+            decrease: async () => await updateEditingConfig(key, clamp(state.config.editing[key] - 1)),
+            set: async (value: number) => await updateEditingConfig(key, clamp(value)),
+            reset: async () => await updateEditingConfig(key, limit.default)
         };
     };
 
     // 通用布尔值切换器
     const createGeneralToggler = <T extends keyof GeneralConfig>(key: T) =>
-        () => safeCall(() => updateGeneralConfig(key, !state.config.general[key] as GeneralConfig[T]), 'config.saveFailed', 'config.saveSuccess');
+        async () => await updateGeneralConfig(key, !state.config.general[key] as GeneralConfig[T]);
 
     const createEditingToggler = <T extends keyof EditingConfig>(key: T) =>
-        () => safeCall(() => updateEditingConfig(key, !state.config.editing[key] as EditingConfig[T]), 'config.saveFailed', 'config.saveSuccess');
+        async () => await updateEditingConfig(key, !state.config.editing[key] as EditingConfig[T]);
 
     // 枚举值切换器
     const createEnumToggler = <T extends TabType>(key: 'tabType', values: readonly T[]) =>
-        () => {
+        async () => {
             const currentIndex = values.indexOf(state.config.editing[key] as T);
             const nextIndex = (currentIndex + 1) % values.length;
-            return safeCall(() => updateEditingConfig(key, values[nextIndex]), 'config.saveFailed', 'config.saveSuccess');
+            return await updateEditingConfig(key, values[nextIndex]);
         };
 
     // 重置配置
@@ -278,16 +277,12 @@ export const useConfigStore = defineStore('config', () => {
 
         state.isLoading = true;
         try {
-            // 调用后端重置配置
-            await safeCall(() => ConfigService.ResetConfig(), 'config.resetFailed', 'config.resetSuccess');
 
-            // 立即重新加载后端配置以确保前端状态同步
-            await safeCall(async () => {
-                const appConfig = await ConfigService.GetConfig();
-                if (appConfig) {
-                    state.config = JSON.parse(JSON.stringify(appConfig)) as AppConfig;
-                }
-            }, 'config.loadFailed', 'config.loadSuccess');
+            await ConfigService.ResetConfig()
+            const appConfig = await ConfigService.GetConfig();
+            if (appConfig) {
+                state.config = JSON.parse(JSON.stringify(appConfig)) as AppConfig;
+            }
         } finally {
             state.isLoading = false;
         }
@@ -295,20 +290,16 @@ export const useConfigStore = defineStore('config', () => {
 
     // 语言设置方法
     const setLanguage = async (language: LanguageType): Promise<void> => {
-        await safeCall(async () => {
-            await updateAppearanceConfig('language', language);
+        await updateAppearanceConfig('language', language);
 
-            // 同步更新前端语言
-            const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
-            locale.value = frontendLocale as any;
-        }, 'config.languageChangeFailed', 'config.languageChanged');
+        // 同步更新前端语言
+        const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
+        locale.value = frontendLocale as any;
     };
 
     // 系统主题设置方法
     const setSystemTheme = async (systemTheme: SystemThemeType): Promise<void> => {
-        await safeCall(async () => {
-            await updateAppearanceConfig('systemTheme', systemTheme);
-        }, 'config.systemThemeChangeFailed', 'config.systemThemeChanged');
+        await updateAppearanceConfig('systemTheme', systemTheme);
     };
 
     // 初始化语言设置
@@ -339,21 +330,19 @@ export const useConfigStore = defineStore('config', () => {
     const togglers = {
         tabIndent: createEditingToggler('enableTabIndent'),
         alwaysOnTop: async () => {
-            await safeCall(async () => {
-                await updateGeneralConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
-                // 立即应用窗口置顶状态
-                await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
-            }, 'config.alwaysOnTopFailed', 'config.alwaysOnTopSuccess');
+            await updateGeneralConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
+            // 立即应用窗口置顶状态
+            await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
         },
         tabType: createEnumToggler('tabType', CONFIG_LIMITS.tabType.values)
     };
 
     // 字符串配置设置器
     const setters = {
-        fontFamily: (value: string) => safeCall(() => updateEditingConfig('fontFamily', value), 'config.saveFailed', 'config.saveSuccess'),
-        fontWeight: (value: string) => safeCall(() => updateEditingConfig('fontWeight', value), 'config.saveFailed', 'config.saveSuccess'),
-        dataPath: (value: string) => safeCall(() => updateGeneralConfig('dataPath', value), 'config.saveFailed', 'config.saveSuccess'),
-        autoSaveDelay: (value: number) => safeCall(() => updateEditingConfig('autoSaveDelay', value), 'config.saveFailed', 'config.saveSuccess')
+        fontFamily: async (value: string) => await updateEditingConfig('fontFamily', value),
+        fontWeight: async (value: string) => await updateEditingConfig('fontWeight', value),
+        dataPath: async (value: string) => await updateGeneralConfig('dataPath', value),
+        autoSaveDelay: async (value: number) => await updateEditingConfig('autoSaveDelay', value)
     };
 
     return {
@@ -366,7 +355,7 @@ export const useConfigStore = defineStore('config', () => {
         ...limits,
 
         // 核心方法
-        initConfig: () => safeCall(() => initConfig(), 'config.loadFailed', 'config.loadSuccess'),
+        initConfig,
         resetConfig,
 
         // 语言相关方法
@@ -385,7 +374,7 @@ export const useConfigStore = defineStore('config', () => {
 
         // Tab操作
         toggleTabIndent: togglers.tabIndent,
-        setEnableTabIndent: (value: boolean) => safeCall(() => updateEditingConfig('enableTabIndent', value), 'config.saveFailed', 'config.saveSuccess'),
+        setEnableTabIndent: (value: boolean) => updateEditingConfig('enableTabIndent', value),
         ...adjusters.tabSize,
         increaseTabSize: adjusters.tabSize.increase,
         decreaseTabSize: adjusters.tabSize.decrease,
@@ -397,7 +386,7 @@ export const useConfigStore = defineStore('config', () => {
 
         // 窗口操作
         toggleAlwaysOnTop: togglers.alwaysOnTop,
-        setAlwaysOnTop: (value: boolean) => safeCall(() => updateGeneralConfig('alwaysOnTop', value), 'config.saveFailed', 'config.saveSuccess'),
+        setAlwaysOnTop: (value: boolean) => updateGeneralConfig('alwaysOnTop', value),
 
         // 字体操作
         setFontFamily: setters.fontFamily,
@@ -410,20 +399,18 @@ export const useConfigStore = defineStore('config', () => {
         setAutoSaveDelay: setters.autoSaveDelay,
 
         // 热键配置相关方法
-        setEnableGlobalHotkey: (value: boolean) => safeCall(() => updateGeneralConfig('enableGlobalHotkey', value), 'config.saveFailed', 'config.saveSuccess'),
-        setGlobalHotkey: (hotkey: any) => safeCall(() => updateGeneralConfig('globalHotkey', hotkey), 'config.saveFailed', 'config.saveSuccess'),
+        setEnableGlobalHotkey: (value: boolean) => updateGeneralConfig('enableGlobalHotkey', value),
+        setGlobalHotkey: (hotkey: any) => updateGeneralConfig('globalHotkey', hotkey),
 
         // 系统托盘配置相关方法
-        setEnableSystemTray: (value: boolean) => safeCall(() => updateGeneralConfig('enableSystemTray', value), 'config.saveFailed', 'config.saveSuccess'),
+        setEnableSystemTray: (value: boolean) => updateGeneralConfig('enableSystemTray', value),
 
         // 开机启动配置相关方法
         setStartAtLogin: async (value: boolean) => {
-            await safeCall(async () => {
-                // 先更新配置文件
-                await updateGeneralConfig('startAtLogin', value);
-                // 再调用系统设置API
-                await StartupService.SetEnabled(value);
-            }, 'config.startupFailed', 'config.startupSuccess');
+            // 先更新配置文件
+            await updateGeneralConfig('startAtLogin', value);
+            // 再调用系统设置API
+            await StartupService.SetEnabled(value);
         }
     };
 });

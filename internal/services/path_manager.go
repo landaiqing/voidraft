@@ -31,11 +31,6 @@ func NewPathManager() *PathManager {
 	}
 }
 
-// GetConfigDir 获取配置目录路径
-func (pm *PathManager) GetConfigDir() string {
-	return pm.configDir
-}
-
 // GetSettingsPath 获取设置文件路径
 func (pm *PathManager) GetSettingsPath() string {
 	return pm.settingsPath
@@ -49,14 +44,4 @@ func (pm *PathManager) GetKeybindsPath() string {
 // EnsureConfigDir 确保配置目录存在
 func (pm *PathManager) EnsureConfigDir() error {
 	return os.MkdirAll(pm.configDir, 0755)
-}
-
-// GetConfigName 获取配置文件
-func (pm *PathManager) GetConfigName() string {
-	return "settings"
-}
-
-// GetKeybindsName 获取快捷键配置文件名
-func (pm *PathManager) GetKeybindsName() string {
-	return "keybindings"
 }

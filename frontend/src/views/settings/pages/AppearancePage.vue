@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { useThemeStore } from '@/stores/themeStore';
-import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
@@ -10,7 +9,6 @@ import { SystemThemeType, LanguageType } from '@/../bindings/voidraft/internal/m
 const { t } = useI18n();
 const configStore = useConfigStore();
 const themeStore = useThemeStore();
-const { safeCall } = useErrorHandler();
 
 // 语言选项
 const languageOptions = [
@@ -30,10 +28,7 @@ const updateLanguage = async (event: Event) => {
   const select = event.target as HTMLSelectElement;
   const selectedLanguage = select.value as LanguageType;
   
-  await safeCall(
-    () => configStore.setLanguage(selectedLanguage),
-    'config.languageChangeFailed'
-  );
+  await configStore.setLanguage(selectedLanguage);
 };
 
 // 更新系统主题设置
@@ -41,10 +36,7 @@ const updateSystemTheme = async (event: Event) => {
   const select = event.target as HTMLSelectElement;
   const selectedSystemTheme = select.value as SystemThemeType;
   
-  await safeCall(
-    () => themeStore.setTheme(selectedSystemTheme),
-    'config.systemThemeChangeFailed'
-  );
+  await themeStore.setTheme(selectedSystemTheme);
 };
 </script>
 

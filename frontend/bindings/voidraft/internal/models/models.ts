@@ -132,10 +132,18 @@ export class ConfigMetadata {
      */
     "lastUpdated": string;
 
+    /**
+     * 配置版本号
+     */
+    "version": string;
+
     /** Creates a new ConfigMetadata instance. */
     constructor($$source: Partial<ConfigMetadata> = {}) {
         if (!("lastUpdated" in $$source)) {
             this["lastUpdated"] = "";
+        }
+        if (!("version" in $$source)) {
+            this["version"] = "";
         }
 
         Object.assign(this, $$source);
@@ -978,7 +986,7 @@ export class UpdatesConfig {
     /**
      * 当前版本号
      */
-    "Version": string;
+    "version": string;
 
     /**
      * 是否自动更新
@@ -992,8 +1000,8 @@ export class UpdatesConfig {
 
     /** Creates a new UpdatesConfig instance. */
     constructor($$source: Partial<UpdatesConfig> = {}) {
-        if (!("Version" in $$source)) {
-            this["Version"] = "";
+        if (!("version" in $$source)) {
+            this["version"] = "";
         }
         if (!("autoUpdate" in $$source)) {
             this["autoUpdate"] = false;

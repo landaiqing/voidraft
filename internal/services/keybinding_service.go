@@ -2,23 +2,25 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"voidraft/internal/models"
 
-	"github.com/fsnotify/fsnotify"
-	"github.com/spf13/viper"
+	jsonparser "github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/providers/file"
+	"github.com/knadh/koanf/providers/structs"
+	"github.com/knadh/koanf/v2"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
 // KeyBindingService 快捷键管理服务
 type KeyBindingService struct {
-	viper       *viper.Viper
-	logger      *log.LoggerService
-	pathManager *PathManager
+	koanf        *koanf.Koanf
+	logger       *log.LoggerService
+	pathManager  *PathManager
+	fileProvider *file.File
 
 	mu       sync.RWMutex
 	ctx      context.Context
@@ -60,16 +62,10 @@ func NewKeyBindingService(logger *log.LoggerService, pathManager *PathManager) *
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 创建并配置 Viper
-	v := viper.New()
-	v.SetConfigName(pathManager.GetKeybindsName())
-	v.SetConfigType("json")
-	v.AddConfigPath(pathManager.GetConfigDir())
-	v.SetEnvPrefix("VOIDRAFT_KEYBINDING")
-	v.AutomaticEnv()
+	k := koanf.New(".")
 
 	service := &KeyBindingService{
-		viper:       v,
+		koanf:       k,
 		logger:      logger,
 		pathManager: pathManager,
 		ctx:         ctx,
@@ -85,21 +81,21 @@ func NewKeyBindingService(logger *log.LoggerService, pathManager *PathManager) *
 // initialize 初始化配置
 func (kbs *KeyBindingService) initialize() {
 	kbs.initOnce.Do(func() {
-		kbs.setDefaults()
-
 		if err := kbs.initConfig(); err != nil {
 			kbs.logger.Error("failed to initialize keybinding config", "error", err)
 		}
-
-		kbs.startWatching()
 	})
 }
 
 // setDefaults 设置默认值
-func (kbs *KeyBindingService) setDefaults() {
+func (kbs *KeyBindingService) setDefaults() error {
 	defaultConfig := models.NewDefaultKeyBindingConfig()
-	kbs.viper.SetDefault("keyBindings", defaultConfig.KeyBindings)
-	kbs.viper.SetDefault("metadata.lastUpdated", defaultConfig.Metadata.LastUpdated)
+
+	if err := kbs.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
+		return &KeyBindingError{"load_defaults", "", err}
+	}
+
+	return nil
 }
 
 // initConfig 初始化配置
@@ -107,13 +103,18 @@ func (kbs *KeyBindingService) initConfig() error {
 	kbs.mu.Lock()
 	defer kbs.mu.Unlock()
 
-	if err := kbs.viper.ReadInConfig(); err != nil {
-		var configFileNotFoundError viper.ConfigFileNotFoundError
-		if errors.As(err, &configFileNotFoundError) {
-			return kbs.createDefaultConfig()
-		}
-		return &KeyBindingError{"read_config", "", err}
+	// 检查配置文件是否存在
+	configPath := kbs.pathManager.GetKeybindsPath()
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return kbs.createDefaultConfig()
 	}
+
+	// 配置文件存在，直接加载
+	kbs.fileProvider = file.Provider(configPath)
+	if err := kbs.koanf.Load(kbs.fileProvider, jsonparser.Parser()); err != nil {
+		return &KeyBindingError{"load_config_file", "", err}
+	}
+
 	return nil
 }
 
@@ -123,8 +124,11 @@ func (kbs *KeyBindingService) createDefaultConfig() error {
 		return &KeyBindingError{"create_config_dir", "", err}
 	}
 
-	defaultConfig := models.NewDefaultKeyBindingConfig()
-	configBytes, err := json.MarshalIndent(defaultConfig, "", "  ")
+	if err := kbs.setDefaults(); err != nil {
+		return err
+	}
+
+	configBytes, err := kbs.koanf.Marshal(jsonparser.Parser())
 	if err != nil {
 		return &KeyBindingError{"marshal_config", "", err}
 	}
@@ -133,15 +137,12 @@ func (kbs *KeyBindingService) createDefaultConfig() error {
 		return &KeyBindingError{"write_config", "", err}
 	}
 
-	return kbs.viper.ReadInConfig()
-}
-
-// startWatching 启动配置文件监听
-func (kbs *KeyBindingService) startWatching() {
-	kbs.viper.OnConfigChange(func(e fsnotify.Event) {
-
-	})
-	kbs.viper.WatchConfig()
+	// 创建文件提供器
+	kbs.fileProvider = file.Provider(kbs.pathManager.GetKeybindsPath())
+	if err = kbs.koanf.Load(kbs.fileProvider, jsonparser.Parser()); err != nil {
+		return err
+	}
+	return nil
 }
 
 // GetKeyBindingConfig 获取完整快捷键配置
@@ -150,7 +151,7 @@ func (kbs *KeyBindingService) GetKeyBindingConfig() (*models.KeyBindingConfig, e
 	defer kbs.mu.RUnlock()
 
 	var config models.KeyBindingConfig
-	if err := kbs.viper.Unmarshal(&config); err != nil {
+	if err := kbs.koanf.Unmarshal("", &config); err != nil {
 		return nil, &KeyBindingError{"unmarshal_config", "", err}
 	}
 	return &config, nil
@@ -165,8 +166,8 @@ func (kbs *KeyBindingService) GetAllKeyBindings() ([]models.KeyBinding, error) {
 	return config.KeyBindings, nil
 }
 
-// Shutdown 关闭服务
-func (kbs *KeyBindingService) Shutdown() error {
+// ServiceShutdown 关闭服务
+func (kbs *KeyBindingService) ServiceShutdown() error {
 	kbs.cancel()
 	return nil
 }

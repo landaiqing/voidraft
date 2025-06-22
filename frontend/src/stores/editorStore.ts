@@ -4,34 +4,29 @@ import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
-import {useLogStore} from './logStore';
+import {useThemeStore} from './themeStore';
+import {useI18n} from 'vue-i18n';
+import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
+import {DocumentService} from '@/../bindings/voidraft/internal/services';
+import {ensureSyntaxTree} from "@codemirror/language"
 import {createBasicSetup} from '@/views/editor/extensions/basicSetup';
-import {
-  createStatsUpdateExtension,
-  getTabExtensions,
-  updateTabConfig,
-  createAutoSavePlugin,
-  createSaveShortcutPlugin,
-  createFontExtensionFromBackend,
-  updateFontConfig,
-  createDynamicKeymapExtension,
-} from '@/views/editor/extensions';
-import { createThemeExtension, updateEditorTheme } from '@/views/editor/extensions/themeExtension';
-import { useThemeStore } from './themeStore';
-import { useI18n } from 'vue-i18n';
-import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
-import { DocumentService } from '@/../bindings/voidraft/internal/services';
-import {ensureSyntaxTree } from "@codemirror/language"
+import {createThemeExtension, updateEditorTheme} from '@/views/editor/extensions/themeExtension';
+import {getTabExtensions, updateTabConfig} from '@/views/editor/extensions/tabExtension';
+import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/extensions/fontExtension';
+import {createStatsUpdateExtension} from '@/views/editor/extensions/statsExtension';
+import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/extensions/autoSaveExtension';
+import {createDynamicKeymapExtension} from '@/views/editor/extensions/keymap';
+
 export interface DocumentStats {
     lines: number;
     characters: number;
     selectedCharacters: number;
 }
+
 export const useEditorStore = defineStore('editor', () => {
     // 引用配置store
     const configStore = useConfigStore();
     const documentStore = useDocumentStore();
-    const logStore = useLogStore();
     const themeStore = useThemeStore();
     const { t } = useI18n();
 
@@ -97,22 +92,6 @@ export const useEditorStore = defineStore('editor', () => {
     const scrollEditorToBottom = () => {
         if (editorView.value) {
             scrollToBottom(editorView.value as any);
-        }
-    };
-
-    // 手动保存文档
-    const handleManualSave = async () => {
-        if (!editorView.value) return;
-
-        const view = editorView.value as EditorView;
-        const content = view.state.doc.toString();
-
-        // 先更新内容
-        await DocumentService.UpdateActiveDocumentContent(content);
-        // 然后调用强制保存方法
-        const success = await documentStore.forceSaveDocument();
-        if (success) {
-            logStore.info(t('document.manualSaveSuccess'));
         }
     };
 
@@ -231,6 +210,18 @@ export const useEditorStore = defineStore('editor', () => {
         });
     };
 
+    // 手动保存文档
+    const handleManualSave = async () => {
+        if (!editorView.value) return;
+
+        const view = editorView.value as EditorView;
+        const content = view.state.doc.toString();
+
+        // 先更新内容
+        await DocumentService.UpdateActiveDocumentContent(content);
+        // 然后调用强制保存方法
+        await documentStore.forceSaveDocument();
+    };
 
     // 销毁编辑器
     const destroyEditor = () => {
@@ -241,51 +232,50 @@ export const useEditorStore = defineStore('editor', () => {
         }
     };
 
+    // 监听Tab设置变化
+    watch([
+        () => configStore.config.editing.tabSize,
+        () => configStore.config.editing.enableTabIndent,
+        () => configStore.config.editing.tabType,
+    ], () => {
+        reconfigureTabSettings();
+    });
 
-        // 监听Tab设置变化
-        watch([
-            () => configStore.config.editing.tabSize,
-            () => configStore.config.editing.enableTabIndent,
-            () => configStore.config.editing.tabType,
-        ], () => {
-            reconfigureTabSettings();
-        });
+    // 监听字体大小变化
+    watch([
+        () => configStore.config.editing.fontFamily,
+        () => configStore.config.editing.fontSize,
+        () => configStore.config.editing.lineHeight,
+        () => configStore.config.editing.fontWeight,
+    ], () => {
+        reconfigureFontSettings();
+        applyFontSize();
+    });
 
-        // 监听字体大小变化
-        watch([
-            () => configStore.config.editing.fontFamily,
-            () => configStore.config.editing.fontSize,
-            () => configStore.config.editing.lineHeight,
-            () => configStore.config.editing.fontWeight,
-        ], () => {
-            reconfigureFontSettings();
-            applyFontSize();
-        });
+    // 监听主题变化
+    watch(() => themeStore.currentTheme, (newTheme) => {
+        if (editorView.value && newTheme) {
+            updateEditorTheme(editorView.value as EditorView, newTheme);
+        }
+    });
 
-        // 监听主题变化
-        watch(() => themeStore.currentTheme, (newTheme) => {
-            if (editorView.value && newTheme) {
-                updateEditorTheme(editorView.value as EditorView, newTheme);
-            }
-        });
+    return {
+        // 状态
+        documentStats,
+        editorView,
+        isEditorInitialized,
+        editorContainer,
 
-            return {
-            // 状态
-            documentStats,
-            editorView,
-            isEditorInitialized,
-            editorContainer,
-
-            // 方法
-            setEditorView,
-            setEditorContainer,
-            updateDocumentStats,
-            applyFontSize,
-            createEditor,
-            reconfigureTabSettings,
-            reconfigureFontSettings,
-            handleManualSave,
-            destroyEditor,
-            scrollEditorToBottom,
-        };
+        // 方法
+        setEditorView,
+        setEditorContainer,
+        updateDocumentStats,
+        applyFontSize,
+        createEditor,
+        reconfigureTabSettings,
+        reconfigureFontSettings,
+        handleManualSave,
+        destroyEditor,
+        scrollEditorToBottom,
+    };
 });

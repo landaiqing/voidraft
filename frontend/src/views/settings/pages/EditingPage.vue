@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { FONT_OPTIONS } from '@/stores/configStore';
-import { useErrorHandler } from '@/utils/errorHandler';
 import { useI18n } from 'vue-i18n';
 import {computed, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -11,7 +10,6 @@ import { TabType } from '@/../bindings/voidraft/internal/models/';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
-const { safeCall } = useErrorHandler();
 
 // 确保配置已加载
 onMounted(async () => {
@@ -29,10 +27,7 @@ const handleFontFamilyChange = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
   const fontFamily = target.value;
   if (fontFamily) {
-    await safeCall(
-      () => configStore.setFontFamily(fontFamily),
-      'config.fontFamilyUpdateFailed'
-    );
+    await configStore.setFontFamily(fontFamily);
   }
 };
 
@@ -52,42 +47,27 @@ const fontWeightOptions = [
 // 字体粗细选择
 const handleFontWeightChange = async (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  await safeCall(
-    () => configStore.setFontWeight(target.value),
-    'config.fontWeightUpdateFailed'
-  );
+  await configStore.setFontWeight(target.value);
 };
 
 // 行高控制
 const increaseLineHeight = async () => {
   const newLineHeight = Math.min(3.0, configStore.config.editing.lineHeight + 0.1);
-  await safeCall(
-    () => configStore.setLineHeight(Math.round(newLineHeight * 10) / 10),
-    'config.lineHeightIncreaseFailed'
-  );
+  await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
 };
 
 const decreaseLineHeight = async () => {
   const newLineHeight = Math.max(1.0, configStore.config.editing.lineHeight - 0.1);
-  await safeCall(
-    () => configStore.setLineHeight(Math.round(newLineHeight * 10) / 10),
-    'config.lineHeightDecreaseFailed'
-  );
+  await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
 };
 
 // 字体大小控制
 const increaseFontSize = async () => {
-  await safeCall(
-    () => configStore.increaseFontSize(),
-    'config.fontSizeIncreaseFailed'
-  );
+  await configStore.increaseFontSize();
 };
 
 const decreaseFontSize = async () => {
-  await safeCall(
-    () => configStore.decreaseFontSize(),
-    'config.fontSizeDecreaseFailed'
-  );
+  await configStore.decreaseFontSize();
 };
 
 // Tab类型切换
@@ -99,35 +79,23 @@ const tabTypeText = computed(() => {
 
 // Tab大小增减
 const increaseTabSize = async () => {
-  await safeCall(
-    () => configStore.increaseTabSize(),
-    'config.tabSizeIncreaseFailed'
-  );
+  await configStore.increaseTabSize();
 };
 
 const decreaseTabSize = async () => {
-  await safeCall(
-    () => configStore.decreaseTabSize(),
-    'config.tabSizeDecreaseFailed'
-  );
+  await configStore.decreaseTabSize();
 };
 
 // Tab相关操作
 const handleToggleTabType = async () => {
-  await safeCall(
-    () => configStore.toggleTabType(),
-    'config.tabTypeToggleFailed'
-  );
+  await configStore.toggleTabType();
 };
 
 // 创建双向绑定的计算属性
 const enableTabIndent = computed({
   get: () => configStore.config.editing.enableTabIndent,
   set: async (value: boolean) => {
-    await safeCall(
-      () => configStore.setEnableTabIndent(value),
-      'config.tabIndentToggleFailed'
-    );
+    await configStore.setEnableTabIndent(value);
   }
 });
 
@@ -136,10 +104,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   const value = parseInt(target.value, 10);
   if (!isNaN(value) && value >= 1000 && value <= 30000) {
-    await safeCall(
-      () => configStore.setAutoSaveDelay(value),
-      'config.autoSaveDelayUpdateFailed'
-    );
+    await configStore.setAutoSaveDelay(value);
   }
 };
 

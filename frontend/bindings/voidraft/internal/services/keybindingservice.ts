@@ -39,10 +39,10 @@ export function GetKeyBindingConfig(): Promise<models$0.KeyBindingConfig | null>
 }
 
 /**
- * Shutdown 关闭服务
+ * ServiceShutdown 关闭服务
  */
-export function Shutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3046465148) as any;
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1610182855) as any;
     return $resultPromise;
 }
 

@@ -11,69 +11,18 @@ export default {
       characters: 'Ch',
       selected: 'Sel'
     },
-    fontSize: 'Font Size',
     fontSizeTooltip: 'Font Size (Ctrl+wheel to adjust)',
-    tabLabel: 'Tab',
-    tabType: {
-      spaces: 'Spaces',
-      tab: 'Tab'
-    },
-    encoding: 'UTF-8',
     settings: 'Settings',
     alwaysOnTop: 'Always on Top',
     blockLanguage: 'Block Language',
     searchLanguage: 'Search language...',
     noLanguageFound: 'No language found',
-    autoDetected: 'Auto-detected',
     formatHint: 'Current block supports formatting, use Ctrl+Shift+F shortcut for formatting',
-  },
-  config: {
-    loadSuccess: 'Configuration loaded successfully',
-    loadFailed: 'Failed to load configuration',
-    saveSuccess: 'Configuration saved',
-    saveFailed: 'Failed to save configuration',
-    resetSuccess: 'Configuration reset to defaults',
-    resetFailed: 'Failed to reset configuration',
-    fontSizeFixed: 'Font size ({value}) has been corrected to {fixed}',
-    tabSizeFixed: 'Tab size ({value}) has been corrected to {fixed}',
-    tabTypeFixed: 'Tab type ({value}) is invalid, corrected to spaces',
-    alwaysOnTopFailed: 'Failed to set window always on top',
-    alwaysOnTopSuccess: 'Window always on top status updated',
-    languageChanged: 'Language setting updated',
-    languageChangeFailed: 'Failed to update language setting',
-    themeChanged: 'Theme setting updated',
-    themeChangeFailed: 'Failed to update theme setting',
-    systemThemeChanged: 'System theme setting updated',
-    systemThemeChangeFailed: 'Failed to update system theme setting',
-    startupSuccess: 'Startup setting updated',
-    startupFailed: 'Failed to update startup setting'
-  },
-  languages: {
-    'zh-CN': '简体中文',
-    'en-US': 'English'
   },
   systemTheme: {
     dark: 'Dark',
     light: 'Light',
     auto: 'Follow System'
-  },
-  document: {
-    loadSuccess: 'Document loaded successfully',
-    loadFailed: 'Failed to load document',
-    saveSuccess: 'Document saved successfully',
-    saveFailed: 'Failed to save document',
-    manualSaveSuccess: 'Manually saved successfully',
-    settings: {
-      loadFailed: 'Failed to load save settings',
-      saveSuccess: 'Save settings updated',
-      saveFailed: 'Failed to update save settings'
-    },
-  },
-  migration: {
-    started: 'Starting data migration',
-    migrating: 'Migrating',
-    completed: 'Migration Completed',
-    failed: 'Migration Failed'
   },
   keybindings: {
     headers: {
@@ -88,10 +37,7 @@ export default {
       searchToggleWord: 'Toggle whole word matching',
       searchToggleRegex: 'Toggle regular expression matching',
       searchShowReplace: 'Show replace functionality',
-      searchFindNext: 'Find next match',
-      searchFindPrev: 'Find previous match',
       searchReplaceAll: 'Replace all matches',
-      searchSelectAll: 'Select all content',
       blockSelectAll: 'Select all in block',
       blockAddAfterCurrent: 'Add new block after current',
       blockAddAfterLast: 'Add new block at end',
@@ -125,7 +71,6 @@ export default {
       selectSyntaxRight: 'Select syntax right',
       copyLineUp: 'Copy line up',
       copyLineDown: 'Copy line down',
-      simplifySelection: 'Simplify selection',
       insertBlankLine: 'Insert blank line',
       selectLine: 'Select line',
       selectParentSyntax: 'Select parent syntax',
@@ -151,10 +96,7 @@ export default {
     appearance: 'Appearance',
     keyBindings: 'Key Bindings',
     updates: 'Updates',
-    comingSoon: 'Coming Soon...',
-    save: 'Save',
     reset: 'Reset',
-    cancel: 'Cancel',
     dangerZone: 'Danger Zone',
     resetAllSettings: 'Reset All Settings',
     confirmReset: 'Click again to confirm reset',
@@ -171,7 +113,6 @@ export default {
     clickToSelectPath: 'Click to select path',
     resetDefault: 'Reset Default',
     resetToDefaultPath: 'Reset to default path',
-    restartRequiredForDataPath: 'Restart required',
     fontSize: 'Font Size',
     fontSizeDescription: 'Editor font size',
     fontSettings: 'Font Settings',
@@ -189,15 +130,7 @@ export default {
     enableTabIndent: 'Enable Tab Indent',
     language: 'Interface Language',
     systemTheme: 'System Theme',
-    theme: 'Editor Theme',
-    themeDescription: 'Choose editor theme',
-    restartRequired: '(Restart required)',
     saveOptions: 'Save Options',
-    autoSaveDelay: 'Auto Save Delay (ms)',
-    selectDirectoryFailed: 'Failed to select directory',
-    validation: {
-      customPathRequired: 'A valid directory must be selected when enabling custom path',
-      customPathAutoDisabled: 'Custom data path has been automatically disabled due to no valid directory selected'
-    }
+    autoSaveDelay: 'Auto Save Delay (ms)'
   }
 }; 

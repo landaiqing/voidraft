@@ -2,11 +2,8 @@ import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
-import {useErrorHandler} from '@/utils/errorHandler';
 
 export const useDocumentStore = defineStore('document', () => {
-  const {safeCall} = useErrorHandler();
-
   // 状态
   const activeDocument = ref<Document | null>(null);
   const isLoading = ref(false);
@@ -23,15 +20,13 @@ export const useDocumentStore = defineStore('document', () => {
   // 状态管理包装器
   const withStateGuard = async <T>(
     operation: () => Promise<T>,
-    stateRef: typeof isLoading | typeof isSaving,
-    errorMessageKey: string,
-    successMessageKey?: string
+    stateRef: typeof isLoading | typeof isSaving
   ): Promise<T | null> => {
     if (stateRef.value) return null;
     
     stateRef.value = true;
     try {
-      return await safeCall(operation, errorMessageKey, successMessageKey);
+      return await operation();
     } finally {
       stateRef.value = false;
     }
@@ -44,9 +39,7 @@ export const useDocumentStore = defineStore('document', () => {
       activeDocument.value = doc;
       return doc;
     },
-    isLoading,
-    'document.loadFailed',
-    'document.loadSuccess'
+    isLoading
   );
 
   // 保存文档
@@ -64,9 +57,7 @@ export const useDocumentStore = defineStore('document', () => {
         
         return true;
       },
-      isSaving,
-      'document.saveFailed',
-      'document.saveSuccess'
+      isSaving
     );
     
     return result ?? false;
@@ -88,9 +79,7 @@ export const useDocumentStore = defineStore('document', () => {
         
         return true;
       },
-      isSaving,
-      'document.saveFailed',
-      'document.manualSaveSuccess'
+      isSaving
     );
     
     return result ?? false;
