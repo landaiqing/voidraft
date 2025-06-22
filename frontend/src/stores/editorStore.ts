@@ -9,7 +9,6 @@ import {createBasicSetup} from '@/views/editor/extensions/basicSetup';
 import {
   createStatsUpdateExtension,
   getTabExtensions,
-  updateStats,
   updateTabConfig,
   createAutoSavePlugin,
   createSaveShortcutPlugin,
@@ -22,7 +21,7 @@ import { useThemeStore } from './themeStore';
 import { useI18n } from 'vue-i18n';
 import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
 import { DocumentService } from '@/../bindings/voidraft/internal/services';
-
+import {ensureSyntaxTree } from "@codemirror/language"
 export interface DocumentStats {
     lines: number;
     characters: number;
@@ -199,15 +198,15 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 将编辑器实例保存到store
         setEditorView(view);
+
         isEditorInitialized.value = true;
 
-        // 确保编辑器已渲染后再滚动到底部
         scrollToBottom(view);
+
+        ensureSyntaxTree(view.state, view.state.doc.length, 5000)
+
         // 应用初始字体大小
         applyFontSize();
-
-        // 立即更新统计信息
-        updateStats(view, updateDocumentStats);
     };
 
     // 重新配置编辑器

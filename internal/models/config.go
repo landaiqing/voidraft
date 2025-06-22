@@ -1,8 +1,6 @@
 package models
 
 import (
-	"os"
-	"path/filepath"
 	"time"
 )
 
@@ -103,19 +101,10 @@ type ConfigMetadata struct {
 
 // NewDefaultAppConfig 创建默认应用配置
 func NewDefaultAppConfig() *AppConfig {
-	// 获取当前工作目录
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "."
-	}
-
-	// 默认路径配置 - 使用当前目录
-	dataDir := filepath.Join(currentDir, "data")
-
 	return &AppConfig{
 		General: GeneralConfig{
 			AlwaysOnTop:        false,
-			DataPath:           dataDir,
+			DataPath:           "./data",
 			EnableSystemTray:   true,
 			StartAtLogin:       false,
 			EnableGlobalHotkey: false,
