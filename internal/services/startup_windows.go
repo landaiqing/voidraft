@@ -184,7 +184,7 @@ func (w *WindowsStartupImpl) SetEnabled(enabled bool) error {
 	}
 }
 
-// setRegistryStartup 设置注册表启动项（备用方法）
+// setRegistryStartup 设置注册表启动项
 func (w *WindowsStartupImpl) setRegistryStartup(enabled bool) error {
 	key, err := w.openRegistryKey()
 	if err != nil {

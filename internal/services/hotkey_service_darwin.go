@@ -68,6 +68,7 @@ import "C"
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -83,7 +84,7 @@ type HotkeyService struct {
 	configService *ConfigService
 	app           *application.App
 	mu            sync.RWMutex
-	isRegistered  bool
+	isRegistered  atomic.Bool
 	currentHotkey *models.HotkeyCombo
 }
 
@@ -95,7 +96,7 @@ type HotkeyError struct {
 
 // Error 实现error接口
 func (e *HotkeyError) Error() string {
-	return fmt.Sprintf("hotkey error during %s: %v", e.Operation, e.Err)
+	return fmt.Sprintf("hotkey %s: %v", e.Operation, e.Err)
 }
 
 // Unwrap 获取原始错误
@@ -112,7 +113,6 @@ func NewHotkeyService(configService *ConfigService, logger *log.LoggerService) *
 	service := &HotkeyService{
 		logger:        logger,
 		configService: configService,
-		isRegistered:  false,
 	}
 
 	// 设置全局实例
@@ -128,41 +128,31 @@ func (hs *HotkeyService) Initialize(app *application.App) error {
 	// 加载并应用当前配置
 	config, err := hs.configService.GetConfig()
 	if err != nil {
-		return &HotkeyError{Operation: "load_config", Err: err}
+		return &HotkeyError{"load_config", err}
 	}
 
 	if config.General.EnableGlobalHotkey {
-		err = hs.RegisterHotkey(&config.General.GlobalHotkey)
-		if err != nil {
-			hs.logger.Error("Hotkey: Failed to register hotkey on startup", "error", err)
+		if err := hs.RegisterHotkey(&config.General.GlobalHotkey); err != nil {
+			hs.logger.Error("failed to register startup hotkey", "error", err)
 		}
 	}
 
-	hs.logger.Info("Hotkey: macOS service initialized")
 	return nil
 }
 
 // RegisterHotkey 注册全局热键
 func (hs *HotkeyService) RegisterHotkey(hotkey *models.HotkeyCombo) error {
-	hs.mu.Lock()
-	defer hs.mu.Unlock()
-
-	// 验证热键组合
 	if !hs.isValidHotkey(hotkey) {
-		return &HotkeyError{Operation: "validate_hotkey", Err: fmt.Errorf("invalid hotkey combination")}
+		return &HotkeyError{"validate", fmt.Errorf("invalid hotkey combination")}
 	}
 
-	hs.logger.Info("Hotkey: Registering global hotkey on macOS",
-		"ctrl", hotkey.Ctrl,
-		"shift", hotkey.Shift,
-		"alt", hotkey.Alt,
-		"win", hotkey.Win,
-		"key", hotkey.Key)
+	hs.mu.Lock()
+	defer hs.mu.Unlock()
 
 	// 转换键码和修饰符
 	keyCode := hs.keyToMacKeyCode(hotkey.Key)
 	if keyCode == 0 {
-		return &HotkeyError{Operation: "convert_key", Err: fmt.Errorf("unsupported key: %s", hotkey.Key)}
+		return &HotkeyError{"convert_key", fmt.Errorf("unsupported key: %s", hotkey.Key)}
 	}
 
 	modifiers := hs.buildMacModifiers(hotkey)
@@ -170,13 +160,12 @@ func (hs *HotkeyService) RegisterHotkey(hotkey *models.HotkeyCombo) error {
 	// 调用C函数注册热键
 	result := int(C.registerGlobalHotkey(C.int(keyCode), C.int(modifiers)))
 	if result == 0 {
-		return &HotkeyError{Operation: "register_hotkey", Err: fmt.Errorf("failed to register hotkey")}
+		return &HotkeyError{"register", fmt.Errorf("failed to register hotkey")}
 	}
 
 	hs.currentHotkey = hotkey
-	hs.isRegistered = true
+	hs.isRegistered.Store(true)
 
-	hs.logger.Info("Hotkey: Successfully registered global hotkey on macOS")
 	return nil
 }
 
@@ -185,67 +174,28 @@ func (hs *HotkeyService) UnregisterHotkey() error {
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
 
-	if !hs.isRegistered {
-		hs.logger.Debug("Hotkey: No hotkey registered, skipping unregister")
+	if !hs.isRegistered.Load() {
 		return nil
 	}
-
-	hs.logger.Info("Hotkey: Unregistering global hotkey on macOS")
 
 	// 调用C函数取消注册热键
 	result := int(C.unregisterGlobalHotkey())
 	if result == 0 {
-		return &HotkeyError{Operation: "unregister_hotkey", Err: fmt.Errorf("failed to unregister hotkey")}
+		return &HotkeyError{"unregister", fmt.Errorf("failed to unregister hotkey")}
 	}
 
 	hs.currentHotkey = nil
-	hs.isRegistered = false
+	hs.isRegistered.Store(false)
 
-	hs.logger.Info("Hotkey: Successfully unregistered global hotkey on macOS")
 	return nil
 }
 
 // UpdateHotkey 更新热键配置
 func (hs *HotkeyService) UpdateHotkey(enable bool, hotkey *models.HotkeyCombo) error {
-	hs.logger.Info("Hotkey: === UpdateHotkey called (macOS) ===",
-		"enable", enable,
-		"ctrl", hotkey.Ctrl,
-		"shift", hotkey.Shift,
-		"alt", hotkey.Alt,
-		"win", hotkey.Win,
-		"key", hotkey.Key)
-
 	if enable {
-		// 启用热键：直接注册新热键（RegisterHotkey 会处理取消旧热键）
-		err := hs.RegisterHotkey(hotkey)
-		if err != nil {
-			hs.logger.Error("Hotkey: Failed to register new hotkey", "error", err)
-			return err
-		}
-		hs.logger.Info("Hotkey: Successfully updated and registered new hotkey on macOS")
-		return nil
-	} else {
-		// 禁用热键：取消注册
-		err := hs.UnregisterHotkey()
-		if err != nil {
-			hs.logger.Error("Hotkey: Failed to unregister hotkey", "error", err)
-			return err
-		}
-		hs.logger.Info("Hotkey: Successfully disabled hotkey on macOS")
-		return nil
+		return hs.RegisterHotkey(hotkey)
 	}
-}
-
-// ToggleWindow 切换窗口显示/隐藏
-func (hs *HotkeyService) ToggleWindow() {
-	if hs.app == nil {
-		hs.logger.Warning("Hotkey: App is nil, cannot toggle")
-		return
-	}
-
-	// 发送事件到前端，让前端处理窗口切换
-	hs.app.EmitEvent("hotkey:toggle-window", nil)
-	hs.logger.Debug("Hotkey: Emitted toggle window event (macOS)")
+	return hs.UnregisterHotkey()
 }
 
 // keyToMacKeyCode 将键名转换为macOS虚拟键码
@@ -330,31 +280,18 @@ func (hs *HotkeyService) GetCurrentHotkey() *models.HotkeyCombo {
 
 // IsRegistered 检查是否已注册热键
 func (hs *HotkeyService) IsRegistered() bool {
-	hs.mu.RLock()
-	defer hs.mu.RUnlock()
-	return hs.isRegistered
+	return hs.isRegistered.Load()
 }
 
 // ServiceShutdown 关闭热键服务
 func (hs *HotkeyService) ServiceShutdown() error {
-	hs.mu.Lock()
-	defer hs.mu.Unlock()
-
-	if hs.isRegistered {
-		err := hs.UnregisterHotkey()
-		if err != nil {
-			hs.logger.Error("Hotkey: Failed to unregister hotkey on shutdown", "error", err)
-		}
-	}
-
-	hs.logger.Info("Hotkey: macOS service shutdown completed")
-	return nil
+	return hs.UnregisterHotkey()
 }
 
 //export hotkeyTriggered
 func hotkeyTriggered() {
 	// 通过全局实例调用ToggleWindow
-	if globalHotkeyService != nil {
+	if globalHotkeyService != nil && globalHotkeyService.app != nil {
 		globalHotkeyService.ToggleWindow()
 	}
 }

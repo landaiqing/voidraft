@@ -26,7 +26,6 @@ func NewDialogService(logger *log.LoggerService) *DialogService {
 // SetWindow 设置绑定的窗口
 func (ds *DialogService) SetWindow(window *application.WebviewWindow) {
 	ds.window = window
-	ds.logger.Info("Dialog service window binding updated")
 }
 
 // SelectDirectory 打开目录选择对话框
@@ -65,10 +64,7 @@ func (ds *DialogService) SelectDirectory() (string, error) {
 
 	path, err := dialog.PromptForSingleSelection()
 	if err != nil {
-		ds.logger.Error("Failed to select directory", "error", err)
 		return "", err
 	}
-
-	ds.logger.Info("Directory selected", "path", path)
 	return path, nil
 }

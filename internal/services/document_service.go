@@ -1,9 +1,11 @@
 package services
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 	"voidraft/internal/models"
 
@@ -14,15 +16,21 @@ import (
 type DocumentService struct {
 	configService *ConfigService
 	logger        *log.LoggerService
-	document      *models.Document
 	docStore      *Store[models.Document]
-	mutex         sync.RWMutex
 
-	// 自动保存优化
-	saveTimer      *time.Timer
-	isDirty        bool
-	lastSaveTime   time.Time
-	pendingContent string // 暂存待保存的内容
+	// 文档状态管理
+	mu       sync.RWMutex
+	document *models.Document
+
+	// 自动保存管理
+	ctx           context.Context
+	cancel        context.CancelFunc
+	isDirty       atomic.Bool
+	lastSaveTime  atomic.Int64 // unix timestamp
+	saveScheduler chan struct{}
+
+	// 初始化控制
+	initOnce sync.Once
 }
 
 // NewDocumentService 创建文档服务
@@ -31,20 +39,33 @@ func NewDocumentService(configService *ConfigService, logger *log.LoggerService)
 		logger = log.New()
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	return &DocumentService{
 		configService: configService,
 		logger:        logger,
+		ctx:           ctx,
+		cancel:        cancel,
+		saveScheduler: make(chan struct{}, 1),
 	}
 }
 
 // Initialize 初始化服务
 func (ds *DocumentService) Initialize() error {
+	var initErr error
+	ds.initOnce.Do(func() {
+		initErr = ds.doInitialize()
+	})
+	return initErr
+}
+
+// doInitialize 执行初始化
+func (ds *DocumentService) doInitialize() error {
 	if err := ds.initStore(); err != nil {
 		return err
 	}
 
 	ds.loadDocument()
-	ds.startAutoSave()
+	go ds.autoSaveWorker()
 	return nil
 }
 
@@ -55,7 +76,6 @@ func (ds *DocumentService) initStore() error {
 		return err
 	}
 
-	// 确保目录存在
 	if err := os.MkdirAll(filepath.Dir(docPath), 0755); err != nil {
 		return err
 	}
@@ -75,72 +95,75 @@ func (ds *DocumentService) getDocumentPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return filepath.Join(config.General.DataPath, "docs", "default.json"), nil
 }
 
 // loadDocument 加载文档
 func (ds *DocumentService) loadDocument() {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
 	doc := ds.docStore.Get()
 	if doc.Meta.ID == "" {
-		// 创建新文档
 		ds.document = models.NewDefaultDocument()
 		ds.docStore.Set(*ds.document)
-		ds.logger.Info("Document: Created new document")
 	} else {
 		ds.document = &doc
-		ds.logger.Info("Document: Loaded existing document")
 	}
+
+	ds.lastSaveTime.Store(time.Now().Unix())
 }
 
 // GetActiveDocument 获取活动文档
 func (ds *DocumentService) GetActiveDocument() (*models.Document, error) {
-	ds.mutex.RLock()
-	defer ds.mutex.RUnlock()
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
 
 	if ds.document == nil {
 		return nil, nil
 	}
 
-	// 返回副本
 	docCopy := *ds.document
 	return &docCopy, nil
 }
 
 // UpdateActiveDocumentContent 更新文档内容
 func (ds *DocumentService) UpdateActiveDocumentContent(content string) error {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
-	if ds.document != nil {
-		// 只在内容真正改变时才标记为脏
-		if ds.document.Content != content {
-			ds.pendingContent = content
-			ds.isDirty = true
-		}
+	if ds.document != nil && ds.document.Content != content {
+		ds.document.Content = content
+		ds.markDirty()
 	}
 
 	return nil
 }
 
+// markDirty 标记为脏数据并触发自动保存
+func (ds *DocumentService) markDirty() {
+	if ds.isDirty.CompareAndSwap(false, true) {
+		select {
+		case ds.saveScheduler <- struct{}{}:
+		default: // 已有保存任务在队列中
+		}
+	}
+}
+
 // ForceSave 强制保存
 func (ds *DocumentService) ForceSave() error {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
+	return ds.saveDocument()
+}
+
+// saveDocument 保存文档
+func (ds *DocumentService) saveDocument() error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
 	if ds.document == nil {
 		return nil
 	}
 
-	// 应用待保存的内容
-	if ds.pendingContent != "" {
-		ds.document.Content = ds.pendingContent
-		ds.pendingContent = ""
-	}
-
 	now := time.Now()
 	ds.document.Meta.LastUpdated = now
 
@@ -152,85 +175,71 @@ func (ds *DocumentService) ForceSave() error {
 		return err
 	}
 
-	ds.isDirty = false
-	ds.lastSaveTime = now
-	ds.logger.Info("Document: Force save completed")
+	ds.isDirty.Store(false)
+	ds.lastSaveTime.Store(now.Unix())
 	return nil
 }
 
-// startAutoSave 启动自动保存
-func (ds *DocumentService) startAutoSave() {
-	delay := 5 * time.Second // 默认延迟
+// autoSaveWorker 自动保存工作协程
+func (ds *DocumentService) autoSaveWorker() {
+	ticker := time.NewTicker(ds.getAutoSaveInterval())
+	defer ticker.Stop()
 
-	if config, err := ds.configService.GetConfig(); err == nil {
-		delay = time.Duration(config.Editing.AutoSaveDelay) * time.Millisecond
+	for {
+		select {
+		case <-ds.ctx.Done():
+			return
+		case <-ds.saveScheduler:
+			ds.performAutoSave()
+		case <-ticker.C:
+			if ds.isDirty.Load() {
+				ds.performAutoSave()
+			}
+			// 动态调整保存间隔
+			ticker.Reset(ds.getAutoSaveInterval())
+		}
 	}
-
-	ds.scheduleAutoSave(delay)
 }
 
-// scheduleAutoSave 安排自动保存
-func (ds *DocumentService) scheduleAutoSave(delay time.Duration) {
-	if ds.saveTimer != nil {
-		ds.saveTimer.Stop()
+// getAutoSaveInterval 获取自动保存间隔
+func (ds *DocumentService) getAutoSaveInterval() time.Duration {
+	config, err := ds.configService.GetConfig()
+	if err != nil {
+		return 5 * time.Second
 	}
-
-	ds.saveTimer = time.AfterFunc(delay, func() {
-		ds.performAutoSave()
-		ds.startAutoSave() // 重新安排
-	})
+	return time.Duration(config.Editing.AutoSaveDelay) * time.Millisecond
 }
 
 // performAutoSave 执行自动保存
 func (ds *DocumentService) performAutoSave() {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
-
-	if !ds.isDirty || ds.document == nil {
+	if !ds.isDirty.Load() {
 		return
 	}
 
-	// 检查距离上次保存的时间间隔，避免过于频繁的保存
-	now := time.Now()
-	if now.Sub(ds.lastSaveTime) < time.Second {
-		// 如果距离上次保存不到1秒，跳过此次保存
-		// 下一个自动保存周期会重新尝试
-		ds.logger.Debug("Document: Skipping auto save due to recent save")
+	// 防抖：避免过于频繁的保存
+	lastSave := time.Unix(ds.lastSaveTime.Load(), 0)
+	if time.Since(lastSave) < time.Second {
+		// 延迟重试
+		time.AfterFunc(time.Second, func() {
+			select {
+			case ds.saveScheduler <- struct{}{}:
+			default:
+			}
+		})
 		return
 	}
 
-	// 应用待保存的内容
-	if ds.pendingContent != "" {
-		ds.document.Content = ds.pendingContent
-		ds.pendingContent = ""
+	if err := ds.saveDocument(); err != nil {
+		ds.logger.Error("auto save failed", "error", err)
 	}
-
-	ds.document.Meta.LastUpdated = now
-
-	if err := ds.docStore.Set(*ds.document); err != nil {
-		ds.logger.Error("Document: Auto save failed", "error", err)
-		return
-	}
-
-	if err := ds.docStore.Save(); err != nil {
-		ds.logger.Error("Document: Auto save failed", "error", err)
-		return
-	}
-
-	ds.isDirty = false
-	ds.lastSaveTime = now
-	ds.logger.Debug("Document: Auto save completed")
 }
 
 // ReloadDocument 重新加载文档
 func (ds *DocumentService) ReloadDocument() error {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
-
-	// 强制保存当前文档
-	if ds.document != nil && ds.isDirty {
-		if err := ds.forceSaveInternal(); err != nil {
-			ds.logger.Error("Document: Failed to save before reload", "error", err)
+	// 先保存当前文档
+	if ds.isDirty.Load() {
+		if err := ds.saveDocument(); err != nil {
+			return err
 		}
 	}
 
@@ -239,76 +248,24 @@ func (ds *DocumentService) ReloadDocument() error {
 		return err
 	}
 
-	// 重新加载文档
-	doc := ds.docStore.Get()
-	if doc.Meta.ID == "" {
-		// 创建新文档
-		ds.document = models.NewDefaultDocument()
-		ds.docStore.Set(*ds.document)
-		ds.logger.Info("Document: Created new document after reload")
-	} else {
-		ds.document = &doc
-		ds.logger.Info("Document: Loaded existing document after reload")
-	}
-
-	// 重置状态
-	ds.isDirty = false
-	ds.pendingContent = ""
-	ds.lastSaveTime = time.Now()
-
-	return nil
-}
-
-// forceSaveInternal 内部强制保存（不加锁）
-func (ds *DocumentService) forceSaveInternal() error {
-	if ds.document == nil {
-		return nil
-	}
-
-	// 应用待保存的内容
-	if ds.pendingContent != "" {
-		ds.document.Content = ds.pendingContent
-		ds.pendingContent = ""
-	}
-
-	now := time.Now()
-	ds.document.Meta.LastUpdated = now
-
-	if err := ds.docStore.Set(*ds.document); err != nil {
-		return err
-	}
-
-	if err := ds.docStore.Save(); err != nil {
-		return err
-	}
-
-	ds.isDirty = false
-	ds.lastSaveTime = now
+	// 重新加载
+	ds.loadDocument()
 	return nil
 }
 
 // ServiceShutdown 关闭服务
 func (ds *DocumentService) ServiceShutdown() error {
-	// 停止定时器
-	if ds.saveTimer != nil {
-		ds.saveTimer.Stop()
-	}
+	ds.cancel() // 停止自动保存工作协程
 
 	// 最后保存
-	if err := ds.ForceSave(); err != nil {
-		ds.logger.Error("Document: Failed to save on shutdown", "error", err)
+	if ds.isDirty.Load() {
+		return ds.saveDocument()
 	}
 
-	ds.logger.Info("Document: Service shutdown completed")
 	return nil
 }
 
 // OnDataPathChanged 处理数据路径变更
 func (ds *DocumentService) OnDataPathChanged(oldPath, newPath string) error {
-	ds.logger.Info("Document: Data path changed, reloading document",
-		"oldPath", oldPath,
-		"newPath", newPath)
-
-	// 重新加载文档以使用新的路径
 	return ds.ReloadDocument()
 }

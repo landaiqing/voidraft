@@ -73,7 +73,6 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
-	log.Println("Creating main window...")
 	mainWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
 		Title:                      "voidraft",
 		Width:                      700,
@@ -106,7 +105,6 @@ func main() {
 	hotkeyService := serviceManager.GetHotkeyService()
 	err := hotkeyService.Initialize(app)
 	if err != nil {
-		log.Printf("Failed to initialize hotkey service: %v\n", err)
 		panic(err)
 	}
 

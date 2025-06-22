@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 	"voidraft/internal/models"
@@ -17,9 +16,10 @@ import (
 
 // ConfigService 提供基于 Viper 的配置管理功能
 type ConfigService struct {
-	viper  *viper.Viper       // Viper 实例
-	logger *log.LoggerService // 日志服务
-	mu     sync.RWMutex       // 读写锁
+	viper       *viper.Viper       // Viper 实例
+	logger      *log.LoggerService // 日志服务
+	pathManager *PathManager       // 路径管理器
+	mu          sync.RWMutex       // 读写锁
 
 	// 配置通知服务
 	notificationService *ConfigNotificationService
@@ -49,29 +49,24 @@ func (e *ConfigError) Is(target error) bool {
 }
 
 // NewConfigService 创建新的配置服务实例
-func NewConfigService(logger *log.LoggerService) *ConfigService {
+func NewConfigService(logger *log.LoggerService, pathManager *PathManager) *ConfigService {
 	// 设置日志服务
 	if logger == nil {
 		logger = log.New()
 	}
 
-	// 获取当前工作目录
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "."
+	// 设置路径管理器
+	if pathManager == nil {
+		pathManager = NewPathManager()
 	}
-
-	// 固定配置路径和文件名
-	configPath := filepath.Join(currentDir, "config")
-	configName := "settings"
 
 	// 创建 Viper 实例
 	v := viper.New()
 
 	// 配置 Viper
-	v.SetConfigName(configName)
+	v.SetConfigName(pathManager.GetConfigName())
 	v.SetConfigType("json")
-	v.AddConfigPath(configPath)
+	v.AddConfigPath(pathManager.GetConfigDir())
 
 	// 设置环境变量前缀
 	v.SetEnvPrefix("VOIDRAFT")
@@ -82,8 +77,9 @@ func NewConfigService(logger *log.LoggerService) *ConfigService {
 
 	// 构造配置服务实例
 	service := &ConfigService{
-		viper:  v,
-		logger: logger,
+		viper:       v,
+		logger:      logger,
+		pathManager: pathManager,
 	}
 
 	// 初始化配置通知服务
@@ -91,7 +87,7 @@ func NewConfigService(logger *log.LoggerService) *ConfigService {
 
 	// 初始化配置
 	if err := service.initConfig(); err != nil {
-		service.logger.Error("Config: Failed to initialize config", "error", err)
+		service.logger.Error("Failed to initialize config", "error", err)
 	}
 
 	// 启动配置文件监听
@@ -143,29 +139,19 @@ func (cs *ConfigService) initConfig() error {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
 		if errors.As(err, &configFileNotFoundError) {
 			// 配置文件不存在，创建默认配置文件
-			cs.logger.Info("Config: Config file not found, creating default config")
 			return cs.createDefaultConfig()
 		}
 		// 配置文件存在但读取失败
 		return &ConfigError{Operation: "read_config", Err: err}
 	}
 
-	cs.logger.Info("Config: Successfully loaded config file", "file", cs.viper.ConfigFileUsed())
 	return nil
 }
 
 // createDefaultConfig 创建默认配置文件
 func (cs *ConfigService) createDefaultConfig() error {
-	// 获取配置目录路径
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "."
-	}
-	configDir := filepath.Join(currentDir, "config")
-	configPath := filepath.Join(configDir, "settings.json")
-
 	// 确保配置目录存在
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := cs.pathManager.EnsureConfigDir(); err != nil {
 		return &ConfigError{Operation: "create_config_dir", Err: err}
 	}
 
@@ -179,7 +165,7 @@ func (cs *ConfigService) createDefaultConfig() error {
 	}
 
 	// 写入配置文件
-	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
+	if err := os.WriteFile(cs.pathManager.GetSettingsPath(), configBytes, 0644); err != nil {
 		return &ConfigError{Operation: "write_default_config", Err: err}
 	}
 
@@ -188,7 +174,6 @@ func (cs *ConfigService) createDefaultConfig() error {
 		return &ConfigError{Operation: "read_created_config", Err: err}
 	}
 
-	cs.logger.Info("Config: Created default config file", "path", configPath)
 	return nil
 }
 
@@ -196,15 +181,12 @@ func (cs *ConfigService) createDefaultConfig() error {
 func (cs *ConfigService) startWatching() {
 	// 设置配置变化回调
 	cs.viper.OnConfigChange(func(e fsnotify.Event) {
-		cs.logger.Info("Config: Config file changed", "file", e.Name, "operation", e.Op.String())
-
 		// 使用配置通知服务检查所有已注册的配置变更
 		cs.notificationService.CheckConfigChanges()
 	})
 
 	// 启动配置文件监听
 	cs.viper.WatchConfig()
-	cs.logger.Info("Config: Started watching config file for changes")
 }
 
 // GetConfig 获取完整应用配置
@@ -261,30 +243,20 @@ func (cs *ConfigService) ResetConfig() {
 
 	// 直接写入JSON文件
 	if err := cs.writeConfigToFile(defaultConfig); err != nil {
-		cs.logger.Error("Config: Failed to write config during reset", "error", err)
 		return
 	}
 
 	// 重新读取配置文件到viper
 	if err := cs.viper.ReadInConfig(); err != nil {
-		cs.logger.Error("Config: Failed to reload config after reset", "error", err)
 		return
 	}
 
-	cs.logger.Info("Config: All settings have been reset to defaults")
 	// 手动触发配置变更检查，确保通知系统能感知到变更
 	cs.notificationService.CheckConfigChanges()
 }
 
 // writeConfigToFile 直接写入配置到JSON文件
 func (cs *ConfigService) writeConfigToFile(config *models.AppConfig) error {
-	// 获取配置文件路径
-	currentDir, err := os.Getwd()
-	if err != nil {
-		currentDir = "."
-	}
-	configPath := filepath.Join(currentDir, "config", "settings.json")
-
 	// 序列化为JSON
 	configBytes, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -292,7 +264,7 @@ func (cs *ConfigService) writeConfigToFile(config *models.AppConfig) error {
 	}
 
 	// 写入文件
-	if err := os.WriteFile(configPath, configBytes, 0644); err != nil {
+	if err := os.WriteFile(cs.pathManager.GetSettingsPath(), configBytes, 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %v", err)
 	}
 

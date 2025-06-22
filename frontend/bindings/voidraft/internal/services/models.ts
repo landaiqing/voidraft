@@ -76,19 +76,8 @@ export class MemoryStats {
  * MigrationProgress 迁移进度信息
  */
 export class MigrationProgress {
-    /**
-     * 迁移状态
-     */
     "status": MigrationStatus;
-
-    /**
-     * 进度百分比 (0-100)
-     */
     "progress": number;
-
-    /**
-     * 错误信息
-     */
     "error"?: string;
 
     /** Creates a new MigrationProgress instance. */
@@ -121,18 +110,7 @@ export enum MigrationStatus {
      */
     $zero = "",
 
-    /**
-     * 迁移中
-     */
     MigrationStatusMigrating = "migrating",
-
-    /**
-     * 完成
-     */
     MigrationStatusCompleted = "completed",
-
-    /**
-     * 失败
-     */
     MigrationStatusFailed = "failed",
 };

@@ -143,7 +143,11 @@ const DEFAULT_CONFIG: AppConfig = {
         language: LanguageType.LangZhCN,
         systemTheme: SystemThemeType.SystemThemeAuto
     },
-    updates: {},
+    updates: {
+        Version: "1.0.0",
+        autoUpdate: true,
+        betaChannel: false
+    },
     metadata: {
         lastUpdated: new Date().toString()
     }
@@ -276,7 +280,7 @@ export const useConfigStore = defineStore('config', () => {
         try {
             // 调用后端重置配置
             await safeCall(() => ConfigService.ResetConfig(), 'config.resetFailed', 'config.resetSuccess');
-            
+
             // 立即重新加载后端配置以确保前端状态同步
             await safeCall(async () => {
                 const appConfig = await ConfigService.GetConfig();

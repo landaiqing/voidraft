@@ -9,6 +9,7 @@ import (
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
+	pathManager       *PathManager
 	configService     *ConfigService
 	documentService   *DocumentService
 	migrationService  *MigrationService
@@ -26,8 +27,11 @@ func NewServiceManager() *ServiceManager {
 	// 初始化日志服务
 	logger := log.New()
 
-	// 初始化配置服务 - 使用固定配置（当前目录下的 config/config.yaml）
-	configService := NewConfigService(logger)
+	// 初始化路径管理器
+	pathManager := NewPathManager()
+
+	// 初始化配置服务
+	configService := NewConfigService(logger, pathManager)
 
 	// 初始化迁移服务
 	migrationService := NewMigrationService(logger)
@@ -48,7 +52,7 @@ func NewServiceManager() *ServiceManager {
 	trayService := NewTrayService(logger, configService)
 
 	// 初始化快捷键服务
-	keyBindingService := NewKeyBindingService(logger)
+	keyBindingService := NewKeyBindingService(logger, pathManager)
 
 	// 初始化开机启动服务
 	startupService := NewStartupService(configService, logger)
@@ -58,7 +62,6 @@ func NewServiceManager() *ServiceManager {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
 	})
 	if err != nil {
-		logger.Error("Failed to set hotkey change callback", "error", err)
 		panic(err)
 	}
 
@@ -67,14 +70,12 @@ func NewServiceManager() *ServiceManager {
 		return documentService.OnDataPathChanged(oldPath, newPath)
 	})
 	if err != nil {
-		logger.Error("Failed to set data path change callback", "error", err)
 		panic(err)
 	}
 
 	// 初始化文档服务
 	err = documentService.Initialize()
 	if err != nil {
-		logger.Error("Failed to initialize document service", "error", err)
 		panic(err)
 	}
 

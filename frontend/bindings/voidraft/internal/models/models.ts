@@ -975,9 +975,32 @@ export enum TabType {
  * UpdatesConfig 更新设置配置
  */
 export class UpdatesConfig {
+    /**
+     * 当前版本号
+     */
+    "Version": string;
+
+    /**
+     * 是否自动更新
+     */
+    "autoUpdate": boolean;
+
+    /**
+     * 是否启用测试版
+     */
+    "betaChannel": boolean;
 
     /** Creates a new UpdatesConfig instance. */
     constructor($$source: Partial<UpdatesConfig> = {}) {
+        if (!("Version" in $$source)) {
+            this["Version"] = "";
+        }
+        if (!("autoUpdate" in $$source)) {
+            this["autoUpdate"] = false;
+        }
+        if (!("betaChannel" in $$source)) {
+            this["betaChannel"] = false;
+        }
 
         Object.assign(this, $$source);
     }

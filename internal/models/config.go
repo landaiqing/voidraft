@@ -1,6 +1,8 @@
 package models
 
 import (
+	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -82,7 +84,9 @@ type AppearanceConfig struct {
 
 // UpdatesConfig 更新设置配置
 type UpdatesConfig struct {
-	// 预留给未来的更新配置
+	Version     string `json:"Version"`     // 当前版本号
+	AutoUpdate  bool   `json:"autoUpdate"`  // 是否自动更新
+	BetaChannel bool   `json:"betaChannel"` // 是否启用测试版
 }
 
 // AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -101,10 +105,14 @@ type ConfigMetadata struct {
 
 // NewDefaultAppConfig 创建默认应用配置
 func NewDefaultAppConfig() *AppConfig {
+
+	currentDir, _ := os.UserConfigDir()
+	dataDir := filepath.Join(currentDir, ".voidraft", "data")
+
 	return &AppConfig{
 		General: GeneralConfig{
 			AlwaysOnTop:        false,
-			DataPath:           "./data",
+			DataPath:           dataDir,
 			EnableSystemTray:   true,
 			StartAtLogin:       false,
 			EnableGlobalHotkey: false,
@@ -133,7 +141,11 @@ func NewDefaultAppConfig() *AppConfig {
 			Language:    LangZhCN,
 			SystemTheme: SystemThemeAuto, // 默认使用深色系统主题
 		},
-		Updates: UpdatesConfig{},
+		Updates: UpdatesConfig{
+			Version:     "1.0.0",
+			AutoUpdate:  true,
+			BetaChannel: false,
+		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),
 		},

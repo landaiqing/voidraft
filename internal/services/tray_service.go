@@ -31,7 +31,6 @@ func (ts *TrayService) SetAppReferences(app *application.App, mainWindow *applic
 func (ts *TrayService) ShouldMinimizeToTray() bool {
 	config, err := ts.configService.GetConfig()
 	if err != nil {
-		ts.logger.Error("TrayService: Failed to get config", "error", err)
 		return true // 默认行为：隐藏到托盘
 	}
 
@@ -44,11 +43,9 @@ func (ts *TrayService) HandleWindowClose() {
 		// 隐藏到托盘
 		ts.mainWindow.Hide()
 		ts.app.EmitEvent("window:hidden", nil)
-		ts.logger.Info("TrayService: Window hidden to system tray")
 	} else {
 		// 直接退出应用
 		ts.app.Quit()
-		ts.logger.Info("TrayService: Application quit")
 	}
 }
 
@@ -58,10 +55,6 @@ func (ts *TrayService) HandleWindowMinimize() {
 		// 隐藏到托盘
 		ts.mainWindow.Hide()
 		ts.app.EmitEvent("window:hidden", nil)
-		ts.logger.Info("TrayService: Window minimized to system tray")
-	} else {
-		// 允许正常最小化（不处理，让系统处理）
-		ts.logger.Info("TrayService: Window minimized normally")
 	}
 }
 
@@ -74,7 +67,6 @@ func (ts *TrayService) ShowWindow() {
 		if ts.app != nil {
 			ts.app.EmitEvent("window:shown", nil)
 		}
-		ts.logger.Info("TrayService: Window shown from system tray")
 	}
 }
 
@@ -82,5 +74,4 @@ func (ts *TrayService) ShowWindow() {
 func (ts *TrayService) MinimizeButtonClicked() {
 	// 最小化按钮总是执行正常最小化到任务栏，不隐藏到托盘
 	ts.mainWindow.Minimise()
-	ts.logger.Info("TrayService: Window minimized to taskbar via titlebar button")
 }
