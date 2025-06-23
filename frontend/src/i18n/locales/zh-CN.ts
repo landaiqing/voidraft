@@ -135,6 +135,19 @@ export default {
     language: '界面语言',
     systemTheme: '系统主题',
     saveOptions: '保存选项',
-    autoSaveDelay: '自动保存延迟(毫秒)'
+    autoSaveDelay: '自动保存延迟(毫秒)',
+    updateSettings: '更新设置',
+    autoCheckUpdates: '自动检查更新',
+    autoCheckUpdatesDescription: '启动应用时自动检查更新',
+    manualCheck: '手动检查',
+    currentVersion: '当前版本',
+    checkForUpdates: '检查更新',
+    checking: '检查中...',
+    checkFailed: '检查失败',
+    newVersionAvailable: '发现新版本',
+    upToDate: '您正在使用最新版本',
+    viewUpdate: '查看更新',
+    releaseNotes: '更新内容',
+    networkError: '网络连接错误，请检查网络设置'
   }
 }; 

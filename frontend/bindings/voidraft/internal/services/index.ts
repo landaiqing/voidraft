@@ -10,6 +10,7 @@ import * as MigrationService from "./migrationservice.js";
 import * as StartupService from "./startupservice.js";
 import * as SystemService from "./systemservice.js";
 import * as TrayService from "./trayservice.js";
+import * as UpdateService from "./updateservice.js";
 export {
     ConfigService,
     DialogService,
@@ -19,7 +20,8 @@ export {
     MigrationService,
     StartupService,
     SystemService,
-    TrayService
+    TrayService,
+    UpdateService
 };
 
 export * from "./models.js";

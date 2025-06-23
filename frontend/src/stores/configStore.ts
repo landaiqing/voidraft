@@ -9,6 +9,7 @@ import {
     LanguageType,
     SystemThemeType,
     TabType,
+    UpdatesConfig,
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/utils/configUtils';
@@ -42,6 +43,10 @@ type AppearanceConfigKeyMap = {
     readonly [K in keyof AppearanceConfig]: string;
 };
 
+type UpdatesConfigKeyMap = {
+    readonly [K in keyof UpdatesConfig]: string;
+};
+
 type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
 
 // 配置键映射
@@ -68,6 +73,11 @@ const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
     language: 'appearance.language',
     systemTheme: 'appearance.systemTheme'
+} as const;
+
+const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
+    version: 'updates.version',
+    autoUpdate: 'updates.autoUpdate'
 } as const;
 
 // 配置限制
@@ -145,7 +155,6 @@ const DEFAULT_CONFIG: AppConfig = {
     updates: {
         version: "1.0.0",
         autoUpdate: true,
-        betaChannel: false
     },
     metadata: {
         version: '1.0.0',
@@ -214,6 +223,21 @@ export const useConfigStore = defineStore('config', () => {
 
         await ConfigService.Set(backendKey, value);
         state.config.appearance[key] = value;
+    };
+
+    const updateUpdatesConfig = async <K extends keyof UpdatesConfig>(key: K, value: UpdatesConfig[K]): Promise<void> => {
+        // 确保配置已加载
+        if (!state.configLoaded && !state.isLoading) {
+            await initConfig();
+        }
+
+        const backendKey = UPDATES_CONFIG_KEY_MAP[key];
+        if (!backendKey) {
+            throw new Error(`No backend key mapping found for updates.${key.toString()}`);
+        }
+
+        await ConfigService.Set(backendKey, value);
+        state.config.updates[key] = value;
     };
 
     // 加载配置
@@ -411,6 +435,9 @@ export const useConfigStore = defineStore('config', () => {
             await updateGeneralConfig('startAtLogin', value);
             // 再调用系统设置API
             await StartupService.SetEnabled(value);
-        }
+        },
+
+        // 更新配置相关方法
+        setAutoUpdate: async (value: boolean) => await updateUpdatesConfig('autoUpdate', value)
     };
 });

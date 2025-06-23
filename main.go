@@ -4,6 +4,7 @@ import (
 	"embed"
 	_ "embed"
 	"log"
+	"log/slog"
 	"time"
 	"voidraft/internal/services"
 	"voidraft/internal/systray"
@@ -44,6 +45,7 @@ func main() {
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
+		LogLevel: slog.LevelDebug,
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},

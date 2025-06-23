@@ -84,9 +84,8 @@ type AppearanceConfig struct {
 
 // UpdatesConfig 更新设置配置
 type UpdatesConfig struct {
-	Version     string `json:"version"`     // 当前版本号
-	AutoUpdate  bool   `json:"autoUpdate"`  // 是否自动更新
-	BetaChannel bool   `json:"betaChannel"` // 是否启用测试版
+	Version    string `json:"version"`    // 当前版本号
+	AutoUpdate bool   `json:"autoUpdate"` // 是否自动更新
 }
 
 // AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -143,9 +142,8 @@ func NewDefaultAppConfig() *AppConfig {
 			SystemTheme: SystemThemeAuto, // 默认使用深色系统主题
 		},
 		Updates: UpdatesConfig{
-			Version:     "1.0.0",
-			AutoUpdate:  true,
-			BetaChannel: false,
+			Version:    "1.0.0",
+			AutoUpdate: true,
 		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),

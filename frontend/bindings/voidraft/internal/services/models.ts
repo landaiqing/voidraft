@@ -114,3 +114,70 @@ export enum MigrationStatus {
     MigrationStatusCompleted = "completed",
     MigrationStatusFailed = "failed",
 };
+
+/**
+ * UpdateCheckResult 更新检查结果
+ */
+export class UpdateCheckResult {
+    /**
+     * 是否有更新
+     */
+    "hasUpdate": boolean;
+
+    /**
+     * 当前版本
+     */
+    "currentVer": string;
+
+    /**
+     * 最新版本
+     */
+    "latestVer": string;
+
+    /**
+     * 发布说明
+     */
+    "releaseNotes": string;
+
+    /**
+     * 发布页面URL
+     */
+    "releaseURL": string;
+
+    /**
+     * 错误信息
+     */
+    "error": string;
+
+    /** Creates a new UpdateCheckResult instance. */
+    constructor($$source: Partial<UpdateCheckResult> = {}) {
+        if (!("hasUpdate" in $$source)) {
+            this["hasUpdate"] = false;
+        }
+        if (!("currentVer" in $$source)) {
+            this["currentVer"] = "";
+        }
+        if (!("latestVer" in $$source)) {
+            this["latestVer"] = "";
+        }
+        if (!("releaseNotes" in $$source)) {
+            this["releaseNotes"] = "";
+        }
+        if (!("releaseURL" in $$source)) {
+            this["releaseURL"] = "";
+        }
+        if (!("error" in $$source)) {
+            this["error"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UpdateCheckResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): UpdateCheckResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UpdateCheckResult($$parsedSource as Partial<UpdateCheckResult>);
+    }
+}

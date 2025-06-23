@@ -19,6 +19,7 @@ type ServiceManager struct {
 	trayService       *TrayService
 	keyBindingService *KeyBindingService
 	startupService    *StartupService
+	updateService     *UpdateService
 	logger            *log.LoggerService
 }
 
@@ -57,6 +58,9 @@ func NewServiceManager() *ServiceManager {
 	// 初始化开机启动服务
 	startupService := NewStartupService(configService, logger)
 
+	// 初始化更新服务
+	updateService := NewUpdateService(configService, logger)
+
 	// 使用新的配置通知系统设置热键配置变更监听
 	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
@@ -89,6 +93,7 @@ func NewServiceManager() *ServiceManager {
 		trayService:       trayService,
 		keyBindingService: keyBindingService,
 		startupService:    startupService,
+		updateService:     updateService,
 		logger:            logger,
 	}
 }
@@ -105,6 +110,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.trayService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.startupService),
+		application.NewService(sm.updateService),
 	}
 }
 
@@ -141,4 +147,9 @@ func (sm *ServiceManager) GetKeyBindingService() *KeyBindingService {
 // GetStartupService 获取开机启动服务实例
 func (sm *ServiceManager) GetStartupService() *StartupService {
 	return sm.startupService
+}
+
+// GetUpdateService 获取更新服务实例
+func (sm *ServiceManager) GetUpdateService() *UpdateService {
+	return sm.updateService
 }

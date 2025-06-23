@@ -3,6 +3,7 @@ import {useI18n} from 'vue-i18n';
 import {onMounted, onUnmounted, ref, watch} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
+import {useUpdateStore} from '@/stores/updateStore';
 import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
@@ -11,6 +12,7 @@ import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/langu
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
+const updateStore = useUpdateStore();
 const {t} = useI18n();
 const router = useRouter();
 
@@ -176,6 +178,21 @@ watch(isLoaded, async (newLoaded) => {
         </svg>
       </div>
 
+      <!-- 更新提示图标 -->
+      <div
+          v-if="updateStore.hasUpdate"
+          class="update-button"
+          :title="`发现新版本 ${updateStore.updateResult?.latestVer || ''}`"
+          @click="updateStore.openReleaseURL"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="7.5,10.5 12,15 16.5,10.5"/>
+          <polyline points="12,15 12,3"/>
+        </svg>
+      </div>
+
       <!-- 窗口置顶图标按钮 -->
       <div
           class="pin-button"
@@ -240,6 +257,39 @@ watch(isLoaded, async (newLoaded) => {
       cursor: help;
     }
 
+
+    /* 更新提示按钮样式 */
+    .update-button {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      padding: 2px;
+      border-radius: 3px;
+      background-color: rgba(76, 175, 80, 0.1);
+      transition: all 0.2s ease;
+      animation: pulse 2s infinite;
+
+      &:hover {
+        background-color: rgba(76, 175, 80, 0.2);
+        transform: scale(1.05);
+      }
+
+      svg {
+        stroke: #4caf50;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+    }
 
     /* 窗口置顶图标按钮样式 */
     .pin-button {

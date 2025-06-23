@@ -186,11 +186,6 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     return part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
   }).filter(part => part.length > 0);
 };
-
-// 组件挂载时加载快捷键数据
-onMounted(async () => {
-  await keybindingStore.loadKeyBindings();
-});
 </script>
 
 <template>

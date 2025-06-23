@@ -135,6 +135,19 @@ export default {
     language: 'Interface Language',
     systemTheme: 'System Theme',
     saveOptions: 'Save Options',
-    autoSaveDelay: 'Auto Save Delay (ms)'
+    autoSaveDelay: 'Auto Save Delay (ms)',
+    updateSettings: 'Update Settings',
+    autoCheckUpdates: 'Auto Check Updates',
+    autoCheckUpdatesDescription: 'Automatically check for updates on startup',
+    manualCheck: 'Manual Check',
+    currentVersion: 'Current Version',
+    checkForUpdates: 'Check for Updates',
+    checking: 'Checking...',
+    checkFailed: 'Check Failed',
+    newVersionAvailable: 'New Version Available',
+    upToDate: 'You are using the latest version',
+    viewUpdate: 'View Update',
+    releaseNotes: 'Release Notes',
+    networkError: 'Network connection error, please check your network settings'
   }
 }; 

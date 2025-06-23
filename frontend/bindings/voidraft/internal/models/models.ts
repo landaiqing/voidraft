@@ -1001,11 +1001,6 @@ export class UpdatesConfig {
      */
     "autoUpdate": boolean;
 
-    /**
-     * 是否启用测试版
-     */
-    "betaChannel": boolean;
-
     /** Creates a new UpdatesConfig instance. */
     constructor($$source: Partial<UpdatesConfig> = {}) {
         if (!("version" in $$source)) {
@@ -1013,9 +1008,6 @@ export class UpdatesConfig {
         }
         if (!("autoUpdate" in $$source)) {
             this["autoUpdate"] = false;
-        }
-        if (!("betaChannel" in $$source)) {
-            this["betaChannel"] = false;
         }
 
         Object.assign(this, $$source);
