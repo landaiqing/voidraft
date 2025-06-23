@@ -149,7 +149,7 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     metadata: {
         version: '1.0.0',
-        lastUpdated: new Date().toString()
+        lastUpdated: new Date().toString(),
     }
 };
 

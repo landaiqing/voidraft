@@ -17,76 +17,69 @@ export const useDocumentStore = defineStore('document', () => {
   const isSaveInProgress = computed(() => isSaving.value);
   const lastSavedTime = computed(() => lastSaved.value);
 
-  // 状态管理包装器
-  const withStateGuard = async <T>(
-    operation: () => Promise<T>,
-    stateRef: typeof isLoading | typeof isSaving
-  ): Promise<T | null> => {
-    if (stateRef.value) return null;
-    
-    stateRef.value = true;
-    try {
-      return await operation();
-    } finally {
-      stateRef.value = false;
-    }
-  };
-
   // 加载文档
-  const loadDocument = () => withStateGuard(
-    async () => {
+  const loadDocument = async (): Promise<Document | null> => {
+    if (isLoading.value) return null;
+    
+    isLoading.value = true;
+    try {
       const doc = await DocumentService.GetActiveDocument();
       activeDocument.value = doc;
       return doc;
-    },
-    isLoading
-  );
+    } catch (error) {
+      return null;
+    } finally {
+      isLoading.value = false;
+    }
+  };
 
   // 保存文档
   const saveDocument = async (content: string): Promise<boolean> => {
-    const result = await withStateGuard(
-      async () => {
-        await DocumentService.UpdateActiveDocumentContent(content);
-        lastSaved.value = new Date();
-        
-        // 使用可选链更新本地副本
-        if (activeDocument.value) {
-          activeDocument.value.content = content;
-          activeDocument.value.meta.lastUpdated = lastSaved.value;
-        }
-        
-        return true;
-      },
-      isSaving
-    );
+    if (isSaving.value) return false;
     
-    return result ?? false;
+    isSaving.value = true;
+    try {
+      await DocumentService.UpdateActiveDocumentContent(content);
+      lastSaved.value = new Date();
+      
+      // 更新本地副本
+      if (activeDocument.value) {
+        activeDocument.value.content = content;
+        activeDocument.value.meta.lastUpdated = lastSaved.value;
+      }
+      
+      return true;
+    } catch (error) {
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
   };
 
   // 强制保存文档到磁盘
   const forceSaveDocument = async (): Promise<boolean> => {
-    const result = await withStateGuard(
-      async () => {
-        // 直接调用强制保存API
-        await DocumentService.ForceSave();
-        
-        lastSaved.value = new Date();
-        
-        // 使用可选链更新时间戳
-        if (activeDocument.value) {
-          activeDocument.value.meta.lastUpdated = lastSaved.value;
-        }
-        
-        return true;
-      },
-      isSaving
-    );
+    if (isSaving.value) return false;
     
-    return result ?? false;
+    isSaving.value = true;
+    try {
+      await DocumentService.ForceSave();
+      lastSaved.value = new Date();
+      
+      // 更新时间戳
+      if (activeDocument.value) {
+        activeDocument.value.meta.lastUpdated = lastSaved.value;
+      }
+      
+      return true;
+    } catch (error) {
+      return false;
+    } finally {
+      isSaving.value = false;
+    }
   };
 
   // 初始化
-  const initialize = async () => {
+  const initialize = async (): Promise<void> => {
     await loadDocument();
   };
 

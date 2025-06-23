@@ -19,6 +19,10 @@ export default {
     noLanguageFound: 'No language found',
     formatHint: 'Current block supports formatting, use Ctrl+Shift+F shortcut for formatting',
   },
+  languages: {
+    'zh-CN': 'Chinese',
+    'en-US': 'English'
+  },
   systemTheme: {
     dark: 'Dark',
     light: 'Light',

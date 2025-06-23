@@ -1,5 +1,5 @@
-import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import {defineStore} from 'pinia';
+import {computed, ref} from 'vue';
 import * as runtime from '@wailsio/runtime';
 
 export interface SystemEnvironment {
@@ -50,8 +50,7 @@ export const useSystemStore = defineStore('system', () => {
     error.value = null;
 
     try {
-      const env = await runtime.System.Environment();
-      environment.value = env;
+        environment.value = await runtime.System.Environment();
     } catch (err) {
       error.value = 'Failed to get system environment';
       environment.value = null;

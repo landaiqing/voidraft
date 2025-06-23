@@ -153,3 +153,23 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 	}
 }
+
+// GetVersion 获取配置版本
+func (ac *AppConfig) GetVersion() string {
+	return ac.Metadata.Version
+}
+
+// SetVersion 设置配置版本
+func (ac *AppConfig) SetVersion(version string) {
+	ac.Metadata.Version = version
+}
+
+// SetLastUpdated 设置最后更新时间
+func (ac *AppConfig) SetLastUpdated(timeStr string) {
+	ac.Metadata.LastUpdated = timeStr
+}
+
+// GetDefaultConfig 获取默认配置
+func (ac *AppConfig) GetDefaultConfig() any {
+	return NewDefaultAppConfig()
+}

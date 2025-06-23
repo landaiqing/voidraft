@@ -26,6 +26,9 @@ type KeyBindingService struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	initOnce sync.Once
+
+	// 配置迁移服务
+	migrationService *ConfigMigrationService[*models.KeyBindingConfig]
 }
 
 // KeyBindingError 快捷键错误
@@ -64,12 +67,15 @@ func NewKeyBindingService(logger *log.LoggerService, pathManager *PathManager) *
 
 	k := koanf.New(".")
 
+	migrationService := NewKeyBindingMigrationService(logger, pathManager)
+
 	service := &KeyBindingService{
-		koanf:       k,
-		logger:      logger,
-		pathManager: pathManager,
-		ctx:         ctx,
-		cancel:      cancel,
+		koanf:            k,
+		logger:           logger,
+		pathManager:      pathManager,
+		ctx:              ctx,
+		cancel:           cancel,
+		migrationService: migrationService,
 	}
 
 	// 异步初始化
@@ -109,10 +115,23 @@ func (kbs *KeyBindingService) initConfig() error {
 		return kbs.createDefaultConfig()
 	}
 
-	// 配置文件存在，直接加载
+	// 配置文件存在，先加载现有配置
 	kbs.fileProvider = file.Provider(configPath)
 	if err := kbs.koanf.Load(kbs.fileProvider, jsonparser.Parser()); err != nil {
 		return &KeyBindingError{"load_config_file", "", err}
+	}
+
+	// 检查并执行配置迁移
+	if kbs.migrationService != nil {
+		result, err := kbs.migrationService.MigrateConfig(kbs.koanf)
+		if err != nil {
+			return &KeyBindingError{"migrate_config", "", err}
+		}
+
+		if result.Migrated && result.ConfigUpdated {
+			// 迁移完成且配置已更新，重新创建文件提供器以监听新文件
+			kbs.fileProvider = file.Provider(configPath)
+		}
 	}
 
 	return nil

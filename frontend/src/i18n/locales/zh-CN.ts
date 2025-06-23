@@ -19,6 +19,10 @@ export default {
     noLanguageFound: '未找到匹配的语言',
     formatHint: '当前区块支持格式化，使用 Ctrl+Shift+F 进行格式化',
   },
+  languages: {
+    'zh-CN': '简体中文',
+    'en-US': 'English'
+  },
   systemTheme: {
     dark: '深色',
     light: '浅色',

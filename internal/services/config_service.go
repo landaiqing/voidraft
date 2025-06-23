@@ -25,6 +25,8 @@ type ConfigService struct {
 
 	// 配置通知服务
 	notificationService *ConfigNotificationService
+	// 配置迁移服务
+	migrationService *ConfigMigrationService[*models.AppConfig]
 }
 
 // ConfigError 配置错误
@@ -65,15 +67,17 @@ func NewConfigService(logger *log.LoggerService, pathManager *PathManager) *Conf
 	// 使用"."作为键路径分隔符
 	k := koanf.New(".")
 
+	notificationService := NewConfigNotificationService(k, logger)
+	migrationService := NewAppConfigMigrationService(logger, pathManager)
+
 	// 构造配置服务实例
 	service := &ConfigService{
-		koanf:       k,
-		logger:      logger,
-		pathManager: pathManager,
+		koanf:               k,
+		logger:              logger,
+		pathManager:         pathManager,
+		notificationService: notificationService,
+		migrationService:    migrationService,
 	}
-
-	// 初始化配置通知服务
-	service.notificationService = NewConfigNotificationService(k, logger)
 
 	// 初始化配置
 	if err := service.initConfig(); err != nil {
@@ -108,10 +112,23 @@ func (cs *ConfigService) initConfig() error {
 		return cs.createDefaultConfig()
 	}
 
-	// 配置文件存在，直接加载
+	// 配置文件存在，先加载现有配置
 	cs.fileProvider = file.Provider(configPath)
 	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
 		return &ConfigError{Operation: "load_config_file", Err: err}
+	}
+
+	// 检查并执行配置迁移
+	if cs.migrationService != nil {
+		result, err := cs.migrationService.MigrateConfig(cs.koanf)
+		if err != nil {
+			return &ConfigError{Operation: "migrate_config", Err: err}
+		}
+
+		if result.Migrated && result.ConfigUpdated {
+			// 迁移完成且配置已更新，重新创建文件提供器以监听新文件
+			cs.fileProvider = file.Provider(configPath)
+		}
 	}
 
 	return nil
@@ -176,7 +193,7 @@ func (cs *ConfigService) GetConfig() (*models.AppConfig, error) {
 	defer cs.mu.RUnlock()
 
 	var config models.AppConfig
-	if err := cs.koanf.Unmarshal("", &config); err != nil {
+	if err := cs.koanf.UnmarshalWithConf("", &config, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		return nil, &ConfigError{Operation: "unmarshal_config", Err: err}
 	}
 

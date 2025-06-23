@@ -5,7 +5,6 @@ import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
 import {useThemeStore} from './themeStore';
-import {useI18n} from 'vue-i18n';
 import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language"
@@ -28,7 +27,6 @@ export const useEditorStore = defineStore('editor', () => {
     const configStore = useConfigStore();
     const documentStore = useDocumentStore();
     const themeStore = useThemeStore();
-    const { t } = useI18n();
 
     // 状态
     const documentStats = ref<DocumentStats>({
@@ -267,10 +265,7 @@ export const useEditorStore = defineStore('editor', () => {
         editorContainer,
 
         // 方法
-        setEditorView,
         setEditorContainer,
-        updateDocumentStats,
-        applyFontSize,
         createEditor,
         reconfigureTabSettings,
         reconfigureFontSettings,

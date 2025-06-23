@@ -892,12 +892,20 @@ export class KeyBindingConfig {
  */
 export class KeyBindingMetadata {
     /**
+     * 配置版本
+     */
+    "version": string;
+
+    /**
      * 最后更新时间
      */
     "lastUpdated": string;
 
     /** Creates a new KeyBindingMetadata instance. */
     constructor($$source: Partial<KeyBindingMetadata> = {}) {
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
         if (!("lastUpdated" in $$source)) {
             this["lastUpdated"] = "";
         }

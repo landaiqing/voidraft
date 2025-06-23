@@ -93,6 +93,7 @@ const (
 
 // KeyBindingMetadata 快捷键配置元数据
 type KeyBindingMetadata struct {
+	Version     string `json:"version"`     // 配置版本
 	LastUpdated string `json:"lastUpdated"` // 最后更新时间
 }
 
@@ -107,6 +108,7 @@ func NewDefaultKeyBindingConfig() *KeyBindingConfig {
 	return &KeyBindingConfig{
 		KeyBindings: NewDefaultKeyBindings(),
 		Metadata: KeyBindingMetadata{
+			Version:     "1.0.0",
 			LastUpdated: time.Now().Format(time.RFC3339),
 		},
 	}
@@ -503,4 +505,24 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 	}
+}
+
+// GetVersion 获取配置版本
+func (kbc *KeyBindingConfig) GetVersion() string {
+	return kbc.Metadata.Version
+}
+
+// SetVersion 设置配置版本
+func (kbc *KeyBindingConfig) SetVersion(version string) {
+	kbc.Metadata.Version = version
+}
+
+// SetLastUpdated 设置最后更新时间
+func (kbc *KeyBindingConfig) SetLastUpdated(timeStr string) {
+	kbc.Metadata.LastUpdated = timeStr
+}
+
+// GetDefaultConfig 获取默认配置
+func (kbc *KeyBindingConfig) GetDefaultConfig() any {
+	return NewDefaultKeyBindingConfig()
 }

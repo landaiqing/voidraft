@@ -41,6 +41,11 @@ func (pm *PathManager) GetKeybindsPath() string {
 	return pm.keybindsPath
 }
 
+// GetConfigDir 获取配置目录路径
+func (pm *PathManager) GetConfigDir() string {
+	return pm.configDir
+}
+
 // EnsureConfigDir 确保配置目录存在
 func (pm *PathManager) EnsureConfigDir() error {
 	return os.MkdirAll(pm.configDir, 0755)
