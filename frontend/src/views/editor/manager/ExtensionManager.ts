@@ -1,6 +1,6 @@
-import { Compartment, Extension, StateEffect } from '@codemirror/state'
-import { EditorView } from '@codemirror/view'
-import { ExtensionID, Extension as ExtensionConfig } from '@/../bindings/voidraft/internal/models/models'
+import {Compartment, Extension, StateEffect} from '@codemirror/state'
+import {EditorView} from '@codemirror/view'
+import {Extension as ExtensionConfig, ExtensionID} from '@/../bindings/voidraft/internal/models/models'
 
 /**
  * 扩展工厂接口
@@ -90,24 +90,22 @@ export class ExtensionManager {
         for (const config of extensionConfigs) {
             const compartmentInfo = this.compartments.get(config.id)
             if (!compartmentInfo) {
-                console.warn(`Extension ${config.id} is not registered`)
                 continue
             }
 
             // 验证配置
-            if (compartmentInfo.factory.validateConfig && 
+            if (compartmentInfo.factory.validateConfig &&
                 !compartmentInfo.factory.validateConfig(config.config)) {
-                console.warn(`Invalid config for extension ${config.id}`)
                 continue
             }
 
             try {
-                const extension = config.enabled 
+                const extension = config.enabled
                     ? compartmentInfo.factory.create(config.config)
                     : [] // 空扩展表示禁用
 
                 extensions.push(compartmentInfo.compartment.of(extension))
-                
+
                 // 更新状态
                 compartmentInfo.currentConfig = config.config
                 compartmentInfo.enabled = config.enabled
@@ -134,26 +132,24 @@ export class ExtensionManager {
      * @param config 扩展配置
      */
     updateExtension(id: ExtensionID, enabled: boolean, config: any = {}): void {
+
         if (!this.view) {
-            console.warn('Editor view not set')
             return
         }
 
         const compartmentInfo = this.compartments.get(id)
         if (!compartmentInfo) {
-            console.warn(`Extension ${id} is not registered`)
             return
         }
 
         try {
             // 验证配置
-            if (compartmentInfo.factory.validateConfig && 
+            if (compartmentInfo.factory.validateConfig &&
                 !compartmentInfo.factory.validateConfig(config)) {
-                console.warn(`Invalid config for extension ${id}`)
                 return
             }
 
-            const extension = enabled 
+            const extension = enabled
                 ? compartmentInfo.factory.create(config)
                 : []
 
@@ -164,8 +160,9 @@ export class ExtensionManager {
             // 更新状态
             compartmentInfo.currentConfig = config
             compartmentInfo.enabled = enabled
+
         } catch (error) {
-            console.error(`Failed to update extension ${id}:`, error)
+            console.error(`[ExtensionManager] Failed to update extension ${id}:`, error)
         }
     }
 
@@ -188,19 +185,17 @@ export class ExtensionManager {
         for (const update of updates) {
             const compartmentInfo = this.compartments.get(update.id)
             if (!compartmentInfo) {
-                console.warn(`Extension ${update.id} is not registered`)
                 continue
             }
 
             try {
                 // 验证配置
-                if (compartmentInfo.factory.validateConfig && 
+                if (compartmentInfo.factory.validateConfig &&
                     !compartmentInfo.factory.validateConfig(update.config)) {
-                    console.warn(`Invalid config for extension ${update.id}`)
                     continue
                 }
 
-                const extension = update.enabled 
+                const extension = update.enabled
                     ? compartmentInfo.factory.create(update.config)
                     : []
 
@@ -215,7 +210,7 @@ export class ExtensionManager {
         }
 
         if (effects.length > 0) {
-            this.view.dispatch({ effects })
+            this.view.dispatch({effects})
         }
     }
 
@@ -245,7 +240,6 @@ export class ExtensionManager {
     resetExtensionToDefault(id: ExtensionID): void {
         const compartmentInfo = this.compartments.get(id)
         if (!compartmentInfo) {
-            console.warn(`Extension ${id} is not registered`)
             return
         }
 

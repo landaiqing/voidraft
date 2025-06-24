@@ -15,40 +15,12 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as models$0 from "../models/models.js";
 
 /**
- * DisableExtension 禁用扩展
- */
-export function DisableExtension(id: models$0.ExtensionID): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2040844784, id) as any;
-    return $resultPromise;
-}
-
-/**
- * EnableExtension 启用扩展
- */
-export function EnableExtension(id: models$0.ExtensionID): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2926319443, id) as any;
-    return $resultPromise;
-}
-
-/**
  * GetAllExtensions 获取所有扩展配置
  */
 export function GetAllExtensions(): Promise<models$0.Extension[]> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3094292124) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetExtensionSettings 获取完整扩展配置
- */
-export function GetExtensionSettings(): Promise<models$0.ExtensionSettings | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2127854337) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType3($result);
     }) as any;
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -79,6 +51,14 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
 }
 
 /**
+ * UpdateExtensionEnabled 更新扩展启用状态
+ */
+export function UpdateExtensionEnabled(id: models$0.ExtensionID, enabled: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1067300094, id, enabled) as any;
+    return $resultPromise;
+}
+
+/**
  * UpdateExtensionState 更新扩展状态
  */
 export function UpdateExtensionState(id: models$0.ExtensionID, enabled: boolean, config: models$0.ExtensionConfig): Promise<void> & { cancel(): void } {
@@ -89,5 +69,3 @@ export function UpdateExtensionState(id: models$0.ExtensionID, enabled: boolean,
 // Private type creation functions
 const $$createType0 = models$0.Extension.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = models$0.ExtensionSettings.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);

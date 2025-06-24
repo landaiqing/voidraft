@@ -182,28 +182,6 @@ func (es *ExtensionSettings) GetExtensionByID(id ExtensionID) *Extension {
 	return nil
 }
 
-// GetEnabledExtensions 获取所有启用的扩展
-func (es *ExtensionSettings) GetEnabledExtensions() []Extension {
-	var enabled []Extension
-	for _, ext := range es.Extensions {
-		if ext.Enabled {
-			enabled = append(enabled, ext)
-		}
-	}
-	return enabled
-}
-
-// GetExtensionsByCategory 根据分类获取扩展
-func (es *ExtensionSettings) GetExtensionsByCategory(category ExtensionCategory) []Extension {
-	var extensions []Extension
-	for _, ext := range es.Extensions {
-		if ext.Category == category {
-			extensions = append(extensions, ext)
-		}
-	}
-	return extensions
-}
-
 // UpdateExtension 更新扩展配置
 func (es *ExtensionSettings) UpdateExtension(id ExtensionID, enabled bool, config ExtensionConfig) bool {
 	for i := range es.Extensions {

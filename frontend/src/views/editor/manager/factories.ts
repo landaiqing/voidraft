@@ -1,5 +1,6 @@
 import {ExtensionFactory, ExtensionManager} from './ExtensionManager'
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models'
+import i18n from '@/i18n'
 
 // 导入现有扩展的创建函数
 import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension'
@@ -192,52 +193,52 @@ const EXTENSION_CONFIGS = {
     // 编辑增强扩展
     [ExtensionID.ExtensionRainbowBrackets]: {
         factory: rainbowBracketsFactory,
-        displayName: '彩虹括号',
-        description: '用不同颜色显示嵌套括号'
+        displayNameKey: 'extensions.rainbowBrackets.name',
+        descriptionKey: 'extensions.rainbowBrackets.description'
     },
     [ExtensionID.ExtensionHyperlink]: {
         factory: hyperlinkFactory,
-        displayName: '超链接',
-        description: '识别并可点击超链接'
+        displayNameKey: 'extensions.hyperlink.name',
+        descriptionKey: 'extensions.hyperlink.description'
     },
     [ExtensionID.ExtensionColorSelector]: {
         factory: colorSelectorFactory,
-        displayName: '颜色选择器',
-        description: '颜色值的可视化和选择'
+        displayNameKey: 'extensions.colorSelector.name',
+        descriptionKey: 'extensions.colorSelector.description'
     },
 
     // UI增强扩展
     [ExtensionID.ExtensionMinimap]: {
         factory: minimapFactory,
-        displayName: '小地图',
-        description: '显示小地图视图'
+        displayNameKey: 'extensions.minimap.name',
+        descriptionKey: 'extensions.minimap.description'
     },
     [ExtensionID.ExtensionCodeBlast]: {
         factory: codeBlastFactory,
-        displayName: '爆炸效果',
-        description: '编写时的动画效果'
+        displayNameKey: 'extensions.codeBlast.name',
+        descriptionKey: 'extensions.codeBlast.description'
     },
 
     // 工具扩展
     [ExtensionID.ExtensionSearch]: {
         factory: searchFactory,
-        displayName: '搜索功能',
-        description: '文本搜索和替换功能'
+        displayNameKey: 'extensions.search.name',
+        descriptionKey: 'extensions.search.description'
     },
     [ExtensionID.ExtensionCodeBlock]: {
         factory: codeBlockFactory,
-        displayName: '代码块',
-        description: '代码块语法高亮和格式化'
+        displayNameKey: 'extensions.codeBlock.name',
+        descriptionKey: 'extensions.codeBlock.description'
     },
     [ExtensionID.ExtensionFold]: {
         factory: foldFactory,
-        displayName: '折叠',
-        description: '折叠'
+        displayNameKey: 'extensions.fold.name',
+        descriptionKey: 'extensions.fold.description'
     },
-    [ExtensionID.ExtensionTextHighlight]:{
+    [ExtensionID.ExtensionTextHighlight]: {
         factory: textHighlightFactory,
-        displayName: '文本高亮',
-        description: '文本高亮'
+        displayNameKey: 'extensions.textHighlight.name',
+        descriptionKey: 'extensions.textHighlight.description'
     }
 }
 
@@ -257,8 +258,8 @@ export function registerAllExtensions(manager: ExtensionManager): void {
  * @returns 显示名称
  */
 export function getExtensionDisplayName(id: ExtensionID): string {
-    if (id === ExtensionID.$zero) return ''
-    return EXTENSION_CONFIGS[id as Exclude<ExtensionID, ExtensionID.$zero>]?.displayName || id
+    const config = EXTENSION_CONFIGS[id as ExtensionID]
+    return config?.displayNameKey ? i18n.global.t(config.displayNameKey) : id
 }
 
 /**
@@ -267,24 +268,8 @@ export function getExtensionDisplayName(id: ExtensionID): string {
  * @returns 描述
  */
 export function getExtensionDescription(id: ExtensionID): string {
-    if (id === ExtensionID.$zero) return ''
-    return EXTENSION_CONFIGS[id as Exclude<ExtensionID, ExtensionID.$zero>]?.description || '未知扩展'
-}
-
-/**
- * 获取扩展的完整信息
- * @param id 扩展ID
- * @returns 扩展信息对象
- */
-export function getExtensionInfo(id: ExtensionID): { displayName: string; description: string } | null {
-    if (id === ExtensionID.$zero) return null
-    const config = EXTENSION_CONFIGS[id as Exclude<ExtensionID, ExtensionID.$zero>]
-    if (!config) return null
-
-    return {
-        displayName: config.displayName,
-        description: config.description
-    }
+    const config = EXTENSION_CONFIGS[id as ExtensionID]
+    return config?.descriptionKey ? i18n.global.t(config.descriptionKey) : ''
 }
 
 /**

@@ -178,8 +178,8 @@ func (es *ExtensionService) saveExtensionConfig() error {
 	return nil
 }
 
-// GetExtensionSettings 获取完整扩展配置
-func (es *ExtensionService) GetExtensionSettings() (*models.ExtensionSettings, error) {
+// GetAllExtensions 获取所有扩展配置
+func (es *ExtensionService) GetAllExtensions() ([]models.Extension, error) {
 	es.mu.RLock()
 	defer es.mu.RUnlock()
 
@@ -187,26 +187,12 @@ func (es *ExtensionService) GetExtensionSettings() (*models.ExtensionSettings, e
 	if err := es.koanf.Unmarshal("", &settings); err != nil {
 		return nil, &ExtensionError{"unmarshal_config", "", err}
 	}
-	return &settings, nil
-}
-
-// GetAllExtensions 获取所有扩展配置
-func (es *ExtensionService) GetAllExtensions() ([]models.Extension, error) {
-	settings, err := es.GetExtensionSettings()
-	if err != nil {
-		return nil, err
-	}
 	return settings.Extensions, nil
 }
 
-// EnableExtension 启用扩展
-func (es *ExtensionService) EnableExtension(id models.ExtensionID) error {
-	return es.UpdateExtensionState(id, true, nil)
-}
-
-// DisableExtension 禁用扩展
-func (es *ExtensionService) DisableExtension(id models.ExtensionID) error {
-	return es.UpdateExtensionState(id, false, nil)
+// UpdateExtensionEnabled 更新扩展启用状态
+func (es *ExtensionService) UpdateExtensionEnabled(id models.ExtensionID, enabled bool) error {
+	return es.UpdateExtensionState(id, enabled, nil)
 }
 
 // UpdateExtensionState 更新扩展状态

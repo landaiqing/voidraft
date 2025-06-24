@@ -6,6 +6,7 @@ import EditingPage from '@/views/settings/pages/EditingPage.vue';
 import AppearancePage from '@/views/settings/pages/AppearancePage.vue';
 import KeyBindingsPage from '@/views/settings/pages/KeyBindingsPage.vue';
 import UpdatesPage from '@/views/settings/pages/UpdatesPage.vue';
+import ExtensionsPage from '@/views/settings/pages/ExtensionsPage.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -33,6 +34,11 @@ const routes: RouteRecordRaw[] = [
         path: 'appearance',
         name: 'SettingsAppearance',
         component: AppearancePage
+      },
+      {
+        path: 'extensions',
+        name: 'SettingsExtensions',
+        component: ExtensionsPage
       },
       {
         path: 'key-bindings',

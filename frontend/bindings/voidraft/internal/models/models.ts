@@ -478,84 +478,6 @@ export enum ExtensionID {
 };
 
 /**
- * ExtensionMetadata 扩展配置元数据
- */
-export class ExtensionMetadata {
-    /**
-     * 配置版本
-     */
-    "version": string;
-
-    /**
-     * 最后更新时间
-     */
-    "lastUpdated": string;
-
-    /** Creates a new ExtensionMetadata instance. */
-    constructor($$source: Partial<ExtensionMetadata> = {}) {
-        if (!("version" in $$source)) {
-            this["version"] = "";
-        }
-        if (!("lastUpdated" in $$source)) {
-            this["lastUpdated"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ExtensionMetadata instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ExtensionMetadata {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ExtensionMetadata($$parsedSource as Partial<ExtensionMetadata>);
-    }
-}
-
-/**
- * ExtensionSettings 扩展设置配置
- */
-export class ExtensionSettings {
-    /**
-     * 扩展列表
-     */
-    "extensions": Extension[];
-
-    /**
-     * 配置元数据
-     */
-    "metadata": ExtensionMetadata;
-
-    /** Creates a new ExtensionSettings instance. */
-    constructor($$source: Partial<ExtensionSettings> = {}) {
-        if (!("extensions" in $$source)) {
-            this["extensions"] = [];
-        }
-        if (!("metadata" in $$source)) {
-            this["metadata"] = (new ExtensionMetadata());
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ExtensionSettings instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ExtensionSettings {
-        const $$createField0_0 = $$createType9;
-        const $$createField1_0 = $$createType10;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("extensions" in $$parsedSource) {
-            $$parsedSource["extensions"] = $$createField0_0($$parsedSource["extensions"]);
-        }
-        if ("metadata" in $$parsedSource) {
-            $$parsedSource["metadata"] = $$createField1_0($$parsedSource["metadata"]);
-        }
-        return new ExtensionSettings($$parsedSource as Partial<ExtensionSettings>);
-    }
-}
-
-/**
  * GeneralConfig 通用设置配置
  */
 export class GeneralConfig {
@@ -618,7 +540,7 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType11;
+        const $$createField5_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
             $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
@@ -1095,8 +1017,8 @@ export class KeyBindingConfig {
      * Creates a new KeyBindingConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): KeyBindingConfig {
-        const $$createField0_0 = $$createType13;
-        const $$createField1_0 = $$createType14;
+        const $$createField0_0 = $$createType10;
+        const $$createField1_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("keyBindings" in $$parsedSource) {
             $$parsedSource["keyBindings"] = $$createField0_0($$parsedSource["keyBindings"]);
@@ -1257,10 +1179,7 @@ var $$createType6 = (function $$initCreateType6(...args): any {
     return $$createType6(...args);
 });
 const $$createType7 = $Create.Map($Create.Any, $Create.Any);
-const $$createType8 = Extension.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = ExtensionMetadata.createFrom;
-const $$createType11 = HotkeyCombo.createFrom;
-const $$createType12 = KeyBinding.createFrom;
-const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = KeyBindingMetadata.createFrom;
+const $$createType8 = HotkeyCombo.createFrom;
+const $$createType9 = KeyBinding.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = KeyBindingMetadata.createFrom;

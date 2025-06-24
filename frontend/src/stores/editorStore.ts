@@ -6,7 +6,7 @@ import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
 import {useThemeStore} from './themeStore';
 import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
-import {DocumentService} from '@/../bindings/voidraft/internal/services';
+import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language"
 import {createBasicSetup} from '@/views/editor/basic/basicSetup';
 import {createThemeExtension, updateEditorTheme} from '@/views/editor/basic/themeExtension';
@@ -15,9 +15,8 @@ import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/b
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/basic/autoSaveExtension';
 import {createDynamicKeymapExtension} from '@/views/editor/keymap';
-import { createDynamicExtensions, setExtensionManagerView, getExtensionManager } from '@/views/editor/manager';
-import { useExtensionStore } from './extensionStore';
-import { ExtensionService } from '@/../bindings/voidraft/internal/services';
+import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
+import {useExtensionStore} from './extensionStore';
 
 export interface DocumentStats {
     lines: number;
@@ -57,7 +56,7 @@ export const useEditorStore = defineStore('editor', () => {
         if (editorView.value && container && editorView.value.dom.parentElement !== container) {
             container.appendChild(editorView.value.dom);
             // 重新挂载后立即滚动到底部
-            scrollEditorToBottom();
+            scrollToBottom(editorView.value as EditorView);
         }
     }
 
@@ -87,13 +86,6 @@ export const useEditorStore = defineStore('editor', () => {
             view.dispatch({
                 effects: EditorView.scrollIntoView(lastLinePos)
             });
-        }
-    };
-
-    // 滚动到底部的公共方法
-    const scrollEditorToBottom = () => {
-        if (editorView.value) {
-            scrollToBottom(editorView.value as any);
         }
     };
 
@@ -152,7 +144,7 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 创建动态快捷键扩展
         const keymapExtension = await createDynamicKeymapExtension();
-        
+
         // 创建动态扩展
         const dynamicExtensions = await createDynamicExtensions();
 
@@ -183,7 +175,7 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 将编辑器实例保存到store
         setEditorView(view);
-        
+
         // 设置编辑器视图到扩展管理器
         setExtensionManagerView(view);
 
@@ -271,17 +263,22 @@ export const useEditorStore = defineStore('editor', () => {
     // 扩展管理方法
     const updateExtension = async (id: any, enabled: boolean, config?: any) => {
         try {
-            // 更新后端配置
-            await ExtensionService.UpdateExtensionState(id, enabled, config || {})
-            
+            // 如果只是更新启用状态
+            if (config === undefined) {
+                await ExtensionService.UpdateExtensionEnabled(id, enabled)
+            } else {
+                // 如果需要更新配置
+                await ExtensionService.UpdateExtensionState(id, enabled, config)
+            }
             // 更新前端编辑器
             const manager = getExtensionManager()
-            manager.updateExtension(id, enabled, config || {})
-            
-            // 重新加载扩展配置
+            if (manager) {
+                manager.updateExtension(id, enabled, config || {})
+            }
+
             await extensionStore.loadExtensions()
         } catch (error) {
-            console.error('Failed to update extension:', error)
+            throw error
         }
     }
 
@@ -299,7 +296,6 @@ export const useEditorStore = defineStore('editor', () => {
         reconfigureFontSettings,
         handleManualSave,
         destroyEditor,
-        scrollEditorToBottom,
         updateExtension
     };
 });

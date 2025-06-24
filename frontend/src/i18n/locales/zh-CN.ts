@@ -98,6 +98,7 @@ export default {
     general: '常规',
     editing: '编辑器',
     appearance: '外观',
+    extensions: '扩展',
     keyBindings: '快捷键',
     updates: '更新',
     reset: '重置',
@@ -148,6 +149,74 @@ export default {
     upToDate: '您正在使用最新版本',
     viewUpdate: '查看更新',
     releaseNotes: '更新内容',
-    networkError: '网络连接错误，请检查网络设置'
+    networkError: '网络连接错误，请检查网络设置',
+    extensionsPage: {
+      loading: '加载中',
+      categoryEditing: '编辑增强',
+      categoryUI: '界面增强',
+      categoryTools: '工具扩展',
+      configuration: '配置',
+      resetToDefault: '重置为默认配置',
+      minimap: {
+        displayText: '显示文本',
+        displayTextCharacters: '字符',
+        displayTextBlocks: '块',
+        showOverlay: '显示覆盖层',
+        showOverlayAlways: '始终',
+        showOverlayHover: '悬停时',
+        showOverlayNever: '从不',
+        autohide: '自动隐藏'
+      },
+      codeBlast: {
+        effect: '效果类型',
+        effectParticles: '粒子效果',
+        effectExplosion: '爆炸效果',
+        shake: '震动效果',
+        maxParticles: '最大粒子数',
+        shakeIntensity: '震动强度'
+      },
+      codeBlock: {
+        showBackground: '显示背景',
+        enableAutoDetection: '启用自动检测'
+      }
+    }
+  },
+  extensions: {
+    rainbowBrackets: {
+      name: '彩虹括号',
+      description: '用不同颜色显示嵌套括号'
+    },
+    hyperlink: {
+      name: '超链接',
+      description: '识别并可点击超链接'
+    },
+    colorSelector: {
+      name: '颜色选择器',
+      description: '颜色值的可视化和选择'
+    },
+    minimap: {
+      name: '小地图',
+      description: '显示小地图视图'
+    },
+    codeBlast: {
+      name: '爆炸效果',
+      description: '编写时的动画效果'
+    },
+    search: {
+      name: '搜索功能',
+      description: '文本搜索和替换功能'
+    },
+    codeBlock: {
+      name: '代码块',
+      description: '代码块语法高亮和格式化'
+    },
+    fold: {
+      name: '代码折叠',
+      description: '折叠和展开代码段以提高代码可读性'
+    },
+    textHighlight: {
+      name: '文本高亮',
+      description: '高亮显示文本选择和搜索匹配项'
+    }
   }
 }; 

@@ -13,6 +13,7 @@ const navItems = [
   { id: 'general', icon: '⚙️', route: '/settings/general' },
   { id: 'editing', icon: '✏️', route: '/settings/editing' },
   { id: 'appearance', icon: '🎨', route: '/settings/appearance' },
+  { id: 'extensions', icon: '🧩', route: '/settings/extensions' },
   { id: 'keyBindings', icon: '⌨️', route: '/settings/key-bindings' },
   { id: 'updates', icon: '🔄', route: '/settings/updates' }
 ];

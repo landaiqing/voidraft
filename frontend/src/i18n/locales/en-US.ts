@@ -148,6 +148,75 @@ export default {
     upToDate: 'You are using the latest version',
     viewUpdate: 'View Update',
     releaseNotes: 'Release Notes',
-    networkError: 'Network connection error, please check your network settings'
+    networkError: 'Network connection error, please check your network settings',
+    extensions: 'Extensions',
+    extensionsPage: {
+      loading: 'Loading',
+      categoryEditing: 'Editing Enhancement',
+      categoryUI: 'UI Enhancement',
+      categoryTools: 'Tools',
+      configuration: 'Configuration',
+      resetToDefault: 'Reset to Default Configuration',
+      minimap: {
+        displayText: 'Display Text',
+        displayTextCharacters: 'Characters',
+        displayTextBlocks: 'Blocks',
+        showOverlay: 'Show Overlay',
+        showOverlayAlways: 'Always',
+        showOverlayHover: 'On Hover',
+        showOverlayNever: 'Never',
+        autohide: 'Auto Hide'
+      },
+      codeBlast: {
+        effect: 'Effect Type',
+        effectParticles: 'Particle Effect',
+        effectExplosion: 'Explosion Effect',
+        shake: 'Shake Effect',
+        maxParticles: 'Max Particles',
+        shakeIntensity: 'Shake Intensity'
+      },
+      codeBlock: {
+        showBackground: 'Show Background',
+        enableAutoDetection: 'Enable Auto Detection'
+      }
+    }
+  },
+  extensions: {
+    rainbowBrackets: {
+      name: 'Rainbow Brackets',
+      description: 'Display nested brackets in different colors'
+    },
+    hyperlink: {
+      name: 'Hyperlink',
+      description: 'Recognize and make hyperlinks clickable'
+    },
+    colorSelector: {
+      name: 'Color Selector',
+      description: 'Visual color picker and color value display'
+    },
+    minimap: {
+      name: 'Minimap',
+      description: 'Display minimap overview of the document'
+    },
+    codeBlast: {
+      name: 'Code Blast',
+      description: 'Animated effects while typing'
+    },
+    search: {
+      name: 'Search',
+      description: 'Text search and replace functionality'
+    },
+    codeBlock: {
+      name: 'Code Block',
+      description: 'Code block syntax highlighting and formatting'
+    },
+    fold: {
+      name: 'Code Folding',
+      description: 'Collapse and expand code sections for better readability'
+    },
+    textHighlight: {
+      name: 'Text Highlight',
+      description: 'Highlight text selections and search matches'
+    }
   }
 }; 
