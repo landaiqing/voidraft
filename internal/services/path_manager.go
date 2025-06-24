@@ -7,9 +7,10 @@ import (
 
 // PathManager 路径管理器
 type PathManager struct {
-	configDir    string // 配置目录
-	settingsPath string // 设置文件路径
-	keybindsPath string // 快捷键配置文件路径
+	configDir      string // 配置目录
+	settingsPath   string // 设置文件路径
+	keybindsPath   string // 快捷键配置文件路径
+	extensionsPath string // 扩展配置文件路径
 }
 
 // NewPathManager 创建新的路径管理器
@@ -25,9 +26,10 @@ func NewPathManager() *PathManager {
 	configDir := filepath.Join(userConfigDir, ".voidraft", "config")
 
 	return &PathManager{
-		configDir:    configDir,
-		settingsPath: filepath.Join(configDir, "settings.json"),
-		keybindsPath: filepath.Join(configDir, "keybindings.json"),
+		configDir:      configDir,
+		settingsPath:   filepath.Join(configDir, "settings.json"),
+		keybindsPath:   filepath.Join(configDir, "keybindings.json"),
+		extensionsPath: filepath.Join(configDir, "extensions.json"),
 	}
 }
 
@@ -44,6 +46,11 @@ func (pm *PathManager) GetKeybindsPath() string {
 // GetConfigDir 获取配置目录路径
 func (pm *PathManager) GetConfigDir() string {
 	return pm.configDir
+}
+
+// GetExtensionsPath 获取扩展配置文件路径
+func (pm *PathManager) GetExtensionsPath() string {
+	return pm.extensionsPath
 }
 
 // EnsureConfigDir 确保配置目录存在

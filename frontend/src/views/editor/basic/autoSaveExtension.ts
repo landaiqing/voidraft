@@ -1,5 +1,5 @@
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { DocumentService } from '../../../../bindings/voidraft/internal/services';
+import { DocumentService } from '@/../bindings/voidraft/internal/services';
 import { useDebounceFn } from '@vueuse/core';
 
 // 定义自动保存配置选项

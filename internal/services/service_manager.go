@@ -18,6 +18,7 @@ type ServiceManager struct {
 	dialogService     *DialogService
 	trayService       *TrayService
 	keyBindingService *KeyBindingService
+	extensionService  *ExtensionService
 	startupService    *StartupService
 	updateService     *UpdateService
 	logger            *log.LoggerService
@@ -54,6 +55,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化快捷键服务
 	keyBindingService := NewKeyBindingService(logger, pathManager)
+
+	// 初始化扩展服务
+	extensionService := NewExtensionService(logger, pathManager)
 
 	// 初始化开机启动服务
 	startupService := NewStartupService(configService, logger)
@@ -92,6 +96,7 @@ func NewServiceManager() *ServiceManager {
 		dialogService:     dialogService,
 		trayService:       trayService,
 		keyBindingService: keyBindingService,
+		extensionService:  extensionService,
 		startupService:    startupService,
 		updateService:     updateService,
 		logger:            logger,
@@ -109,6 +114,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.dialogService),
 		application.NewService(sm.trayService),
 		application.NewService(sm.keyBindingService),
+		application.NewService(sm.extensionService),
 		application.NewService(sm.startupService),
 		application.NewService(sm.updateService),
 	}
@@ -147,6 +153,11 @@ func (sm *ServiceManager) GetKeyBindingService() *KeyBindingService {
 // GetStartupService 获取开机启动服务实例
 func (sm *ServiceManager) GetStartupService() *StartupService {
 	return sm.startupService
+}
+
+// GetExtensionService 获取扩展服务实例
+func (sm *ServiceManager) GetExtensionService() *ExtensionService {
+	return sm.extensionService
 }
 
 // GetUpdateService 获取更新服务实例

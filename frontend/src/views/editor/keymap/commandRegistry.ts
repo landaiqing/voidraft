@@ -7,7 +7,7 @@ import {
     searchToggleRegex,
     searchToggleWholeWord,
     showSearchVisibilityCommand
-} from '../vscodeSearch/commands'
+} from '../extensions/vscodeSearch/commands'
 import {
     addNewBlockAfterCurrent,
     addNewBlockAfterLast,
@@ -20,14 +20,39 @@ import {
     moveCurrentBlockUp,
     selectNextBlock,
     selectPreviousBlock
-} from '../codeblock/commands'
-import { selectAll } from '../codeblock/selectAll'
-import { deleteLineCommand } from '../codeblock/deleteLine'
-import { moveLineUp, moveLineDown } from '../codeblock/moveLines'
-import { transposeChars } from '@/views/editor/extensions'
-import { copyCommand, cutCommand, pasteCommand } from '../codeblock/copyPaste'
-import { undo, redo, undoSelection, redoSelection, cursorSyntaxLeft, cursorSyntaxRight, selectSyntaxLeft, selectSyntaxRight, copyLineUp, copyLineDown, insertBlankLine, selectLine, selectParentSyntax, indentLess, indentMore, indentSelection, cursorMatchingBracket, toggleComment, toggleBlockComment, insertNewlineAndIndent, deleteCharBackward, deleteCharForward, deleteGroupBackward, deleteGroupForward } from '@codemirror/commands'
-import { foldCode, unfoldCode, foldAll, unfoldAll } from '@codemirror/language'
+} from '../extensions/codeblock/commands'
+import {selectAll} from '../extensions/codeblock/selectAll'
+import {deleteLineCommand} from '../extensions/codeblock/deleteLine'
+import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines'
+import {transposeChars} from '../extensions/codeblock'
+import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste'
+import {
+    copyLineDown,
+    copyLineUp,
+    cursorMatchingBracket,
+    cursorSyntaxLeft,
+    cursorSyntaxRight,
+    deleteCharBackward,
+    deleteCharForward,
+    deleteGroupBackward,
+    deleteGroupForward,
+    indentLess,
+    indentMore,
+    indentSelection,
+    insertBlankLine,
+    insertNewlineAndIndent,
+    redo,
+    redoSelection,
+    selectLine,
+    selectParentSyntax,
+    selectSyntaxLeft,
+    selectSyntaxRight,
+    toggleBlockComment,
+    toggleComment,
+    undo,
+    undoSelection
+} from '@codemirror/commands'
+import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language'
 import i18n from '@/i18n'
 
 // 默认编辑器选项

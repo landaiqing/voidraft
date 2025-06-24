@@ -4,6 +4,7 @@
 import * as ConfigService from "./configservice.js";
 import * as DialogService from "./dialogservice.js";
 import * as DocumentService from "./documentservice.js";
+import * as ExtensionService from "./extensionservice.js";
 import * as HotkeyService from "./hotkeyservice.js";
 import * as KeyBindingService from "./keybindingservice.js";
 import * as MigrationService from "./migrationservice.js";
@@ -15,6 +16,7 @@ export {
     ConfigService,
     DialogService,
     DocumentService,
+    ExtensionService,
     HotkeyService,
     KeyBindingService,
     MigrationService,

@@ -22,6 +22,9 @@ const (
 	CurrentAppConfigVersion = "1.0.0"
 	// CurrentKeyBindingConfigVersion 当前快捷键配置版本
 	CurrentKeyBindingConfigVersion = "1.0.0"
+
+	CurrentExtensionConfigVersion = "1.0.0"
+
 	// BackupFilePattern 备份文件名模式
 	BackupFilePattern = "%s.backup.%s.json"
 
@@ -322,4 +325,10 @@ func NewAppConfigMigrationService(logger *log.LoggerService, pathManager *PathMa
 func NewKeyBindingMigrationService(logger *log.LoggerService, pathManager *PathManager) *ConfigMigrationService[*models.KeyBindingConfig] {
 	return NewConfigMigrationService[*models.KeyBindingConfig](
 		logger, pathManager, "keybindings", CurrentKeyBindingConfigVersion, pathManager.GetKeybindsPath())
+}
+
+// NewExtensionMigrationService 创建扩展配置迁移服务
+func NewExtensionMigrationService(logger *log.LoggerService, pathManager *PathManager) *ConfigMigrationService[*models.ExtensionSettings] {
+	return NewConfigMigrationService[*models.ExtensionSettings](
+		logger, pathManager, "extensions", CurrentExtensionConfigVersion, pathManager.GetExtensionsPath())
 }

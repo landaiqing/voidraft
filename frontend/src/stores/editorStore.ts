@@ -8,13 +8,16 @@ import {useThemeStore} from './themeStore';
 import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language"
-import {createBasicSetup} from '@/views/editor/extensions/basicSetup';
-import {createThemeExtension, updateEditorTheme} from '@/views/editor/extensions/themeExtension';
-import {getTabExtensions, updateTabConfig} from '@/views/editor/extensions/tabExtension';
-import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/extensions/fontExtension';
-import {createStatsUpdateExtension} from '@/views/editor/extensions/statsExtension';
-import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/extensions/autoSaveExtension';
-import {createDynamicKeymapExtension} from '@/views/editor/extensions/keymap';
+import {createBasicSetup} from '@/views/editor/basic/basicSetup';
+import {createThemeExtension, updateEditorTheme} from '@/views/editor/basic/themeExtension';
+import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtension';
+import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/basic/fontExtension';
+import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
+import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/basic/autoSaveExtension';
+import {createDynamicKeymapExtension} from '@/views/editor/keymap';
+import { createDynamicExtensions, setExtensionManagerView, getExtensionManager } from '@/views/editor/manager';
+import { useExtensionStore } from './extensionStore';
+import { ExtensionService } from '@/../bindings/voidraft/internal/services';
 
 export interface DocumentStats {
     lines: number;
@@ -27,6 +30,7 @@ export const useEditorStore = defineStore('editor', () => {
     const configStore = useConfigStore();
     const documentStore = useDocumentStore();
     const themeStore = useThemeStore();
+    const extensionStore = useExtensionStore();
 
     // 状态
     const documentStats = ref<DocumentStats>({
@@ -130,14 +134,14 @@ export const useEditorStore = defineStore('editor', () => {
         );
 
         // 创建保存快捷键插件
-        const saveShortcutPlugin = createSaveShortcutPlugin(() => {
+        const saveShortcutExtension = createSaveShortcutPlugin(() => {
             if (editorView.value) {
                 handleManualSave();
             }
         });
 
         // 创建自动保存插件
-        const autoSavePlugin = createAutoSavePlugin({
+        const autoSaveExtension = createAutoSavePlugin({
             debounceDelay: 300, // 300毫秒的输入防抖
             onSave: (success) => {
                 if (success) {
@@ -148,6 +152,9 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 创建动态快捷键扩展
         const keymapExtension = await createDynamicKeymapExtension();
+        
+        // 创建动态扩展
+        const dynamicExtensions = await createDynamicExtensions();
 
         // 组合所有扩展
         const extensions: Extension[] = [
@@ -157,8 +164,9 @@ export const useEditorStore = defineStore('editor', () => {
             ...tabExtensions,
             fontExtension,
             statsExtension,
-            saveShortcutPlugin,
-            autoSavePlugin
+            saveShortcutExtension,
+            autoSaveExtension,
+            ...dynamicExtensions
         ];
 
         // 创建编辑器状态
@@ -175,6 +183,9 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 将编辑器实例保存到store
         setEditorView(view);
+        
+        // 设置编辑器视图到扩展管理器
+        setExtensionManagerView(view);
 
         isEditorInitialized.value = true;
 
@@ -257,6 +268,23 @@ export const useEditorStore = defineStore('editor', () => {
         }
     });
 
+    // 扩展管理方法
+    const updateExtension = async (id: any, enabled: boolean, config?: any) => {
+        try {
+            // 更新后端配置
+            await ExtensionService.UpdateExtensionState(id, enabled, config || {})
+            
+            // 更新前端编辑器
+            const manager = getExtensionManager()
+            manager.updateExtension(id, enabled, config || {})
+            
+            // 重新加载扩展配置
+            await extensionStore.loadExtensions()
+        } catch (error) {
+            console.error('Failed to update extension:', error)
+        }
+    }
+
     return {
         // 状态
         documentStats,
@@ -272,5 +300,6 @@ export const useEditorStore = defineStore('editor', () => {
         handleManualSave,
         destroyEditor,
         scrollEditorToBottom,
+        updateExtension
     };
 });

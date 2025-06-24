@@ -81,14 +81,6 @@ export function createFontExtension(config: Partial<FontConfig> = {}): Extension
   return EditorView.theme(styles);
 }
 
-// 创建响应式字体大小扩展
-export function createResponsiveFontExtension(baseFontSize: number = 14): Extension {
-  return fontCompartment.of(createFontExtension({
-    fontSize: baseFontSize,
-    lineHeight: 1.5
-  }));
-}
-
 // 从后端配置创建字体扩展
 export function createFontExtensionFromBackend(backendConfig: {
   fontFamily?: string;

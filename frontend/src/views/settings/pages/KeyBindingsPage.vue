@@ -4,7 +4,7 @@ import { onMounted, computed } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import { useKeybindingStore } from '@/stores/keybindingStore';
 import { useSystemStore } from '@/stores/systemStore';
-import { getCommandDescription } from '@/views/editor/extensions/keymap/commandRegistry';
+import { getCommandDescription } from '@/views/editor/keymap/commandRegistry';
 import {KeyBindingCommand} from "@/../bindings/voidraft/internal/models";
 
 const { t } = useI18n();

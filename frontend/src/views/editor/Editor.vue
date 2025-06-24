@@ -2,7 +2,7 @@
 import {onBeforeUnmount, onMounted, ref} from 'vue';
 import {useEditorStore} from '@/stores/editorStore';
 import {useConfigStore} from '@/stores/configStore';
-import {createWheelZoomHandler} from './extensions';
+import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 
 const editorStore = useEditorStore();
