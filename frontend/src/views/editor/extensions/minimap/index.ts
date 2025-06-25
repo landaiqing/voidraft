@@ -122,6 +122,14 @@ const minimapClass = ViewPlugin.fromClass(
       }
 
       if (now) {
+        if (prev && this.dom && prev.autohide !== now.autohide) {
+          if (now.autohide) {
+            this.dom.classList.add('cm-minimap-autohide');
+          } else {
+            this.dom.classList.remove('cm-minimap-autohide');
+          }
+        }
+
         this.text.update(update);
         this.selection.update(update);
         this.diagnostic.update(update);
@@ -279,7 +287,7 @@ const minimapClass = ViewPlugin.fromClass(
   }
 );
 
-// 使用type定义，而不是interface
+// 使用type定义
 export type MinimapConfig = Omit<Options, "enabled"> & {
   /**
    * A function that creates the element that contains the minimap

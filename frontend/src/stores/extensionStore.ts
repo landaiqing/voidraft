@@ -19,7 +19,7 @@ export const useExtensionStore = defineStore('extension', () => {
         try {
             extensions.value = await ExtensionService.GetAllExtensions()
         } catch (err) {
-            console.error('Failed to load extensions:', err)
+            console.error('[ExtensionStore] Failed to load extensions:', err)
         }
     }
 

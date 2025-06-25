@@ -270,6 +270,7 @@ export const useEditorStore = defineStore('editor', () => {
                 // 如果需要更新配置
                 await ExtensionService.UpdateExtensionState(id, enabled, config)
             }
+            
             // 更新前端编辑器
             const manager = getExtensionManager()
             if (manager) {

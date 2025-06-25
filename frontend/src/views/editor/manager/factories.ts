@@ -5,7 +5,7 @@ import i18n from '@/i18n'
 // 导入现有扩展的创建函数
 import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension'
 import {createTextHighlighter} from '../extensions/textHighlight/textHighlightExtension'
-import {createCodeBlastExtension} from '../extensions/codeblast'
+
 import {color} from '../extensions/colorSelector'
 import {hyperLink} from '../extensions/hyperlink'
 import {minimap} from '../extensions/minimap'
@@ -73,35 +73,7 @@ export const minimapFactory: ExtensionFactory = {
     }
 }
 
-/**
- * 代码爆炸效果扩展工厂
- */
-export const codeBlastFactory: ExtensionFactory = {
-    create(config: any) {
-        const options = {
-            effect: config.effect || 1,
-            shake: config.shake !== false,
-            maxParticles: config.maxParticles || 300,
-            shakeIntensity: config.shakeIntensity || 3
-        }
-        return createCodeBlastExtension(options)
-    },
-    getDefaultConfig() {
-        return {
-            effect: 1,
-            shake: true,
-            maxParticles: 300,
-            shakeIntensity: 3
-        }
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object' &&
-            (!config.effect || [1, 2].includes(config.effect)) &&
-            (!config.shake || typeof config.shake === 'boolean') &&
-            (!config.maxParticles || typeof config.maxParticles === 'number') &&
-            (!config.shakeIntensity || typeof config.shakeIntensity === 'number')
-    }
-}
+
 
 /**
  * 超链接扩展工厂
@@ -213,11 +185,7 @@ const EXTENSION_CONFIGS = {
         displayNameKey: 'extensions.minimap.name',
         descriptionKey: 'extensions.minimap.description'
     },
-    [ExtensionID.ExtensionCodeBlast]: {
-        factory: codeBlastFactory,
-        displayNameKey: 'extensions.codeBlast.name',
-        descriptionKey: 'extensions.codeBlast.description'
-    },
+
 
     // 工具扩展
     [ExtensionID.ExtensionSearch]: {
@@ -270,6 +238,35 @@ export function getExtensionDisplayName(id: ExtensionID): string {
 export function getExtensionDescription(id: ExtensionID): string {
     const config = EXTENSION_CONFIGS[id as ExtensionID]
     return config?.descriptionKey ? i18n.global.t(config.descriptionKey) : ''
+}
+
+/**
+ * 获取扩展工厂实例
+ * @param id 扩展ID
+ * @returns 扩展工厂实例
+ */
+export function getExtensionFactory(id: ExtensionID): ExtensionFactory | undefined {
+    return EXTENSION_CONFIGS[id as ExtensionID]?.factory
+}
+
+/**
+ * 获取扩展的默认配置
+ * @param id 扩展ID
+ * @returns 默认配置对象
+ */
+export function getExtensionDefaultConfig(id: ExtensionID): any {
+    const factory = getExtensionFactory(id)
+    return factory?.getDefaultConfig() || {}
+}
+
+/**
+ * 检查扩展是否有配置项
+ * @param id 扩展ID
+ * @returns 是否有配置项
+ */
+export function hasExtensionConfig(id: ExtensionID): boolean {
+    const defaultConfig = getExtensionDefaultConfig(id)
+    return Object.keys(defaultConfig).length > 0
 }
 
 /**

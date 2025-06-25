@@ -23,8 +23,7 @@ const (
 	ExtensionTextHighlight   ExtensionID = "textHighlight"
 
 	// UI增强扩展
-	ExtensionMinimap   ExtensionID = "minimap"   // 小地图
-	ExtensionCodeBlast ExtensionID = "codeBlast" // 代码爆炸效果
+	ExtensionMinimap ExtensionID = "minimap" // 小地图
 
 	// 工具扩展
 	ExtensionSearch    ExtensionID = "search"    // 搜索功能
@@ -102,18 +101,6 @@ func NewDefaultExtensions() []Extension {
 				"displayText": "characters",
 				"showOverlay": "always",
 				"autohide":    false,
-			},
-		},
-		{
-			ID:        ExtensionCodeBlast,
-			Category:  CategoryUI,
-			Enabled:   true,
-			IsDefault: true,
-			Config: ExtensionConfig{
-				"effect":         1,
-				"shake":          true,
-				"maxParticles":   300,
-				"shakeIntensity": 3,
 			},
 		},
 

@@ -157,28 +157,7 @@ export default {
       categoryTools: '工具扩展',
       configuration: '配置',
       resetToDefault: '重置为默认配置',
-      minimap: {
-        displayText: '显示文本',
-        displayTextCharacters: '字符',
-        displayTextBlocks: '块',
-        showOverlay: '显示覆盖层',
-        showOverlayAlways: '始终',
-        showOverlayHover: '悬停时',
-        showOverlayNever: '从不',
-        autohide: '自动隐藏'
-      },
-      codeBlast: {
-        effect: '效果类型',
-        effectParticles: '粒子效果',
-        effectExplosion: '爆炸效果',
-        shake: '震动效果',
-        maxParticles: '最大粒子数',
-        shakeIntensity: '震动强度'
-      },
-      codeBlock: {
-        showBackground: '显示背景',
-        enableAutoDetection: '启用自动检测'
-      }
+      // 保留必要的扩展界面翻译，配置项直接显示英文
     }
   },
   extensions: {
@@ -198,10 +177,7 @@ export default {
       name: '小地图',
       description: '显示小地图视图'
     },
-    codeBlast: {
-      name: '爆炸效果',
-      description: '编写时的动画效果'
-    },
+
     search: {
       name: '搜索功能',
       description: '文本搜索和替换功能'

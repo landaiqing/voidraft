@@ -47,6 +47,8 @@ export class ExtensionManager {
     private view: EditorView | null = null
     private compartments = new Map<ExtensionID, ExtensionCompartment>()
     private extensionFactories = new Map<ExtensionID, ExtensionFactory>()
+    private updateQueue = new Map<ExtensionID, { enabled: boolean, config: any, timestamp: number }>()
+    private debounceTimeout: number | null = null
 
     /**
      * 注册扩展工厂
@@ -110,7 +112,7 @@ export class ExtensionManager {
                 compartmentInfo.currentConfig = config.config
                 compartmentInfo.enabled = config.enabled
             } catch (error) {
-                console.error(`Failed to create extension ${config.id}:`, error)
+                console.error(`[ExtensionManager] Failed to create extension ${config.id}:`, error)
             }
         }
 
@@ -126,13 +128,33 @@ export class ExtensionManager {
     }
 
     /**
-     * 动态更新单个扩展
+     * 动态更新单个扩展（带防抖）
      * @param id 扩展ID
      * @param enabled 是否启用
      * @param config 扩展配置
      */
     updateExtension(id: ExtensionID, enabled: boolean, config: any = {}): void {
+        // 添加到更新队列
+        this.updateQueue.set(id, {enabled, config, timestamp: Date.now()})
 
+        // 清除之前的防抖定时器
+        if (this.debounceTimeout) {
+            clearTimeout(this.debounceTimeout)
+        }
+
+        // 设置新的防抖定时器
+        this.debounceTimeout = window.setTimeout(() => {
+            this.flushUpdateQueue()
+        }, 100) // 100ms 防抖
+    }
+
+    /**
+     * 立即更新扩展（无防抖）
+     * @param id 扩展ID
+     * @param enabled 是否启用
+     * @param config 扩展配置
+     */
+    updateExtensionImmediate(id: ExtensionID, enabled: boolean, config: any = {}): void {
         if (!this.view) {
             return
         }
@@ -164,6 +186,52 @@ export class ExtensionManager {
         } catch (error) {
             console.error(`[ExtensionManager] Failed to update extension ${id}:`, error)
         }
+    }
+
+    /**
+     * 处理更新队列中的所有更新
+     */
+    private flushUpdateQueue(): void {
+        if (!this.view) {
+            return
+        }
+
+        const effects: StateEffect<any>[] = []
+
+        for (const [id, update] of this.updateQueue) {
+            const compartmentInfo = this.compartments.get(id)
+            if (!compartmentInfo) {
+                continue
+            }
+
+            try {
+                // 验证配置
+                if (compartmentInfo.factory.validateConfig &&
+                    !compartmentInfo.factory.validateConfig(update.config)) {
+                    continue
+                }
+
+                const extension = update.enabled
+                    ? compartmentInfo.factory.create(update.config)
+                    : []
+
+                effects.push(compartmentInfo.compartment.reconfigure(extension))
+
+                // 更新状态
+                compartmentInfo.currentConfig = update.config
+                compartmentInfo.enabled = update.enabled
+            } catch (error) {
+                console.error(`[ExtensionManager] Failed to update extension ${id}:`, error)
+            }
+        }
+
+        if (effects.length > 0) {
+            this.view.dispatch({effects})
+        }
+
+        // 清空更新队列
+        this.updateQueue.clear()
+        this.debounceTimeout = null
     }
 
     /**
@@ -251,8 +319,15 @@ export class ExtensionManager {
      * 销毁管理器
      */
     destroy(): void {
+        // 清除防抖定时器
+        if (this.debounceTimeout) {
+            clearTimeout(this.debounceTimeout)
+            this.debounceTimeout = null
+        }
+
         this.view = null
         this.compartments.clear()
         this.extensionFactories.clear()
+        this.updateQueue.clear()
     }
 } 

@@ -157,28 +157,7 @@ export default {
       categoryTools: 'Tools',
       configuration: 'Configuration',
       resetToDefault: 'Reset to Default Configuration',
-      minimap: {
-        displayText: 'Display Text',
-        displayTextCharacters: 'Characters',
-        displayTextBlocks: 'Blocks',
-        showOverlay: 'Show Overlay',
-        showOverlayAlways: 'Always',
-        showOverlayHover: 'On Hover',
-        showOverlayNever: 'Never',
-        autohide: 'Auto Hide'
-      },
-      codeBlast: {
-        effect: 'Effect Type',
-        effectParticles: 'Particle Effect',
-        effectExplosion: 'Explosion Effect',
-        shake: 'Shake Effect',
-        maxParticles: 'Max Particles',
-        shakeIntensity: 'Shake Intensity'
-      },
-      codeBlock: {
-        showBackground: 'Show Background',
-        enableAutoDetection: 'Enable Auto Detection'
-      }
+      // Keep necessary extension interface translations, configuration items display in English directly
     }
   },
   extensions: {
@@ -198,10 +177,7 @@ export default {
       name: 'Minimap',
       description: 'Display minimap overview of the document'
     },
-    codeBlast: {
-      name: 'Code Blast',
-      description: 'Animated effects while typing'
-    },
+
     search: {
       name: 'Search',
       description: 'Text search and replace functionality'

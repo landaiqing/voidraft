@@ -461,11 +461,6 @@ export enum ExtensionID {
     ExtensionMinimap = "minimap",
 
     /**
-     * 代码爆炸效果
-     */
-    ExtensionCodeBlast = "codeBlast",
-
-    /**
      * 工具扩展
      * 搜索功能
      */
