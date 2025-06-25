@@ -25,8 +25,7 @@ const (
 	ExtensionMinimap ExtensionID = "minimap" // 小地图
 
 	// 工具扩展
-	ExtensionSearch    ExtensionID = "search"    // 搜索功能
-	ExtensionCodeBlock ExtensionID = "codeBlock" // 代码块
+	ExtensionSearch ExtensionID = "search" // 搜索功能
 
 	// 核心扩展
 	ExtensionEditor ExtensionID = "editor" // 编辑器核心功能
@@ -90,7 +89,10 @@ func NewDefaultExtensions() []Extension {
 			ID:        ExtensionTextHighlight,
 			Enabled:   true,
 			IsDefault: true,
-			Config:    ExtensionConfig{},
+			Config: ExtensionConfig{
+				"backgroundColor": "#FFD700",
+				"opacity":         0.3,
+			},
 		},
 
 		// UI增强扩展
@@ -111,15 +113,6 @@ func NewDefaultExtensions() []Extension {
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},
-		},
-		{
-			ID:        ExtensionCodeBlock,
-			Enabled:   true,
-			IsDefault: true,
-			Config: ExtensionConfig{
-				"showBackground":      true,
-				"enableAutoDetection": true,
-			},
 		},
 
 		// 核心扩展

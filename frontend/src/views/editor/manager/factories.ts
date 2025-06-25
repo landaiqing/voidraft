@@ -10,7 +10,7 @@ import {color} from '../extensions/colorSelector'
 import {hyperLink} from '../extensions/hyperlink'
 import {minimap} from '../extensions/minimap'
 import {vscodeSearch} from '../extensions/vscodeSearch'
-import {createCodeBlockExtension} from '../extensions/codeblock'
+
 import {foldingOnIndent} from '../extensions/fold/foldExtension'
 
 /**
@@ -33,16 +33,21 @@ export const rainbowBracketsFactory: ExtensionFactory = {
  */
 export const textHighlightFactory: ExtensionFactory = {
     create(config: any) {
-        return createTextHighlighter('default')
+        return createTextHighlighter({
+            backgroundColor: config.backgroundColor || '#FFD700',
+            opacity: config.opacity || 0.3
+        })
     },
     getDefaultConfig() {
         return {
-            highlightClass: 'hl'
+            backgroundColor: '#FFD700', // 金黄色
+            opacity: 0.3 // 透明度
         }
     },
     validateConfig(config: any) {
         return typeof config === 'object' &&
-            (!config.highlightClass || typeof config.highlightClass === 'string')
+            (!config.backgroundColor || typeof config.backgroundColor === 'string') &&
+            (!config.opacity || (typeof config.opacity === 'number' && config.opacity >= 0 && config.opacity <= 1))
     }
 }
 
@@ -120,29 +125,7 @@ export const searchFactory: ExtensionFactory = {
     }
 }
 
-/**
- * 代码块扩展工厂
- */
-export const codeBlockFactory: ExtensionFactory = {
-    create(config: any) {
-        const options = {
-            showBackground: config.showBackground !== false,
-            enableAutoDetection: config.enableAutoDetection !== false
-        }
-        return createCodeBlockExtension(options)
-    },
-    getDefaultConfig() {
-        return {
-            showBackground: true,
-            enableAutoDetection: true
-        }
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object' &&
-            (!config.showBackground || typeof config.showBackground === 'boolean') &&
-            (!config.enableAutoDetection || typeof config.enableAutoDetection === 'boolean')
-    }
-}
+
 
 export const foldFactory: ExtensionFactory = {
     create(config: any) {
@@ -193,11 +176,7 @@ const EXTENSION_CONFIGS = {
         displayNameKey: 'extensions.search.name',
         descriptionKey: 'extensions.search.description'
     },
-    [ExtensionID.ExtensionCodeBlock]: {
-        factory: codeBlockFactory,
-        displayNameKey: 'extensions.codeBlock.name',
-        descriptionKey: 'extensions.codeBlock.description'
-    },
+
     [ExtensionID.ExtensionFold]: {
         factory: foldFactory,
         displayNameKey: 'extensions.fold.name',

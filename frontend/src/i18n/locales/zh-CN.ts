@@ -89,6 +89,7 @@ export default {
       deleteCharForward: '向前删除字符',
       deleteGroupBackward: '向后删除组',
       deleteGroupForward: '向前删除组',
+    textHighlightToggle: '切换文本高亮',
     }
   },
   settings: {
@@ -182,17 +183,16 @@ export default {
       name: '搜索功能',
       description: '文本搜索和替换功能'
     },
-    codeBlock: {
-      name: '代码块',
-      description: '代码块语法高亮和格式化'
-    },
+
     fold: {
       name: '代码折叠',
       description: '折叠和展开代码段以提高代码可读性'
     },
     textHighlight: {
       name: '文本高亮',
-      description: '高亮显示文本选择和搜索匹配项'
+      description: '高亮选中的文本内容 (Ctrl+Shift+H 切换高亮)',
+      backgroundColor: '背景颜色',
+      opacity: '透明度'
     }
   }
 }; 

@@ -434,11 +434,6 @@ export enum ExtensionID {
     ExtensionSearch = "search",
 
     /**
-     * 代码块
-     */
-    ExtensionCodeBlock = "codeBlock",
-
-    /**
      * 核心扩展
      * 编辑器核心功能
      */
@@ -918,6 +913,12 @@ export enum KeyBindingCommand {
      * 重做选择
      */
     HistoryRedoSelectionCommand = "historyRedoSelection",
+
+    /**
+     * 文本高亮扩展相关
+     * 切换文本高亮
+     */
+    TextHighlightToggleCommand = "textHighlightToggle",
 };
 
 /**

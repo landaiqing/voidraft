@@ -26,6 +26,7 @@ import {deleteLineCommand} from '../extensions/codeblock/deleteLine'
 import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines'
 import {transposeChars} from '../extensions/codeblock'
 import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste'
+import {textHighlightToggleCommand} from '../extensions/textHighlight/textHighlightExtension'
 import {
     copyLineDown,
     copyLineUp,
@@ -283,6 +284,12 @@ export const commandRegistry = {
     [KeyBindingCommand.DeleteGroupForwardCommand]: {
         handler: deleteGroupForward,
         descriptionKey: 'keybindings.commands.deleteGroupForward'
+    },
+
+    // 文本高亮扩展命令
+    [KeyBindingCommand.TextHighlightToggleCommand]: {
+        handler: textHighlightToggleCommand,
+        descriptionKey: 'keybindings.commands.textHighlightToggle'
     },
 } as const
 

@@ -18,6 +18,7 @@ import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/bas
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
+import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
 
 export interface DocumentStats {
     lines: number;
@@ -142,6 +143,11 @@ export const useEditorStore = defineStore('editor', () => {
                 }
             }
         });
+        // 代码块功能
+        const codeBlockExtension = createCodeBlockExtension({
+            showBackground: true,
+            enableAutoDetection: true
+        });
 
         // 创建动态快捷键扩展
         const keymapExtension = await createDynamicKeymapExtension();
@@ -159,6 +165,7 @@ export const useEditorStore = defineStore('editor', () => {
             statsExtension,
             saveShortcutExtension,
             autoSaveExtension,
+            codeBlockExtension,
             ...dynamicExtensions
         ];
 

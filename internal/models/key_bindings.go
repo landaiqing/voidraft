@@ -78,6 +78,9 @@ const (
 	HistoryRedoCommand          KeyBindingCommand = "historyRedo"          // 重做
 	HistoryUndoSelectionCommand KeyBindingCommand = "historyUndoSelection" // 撤销选择
 	HistoryRedoSelectionCommand KeyBindingCommand = "historyRedoSelection" // 重做选择
+
+	// 文本高亮扩展相关
+	TextHighlightToggleCommand KeyBindingCommand = "textHighlightToggle" // 切换文本高亮
 )
 
 // KeyBindingMetadata 快捷键配置元数据
@@ -157,115 +160,115 @@ func NewDefaultKeyBindings() []KeyBinding {
 			IsDefault: true,
 		},
 
-		// 代码块扩展快捷键
+		// 代码块核心功能快捷键
 		{
 			Command:   BlockSelectAllCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-a",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockAddAfterCurrentCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockAddAfterLastCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Shift-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockAddBeforeCurrentCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Alt-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockGotoPreviousCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockGotoNextCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockSelectPreviousCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Shift-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockSelectNextCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Shift-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockDeleteCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Shift-d",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveUpCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Alt-Mod-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveDownCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Alt-Mod-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockDeleteLineCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Shift-k",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveLineUpCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Alt-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveLineDownCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Alt-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockTransposeCharsCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-t",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockFormatCommand,
-			Extension: ExtensionCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-Shift-f",
 			Enabled:   true,
 			IsDefault: true,
@@ -490,6 +493,15 @@ func NewDefaultKeyBindings() []KeyBinding {
 			Command:   DeleteGroupForwardCommand,
 			Extension: ExtensionEditor,
 			Key:       "Ctrl-Delete",
+			Enabled:   true,
+			IsDefault: true,
+		},
+
+		// 文本高亮扩展快捷键
+		{
+			Command:   TextHighlightToggleCommand,
+			Extension: ExtensionTextHighlight,
+			Key:       "Mod-Shift-h",
 			Enabled:   true,
 			IsDefault: true,
 		},

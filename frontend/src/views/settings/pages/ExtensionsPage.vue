@@ -7,11 +7,11 @@ import {ExtensionService} from '@/../bindings/voidraft/internal/services'
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models'
 import {getExtensionManager} from '@/views/editor/manager'
 import {
-  getAllExtensionIds, 
-  getExtensionDescription, 
+  getAllExtensionIds,
+  getExtensionDefaultConfig,
+  getExtensionDescription,
   getExtensionDisplayName,
-  hasExtensionConfig,
-  getExtensionDefaultConfig
+  hasExtensionConfig
 } from '@/views/editor/manager/factories'
 import SettingSection from '../components/SettingSection.vue'
 import SettingItem from '../components/SettingItem.vue'
@@ -67,10 +67,10 @@ const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string
     if (!extension) return
 
     // 更新配置
-    const updatedConfig = { ...extension.config, [configKey]: value }
+    const updatedConfig = {...extension.config, [configKey]: value}
 
     await editorStore.updateExtension(extensionId, extension.enabled, updatedConfig)
-    
+
   } catch (error) {
     console.error('Failed to update extension config:', error)
   }
@@ -80,7 +80,7 @@ const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string
 const resetExtension = async (extensionId: ExtensionID) => {
   try {
     await ExtensionService.ResetExtensionToDefault(extensionId)
-    
+
     // 重新加载扩展状态以获取最新配置
     await extensionStore.loadExtensions()
 
@@ -114,25 +114,23 @@ const extensionConfigMeta: Partial<Record<ExtensionID, Record<string, ConfigItem
     displayText: {
       type: 'select',
       options: [
-        { value: 'characters', label: 'Characters' },
-        { value: 'blocks', label: 'Blocks' }
+        {value: 'characters', label: 'Characters'},
+        {value: 'blocks', label: 'Blocks'}
       ]
     },
     showOverlay: {
       type: 'select',
       options: [
-        { value: 'always', label: 'Always' },
-        { value: 'mouse-over', label: 'Mouse Over' }
+        {value: 'always', label: 'Always'},
+        {value: 'mouse-over', label: 'Mouse Over'}
       ]
     },
-    autohide: { type: 'toggle' }
+    autohide: {type: 'toggle'}
   },
-  [ExtensionID.ExtensionCodeBlock]: {
-    showBackground: { type: 'toggle' },
-    enableAutoDetection: { type: 'toggle' }
-  },
+
   [ExtensionID.ExtensionTextHighlight]: {
-    highlightClass: { type: 'text' }
+    backgroundColor: {type: 'text'},
+    opacity: {type: 'number'}
   }
 }
 
@@ -142,7 +140,7 @@ const getConfigItemType = (extensionId: ExtensionID, configKey: string, defaultV
   if (meta?.type) {
     return meta.type
   }
-  
+
   // 根据默认值类型自动推断
   if (typeof defaultValue === 'boolean') return 'toggle'
   if (typeof defaultValue === 'number') return 'number'
@@ -180,8 +178,10 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
                 :class="{ expanded: expandedExtensions.has(extension.id) }"
                 :title="t('settings.extensionsPage.configuration')"
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path
+                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                 <circle cx="12" cy="12" r="3"/>
               </svg>
             </button>
@@ -194,7 +194,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
         </SettingItem>
 
         <!-- 可展开的配置区域 -->
-        <div 
+        <div
             v-if="extension.hasConfig && expandedExtensions.has(extension.id)"
             class="extension-config"
         >
@@ -209,8 +209,8 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
               {{ t('settings.reset') }}
             </button>
           </div>
-          
-          <div 
+
+          <div
               v-for="[configKey, configValue] in Object.entries(extension.defaultConfig)"
               :key="configKey"
               class="config-item"
@@ -224,16 +224,19 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
                   :model-value="extension.config[configKey] ?? configValue"
                   @update:model-value="updateExtensionConfig(extension.id, configKey, $event)"
               />
-              
+
               <!-- 数字输入框 -->
               <input
                   v-else-if="getConfigItemType(extension.id, configKey, configValue) === 'number'"
                   type="number"
                   class="config-input"
                   :value="extension.config[configKey] ?? configValue"
-                  @input="updateExtensionConfig(extension.id, configKey, parseInt(($event.target as HTMLInputElement).value))"
+                  :min="configKey === 'opacity' ? 0 : undefined"
+                  :max="configKey === 'opacity' ? 1 : undefined"
+                  :step="configKey === 'opacity' ? 0.1 : 1"
+                  @input="updateExtensionConfig(extension.id, configKey, parseFloat(($event.target as HTMLInputElement).value))"
               />
-              
+
               <!-- 选择框 -->
               <select
                   v-else-if="getConfigItemType(extension.id, configKey, configValue) === 'select'"
@@ -249,7 +252,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
                   {{ option.label }}
                 </option>
               </select>
-              
+
               <!-- 文本输入框 -->
               <input
                   v-else
@@ -273,7 +276,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
 
 .extension-item {
   border-bottom: 1px solid var(--settings-input-border);
-  
+
   &:last-child {
     border-bottom: none;
   }
@@ -301,17 +304,17 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  
+
   &:hover {
     background-color: var(--settings-hover);
     color: var(--settings-text);
   }
-  
+
   &.expanded {
     color: var(--settings-accent);
     background-color: var(--settings-hover);
   }
-  
+
   svg {
     transition: all 0.2s ease;
   }
@@ -368,12 +371,12 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
   &:not(:last-child) {
     margin-bottom: 12px;
   }
-  
+
   /* 配置项标题和描述字体大小 */
   :deep(.setting-item-title) {
     font-size: 12px;
   }
-  
+
   :deep(.setting-item-description) {
     font-size: 11px;
   }
@@ -387,7 +390,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
   background-color: var(--settings-input-bg);
   color: var(--settings-text);
   font-size: 11px; /* 调整字体大小 */
-  
+
   &:focus {
     outline: none;
     border-color: var(--settings-accent);

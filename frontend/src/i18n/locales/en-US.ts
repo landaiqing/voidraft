@@ -89,6 +89,7 @@ export default {
       deleteCharForward: 'Delete character forward',
       deleteGroupBackward: 'Delete group backward',
       deleteGroupForward: 'Delete group forward',
+      textHighlightToggle: 'Toggle text highlight',
     }
   },
   settings: {
@@ -182,17 +183,16 @@ export default {
       name: 'Search',
       description: 'Text search and replace functionality'
     },
-    codeBlock: {
-      name: 'Code Block',
-      description: 'Code block syntax highlighting and formatting'
-    },
+
     fold: {
       name: 'Code Folding',
       description: 'Collapse and expand code sections for better readability'
     },
     textHighlight: {
       name: 'Text Highlight',
-      description: 'Highlight text selections and search matches'
+      description: 'Highlight selected text content (Ctrl+Shift+H to toggle highlight)',
+      backgroundColor: 'Background Color',
+      opacity: 'Opacity'
     }
   }
 }; 
