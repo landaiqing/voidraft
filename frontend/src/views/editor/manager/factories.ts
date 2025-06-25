@@ -10,6 +10,7 @@ import {color} from '../extensions/colorSelector'
 import {hyperLink} from '../extensions/hyperlink'
 import {minimap} from '../extensions/minimap'
 import {vscodeSearch} from '../extensions/vscodeSearch'
+import {createCheckboxExtension} from '../extensions/checkbox'
 
 import {foldingOnIndent} from '../extensions/fold/foldExtension'
 
@@ -140,6 +141,21 @@ export const foldFactory: ExtensionFactory = {
 }
 
 /**
+ * 选择框扩展工厂
+ */
+export const checkboxFactory: ExtensionFactory = {
+    create(config: any) {
+        return createCheckboxExtension()
+    },
+    getDefaultConfig() {
+        return {}
+    },
+    validateConfig(config: any) {
+        return typeof config === 'object'
+    }
+}
+
+/**
  * 所有扩展的统一配置
  * 排除$zero值以避免TypeScript类型错误
  */
@@ -186,6 +202,11 @@ const EXTENSION_CONFIGS = {
         factory: textHighlightFactory,
         displayNameKey: 'extensions.textHighlight.name',
         descriptionKey: 'extensions.textHighlight.description'
+    },
+    [ExtensionID.ExtensionCheckbox]: {
+        factory: checkboxFactory,
+        displayNameKey: 'extensions.checkbox.name',
+        descriptionKey: 'extensions.checkbox.description'
     }
 }
 

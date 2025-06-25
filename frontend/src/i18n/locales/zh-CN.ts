@@ -193,6 +193,10 @@ export default {
       description: '高亮选中的文本内容 (Ctrl+Shift+H 切换高亮)',
       backgroundColor: '背景颜色',
       opacity: '透明度'
+    },
+    checkbox: {
+      name: '选择框',
+      description: '将 [x] 和 [ ] 渲染为可交互的选择框'
     }
   }
 }; 

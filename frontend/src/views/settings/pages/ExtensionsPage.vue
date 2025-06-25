@@ -108,7 +108,7 @@ interface ConfigItemMeta {
   options?: SelectOption[]
 }
 
-// 扩展配置项元数据
+// 只保留 select 类型的配置项元数据
 const extensionConfigMeta: Partial<Record<ExtensionID, Record<string, ConfigItemMeta>>> = {
   [ExtensionID.ExtensionMinimap]: {
     displayText: {
@@ -124,13 +124,7 @@ const extensionConfigMeta: Partial<Record<ExtensionID, Record<string, ConfigItem
         {value: 'always', label: 'Always'},
         {value: 'mouse-over', label: 'Mouse Over'}
       ]
-    },
-    autohide: {type: 'toggle'}
-  },
-
-  [ExtensionID.ExtensionTextHighlight]: {
-    backgroundColor: {type: 'text'},
-    opacity: {type: 'number'}
+    }
   }
 }
 
@@ -147,13 +141,9 @@ const getConfigItemType = (extensionId: ExtensionID, configKey: string, defaultV
   return 'text'
 }
 
-// 获取选择项选项
-const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
-  const meta = extensionConfigMeta[extensionId]?.[configKey]
-  if (meta?.type === 'select' && meta.options) {
-    return meta.options
-  }
-  return []
+// 获取选择框的选项列表
+const getSelectOptions = (extensionId: ExtensionID, configKey: string): SelectOption[] => {
+  return extensionConfigMeta[extensionId]?.[configKey]?.options || []
 }
 </script>
 
@@ -332,7 +322,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
   margin: 8px 0 16px 0;
   padding: 12px;
   border-radius: 6px;
-  font-size: 13px; /* 调整字体大小 */
+  font-size: 13px;
 }
 
 .config-header {
@@ -343,7 +333,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
 }
 
 .config-title {
-  font-size: 13px; /* 调整字体大小 */
+  font-size: 13px;
   font-weight: 600;
   color: var(--settings-text);
   margin: 0;
@@ -351,7 +341,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
 
 .reset-button {
   padding: 6px 12px;
-  font-size: 11px; /* 调整字体大小 */
+  font-size: 11px;
   border: 1px solid var(--settings-input-border);
   border-radius: 4px;
   background-color: var(--settings-input-bg);
@@ -389,7 +379,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string) => {
   border-radius: 3px;
   background-color: var(--settings-input-bg);
   color: var(--settings-text);
-  font-size: 11px; /* 调整字体大小 */
+  font-size: 11px;
 
   &:focus {
     outline: none;

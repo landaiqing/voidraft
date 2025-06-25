@@ -19,6 +19,7 @@ import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/edito
 import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
 import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
+import {triggerFontChange} from '@/views/editor/extensions/checkbox';
 
 export interface DocumentStats {
     lines: number;
@@ -259,6 +260,10 @@ export const useEditorStore = defineStore('editor', () => {
     ], () => {
         reconfigureFontSettings();
         applyFontSize();
+        // 通知checkbox扩展字体已变化，需要重新渲染
+        if (editorView.value) {
+            triggerFontChange(editorView.value as EditorView);
+        }
     });
 
     // 监听主题变化

@@ -20,6 +20,7 @@ const (
 	ExtensionColorSelector   ExtensionID = "colorSelector"   // 颜色选择器
 	ExtensionFold            ExtensionID = "fold"
 	ExtensionTextHighlight   ExtensionID = "textHighlight"
+	ExtensionCheckbox        ExtensionID = "checkbox" // 选择框
 
 	// UI增强扩展
 	ExtensionMinimap ExtensionID = "minimap" // 小地图
@@ -93,6 +94,12 @@ func NewDefaultExtensions() []Extension {
 				"backgroundColor": "#FFD700",
 				"opacity":         0.3,
 			},
+		},
+		{
+			ID:        ExtensionCheckbox,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
 		},
 
 		// UI增强扩展

@@ -422,6 +422,11 @@ export enum ExtensionID {
     ExtensionTextHighlight = "textHighlight",
 
     /**
+     * 选择框
+     */
+    ExtensionCheckbox = "checkbox",
+
+    /**
      * UI增强扩展
      * 小地图
      */

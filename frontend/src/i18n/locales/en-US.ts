@@ -193,6 +193,10 @@ export default {
       description: 'Highlight selected text content (Ctrl+Shift+H to toggle highlight)',
       backgroundColor: 'Background Color',
       opacity: 'Opacity'
+    },
+    checkbox: {
+      name: 'Checkbox',
+      description: 'Render [x] and [ ] as interactive checkboxes'
     }
   }
 }; 
