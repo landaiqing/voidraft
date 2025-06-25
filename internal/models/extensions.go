@@ -4,11 +4,10 @@ import "time"
 
 // Extension 单个扩展配置
 type Extension struct {
-	ID        ExtensionID       `json:"id"`        // 扩展唯一标识
-	Category  ExtensionCategory `json:"category"`  // 扩展分类
-	Enabled   bool              `json:"enabled"`   // 是否启用
-	IsDefault bool              `json:"isDefault"` // 是否为默认扩展
-	Config    ExtensionConfig   `json:"config"`    // 扩展配置项
+	ID        ExtensionID     `json:"id"`        // 扩展唯一标识
+	Enabled   bool            `json:"enabled"`   // 是否启用
+	IsDefault bool            `json:"isDefault"` // 是否为默认扩展
+	Config    ExtensionConfig `json:"config"`    // 扩展配置项
 }
 
 // ExtensionID 扩展标识符
@@ -28,18 +27,12 @@ const (
 	// 工具扩展
 	ExtensionSearch    ExtensionID = "search"    // 搜索功能
 	ExtensionCodeBlock ExtensionID = "codeBlock" // 代码块
+
+	// 核心扩展
+	ExtensionEditor ExtensionID = "editor" // 编辑器核心功能
 )
 
-// ExtensionCategory 扩展分类
-type ExtensionCategory string
-
-const (
-	CategoryEditing ExtensionCategory = "editing" // 编辑增强
-	CategoryUI      ExtensionCategory = "ui"      // 界面增强
-	CategoryTools   ExtensionCategory = "tools"   // 工具类
-)
-
-// ExtensionConfig 扩展配置项（动态配置）
+// ExtensionConfig 扩展配置项
 type ExtensionConfig map[string]interface{}
 
 // ExtensionMetadata 扩展配置元数据
@@ -71,21 +64,30 @@ func NewDefaultExtensions() []Extension {
 		// 编辑增强扩展
 		{
 			ID:        ExtensionRainbowBrackets,
-			Category:  CategoryEditing,
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},
 		},
 		{
 			ID:        ExtensionHyperlink,
-			Category:  CategoryEditing,
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},
 		},
 		{
 			ID:        ExtensionColorSelector,
-			Category:  CategoryEditing,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
+		},
+		{
+			ID:        ExtensionFold,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
+		},
+		{
+			ID:        ExtensionTextHighlight,
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},
@@ -94,7 +96,6 @@ func NewDefaultExtensions() []Extension {
 		// UI增强扩展
 		{
 			ID:        ExtensionMinimap,
-			Category:  CategoryUI,
 			Enabled:   true,
 			IsDefault: true,
 			Config: ExtensionConfig{
@@ -107,14 +108,12 @@ func NewDefaultExtensions() []Extension {
 		// 工具扩展
 		{
 			ID:        ExtensionSearch,
-			Category:  CategoryTools,
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},
 		},
 		{
 			ID:        ExtensionCodeBlock,
-			Category:  CategoryTools,
 			Enabled:   true,
 			IsDefault: true,
 			Config: ExtensionConfig{
@@ -122,16 +121,10 @@ func NewDefaultExtensions() []Extension {
 				"enableAutoDetection": true,
 			},
 		},
+
+		// 核心扩展
 		{
-			ID:        ExtensionFold,
-			Category:  CategoryEditing,
-			Enabled:   true,
-			IsDefault: true,
-			Config:    ExtensionConfig{},
-		},
-		{
-			ID:        ExtensionTextHighlight,
-			Category:  CategoryEditing,
+			ID:        ExtensionEditor,
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},

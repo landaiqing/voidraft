@@ -1,6 +1,6 @@
 import {keymap} from '@codemirror/view'
-import {Extension} from '@codemirror/state'
-import {KeyBinding as KeyBindingConfig} from '@/../bindings/voidraft/internal/models/models'
+import {Extension, Compartment} from '@codemirror/state'
+import {KeyBinding as KeyBindingConfig, ExtensionID} from '@/../bindings/voidraft/internal/models/models'
 import {KeyBinding, KeymapResult} from './types'
 import {getCommandHandler, isCommandRegistered} from './commandRegistry'
 
@@ -9,17 +9,25 @@ import {getCommandHandler, isCommandRegistered} from './commandRegistry'
  * 负责将后端配置转换为CodeMirror快捷键扩展
  */
 export class KeymapManager {
+    private static compartment = new Compartment()
+    
     /**
      * 将后端快捷键配置转换为CodeMirror快捷键绑定
      * @param keyBindings 后端快捷键配置列表
+     * @param enabledExtensions 启用的扩展ID列表，如果不提供则使用所有启用的快捷键
      * @returns 转换结果
      */
-    static convertToKeyBindings(keyBindings: KeyBindingConfig[]): KeymapResult {
+    static convertToKeyBindings(keyBindings: KeyBindingConfig[], enabledExtensions?: ExtensionID[]): KeymapResult {
         const result: KeyBinding[] = []
 
         for (const binding of keyBindings) {
             // 跳过禁用的快捷键
             if (!binding.enabled) {
+                continue
+            }
+
+            // 如果提供了扩展列表，则只处理启用扩展的快捷键
+            if (enabledExtensions && !enabledExtensions.includes(binding.extension)) {
                 continue
             }
 
@@ -50,13 +58,47 @@ export class KeymapManager {
     /**
      * 创建CodeMirror快捷键扩展
      * @param keyBindings 后端快捷键配置列表
+     * @param enabledExtensions 启用的扩展ID列表
      * @returns CodeMirror扩展
      */
-    static createKeymapExtension(keyBindings: KeyBindingConfig[]): Extension {
+    static createKeymapExtension(keyBindings: KeyBindingConfig[], enabledExtensions?: ExtensionID[]): Extension {
         const {keyBindings: cmKeyBindings} =
-            this.convertToKeyBindings(keyBindings)
+            this.convertToKeyBindings(keyBindings, enabledExtensions)
 
-        return keymap.of(cmKeyBindings)
+        return this.compartment.of(keymap.of(cmKeyBindings))
+    }
+
+    /**
+     * 动态更新快捷键扩展
+     * @param view 编辑器视图
+     * @param keyBindings 后端快捷键配置列表
+     * @param enabledExtensions 启用的扩展ID列表
+     */
+    static updateKeymap(view: any, keyBindings: KeyBindingConfig[], enabledExtensions: ExtensionID[]): void {
+        const {keyBindings: cmKeyBindings} =
+            this.convertToKeyBindings(keyBindings, enabledExtensions)
+
+        view.dispatch({
+            effects: this.compartment.reconfigure(keymap.of(cmKeyBindings))
+        })
+    }
+
+    /**
+     * 按扩展分组快捷键
+     * @param keyBindings 快捷键配置列表
+     * @returns 按扩展分组的快捷键映射
+     */
+    static groupByExtension(keyBindings: KeyBindingConfig[]): Map<ExtensionID, KeyBindingConfig[]> {
+        const groups = new Map<ExtensionID, KeyBindingConfig[]>()
+        
+        for (const binding of keyBindings) {
+            if (!groups.has(binding.extension)) {
+                groups.set(binding.extension, [])
+            }
+            groups.get(binding.extension)!.push(binding)
+        }
+        
+        return groups
     }
 
     /**

@@ -5,6 +5,7 @@ import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
 import {useThemeStore} from './themeStore';
+import {useKeybindingStore} from './keybindingStore';
 import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language"
@@ -14,7 +15,7 @@ import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtensi
 import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/basic/fontExtension';
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/basic/autoSaveExtension';
-import {createDynamicKeymapExtension} from '@/views/editor/keymap';
+import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
 
@@ -271,17 +272,30 @@ export const useEditorStore = defineStore('editor', () => {
                 await ExtensionService.UpdateExtensionState(id, enabled, config)
             }
             
-            // 更新前端编辑器
+            // 更新前端编辑器扩展
             const manager = getExtensionManager()
             if (manager) {
                 manager.updateExtension(id, enabled, config || {})
             }
 
+            // 重新加载扩展配置
             await extensionStore.loadExtensions()
+            
+            // 更新快捷键映射
+            if (editorView.value) {
+                updateKeymapExtension(editorView.value)
+            }
         } catch (error) {
             throw error
         }
     }
+
+    // 监听扩展状态变化，自动更新快捷键
+    watch(() => extensionStore.enabledExtensions.length, () => {
+        if (editorView.value) {
+            updateKeymapExtension(editorView.value)
+        }
+    })
 
     return {
         // 状态

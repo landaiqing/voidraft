@@ -12,6 +12,11 @@ export const useExtensionStore = defineStore('extension', () => {
         extensions.value.filter(ext => ext.enabled)
     )
 
+    // 获取启用的扩展ID列表
+    const enabledExtensionIds = computed(() =>
+        enabledExtensions.value.map(ext => ext.id)
+    )
+
     /**
      * 从后端加载扩展配置
      */
@@ -35,9 +40,10 @@ export const useExtensionStore = defineStore('extension', () => {
         // 状态
         extensions,
         enabledExtensions,
+        enabledExtensionIds,
 
         // 方法
         loadExtensions,
-        getExtensionConfig
+        getExtensionConfig,
     }
 }) 

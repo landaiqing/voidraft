@@ -4,29 +4,18 @@ import "time"
 
 // KeyBinding 单个快捷键绑定
 type KeyBinding struct {
-	Command   KeyBindingCommand  `json:"command"`   // 快捷键动作
-	Category  KeyBindingCategory `json:"category"`  // 快捷键分类
-	Key       string             `json:"key"`       // 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
-	Enabled   bool               `json:"enabled"`   // 是否启用
-	IsDefault bool               `json:"isDefault"` // 是否为默认快捷键
+	Command   KeyBindingCommand `json:"command"`   // 快捷键动作
+	Extension ExtensionID       `json:"extension"` // 所属扩展
+	Key       string            `json:"key"`       // 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
+	Enabled   bool              `json:"enabled"`   // 是否启用
+	IsDefault bool              `json:"isDefault"` // 是否为默认快捷键
 }
-
-// KeyBindingCategory 快捷键分类
-type KeyBindingCategory string
-
-const (
-	CategorySearch    KeyBindingCategory = "search"  // 搜索相关
-	CategoryEdit      KeyBindingCategory = "edit"    // 编辑相关
-	CategoryCodeBlock KeyBindingCategory = "block"   // 代码块相关
-	CategoryHistory   KeyBindingCategory = "history" // 历史记录相关
-	CategoryFold      KeyBindingCategory = "fold"    // 代码折叠相关
-)
 
 // KeyBindingCommand 快捷键命令
 type KeyBindingCommand string
 
 const (
-	// 搜索相关
+	// 搜索扩展相关
 	ShowSearchCommand        KeyBindingCommand = "showSearch"        // 显示搜索
 	HideSearchCommand        KeyBindingCommand = "hideSearch"        // 隐藏搜索
 	SearchToggleCaseCommand  KeyBindingCommand = "searchToggleCase"  // 搜索切换大小写
@@ -35,7 +24,7 @@ const (
 	SearchShowReplaceCommand KeyBindingCommand = "searchShowReplace" // 显示替换
 	SearchReplaceAllCommand  KeyBindingCommand = "searchReplaceAll"  // 替换全部
 
-	// 代码块相关
+	// 代码块扩展相关
 	BlockSelectAllCommand        KeyBindingCommand = "blockSelectAll"        // 块内选择全部
 	BlockAddAfterCurrentCommand  KeyBindingCommand = "blockAddAfterCurrent"  // 在当前块后添加新块
 	BlockAddAfterLastCommand     KeyBindingCommand = "blockAddAfterLast"     // 在最后添加新块
@@ -56,19 +45,13 @@ const (
 	BlockCutCommand              KeyBindingCommand = "blockCut"              // 剪切
 	BlockPasteCommand            KeyBindingCommand = "blockPaste"            // 粘贴
 
-	// 历史记录相关
-	HistoryUndoCommand          KeyBindingCommand = "historyUndo"          // 撤销
-	HistoryRedoCommand          KeyBindingCommand = "historyRedo"          // 重做
-	HistoryUndoSelectionCommand KeyBindingCommand = "historyUndoSelection" // 撤销选择
-	HistoryRedoSelectionCommand KeyBindingCommand = "historyRedoSelection" // 重做选择
-
-	// 代码折叠相关
+	// 代码折叠扩展相关
 	FoldCodeCommand   KeyBindingCommand = "foldCode"   // 折叠代码
 	UnfoldCodeCommand KeyBindingCommand = "unfoldCode" // 展开代码
 	FoldAllCommand    KeyBindingCommand = "foldAll"    // 折叠全部
 	UnfoldAllCommand  KeyBindingCommand = "unfoldAll"  // 展开全部
 
-	// 编辑相关
+	// 通用编辑扩展相关
 	CursorSyntaxLeftCommand       KeyBindingCommand = "cursorSyntaxLeft"       // 光标按语法左移
 	CursorSyntaxRightCommand      KeyBindingCommand = "cursorSyntaxRight"      // 光标按语法右移
 	SelectSyntaxLeftCommand       KeyBindingCommand = "selectSyntaxLeft"       // 按语法选择左侧
@@ -89,6 +72,12 @@ const (
 	DeleteCharForwardCommand      KeyBindingCommand = "deleteCharForward"      // 向前删除字符
 	DeleteGroupBackwardCommand    KeyBindingCommand = "deleteGroupBackward"    // 向后删除组
 	DeleteGroupForwardCommand     KeyBindingCommand = "deleteGroupForward"     // 向前删除组
+
+	// 历史记录扩展相关
+	HistoryUndoCommand          KeyBindingCommand = "historyUndo"          // 撤销
+	HistoryRedoCommand          KeyBindingCommand = "historyRedo"          // 重做
+	HistoryUndoSelectionCommand KeyBindingCommand = "historyUndoSelection" // 撤销选择
+	HistoryRedoSelectionCommand KeyBindingCommand = "historyRedoSelection" // 重做选择
 )
 
 // KeyBindingMetadata 快捷键配置元数据
@@ -117,389 +106,389 @@ func NewDefaultKeyBindingConfig() *KeyBindingConfig {
 // NewDefaultKeyBindings 创建默认快捷键配置
 func NewDefaultKeyBindings() []KeyBinding {
 	return []KeyBinding{
-		// 搜索相关快捷键
+		// 搜索扩展快捷键
 		{
 			Command:   ShowSearchCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Mod-f",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   HideSearchCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Escape",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SearchToggleCaseCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Alt-c",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SearchToggleWordCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Alt-w",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SearchToggleRegexCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Alt-r",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SearchShowReplaceCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Mod-h",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SearchReplaceAllCommand,
-			Category:  CategorySearch,
+			Extension: ExtensionSearch,
 			Key:       "Mod-Alt-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
-		// 代码块相关快捷键
+		// 代码块扩展快捷键
 		{
 			Command:   BlockSelectAllCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-a",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockAddAfterCurrentCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockAddAfterLastCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Shift-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockAddBeforeCurrentCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Alt-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockGotoPreviousCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockGotoNextCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockSelectPreviousCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Shift-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockSelectNextCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Shift-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockDeleteCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Shift-d",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveUpCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Alt-Mod-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveDownCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Alt-Mod-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockDeleteLineCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Shift-k",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveLineUpCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Alt-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockMoveLineDownCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Alt-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockTransposeCharsCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Ctrl-t",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockFormatCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionCodeBlock,
 			Key:       "Mod-Shift-f",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockCopyCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-c",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockCutCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-x",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   BlockPasteCommand,
-			Category:  CategoryCodeBlock,
+			Extension: ExtensionEditor,
 			Key:       "Mod-v",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
-		// 历史记录相关快捷键
-		{
-			Command:   HistoryUndoCommand,
-			Category:  CategoryHistory,
-			Key:       "Mod-z",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   HistoryRedoCommand,
-			Category:  CategoryHistory,
-			Key:       "Mod-Shift-z",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   HistoryUndoSelectionCommand,
-			Category:  CategoryHistory,
-			Key:       "Mod-u",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   HistoryRedoSelectionCommand,
-			Category:  CategoryHistory,
-			Key:       "Mod-Shift-u",
-			Enabled:   true,
-			IsDefault: true,
-		},
-
-		// 代码折叠相关快捷键
+		// 代码折叠扩展快捷键
 		{
 			Command:   FoldCodeCommand,
-			Category:  CategoryFold,
+			Extension: ExtensionFold,
 			Key:       "Ctrl-Shift-[",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   UnfoldCodeCommand,
-			Category:  CategoryFold,
+			Extension: ExtensionFold,
 			Key:       "Ctrl-Shift-]",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   FoldAllCommand,
-			Category:  CategoryFold,
+			Extension: ExtensionFold,
 			Key:       "Ctrl-Alt-[",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   UnfoldAllCommand,
-			Category:  CategoryFold,
+			Extension: ExtensionFold,
 			Key:       "Ctrl-Alt-]",
 			Enabled:   true,
 			IsDefault: true,
 		},
 
-		// 编辑相关快捷键 (避免冲突的快捷键)
+		// 历史记录扩展快捷键
+		{
+			Command:   HistoryUndoCommand,
+			Extension: ExtensionEditor,
+			Key:       "Mod-z",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   HistoryRedoCommand,
+			Extension: ExtensionEditor,
+			Key:       "Mod-Shift-z",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   HistoryUndoSelectionCommand,
+			Extension: ExtensionEditor,
+			Key:       "Mod-u",
+			Enabled:   true,
+			IsDefault: true,
+		},
+		{
+			Command:   HistoryRedoSelectionCommand,
+			Extension: ExtensionEditor,
+			Key:       "Mod-Shift-u",
+			Enabled:   true,
+			IsDefault: true,
+		},
+
+		// 通用编辑扩展快捷键
 		{
 			Command:   CursorSyntaxLeftCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Alt-ArrowLeft",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   CursorSyntaxRightCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Alt-ArrowRight",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SelectSyntaxLeftCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Shift-Alt-ArrowLeft",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SelectSyntaxRightCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Shift-Alt-ArrowRight",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   CopyLineUpCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Shift-Alt-ArrowUp",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   CopyLineDownCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Shift-Alt-ArrowDown",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   InsertBlankLineCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SelectLineCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Alt-l",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   SelectParentSyntaxCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-i",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   IndentLessCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-[",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   IndentMoreCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-]",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   IndentSelectionCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-Alt-\\",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   CursorMatchingBracketCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Shift-Ctrl-\\",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   ToggleCommentCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-/",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   ToggleBlockCommentCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Shift-Alt-a",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   InsertNewlineAndIndentCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   DeleteCharBackwardCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Backspace",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   DeleteCharForwardCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Delete",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   DeleteGroupBackwardCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-Backspace",
 			Enabled:   true,
 			IsDefault: true,
 		},
 		{
 			Command:   DeleteGroupForwardCommand,
-			Category:  CategoryEdit,
+			Extension: ExtensionEditor,
 			Key:       "Ctrl-Delete",
 			Enabled:   true,
 			IsDefault: true,

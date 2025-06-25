@@ -3,23 +3,33 @@ import { useI18n } from 'vue-i18n';
 import { onMounted, computed } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import { useKeybindingStore } from '@/stores/keybindingStore';
+import { useExtensionStore } from '@/stores/extensionStore';
 import { useSystemStore } from '@/stores/systemStore';
 import { getCommandDescription } from '@/views/editor/keymap/commandRegistry';
 import {KeyBindingCommand} from "@/../bindings/voidraft/internal/models";
 
 const { t } = useI18n();
 const keybindingStore = useKeybindingStore();
+const extensionStore = useExtensionStore();
 const systemStore = useSystemStore();
 
+// 加载数据
+onMounted(async () => {
+  await keybindingStore.loadKeyBindings();
+  await extensionStore.loadExtensions();
+});
 
 // 从store中获取快捷键数据并转换为显示格式
 const keyBindings = computed(() => {
+  // 只显示启用扩展的快捷键
+  const enabledExtensionIds = new Set(extensionStore.enabledExtensionIds);
+  
   return keybindingStore.keyBindings
-    .filter(kb => kb.enabled)
+    .filter(kb => kb.enabled && enabledExtensionIds.has(kb.extension))
     .map(kb => ({
       id: kb.command,
       keys: parseKeyBinding(kb.key, kb.command),
-      category: kb.category,
+      category: kb.extension,
       description: getCommandDescription(kb.command) || kb.command
     }));
 });

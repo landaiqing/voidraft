@@ -344,11 +344,6 @@ export class Extension {
     "id": ExtensionID;
 
     /**
-     * 扩展分类
-     */
-    "category": ExtensionCategory;
-
-    /**
      * 是否启用
      */
     "enabled": boolean;
@@ -368,9 +363,6 @@ export class Extension {
         if (!("id" in $$source)) {
             this["id"] = ("" as ExtensionID);
         }
-        if (!("category" in $$source)) {
-            this["category"] = ("" as ExtensionCategory);
-        }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
         }
@@ -388,42 +380,17 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField4_0 = $$createType6;
+        const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
-            $$parsedSource["config"] = $$createField4_0($$parsedSource["config"]);
+            $$parsedSource["config"] = $$createField3_0($$parsedSource["config"]);
         }
         return new Extension($$parsedSource as Partial<Extension>);
     }
 }
 
 /**
- * ExtensionCategory 扩展分类
- */
-export enum ExtensionCategory {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * 编辑增强
-     */
-    CategoryEditing = "editing",
-
-    /**
-     * 界面增强
-     */
-    CategoryUI = "ui",
-
-    /**
-     * 工具类
-     */
-    CategoryTools = "tools",
-};
-
-/**
- * ExtensionConfig 扩展配置项（动态配置）
+ * ExtensionConfig 扩展配置项
  */
 export type ExtensionConfig = { [_: string]: any };
 
@@ -470,6 +437,12 @@ export enum ExtensionID {
      * 代码块
      */
     ExtensionCodeBlock = "codeBlock",
+
+    /**
+     * 核心扩展
+     * 编辑器核心功能
+     */
+    ExtensionEditor = "editor",
 };
 
 /**
@@ -613,9 +586,9 @@ export class KeyBinding {
     "command": KeyBindingCommand;
 
     /**
-     * 快捷键分类
+     * 所属扩展
      */
-    "category": KeyBindingCategory;
+    "extension": ExtensionID;
 
     /**
      * 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
@@ -637,8 +610,8 @@ export class KeyBinding {
         if (!("command" in $$source)) {
             this["command"] = ("" as KeyBindingCommand);
         }
-        if (!("category" in $$source)) {
-            this["category"] = ("" as KeyBindingCategory);
+        if (!("extension" in $$source)) {
+            this["extension"] = ("" as ExtensionID);
         }
         if (!("key" in $$source)) {
             this["key"] = "";
@@ -663,41 +636,6 @@ export class KeyBinding {
 }
 
 /**
- * KeyBindingCategory 快捷键分类
- */
-export enum KeyBindingCategory {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * 搜索相关
-     */
-    CategorySearch = "search",
-
-    /**
-     * 编辑相关
-     */
-    CategoryEdit = "edit",
-
-    /**
-     * 代码块相关
-     */
-    CategoryCodeBlock = "block",
-
-    /**
-     * 历史记录相关
-     */
-    CategoryHistory = "history",
-
-    /**
-     * 代码折叠相关
-     */
-    CategoryFold = "fold",
-};
-
-/**
  * KeyBindingCommand 快捷键命令
  */
 export enum KeyBindingCommand {
@@ -707,7 +645,7 @@ export enum KeyBindingCommand {
     $zero = "",
 
     /**
-     * 搜索相关
+     * 搜索扩展相关
      * 显示搜索
      */
     ShowSearchCommand = "showSearch",
@@ -743,7 +681,7 @@ export enum KeyBindingCommand {
     SearchReplaceAllCommand = "searchReplaceAll",
 
     /**
-     * 代码块相关
+     * 代码块扩展相关
      * 块内选择全部
      */
     BlockSelectAllCommand = "blockSelectAll",
@@ -839,28 +777,7 @@ export enum KeyBindingCommand {
     BlockPasteCommand = "blockPaste",
 
     /**
-     * 历史记录相关
-     * 撤销
-     */
-    HistoryUndoCommand = "historyUndo",
-
-    /**
-     * 重做
-     */
-    HistoryRedoCommand = "historyRedo",
-
-    /**
-     * 撤销选择
-     */
-    HistoryUndoSelectionCommand = "historyUndoSelection",
-
-    /**
-     * 重做选择
-     */
-    HistoryRedoSelectionCommand = "historyRedoSelection",
-
-    /**
-     * 代码折叠相关
+     * 代码折叠扩展相关
      * 折叠代码
      */
     FoldCodeCommand = "foldCode",
@@ -881,7 +798,7 @@ export enum KeyBindingCommand {
     UnfoldAllCommand = "unfoldAll",
 
     /**
-     * 编辑相关
+     * 通用编辑扩展相关
      * 光标按语法左移
      */
     CursorSyntaxLeftCommand = "cursorSyntaxLeft",
@@ -980,6 +897,27 @@ export enum KeyBindingCommand {
      * 向前删除组
      */
     DeleteGroupForwardCommand = "deleteGroupForward",
+
+    /**
+     * 历史记录扩展相关
+     * 撤销
+     */
+    HistoryUndoCommand = "historyUndo",
+
+    /**
+     * 重做
+     */
+    HistoryRedoCommand = "historyRedo",
+
+    /**
+     * 撤销选择
+     */
+    HistoryUndoSelectionCommand = "historyUndoSelection",
+
+    /**
+     * 重做选择
+     */
+    HistoryRedoSelectionCommand = "historyRedoSelection",
 };
 
 /**
