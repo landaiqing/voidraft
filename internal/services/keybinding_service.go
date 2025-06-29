@@ -185,8 +185,8 @@ func (kbs *KeyBindingService) GetAllKeyBindings() ([]models.KeyBinding, error) {
 	return config.KeyBindings, nil
 }
 
-// ServiceShutdown 关闭服务
-func (kbs *KeyBindingService) ServiceShutdown() error {
+// OnShutdown 关闭服务
+func (kbs *KeyBindingService) OnShutdown() error {
 	kbs.cancel()
 	return nil
 }

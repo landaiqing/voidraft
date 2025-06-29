@@ -132,7 +132,7 @@ func (cms *ConfigMigrationService[T]) checkResourceLimits() error {
 	return nil
 }
 
-// createBackupOptimized 优化的备份创建（单次扫描删除旧备份）
+// createBackupOptimized 优化的备份创建
 func (cms *ConfigMigrationService[T]) createBackupOptimized() (string, error) {
 	if _, err := os.Stat(cms.configPath); os.IsNotExist(err) {
 		return "", nil
@@ -155,7 +155,7 @@ func (cms *ConfigMigrationService[T]) createBackupOptimized() (string, error) {
 	return newBackupPath, copyFile(cms.configPath, newBackupPath)
 }
 
-// tryQuickRecovery 快速恢复检查（避免完整的备份恢复）
+// tryQuickRecovery 快速恢复检查
 func (cms *ConfigMigrationService[T]) tryQuickRecovery(existingConfig *koanf.Koanf) {
 	var testConfig T
 	if existingConfig.Unmarshal("", &testConfig) != nil {
@@ -213,7 +213,7 @@ func (cms *ConfigMigrationService[T]) mergeInPlace(existingConfig *koanf.Koanf, 
 		return false, fmt.Errorf("config merge failed: %w", err)
 	}
 
-	// 更新元数据（直接操作，无需重新序列化）
+	// 更新元数据
 	mergeKoanf.Set("metadata.version", cms.targetVersion)
 	mergeKoanf.Set("metadata.lastUpdated", time.Now().Format(time.RFC3339))
 
@@ -249,12 +249,12 @@ func (cms *ConfigMigrationService[T]) atomicWrite(existingConfig *koanf.Koanf, c
 	return existingConfig.Load(&BytesProvider{configBytes}, jsonparser.Parser())
 }
 
-// fastMerge 快速合并函数（优化版本）
+// fastMerge 快速合并函数
 func (cms *ConfigMigrationService[T]) fastMerge(src, dest map[string]interface{}) error {
 	return cms.fastMergeRecursive(src, dest, 0)
 }
 
-// fastMergeRecursive 快速递归合并（单次遍历，最小化反射使用）
+// fastMergeRecursive 快速递归合并
 func (cms *ConfigMigrationService[T]) fastMergeRecursive(src, dest map[string]interface{}, depth int) error {
 	if depth > MaxRecursionDepth {
 		return fmt.Errorf("recursion depth exceeded")

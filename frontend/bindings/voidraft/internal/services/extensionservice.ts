@@ -43,14 +43,6 @@ export function ResetExtensionToDefault(id: models$0.ExtensionID): Promise<void>
 }
 
 /**
- * ServiceShutdown 关闭服务
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4127635746) as any;
-    return $resultPromise;
-}
-
-/**
  * UpdateExtensionEnabled 更新扩展启用状态
  */
 export function UpdateExtensionEnabled(id: models$0.ExtensionID, enabled: boolean): Promise<void> & { cancel(): void } {

@@ -159,26 +159,31 @@ export class ConfigMetadata {
 }
 
 /**
- * Document 表示一个文档
+ * Document 表示一个文档（使用自增主键）
  */
 export class Document {
-    /**
-     * 元数据
-     */
-    "meta": DocumentMeta;
-
-    /**
-     * 文档内容
-     */
+    "id": number;
+    "title": string;
     "content": string;
+    "createdAt": time$0.Time;
+    "updatedAt": time$0.Time;
 
     /** Creates a new Document instance. */
     constructor($$source: Partial<Document> = {}) {
-        if (!("meta" in $$source)) {
-            this["meta"] = (new DocumentMeta());
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
         }
         if (!("content" in $$source)) {
             this["content"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = null;
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = null;
         }
 
         Object.assign(this, $$source);
@@ -188,63 +193,8 @@ export class Document {
      * Creates a new Document instance from a string or object.
      */
     static createFrom($$source: any = {}): Document {
-        const $$createField0_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("meta" in $$parsedSource) {
-            $$parsedSource["meta"] = $$createField0_0($$parsedSource["meta"]);
-        }
         return new Document($$parsedSource as Partial<Document>);
-    }
-}
-
-/**
- * DocumentMeta 文档元数据
- */
-export class DocumentMeta {
-    /**
-     * 文档唯一标识
-     */
-    "id": string;
-
-    /**
-     * 文档标题
-     */
-    "title": string;
-
-    /**
-     * 最后更新时间
-     */
-    "lastUpdated": time$0.Time;
-
-    /**
-     * 创建时间
-     */
-    "createdAt": time$0.Time;
-
-    /** Creates a new DocumentMeta instance. */
-    constructor($$source: Partial<DocumentMeta> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
-        if (!("title" in $$source)) {
-            this["title"] = "";
-        }
-        if (!("lastUpdated" in $$source)) {
-            this["lastUpdated"] = null;
-        }
-        if (!("createdAt" in $$source)) {
-            this["createdAt"] = null;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new DocumentMeta instance from a string or object.
-     */
-    static createFrom($$source: any = {}): DocumentMeta {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new DocumentMeta($$parsedSource as Partial<DocumentMeta>);
     }
 }
 
@@ -380,7 +330,7 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField3_0 = $$createType6;
+        const $$createField3_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
             $$parsedSource["config"] = $$createField3_0($$parsedSource["config"]);
@@ -508,7 +458,7 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType8;
+        const $$createField5_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
             $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
@@ -956,8 +906,8 @@ export class KeyBindingConfig {
      * Creates a new KeyBindingConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): KeyBindingConfig {
-        const $$createField0_0 = $$createType10;
-        const $$createField1_0 = $$createType11;
+        const $$createField0_0 = $$createType9;
+        const $$createField1_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("keyBindings" in $$parsedSource) {
             $$parsedSource["keyBindings"] = $$createField0_0($$parsedSource["keyBindings"]);
@@ -1110,15 +1060,14 @@ const $$createType1 = EditingConfig.createFrom;
 const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
 const $$createType4 = ConfigMetadata.createFrom;
-const $$createType5 = DocumentMeta.createFrom;
-var $$createType6 = (function $$initCreateType6(...args): any {
-    if ($$createType6 === $$initCreateType6) {
-        $$createType6 = $$createType7;
+var $$createType5 = (function $$initCreateType5(...args): any {
+    if ($$createType5 === $$initCreateType5) {
+        $$createType5 = $$createType6;
     }
-    return $$createType6(...args);
+    return $$createType5(...args);
 });
-const $$createType7 = $Create.Map($Create.Any, $Create.Any);
-const $$createType8 = HotkeyCombo.createFrom;
-const $$createType9 = KeyBinding.createFrom;
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = KeyBindingMetadata.createFrom;
+const $$createType6 = $Create.Map($Create.Any, $Create.Any);
+const $$createType7 = HotkeyCombo.createFrom;
+const $$createType8 = KeyBinding.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = KeyBindingMetadata.createFrom;

@@ -1,98 +1,109 @@
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { DocumentService } from '@/../bindings/voidraft/internal/services';
-import { useDebounceFn } from '@vueuse/core';
+import { useDocumentStore } from '@/stores/documentStore';
 
-// 定义自动保存配置选项
+// 自动保存配置选项
 export interface AutoSaveOptions {
-  // 保存回调
-  onSave?: (success: boolean) => void;
-  // 内容变更延迟传递（毫秒）- 输入时不会立即发送，有一个小延迟，避免频繁调用后端
+  // 防抖延迟（毫秒）
   debounceDelay?: number;
+  // 保存状态回调
+  onSaveStart?: () => void;
+  onSaveSuccess?: () => void;
+  onSaveError?: () => void;
+}
+
+/**
+ * 简单防抖函数
+ */
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): T & { cancel: () => void } {
+  let timeoutId: number | null = null;
+  
+  const debounced = ((...args: Parameters<T>) => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+    
+    timeoutId = window.setTimeout(() => {
+      timeoutId = null;
+      func(...args);
+    }, delay);
+  }) as T & { cancel: () => void };
+  
+  debounced.cancel = () => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+  
+  return debounced;
 }
 
 /**
  * 创建自动保存插件
- * 
- * @param options 配置选项
- * @returns EditorView.Plugin
  */
 export function createAutoSavePlugin(options: AutoSaveOptions = {}) {
-  const { 
-    onSave = () => {},
-    debounceDelay = 2000
+  const {
+    debounceDelay = 2000,
+    onSaveStart = () => {},
+    onSaveSuccess = () => {},
+    onSaveError = () => {}
   } = options;
 
   return ViewPlugin.fromClass(
-    class {
-      private isActive: boolean = true;
-      private isSaving: boolean = false;
-      private readonly contentUpdateFn: (view: EditorView) => void;
+    class AutoSavePlugin {
+      private documentStore = useDocumentStore();
+      private debouncedSave: ((content: string) => void) & { cancel: () => void };
+      private isDestroyed = false;
+      private lastContent = '';
 
       constructor(private view: EditorView) {
-        // 创建内容更新函数，简单传递内容给后端
-        this.contentUpdateFn = this.createDebouncedUpdateFn(debounceDelay);
+        this.lastContent = view.state.doc.toString();
+        this.debouncedSave = debounce(
+          (content: string) => this.performSave(content),
+          debounceDelay
+        );
       }
 
-      /**
-       * 创建防抖的内容更新函数
-       */
-      private createDebouncedUpdateFn(delay: number): (view: EditorView) => void {
-        // 使用VueUse的防抖函数创建一个新函数
-        return useDebounceFn(async (view: EditorView) => {
-          // 如果插件已不活跃或正在保存中，不发送
-          if (!this.isActive || this.isSaving) return;
+      private async performSave(content: string): Promise<void> {
+        if (this.isDestroyed) return;
+
+        try {
+          onSaveStart();
+          const success = await this.documentStore.saveDocumentContent(content);
           
-          this.isSaving = true;
-          const content = view.state.doc.toString();
-          
-          try {
-            // 简单将内容传递给后端，让后端处理保存策略
-            await DocumentService.UpdateActiveDocumentContent(content);
-            onSave(true);
-          } catch (err) {
-            // 静默处理错误，不在控制台打印
-            onSave(false);
-          } finally {
-            this.isSaving = false;
+          if (success) {
+            this.lastContent = content;
+            onSaveSuccess();
+          } else {
+            onSaveError();
           }
-        }, delay);
+        } catch (error) {
+          onSaveError();
+        }
       }
 
       update(update: ViewUpdate) {
-        // 如果内容没有变化，直接返回
-        if (!update.docChanged) return;
+        if (!update.docChanged || this.isDestroyed) return;
 
-        // 调用防抖函数
-        this.contentUpdateFn(this.view);
+        const newContent = this.view.state.doc.toString();
+        if (newContent === this.lastContent) return;
+
+        this.debouncedSave(newContent);
       }
 
       destroy() {
-        // 标记插件不再活跃
-        this.isActive = false;
+        this.isDestroyed = true;
+        this.debouncedSave.cancel();
         
-        // 静默发送最终内容，忽略错误
-        const content = this.view.state.doc.toString();
-        DocumentService.UpdateActiveDocumentContent(content).then();
+        // 如果内容有变化，立即保存
+        const currentContent = this.view.state.doc.toString();
+        if (currentContent !== this.lastContent) {
+          this.documentStore.saveDocumentContent(currentContent).catch(() => {});
+        }
       }
     }
   );
-}
-
-/**
- * 创建处理保存快捷键的插件
- * @param onSave 保存回调
- * @returns EditorView.Plugin
- */
-export function createSaveShortcutPlugin(onSave: () => void) {
-  return EditorView.domEventHandlers({
-    keydown: (event) => {
-      // Ctrl+S / Cmd+S
-      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
-        event.preventDefault();
-        onSave();
-        return true;
-      }
-      return false;
-    }
-  });
 }

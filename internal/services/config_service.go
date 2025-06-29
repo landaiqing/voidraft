@@ -290,22 +290,22 @@ func (cs *ConfigService) SetHotkeyChangeCallback(callback func(enable bool, hotk
 	defer cs.mu.Unlock()
 
 	// 创建热键监听器并注册
-	hotkeyListener := CreateHotkeyListener(callback)
+	hotkeyListener := CreateHotkeyListener("DefaultHotkeyListener", callback)
 	return cs.notificationService.RegisterListener(hotkeyListener)
 }
 
 // SetDataPathChangeCallback 设置数据路径配置变更回调
-func (cs *ConfigService) SetDataPathChangeCallback(callback func(oldPath, newPath string) error) error {
+func (cs *ConfigService) SetDataPathChangeCallback(callback func() error) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
 	// 创建数据路径监听器并注册
-	dataPathListener := CreateDataPathListener(callback)
+	dataPathListener := CreateDataPathListener("DefaultDataPathListener", callback)
 	return cs.notificationService.RegisterListener(dataPathListener)
 }
 
-// ServiceShutdown 关闭服务
-func (cs *ConfigService) ServiceShutdown() error {
+// OnShutdown 关闭服务
+func (cs *ConfigService) OnShutdown() error {
 	cs.stopWatching()
 	if cs.notificationService != nil {
 		cs.notificationService.Cleanup()

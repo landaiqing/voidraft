@@ -74,15 +74,9 @@ func NewServiceManager() *ServiceManager {
 	}
 
 	// 设置数据路径变更监听，处理配置重置和路径变更
-	err = configService.SetDataPathChangeCallback(func(oldPath, newPath string) error {
-		return documentService.OnDataPathChanged(oldPath, newPath)
+	err = configService.SetDataPathChangeCallback(func() error {
+		return documentService.OnDataPathChanged()
 	})
-	if err != nil {
-		panic(err)
-	}
-
-	// 初始化文档服务
-	err = documentService.Initialize()
 	if err != nil {
 		panic(err)
 	}

@@ -42,13 +42,5 @@ export function MigrateDirectory(srcPath: string, dstPath: string): Promise<void
     return $resultPromise;
 }
 
-/**
- * ServiceShutdown 服务关闭
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3472042605) as any;
-    return $resultPromise;
-}
-
 // Private type creation functions
 const $$createType0 = $models.MigrationProgress.createFrom;

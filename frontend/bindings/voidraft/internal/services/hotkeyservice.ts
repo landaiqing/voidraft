@@ -54,7 +54,7 @@ export function RegisterHotkey(hotkey: models$0.HotkeyCombo | null): Promise<voi
 }
 
 /**
- * ServiceShutdown 关闭服务
+ * OnShutdown 关闭服务
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(157291181) as any;

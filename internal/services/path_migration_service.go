@@ -417,8 +417,8 @@ func (ms *MigrationService) CancelMigration() error {
 	return fmt.Errorf("no active migration to cancel")
 }
 
-// ServiceShutdown 服务关闭
-func (ms *MigrationService) ServiceShutdown() error {
+// OnShutdown 服务关闭
+func (ms *MigrationService) OnShutdown() error {
 	ms.CancelMigration()
 	return nil
 }

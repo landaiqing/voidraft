@@ -283,8 +283,8 @@ func (hs *HotkeyService) IsRegistered() bool {
 	return hs.isRegistered.Load()
 }
 
-// ServiceShutdown 关闭热键服务
-func (hs *HotkeyService) ServiceShutdown() error {
+// OnShutdown 关闭热键服务
+func (hs *HotkeyService) OnShutdown() error {
 	return hs.UnregisterHotkey()
 }
 

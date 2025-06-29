@@ -38,14 +38,6 @@ export function GetKeyBindingConfig(): Promise<models$0.KeyBindingConfig | null>
     return $typingPromise;
 }
 
-/**
- * ServiceShutdown 关闭服务
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1610182855) as any;
-    return $resultPromise;
-}
-
 // Private type creation functions
 const $$createType0 = models$0.KeyBinding.createFrom;
 const $$createType1 = $Create.Array($$createType0);

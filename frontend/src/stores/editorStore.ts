@@ -5,16 +5,15 @@ import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
 import {useThemeStore} from './themeStore';
-import {useKeybindingStore} from './keybindingStore';
 import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
-import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
+import {ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language"
 import {createBasicSetup} from '@/views/editor/basic/basicSetup';
 import {createThemeExtension, updateEditorTheme} from '@/views/editor/basic/themeExtension';
 import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtension';
 import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/basic/fontExtension';
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
-import {createAutoSavePlugin, createSaveShortcutPlugin} from '@/views/editor/basic/autoSaveExtension';
+import {createAutoSavePlugin} from '@/views/editor/basic/autoSaveExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
@@ -128,21 +127,10 @@ export const useEditorStore = defineStore('editor', () => {
             updateDocumentStats
         );
 
-        // 创建保存快捷键插件
-        const saveShortcutExtension = createSaveShortcutPlugin(() => {
-            if (editorView.value) {
-                handleManualSave();
-            }
-        });
 
         // 创建自动保存插件
         const autoSaveExtension = createAutoSavePlugin({
-            debounceDelay: 300, // 300毫秒的输入防抖
-            onSave: (success) => {
-                if (success) {
-                    documentStore.lastSaved = new Date();
-                }
-            }
+            debounceDelay: configStore.config.editing.autoSaveDelay
         });
         // 代码块功能
         const codeBlockExtension = createCodeBlockExtension({
@@ -164,7 +152,6 @@ export const useEditorStore = defineStore('editor', () => {
             ...tabExtensions,
             fontExtension,
             statsExtension,
-            saveShortcutExtension,
             autoSaveExtension,
             codeBlockExtension,
             ...dynamicExtensions
@@ -220,19 +207,6 @@ export const useEditorStore = defineStore('editor', () => {
         });
     };
 
-    // 手动保存文档
-    const handleManualSave = async () => {
-        if (!editorView.value) return;
-
-        const view = editorView.value as EditorView;
-        const content = view.state.doc.toString();
-
-        // 先更新内容
-        await DocumentService.UpdateActiveDocumentContent(content);
-        // 然后调用强制保存方法
-        await documentStore.forceSaveDocument();
-    };
-
     // 销毁编辑器
     const destroyEditor = () => {
         if (editorView.value) {
@@ -283,7 +257,7 @@ export const useEditorStore = defineStore('editor', () => {
                 // 如果需要更新配置
                 await ExtensionService.UpdateExtensionState(id, enabled, config)
             }
-            
+
             // 更新前端编辑器扩展
             const manager = getExtensionManager()
             if (manager) {
@@ -292,7 +266,7 @@ export const useEditorStore = defineStore('editor', () => {
 
             // 重新加载扩展配置
             await extensionStore.loadExtensions()
-            
+
             // 更新快捷键映射
             if (editorView.value) {
                 updateKeymapExtension(editorView.value)
@@ -321,7 +295,6 @@ export const useEditorStore = defineStore('editor', () => {
         createEditor,
         reconfigureTabSettings,
         reconfigureFontSettings,
-        handleManualSave,
         destroyEditor,
         updateExtension
     };

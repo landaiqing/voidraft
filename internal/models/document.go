@@ -4,38 +4,27 @@ import (
 	"time"
 )
 
-// DocumentMeta 文档元数据
-type DocumentMeta struct {
-	ID          string    `json:"id"`          // 文档唯一标识
-	Title       string    `json:"title"`       // 文档标题
-	LastUpdated time.Time `json:"lastUpdated"` // 最后更新时间
-	CreatedAt   time.Time `json:"createdAt"`   // 创建时间
-}
-
-// Document 表示一个文档
+// Document 表示一个文档（使用自增主键）
 type Document struct {
-	Meta    DocumentMeta `json:"meta"`    // 元数据
-	Content string       `json:"content"` // 文档内容
+	ID        int64     `json:"id" db:"id"`
+	Title     string    `json:"title" db:"title"`
+	Content   string    `json:"content" db:"content"`
+	CreatedAt time.Time `json:"createdAt" db:"created_at"`
+	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 }
 
-// DocumentInfo 文档信息（不包含内容，用于列表展示）
-type DocumentInfo struct {
-	ID          string    `json:"id"`          // 文档ID
-	Title       string    `json:"title"`       // 文档标题
-	LastUpdated time.Time `json:"lastUpdated"` // 最后更新时间
-	Path        string    `json:"path"`        // 文档路径
+// NewDocument 创建新文档（不需要传ID，由数据库自增）
+func NewDocument(title, content string) *Document {
+	now := time.Now()
+	return &Document{
+		Title:     title,
+		Content:   content,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
 }
 
 // NewDefaultDocument 创建默认文档
 func NewDefaultDocument() *Document {
-	now := time.Now()
-	return &Document{
-		Meta: DocumentMeta{
-			ID:          "default",
-			Title:       "默认文档",
-			LastUpdated: now,
-			CreatedAt:   now,
-		},
-		Content: "∞∞∞text-a\n",
-	}
+	return NewDocument("default", "∞∞∞text-a\n")
 }

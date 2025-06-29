@@ -135,7 +135,7 @@ func NewDefaultAppConfig() *AppConfig {
 			TabSize:         4,
 			TabType:         TabTypeSpaces,
 			// 保存选项
-			AutoSaveDelay: 5000, // 5秒后自动保存
+			AutoSaveDelay: 2000, // 2秒后自动保存
 		},
 		Appearance: AppearanceConfig{
 			Language:    LangZhCN,

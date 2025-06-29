@@ -259,7 +259,7 @@ func (hs *HotkeyService) IsRegistered() bool {
 	return hs.isRegistered.Load()
 }
 
-// ServiceShutdown 关闭服务
+// OnShutdown 关闭服务
 func (hs *HotkeyService) ServiceShutdown() error {
 	hs.cancel()
 	hs.wg.Wait()

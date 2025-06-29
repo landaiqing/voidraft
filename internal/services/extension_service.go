@@ -257,8 +257,8 @@ func (es *ExtensionService) ResetAllExtensionsToDefault() error {
 	return nil
 }
 
-// ServiceShutdown 关闭服务
-func (es *ExtensionService) ServiceShutdown() error {
+// OnShutdown 关闭服务
+func (es *ExtensionService) OnShutdown() error {
 	es.cancel()
 	return nil
 }

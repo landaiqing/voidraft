@@ -43,14 +43,6 @@ export function ResetConfig(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * ServiceShutdown 关闭服务
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3963562361) as any;
-    return $resultPromise;
-}
-
-/**
  * Set 设置配置项
  */
 export function Set(key: string, value: any): Promise<void> & { cancel(): void } {
