@@ -4,6 +4,7 @@ import {onMounted, onUnmounted, ref, watch} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
 import {useUpdateStore} from '@/stores/updateStore';
+import {useDocumentStore} from '@/stores/documentStore';
 import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
@@ -14,6 +15,7 @@ import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/langu
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
+const documentStore = useDocumentStore();
 const {t} = useI18n();
 const router = useRouter();
 
@@ -32,7 +34,11 @@ const toggleAlwaysOnTop = async () => {
 
 // 跳转到设置页面
 const goToSettings = () => {
-  router.push('/settings');
+  const currentDocId = documentStore.currentDocumentId;
+  router.push({
+    path: '/settings',
+    query: { documentId: currentDocId || undefined }
+  });
 };
 
 

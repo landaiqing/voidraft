@@ -69,6 +69,9 @@ const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string
     // 更新配置
     const updatedConfig = {...extension.config, [configKey]: value}
 
+    console.log(`[ExtensionsPage] 更新扩展 ${extensionId} 配置, ${configKey}=${value}`)
+    
+    // 使用editorStore的updateExtension方法更新，确保应用到所有编辑器实例
     await editorStore.updateExtension(extensionId, extension.enabled, updatedConfig)
 
   } catch (error) {
@@ -79,16 +82,18 @@ const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string
 // 重置扩展到默认配置
 const resetExtension = async (extensionId: ExtensionID) => {
   try {
+    // 重置到默认配置（后端）
     await ExtensionService.ResetExtensionToDefault(extensionId)
 
     // 重新加载扩展状态以获取最新配置
     await extensionStore.loadExtensions()
 
-    // 获取重置后的状态，立即通知编辑器更新
+    // 获取重置后的状态，立即应用到所有编辑器视图
     const extension = extensionStore.extensions.find(ext => ext.id === extensionId)
     if (extension) {
-      const manager = getExtensionManager()
-      manager.updateExtension(extensionId, extension.enabled, extension.config)
+      // 通过editorStore更新，确保所有视图都能同步
+      await editorStore.updateExtension(extensionId, extension.enabled, extension.config)
+      console.log(`[ExtensionsPage] 重置扩展 ${extensionId} 配置，同步应用到所有编辑器实例`)
     }
   } catch (error) {
     console.error('Failed to reset extension:', error)

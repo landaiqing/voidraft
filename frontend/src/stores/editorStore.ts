@@ -15,7 +15,7 @@ import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/b
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
-import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
+import {createDynamicExtensions, getExtensionManager, setExtensionManagerView, removeExtensionManagerView} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
 import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
 
@@ -197,7 +197,7 @@ export const useEditorStore = defineStore('editor', () => {
             throw new Error('Operation cancelled');
         }
 
-        // 快捷键扩展（异步）
+        // 快捷键扩展
         const keymapExtension = await createDynamicKeymapExtension();
 
         // 检查操作有效性
@@ -205,8 +205,8 @@ export const useEditorStore = defineStore('editor', () => {
             throw new Error('Operation cancelled');
         }
 
-        // 动态扩展（异步）
-        const dynamicExtensions = await createDynamicExtensions();
+        // 动态扩展，传递文档ID以便扩展管理器可以预初始化
+        const dynamicExtensions = await createDynamicExtensions(documentId);
 
         // 最终检查操作有效性
         if (!isOperationValid(operationId, documentId)) {
@@ -347,7 +347,7 @@ export const useEditorStore = defineStore('editor', () => {
             currentEditor.value = instance.view;
 
             // 设置扩展管理器视图
-            setExtensionManagerView(instance.view);
+            setExtensionManagerView(instance.view, documentId);
 
             // 更新LRU
             updateLRU(documentId);
@@ -529,6 +529,9 @@ export const useEditorStore = defineStore('editor', () => {
                     instance.autoSaveTimer = null;
                 }
 
+                // 从扩展管理器中移除视图
+                removeExtensionManagerView(documentId);
+
                 // 移除DOM元素
                 if (instance.view && instance.view.dom && instance.view.dom.parentElement) {
                     instance.view.dom.remove();
@@ -596,6 +599,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 应用快捷键设置
     const applyKeymapSettings = async () => {
+        // 确保所有编辑器实例的快捷键都更新
         await Promise.all(
             Object.values(editorCache.value.instances).map(instance =>
                 updateKeymapExtension(instance.view)
@@ -614,6 +618,10 @@ export const useEditorStore = defineStore('editor', () => {
             if (instance.autoSaveTimer) {
                 clearTimeout(instance.autoSaveTimer);
             }
+            
+            // 从扩展管理器移除
+            removeExtensionManagerView(instance.documentId);
+            
             // 移除DOM元素
             if (instance.view.dom.parentElement) {
                 instance.view.dom.remove();
@@ -637,19 +645,19 @@ export const useEditorStore = defineStore('editor', () => {
             await ExtensionService.UpdateExtensionState(id, enabled, config);
         }
 
-        // 更新前端编辑器扩展
+        // 更新前端编辑器扩展 - 应用于所有实例
         const manager = getExtensionManager();
         if (manager) {
-            manager.updateExtension(id, enabled, config || {});
+            // 使用立即更新模式，跳过防抖
+            manager.updateExtensionImmediate(id, enabled, config || {});
         }
 
         // 重新加载扩展配置
         await extensionStore.loadExtensions();
 
-        // 更新快捷键映射
-        if (currentEditor.value) {
-            updateKeymapExtension(currentEditor.value);
-        }
+        // 不再需要单独更新当前编辑器的快捷键映射，因为扩展管理器会更新所有实例
+        // 但我们仍需要确保快捷键配置在所有编辑器上更新
+        await applyKeymapSettings();
     };
 
     // 监听文档切换

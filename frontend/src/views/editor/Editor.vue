@@ -1,10 +1,15 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {onBeforeUnmount, onMounted, ref, watch} from 'vue';
 import {useEditorStore} from '@/stores/editorStore';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useConfigStore} from '@/stores/configStore';
 import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
+
+// 接收路由传入的文档ID
+const props = defineProps<{
+  documentId?: number | null
+}>();
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
@@ -22,6 +27,12 @@ onMounted(async () => {
   if (!editorElement.value) return;
 
   await documentStore.initialize();
+  
+  // 如果有指定文档ID，则打开该文档
+  if (props.documentId) {
+    await documentStore.openDocument(props.documentId);
+  }
+  
   // 设置编辑器容器
   editorStore.setEditorContainer(editorElement.value);
 
@@ -35,6 +46,13 @@ onBeforeUnmount(() => {
     editorElement.value.removeEventListener('wheel', wheelHandler);
   }
 });
+
+// 监听文档ID变化
+watch(() => props.documentId, async (newDocId) => {
+  if (newDocId && documentStore.currentDocumentId !== newDocId) {
+    await documentStore.openDocument(newDocId);
+  }
+}, { immediate: true });
 </script>
 
 <template>

@@ -150,8 +150,7 @@ const saveEdit = async () => {
     const trimmedTitle = editingTitle.value.trim();
     const error = validateTitle(trimmedTitle);
     if (error) {
-      console.error('保存失败:', error);
-      // 保持编辑状态，不清除
+
       return;
     }
 
@@ -159,8 +158,6 @@ const saveEdit = async () => {
       await documentStore.updateDocumentMetadata(editingId.value, trimmedTitle);
       await documentStore.updateDocuments();
     } catch (error) {
-      console.error('保存失败:', error);
-      // 保持编辑状态，不清除
       return;
     }
   }
@@ -186,7 +183,7 @@ const handleDelete = async (doc: Document, event: Event) => {
         }
       }
     } catch (error) {
-      console.error('删除失败:', error);
+      console.error('deleted failed:', error);
     }
     deleteConfirmId.value = null;
   } else {

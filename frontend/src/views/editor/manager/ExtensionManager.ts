@@ -29,27 +29,42 @@ export interface ExtensionFactory {
 }
 
 /**
- * 扩展区间信息
+ * 扩展状态
  */
-interface ExtensionCompartment {
+interface ExtensionState {
     id: ExtensionID
-    compartment: Compartment
     factory: ExtensionFactory
-    currentConfig?: any
+    config: any
     enabled: boolean
+    compartment: Compartment
+    extension: Extension
+}
+
+/**
+ * 视图信息
+ */
+interface EditorViewInfo {
+    view: EditorView
+    documentId: number
+    registered: boolean
 }
 
 /**
  * 扩展管理器
  * 负责管理所有动态扩展的注册、启用、禁用和配置更新
+ * 采用统一配置，多视图同步的设计模式
  */
 export class ExtensionManager {
-    private view: EditorView | null = null
-    private compartments = new Map<ExtensionID, ExtensionCompartment>()
+    // 统一的扩展状态存储
+    private extensionStates = new Map<ExtensionID, ExtensionState>()
+    
+    // 编辑器视图管理
+    private viewsMap = new Map<number, EditorViewInfo>()
+    private activeViewId: number | null = null
+    
+    // 注册的扩展工厂
     private extensionFactories = new Map<ExtensionID, ExtensionFactory>()
-    private updateQueue = new Map<ExtensionID, { enabled: boolean, config: any, timestamp: number }>()
-    private debounceTimeout: number | null = null
-
+    
     /**
      * 注册扩展工厂
      * @param id 扩展ID
@@ -57,13 +72,21 @@ export class ExtensionManager {
      */
     registerExtension(id: ExtensionID, factory: ExtensionFactory): void {
         this.extensionFactories.set(id, factory)
-        this.compartments.set(id, {
-            id,
-            compartment: new Compartment(),
-            factory,
-            currentConfig: factory.getDefaultConfig(),
-            enabled: false
-        })
+        
+        // 创建初始状态
+        if (!this.extensionStates.has(id)) {
+            const compartment = new Compartment()
+            const defaultConfig = factory.getDefaultConfig()
+            
+            this.extensionStates.set(id, {
+                id,
+                factory,
+                config: defaultConfig,
+                enabled: false,
+                compartment,
+                extension: []  // 默认为空扩展（禁用状态）
+            })
+        }
     }
 
     /**
@@ -82,70 +105,95 @@ export class ExtensionManager {
     }
 
     /**
-     * 根据后端配置获取初始扩展数组
+     * 从后端配置初始化扩展状态
      * @param extensionConfigs 后端扩展配置列表
-     * @returns CodeMirror扩展数组
      */
-    getInitialExtensions(extensionConfigs: ExtensionConfig[]): Extension[] {
-        const extensions: Extension[] = []
-
+    initializeExtensionsFromConfig(extensionConfigs: ExtensionConfig[]): void {
         for (const config of extensionConfigs) {
-            const compartmentInfo = this.compartments.get(config.id)
-            if (!compartmentInfo) {
-                continue
-            }
-
+            const factory = this.extensionFactories.get(config.id)
+            if (!factory) continue
+            
             // 验证配置
-            if (compartmentInfo.factory.validateConfig &&
-                !compartmentInfo.factory.validateConfig(config.config)) {
+            if (factory.validateConfig && !factory.validateConfig(config.config)) {
                 continue
             }
-
+            
             try {
-                const extension = config.enabled
-                    ? compartmentInfo.factory.create(config.config)
-                    : [] // 空扩展表示禁用
-
-                extensions.push(compartmentInfo.compartment.of(extension))
-
-                // 更新状态
-                compartmentInfo.currentConfig = config.config
-                compartmentInfo.enabled = config.enabled
+                // 创建扩展实例
+                const extension = config.enabled ? factory.create(config.config) : []
+                
+                // 如果状态已存在则更新，否则创建新状态
+                if (this.extensionStates.has(config.id)) {
+                    const state = this.extensionStates.get(config.id)!
+                    state.config = config.config
+                    state.enabled = config.enabled
+                    state.extension = extension
+                } else {
+                    const compartment = new Compartment()
+                    this.extensionStates.set(config.id, {
+                        id: config.id,
+                        factory,
+                        config: config.config,
+                        enabled: config.enabled,
+                        compartment,
+                        extension
+                    })
+                }
             } catch (error) {
-                console.error(`[ExtensionManager] Failed to create extension ${config.id}:`, error)
+                console.error(`Failed to initialize extension ${config.id}:`, error)
             }
         }
+    }
 
+    /**
+     * 获取初始扩展配置数组（用于创建编辑器）
+     * @returns CodeMirror扩展数组
+     */
+    getInitialExtensions(): Extension[] {
+        const extensions: Extension[] = []
+        
+        // 为每个注册的扩展添加compartment
+        for (const state of this.extensionStates.values()) {
+            extensions.push(state.compartment.of(state.extension))
+        }
+        
         return extensions
     }
 
     /**
      * 设置编辑器视图
      * @param view 编辑器视图实例
+     * @param documentId 文档ID
      */
-    setView(view: EditorView): void {
-        this.view = view
+    setView(view: EditorView, documentId: number): void {
+        // 保存视图信息
+        this.viewsMap.set(documentId, {
+            view,
+            documentId,
+            registered: true
+        })
+        
+        // 设置当前活动视图
+        this.activeViewId = documentId
     }
 
     /**
-     * 动态更新单个扩展（带防抖）
+     * 获取当前活动视图
+     */
+    private getActiveView(): EditorView | null {
+        if (this.activeViewId === null) return null
+        const viewInfo = this.viewsMap.get(this.activeViewId)
+        return viewInfo ? viewInfo.view : null
+    }
+
+    /**
+     * 更新单个扩展配置并应用到所有视图
      * @param id 扩展ID
      * @param enabled 是否启用
      * @param config 扩展配置
      */
     updateExtension(id: ExtensionID, enabled: boolean, config: any = {}): void {
-        // 添加到更新队列
-        this.updateQueue.set(id, {enabled, config, timestamp: Date.now()})
-
-        // 清除之前的防抖定时器
-        if (this.debounceTimeout) {
-            clearTimeout(this.debounceTimeout)
-        }
-
-        // 设置新的防抖定时器
-        this.debounceTimeout = window.setTimeout(() => {
-            this.flushUpdateQueue()
-        }, 100) // 100ms 防抖
+        this.updateExtensionImmediate(id, enabled, config)
     }
 
     /**
@@ -155,83 +203,54 @@ export class ExtensionManager {
      * @param config 扩展配置
      */
     updateExtensionImmediate(id: ExtensionID, enabled: boolean, config: any = {}): void {
-        if (!this.view) {
+        // 获取扩展状态
+        const state = this.extensionStates.get(id)
+        if (!state) return
+        
+        // 获取工厂
+        const factory = state.factory
+        
+        // 验证配置
+        if (factory.validateConfig && !factory.validateConfig(config)) {
             return
         }
-
-        const compartmentInfo = this.compartments.get(id)
-        if (!compartmentInfo) {
-            return
-        }
-
+        
         try {
-            // 验证配置
-            if (compartmentInfo.factory.validateConfig &&
-                !compartmentInfo.factory.validateConfig(config)) {
-                return
-            }
-
-            const extension = enabled
-                ? compartmentInfo.factory.create(config)
-                : []
-
-            this.view.dispatch({
-                effects: compartmentInfo.compartment.reconfigure(extension)
-            })
-
-            // 更新状态
-            compartmentInfo.currentConfig = config
-            compartmentInfo.enabled = enabled
-
+            // 创建新的扩展实例
+            const extension = enabled ? factory.create(config) : []
+            
+            // 更新内部状态
+            state.config = config
+            state.enabled = enabled
+            state.extension = extension
+            
+            // 应用到所有视图
+            this.applyExtensionToAllViews(id)
         } catch (error) {
-            console.error(`[ExtensionManager] Failed to update extension ${id}:`, error)
+            console.error(`Failed to update extension ${id}:`, error)
         }
     }
 
     /**
-     * 处理更新队列中的所有更新
+     * 将指定扩展的当前状态应用到所有视图
+     * @param id 扩展ID
      */
-    private flushUpdateQueue(): void {
-        if (!this.view) {
-            return
-        }
-
-        const effects: StateEffect<any>[] = []
-
-        for (const [id, update] of this.updateQueue) {
-            const compartmentInfo = this.compartments.get(id)
-            if (!compartmentInfo) {
-                continue
-            }
-
+    private applyExtensionToAllViews(id: ExtensionID): void {
+        const state = this.extensionStates.get(id)
+        if (!state) return
+        
+        // 遍历所有视图并应用更改
+        for (const viewInfo of this.viewsMap.values()) {
             try {
-                // 验证配置
-                if (compartmentInfo.factory.validateConfig &&
-                    !compartmentInfo.factory.validateConfig(update.config)) {
-                    continue
-                }
-
-                const extension = update.enabled
-                    ? compartmentInfo.factory.create(update.config)
-                    : []
-
-                effects.push(compartmentInfo.compartment.reconfigure(extension))
-
-                // 更新状态
-                compartmentInfo.currentConfig = update.config
-                compartmentInfo.enabled = update.enabled
+                if (!viewInfo.registered) continue
+                
+                viewInfo.view.dispatch({
+                    effects: state.compartment.reconfigure(state.extension)
+                })
             } catch (error) {
-                console.error(`[ExtensionManager] Failed to update extension ${id}:`, error)
+                console.error(`Failed to apply extension ${id} to document ${viewInfo.documentId}:`, error)
             }
         }
-
-        if (effects.length > 0) {
-            this.view.dispatch({effects})
-        }
-
-        // 清空更新队列
-        this.updateQueue.clear()
-        this.debounceTimeout = null
     }
 
     /**
@@ -243,42 +262,53 @@ export class ExtensionManager {
         enabled: boolean
         config: any
     }>): void {
-        if (!this.view) {
-            console.warn('Editor view not set')
-            return
-        }
-
-        const effects: StateEffect<any>[] = []
-
+        // 更新所有扩展状态
         for (const update of updates) {
-            const compartmentInfo = this.compartments.get(update.id)
-            if (!compartmentInfo) {
+            // 获取扩展状态
+            const state = this.extensionStates.get(update.id)
+            if (!state) continue
+            
+            // 获取工厂
+            const factory = state.factory
+            
+            // 验证配置
+            if (factory.validateConfig && !factory.validateConfig(update.config)) {
                 continue
             }
-
+            
             try {
-                // 验证配置
-                if (compartmentInfo.factory.validateConfig &&
-                    !compartmentInfo.factory.validateConfig(update.config)) {
-                    continue
-                }
-
-                const extension = update.enabled
-                    ? compartmentInfo.factory.create(update.config)
-                    : []
-
-                effects.push(compartmentInfo.compartment.reconfigure(extension))
-
-                // 更新状态
-                compartmentInfo.currentConfig = update.config
-                compartmentInfo.enabled = update.enabled
+                // 创建新的扩展实例
+                const extension = update.enabled ? factory.create(update.config) : []
+                
+                // 更新内部状态
+                state.config = update.config
+                state.enabled = update.enabled
+                state.extension = extension
             } catch (error) {
                 console.error(`Failed to update extension ${update.id}:`, error)
             }
         }
-
-        if (effects.length > 0) {
-            this.view.dispatch({effects})
+        
+        // 将更改应用到所有视图
+        for (const viewInfo of this.viewsMap.values()) {
+            if (!viewInfo.registered) continue
+            
+            const effects: StateEffect<any>[] = []
+            
+            for (const update of updates) {
+                const state = this.extensionStates.get(update.id)
+                if (!state) continue
+                
+                effects.push(state.compartment.reconfigure(state.extension))
+            }
+            
+            if (effects.length > 0) {
+                try {
+                    viewInfo.view.dispatch({ effects })
+                } catch (error) {
+                    console.error(`Failed to apply extensions to document ${viewInfo.documentId}:`, error)
+                }
+            }
         }
     }
 
@@ -290,14 +320,12 @@ export class ExtensionManager {
         enabled: boolean
         config: any
     } | null {
-        const compartmentInfo = this.compartments.get(id)
-        if (!compartmentInfo) {
-            return null
-        }
-
+        const state = this.extensionStates.get(id)
+        if (!state) return null
+        
         return {
-            enabled: compartmentInfo.enabled,
-            config: compartmentInfo.currentConfig
+            enabled: state.enabled,
+            config: state.config
         }
     }
 
@@ -306,28 +334,32 @@ export class ExtensionManager {
      * @param id 扩展ID
      */
     resetExtensionToDefault(id: ExtensionID): void {
-        const compartmentInfo = this.compartments.get(id)
-        if (!compartmentInfo) {
-            return
-        }
-
-        const defaultConfig = compartmentInfo.factory.getDefaultConfig()
+        const state = this.extensionStates.get(id)
+        if (!state) return
+        
+        const defaultConfig = state.factory.getDefaultConfig()
         this.updateExtension(id, true, defaultConfig)
+    }
+
+    /**
+     * 从管理器中移除视图
+     * @param documentId 文档ID
+     */
+    removeView(documentId: number): void {
+        if (this.activeViewId === documentId) {
+            this.activeViewId = null
+        }
+        
+        this.viewsMap.delete(documentId)
     }
 
     /**
      * 销毁管理器
      */
     destroy(): void {
-        // 清除防抖定时器
-        if (this.debounceTimeout) {
-            clearTimeout(this.debounceTimeout)
-            this.debounceTimeout = null
-        }
-
-        this.view = null
-        this.compartments.clear()
+        this.viewsMap.clear()
+        this.activeViewId = null
         this.extensionFactories.clear()
-        this.updateQueue.clear()
+        this.extensionStates.clear()
     }
 } 

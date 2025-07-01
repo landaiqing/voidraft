@@ -1,4 +1,5 @@
 import {Extension} from '@codemirror/state'
+import {EditorView} from '@codemirror/view'
 import {useExtensionStore} from '@/stores/extensionStore'
 import {ExtensionManager} from './ExtensionManager'
 import {registerAllExtensions} from './factories'
@@ -11,8 +12,9 @@ const extensionManager = new ExtensionManager()
 /**
  * 异步创建动态扩展
  * 确保扩展配置已加载
+ * @param documentId 可选的文档ID，用于提前初始化视图
  */
-export const createDynamicExtensions = async (): Promise<Extension[]> => {
+export const createDynamicExtensions = async (documentId?: number): Promise<Extension[]> => {
     const extensionStore = useExtensionStore()
 
     // 注册所有扩展工厂
@@ -23,10 +25,11 @@ export const createDynamicExtensions = async (): Promise<Extension[]> => {
         await extensionStore.loadExtensions()
     }
 
-    // 获取启用的扩展配置
-    const enabledExtensions = extensionStore.enabledExtensions
+    // 初始化扩展管理器配置
+    extensionManager.initializeExtensionsFromConfig(extensionStore.extensions)
 
-    return extensionManager.getInitialExtensions(enabledExtensions)
+    // 获取初始扩展配置
+    return extensionManager.getInitialExtensions()
 }
 
 /**
@@ -40,9 +43,18 @@ export const getExtensionManager = (): ExtensionManager => {
 /**
  * 设置编辑器视图到扩展管理器
  * @param view 编辑器视图
+ * @param documentId 文档ID
  */
-export const setExtensionManagerView = (view: any): void => {
-    extensionManager.setView(view)
+export const setExtensionManagerView = (view: EditorView, documentId: number): void => {
+    extensionManager.setView(view, documentId)
+}
+
+/**
+ * 从扩展管理器移除编辑器视图
+ * @param documentId 文档ID
+ */
+export const removeExtensionManagerView = (documentId: number): void => {
+    extensionManager.removeView(documentId)
 }
 
 // 导出相关模块
