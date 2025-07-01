@@ -1,38 +1,29 @@
 <script setup lang="ts">
 import {onBeforeUnmount, onMounted, ref} from 'vue';
 import {useEditorStore} from '@/stores/editorStore';
+import {useDocumentStore} from '@/stores/documentStore';
 import {useConfigStore} from '@/stores/configStore';
 import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 
 const editorStore = useEditorStore();
+const documentStore = useDocumentStore();
 const configStore = useConfigStore();
-
-const props = defineProps({
-  initialDoc: {
-    type: String,
-    default: ''
-  }
-});
 
 const editorElement = ref<HTMLElement | null>(null);
 
 // 创建滚轮缩放处理器
 const wheelHandler = createWheelZoomHandler(
-  configStore.increaseFontSize,
-  configStore.decreaseFontSize
+    configStore.increaseFontSize,
+    configStore.decreaseFontSize
 );
 
 onMounted(async () => {
   if (!editorElement.value) return;
 
+  await documentStore.initialize();
   // 设置编辑器容器
   editorStore.setEditorContainer(editorElement.value);
-
-  // 如果编辑器还没有初始化，创建编辑器
-  if (!editorStore.isEditorInitialized) {
-    await editorStore.createEditor(props.initialDoc);
-  }
 
   // 添加滚轮事件监听
   editorElement.value.addEventListener('wheel', wheelHandler, {passive: false});
@@ -49,7 +40,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="editor-container">
     <div ref="editorElement" class="editor"></div>
-    <Toolbar />
+    <Toolbar/>
   </div>
 </template>
 

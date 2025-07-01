@@ -7,6 +7,7 @@ import {useUpdateStore} from '@/stores/updateStore';
 import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
+import DocumentSelector from './DocumentSelector.vue';
 import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/languages';
 
@@ -95,7 +96,7 @@ watch(
     {immediate: true}
 );
 
-// 定期更新格式化按钮状态（作为备用机制）
+// 定期更新格式化按钮状态
 let formatButtonUpdateTimer: number | null = null;
 
 const isLoaded = ref(false);
@@ -157,6 +158,9 @@ watch(isLoaded, async (newLoaded) => {
       <span class="font-size" :title="t('toolbar.fontSizeTooltip')" @click="() => configStore.resetFontSize()">
         {{ configStore.config.editing.fontSize }}px
       </span>
+
+      <!-- 文档选择器 -->
+      <DocumentSelector/>
 
       <!-- 块语言选择器 -->
       <BlockLanguageSelector/>

@@ -23,6 +23,11 @@
   --dark-scrollbar-track: #2a2a2a;
   --dark-scrollbar-thumb: #555555;
   --dark-scrollbar-thumb-hover: #666666;
+  --dark-selection-bg: rgba(181, 206, 168, 0.1);
+  --dark-selection-text: #b5cea8;
+  --dark-danger-color: #ff6b6b;
+  --dark-bg-primary: #1a1a1a;
+  --dark-bg-hover: #2a2a2a;
   
   /* 浅色主题颜色变量 */
   --light-toolbar-bg: #f8f9fa;
@@ -45,6 +50,11 @@
   --light-scrollbar-track: #f1f3f4;
   --light-scrollbar-thumb: #c1c1c1;
   --light-scrollbar-thumb-hover: #a8a8a8;
+  --light-selection-bg: rgba(59, 130, 246, 0.15);
+  --light-selection-text: #2563eb;
+  --light-danger-color: #dc3545;
+  --light-bg-primary: #ffffff;
+  --light-bg-hover: #f1f3f4;
   
   /* 默认使用深色主题 */
   --toolbar-bg: var(--dark-toolbar-bg);
@@ -68,6 +78,11 @@
   --scrollbar-track: var(--dark-scrollbar-track);
   --scrollbar-thumb: var(--dark-scrollbar-thumb);
   --scrollbar-thumb-hover: var(--dark-scrollbar-thumb-hover);
+  --selection-bg: var(--dark-selection-bg);
+  --selection-text: var(--dark-selection-text);
+  --text-danger: var(--dark-danger-color);
+  --bg-primary: var(--dark-bg-primary);
+  --bg-hover: var(--dark-bg-hover);
   
   color-scheme: light dark;
 }
@@ -96,6 +111,11 @@
     --scrollbar-track: var(--dark-scrollbar-track);
     --scrollbar-thumb: var(--dark-scrollbar-thumb);
     --scrollbar-thumb-hover: var(--dark-scrollbar-thumb-hover);
+    --selection-bg: var(--dark-selection-bg);
+    --selection-text: var(--dark-selection-text);
+    --text-danger: var(--dark-danger-color);
+    --bg-primary: var(--dark-bg-primary);
+    --bg-hover: var(--dark-bg-hover);
   }
 }
 
@@ -123,6 +143,11 @@
     --scrollbar-track: var(--light-scrollbar-track);
     --scrollbar-thumb: var(--light-scrollbar-thumb);
     --scrollbar-thumb-hover: var(--light-scrollbar-thumb-hover);
+    --selection-bg: var(--light-selection-bg);
+    --selection-text: var(--light-selection-text);
+    --text-danger: var(--light-danger-color);
+    --bg-primary: var(--light-bg-primary);
+    --bg-hover: var(--light-bg-hover);
   }
 }
 
@@ -149,6 +174,11 @@
   --scrollbar-track: var(--light-scrollbar-track);
   --scrollbar-thumb: var(--light-scrollbar-thumb);
   --scrollbar-thumb-hover: var(--light-scrollbar-thumb-hover);
+  --selection-bg: var(--light-selection-bg);
+  --selection-text: var(--light-selection-text);
+  --text-danger: var(--light-danger-color);
+  --bg-primary: var(--light-bg-primary);
+  --bg-hover: var(--light-bg-hover);
 }
 
 /* 手动选择深色主题 */
@@ -174,4 +204,7 @@
   --scrollbar-track: var(--dark-scrollbar-track);
   --scrollbar-thumb: var(--dark-scrollbar-thumb);
   --scrollbar-thumb-hover: var(--dark-scrollbar-thumb-hover);
+  --selection-bg: var(--dark-selection-bg);
+  --selection-text: var(--dark-selection-text);
+  --text-danger: var(--dark-danger-color);
 }

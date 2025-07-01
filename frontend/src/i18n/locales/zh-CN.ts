@@ -1,4 +1,5 @@
 export default {
+  locale: 'zh-CN',
   titlebar: {
     minimize: '最小化',
     maximize: '最大化',
@@ -18,6 +19,23 @@ export default {
     searchLanguage: '搜索语言...',
     noLanguageFound: '未找到匹配的语言',
     formatHint: '当前区块支持格式化，使用 Ctrl+Shift+F 进行格式化',
+    // 文档选择器
+    selectDocument: '选择文档',
+    searchOrCreateDocument: '搜索或输入新文档名...',
+    createDocument: '创建',
+    noDocumentFound: '没有找到文档',
+    loading: '加载中...',
+    rename: '重命名',
+    delete: '删除',
+    confirm: '确认',
+    confirmDelete: '再次点击确认删除',
+    documentNameTooLong: '文档名称不能超过{max}个字符',
+    documentNameRequired: '文档名称不能为空',
+    cannotDeleteLastDocument: '无法删除最后一个文档',
+    cannotDeleteDefaultDocument: '无法删除默认文档',
+    unknownTime: '未知时间',
+    invalidDate: '无效日期',
+    timeError: '时间错误',
   },
   languages: {
     'zh-CN': '简体中文',

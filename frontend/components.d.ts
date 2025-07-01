@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     BlockLanguageSelector: typeof import('./src/components/toolbar/BlockLanguageSelector.vue')['default']
+    DocumentSelector: typeof import('./src/components/toolbar/DocumentSelector.vue')['default']
     LinuxTitleBar: typeof import('./src/components/titlebar/LinuxTitleBar.vue')['default']
     MacOSTitleBar: typeof import('./src/components/titlebar/MacOSTitleBar.vue')['default']
     MemoryMonitor: typeof import('./src/components/monitor/MemoryMonitor.vue')['default']

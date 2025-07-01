@@ -1,4 +1,5 @@
 export default {
+  locale: 'en-US',
   titlebar: {
     minimize: 'Minimize',
     maximize: 'Maximize',
@@ -18,6 +19,23 @@ export default {
     searchLanguage: 'Search language...',
     noLanguageFound: 'No language found',
     formatHint: 'Current block supports formatting, use Ctrl+Shift+F shortcut for formatting',
+    // Document selector
+    selectDocument: 'Select Document',
+    searchOrCreateDocument: 'Search or enter new document name...',
+    createDocument: 'Create',
+    noDocumentFound: 'No document found',
+    loading: 'Loading...',
+    rename: 'Rename',
+    delete: 'Delete',
+    confirm: 'Confirm',
+    confirmDelete: 'Click again to confirm delete',
+    documentNameTooLong: 'Document name cannot exceed {max} characters',
+    documentNameRequired: 'Document name cannot be empty',
+    cannotDeleteLastDocument: 'Cannot delete the last document',
+    cannotDeleteDefaultDocument: 'Cannot delete the default document',
+    unknownTime: 'Unknown time',
+    invalidDate: 'Invalid date',
+    timeError: 'Time error',
   },
   languages: {
     'zh-CN': 'Chinese',

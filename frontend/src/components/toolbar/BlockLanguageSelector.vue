@@ -505,11 +505,12 @@ const scrollToCurrentLanguage = () => {
           }
           
           &.active {
-            background-color: rgba(181, 206, 168, 0.1);
-            color: #b5cea8;
+            background-color: var(--selection-bg);
+            color: var(--selection-text);
             
             .language-alias {
-              color: rgba(181, 206, 168, 0.7);
+              color: var(--selection-text);
+              opacity: 0.7;
             }
           }
           
