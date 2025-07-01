@@ -296,7 +296,7 @@ onUnmounted(() => {
     <!-- 选择器按钮 -->
     <button class="doc-btn" @click="toggleMenu">
       <span class="doc-name">{{ currentDocName }}</span>
-      <span class="arrow" :class="{ open: showMenu }">▼</span>
+      <span class="arrow" :class="{ open: showMenu }">▲</span>
     </button>
 
     <!-- 菜单 -->
@@ -432,7 +432,7 @@ onUnmounted(() => {
       margin-left: 2px;
       transition: transform 0.2s ease;
       
-      &.open {
+      &:not(.open) {
         transform: rotate(180deg);
       }
     }

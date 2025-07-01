@@ -1,13 +1,13 @@
 import {defineStore} from 'pinia';
-import {ref, watch, nextTick} from 'vue';
+import {nextTick, ref, watch} from 'vue';
 import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
 import {useThemeStore} from './themeStore';
-import {SystemThemeType, ExtensionID} from '@/../bindings/voidraft/internal/models/models';
-import {DocumentService} from '@/../bindings/voidraft/internal/services';
-import {ensureSyntaxTree} from "@codemirror/language"
+import {ExtensionID, SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
+import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
+import {ensureSyntaxTree} from "@codemirror/language";
 import {createBasicSetup} from '@/views/editor/basic/basicSetup';
 import {createThemeExtension, updateEditorTheme} from '@/views/editor/basic/themeExtension';
 import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtension';
@@ -17,7 +17,6 @@ import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExten
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {createDynamicExtensions, getExtensionManager, setExtensionManagerView} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
-import {ExtensionService} from '@/../bindings/voidraft/internal/services';
 import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
 
 const NUM_EDITOR_INSTANCES = 5; // 最多缓存5个编辑器实例
@@ -35,6 +34,11 @@ interface EditorInstance {
     isDirty: boolean;
     lastModified: Date;
     autoSaveTimer: number | null;
+    syntaxTreeCache: {
+        lastDocLength: number;
+        lastContentHash: string;
+        lastParsed: Date;
+    } | null;
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -62,15 +66,95 @@ export const useEditorStore = defineStore('editor', () => {
         selectedCharacters: 0
     });
 
+    // 异步操作竞态条件控制
+    const operationSequence = ref(0);
+    const pendingOperations = ref(new Map<number, AbortController>());
+    const currentLoadingDocumentId = ref<number | null>(null);
+
     // 自动保存设置 - 从配置动态获取
     const getAutoSaveDelay = () => configStore.config.editing.autoSaveDelay;
 
+    // 生成新的操作序列号
+    const getNextOperationId = () => ++operationSequence.value;
+
+    // 取消之前的操作
+    const cancelPreviousOperations = (excludeId?: number) => {
+        pendingOperations.value.forEach((controller, id) => {
+            if (id !== excludeId) {
+                controller.abort();
+                pendingOperations.value.delete(id);
+            }
+        });
+    };
+
+    // 检查操作是否仍然有效
+    const isOperationValid = (operationId: number, documentId: number) => {
+        return (
+            pendingOperations.value.has(operationId) &&
+            !pendingOperations.value.get(operationId)?.signal.aborted &&
+            currentLoadingDocumentId.value === documentId
+        );
+    };
+
     // === 私有方法 ===
 
+    // 生成内容哈希
+    const generateContentHash = (content: string): string => {
+        let hash = 0;
+        for (let i = 0; i < content.length; i++) {
+            const char = content.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32bit integer
+        }
+        return hash.toString();
+    };
+
+    // 缓存化的语法树确保方法
+    const ensureSyntaxTreeCached = (view: EditorView, documentId: number): void => {
+        const instance = editorCache.value.instances[documentId];
+        if (!instance) return;
+
+        const docLength = view.state.doc.length;
+        const content = view.state.doc.toString();
+        const contentHash = generateContentHash(content);
+        const now = new Date();
+
+        // 检查是否需要重新构建语法树
+        const cache = instance.syntaxTreeCache;
+        const shouldRebuild = !cache || 
+            cache.lastDocLength !== docLength || 
+            cache.lastContentHash !== contentHash ||
+            (now.getTime() - cache.lastParsed.getTime()) > 30000; // 30秒过期
+
+        if (shouldRebuild) {
+            try {
+                ensureSyntaxTree(view.state, docLength, 5000);
+                
+                // 更新缓存
+                instance.syntaxTreeCache = {
+                    lastDocLength: docLength,
+                    lastContentHash: contentHash,
+                    lastParsed: now
+                };
+            } catch (error) {
+                console.warn('Failed to ensure syntax tree:', error);
+            }
+        }
+    };
+
     // 创建编辑器实例
-    const createEditorInstance = async (content: string): Promise<EditorView> => {
+    const createEditorInstance = async (
+        content: string, 
+        operationId: number, 
+        documentId: number
+    ): Promise<EditorView> => {
         if (!editorCache.value.containerElement) {
             throw new Error('Editor container not set');
+        }
+
+        // 检查操作是否仍然有效
+        if (!isOperationValid(operationId, documentId)) {
+            throw new Error('Operation cancelled');
         }
 
         // 获取基本扩展
@@ -108,11 +192,26 @@ export const useEditorStore = defineStore('editor', () => {
             enableAutoDetection: true
         });
 
-        // 快捷键扩展
+        // 再次检查操作有效性
+        if (!isOperationValid(operationId, documentId)) {
+            throw new Error('Operation cancelled');
+        }
+
+        // 快捷键扩展（异步）
         const keymapExtension = await createDynamicKeymapExtension();
 
-        // 动态扩展
+        // 检查操作有效性
+        if (!isOperationValid(operationId, documentId)) {
+            throw new Error('Operation cancelled');
+        }
+
+        // 动态扩展（异步）
         const dynamicExtensions = await createDynamicExtensions();
+
+        // 最终检查操作有效性
+        if (!isOperationValid(operationId, documentId)) {
+            throw new Error('Operation cancelled');
+        }
 
         // 组合所有扩展
         const extensions: Extension[] = [
@@ -138,13 +237,11 @@ export const useEditorStore = defineStore('editor', () => {
             state
         });
 
-        // 初始化语法树
-        ensureSyntaxTree(view.state, view.state.doc.length, 5000);
-
-        // 将光标定位到文档末尾
+        // 将光标定位到文档末尾并滚动到该位置
         const docLength = view.state.doc.length;
         view.dispatch({
-            selection: { anchor: docLength, head: docLength }
+            selection: {anchor: docLength, head: docLength},
+            scrollIntoView: true
         });
 
         return view;
@@ -177,11 +274,15 @@ export const useEditorStore = defineStore('editor', () => {
             content,
             isDirty: false,
             lastModified: new Date(),
-            autoSaveTimer: null
+            autoSaveTimer: null,
+            syntaxTreeCache: null
         };
 
         // 添加到LRU列表
         editorCache.value.lru.push(documentId);
+
+        // 初始化语法树缓存
+        ensureSyntaxTreeCached(view, documentId);
     };
 
     // 更新LRU
@@ -195,7 +296,11 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 获取或创建编辑器
-    const getOrCreateEditor = async (documentId: number, content: string): Promise<EditorView> => {
+    const getOrCreateEditor = async (
+        documentId: number, 
+        content: string, 
+        operationId: number
+    ): Promise<EditorView> => {
         // 检查缓存
         const cached = editorCache.value.instances[documentId];
         if (cached) {
@@ -203,8 +308,21 @@ export const useEditorStore = defineStore('editor', () => {
             return cached.view;
         }
 
+        // 检查操作是否仍然有效
+        if (!isOperationValid(operationId, documentId)) {
+            throw new Error('Operation cancelled');
+        }
+
         // 创建新的编辑器实例
-        const view = await createEditorInstance(content);
+        const view = await createEditorInstance(content, operationId, documentId);
+        
+        // 最终检查操作有效性
+        if (!isOperationValid(operationId, documentId)) {
+            // 如果操作已取消，清理创建的实例
+            view.destroy();
+            throw new Error('Operation cancelled');
+        }
+
         addEditorToCache(documentId, view, content);
 
         return view;
@@ -236,13 +354,18 @@ export const useEditorStore = defineStore('editor', () => {
 
             // 重新测量和聚焦编辑器
             nextTick(() => {
-                instance.view.requestMeasure();
-                // 将光标定位到文档末尾
+                // 将光标定位到文档末尾并滚动到该位置
                 const docLength = instance.view.state.doc.length;
                 instance.view.dispatch({
-                    selection: { anchor: docLength, head: docLength }
+                    selection: {anchor: docLength, head: docLength},
+                    scrollIntoView: true
                 });
+                
+                // 滚动到文档底部（将光标位置滚动到可见区域）
                 instance.view.focus();
+                
+                // 使用缓存的语法树确保方法
+                ensureSyntaxTreeCached(instance.view, documentId);
             });
         } catch (error) {
             console.error('Error showing editor:', error);
@@ -256,11 +379,17 @@ export const useEditorStore = defineStore('editor', () => {
 
         try {
             const content = instance.view.state.doc.toString();
+            const lastModified = instance.lastModified;
+            
             await DocumentService.UpdateDocumentContent(documentId, content);
 
-            instance.content = content;
-            instance.isDirty = false;
-            instance.lastModified = new Date();
+            // 检查在保存期间内容是否又被修改了
+            if (instance.lastModified === lastModified) {
+                instance.content = content;
+                instance.isDirty = false;
+                instance.lastModified = new Date();
+            }
+            // 如果内容在保存期间被修改了，保持 isDirty 状态
 
             return true;
         } catch (error) {
@@ -276,6 +405,9 @@ export const useEditorStore = defineStore('editor', () => {
 
         instance.isDirty = true;
         instance.lastModified = new Date();
+        
+        // 清理语法树缓存，下次访问时重新构建
+        instance.syntaxTreeCache = null;
 
         // 清除之前的定时器
         if (instance.autoSaveTimer) {
@@ -293,7 +425,7 @@ export const useEditorStore = defineStore('editor', () => {
     // 设置编辑器容器
     const setEditorContainer = (container: HTMLElement | null) => {
         editorCache.value.containerElement = container;
-        
+
         // 如果设置容器时已有当前文档，立即加载编辑器
         if (container && documentStore.currentDocument) {
             loadEditor(documentStore.currentDocument.id, documentStore.currentDocument.content);
@@ -302,22 +434,41 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 加载编辑器
     const loadEditor = async (documentId: number, content: string) => {
+        // 生成新的操作ID
+        const operationId = getNextOperationId();
+        const abortController = new AbortController();
+        
         try {
             // 验证参数
             if (!documentId) {
                 throw new Error('Invalid parameters for loadEditor');
             }
 
+            // 取消之前的操作并设置当前操作
+            cancelPreviousOperations();
+            currentLoadingDocumentId.value = documentId;
+            pendingOperations.value.set(operationId, abortController);
+
             // 保存当前编辑器内容
             if (currentEditor.value) {
                 const currentDocId = documentStore.currentDocumentId;
                 if (currentDocId && currentDocId !== documentId) {
                     await saveEditorContent(currentDocId);
+                    
+                    // 检查操作是否仍然有效
+                    if (!isOperationValid(operationId, documentId)) {
+                        return;
+                    }
                 }
             }
 
             // 获取或创建编辑器
-            const view = await getOrCreateEditor(documentId, content);
+            const view = await getOrCreateEditor(documentId, content, operationId);
+
+            // 检查操作是否仍然有效
+            if (!isOperationValid(operationId, documentId)) {
+                return;
+            }
 
             // 更新内容（如果需要）
             const instance = editorCache.value.instances[documentId];
@@ -333,14 +484,31 @@ export const useEditorStore = defineStore('editor', () => {
                     });
                     instance.content = content;
                     instance.isDirty = false;
+                    // 清理语法树缓存，因为内容已更新
+                    instance.syntaxTreeCache = null;
                 }
+            }
+
+            // 最终检查操作有效性
+            if (!isOperationValid(operationId, documentId)) {
+                return;
             }
 
             // 显示编辑器
             showEditor(documentId);
 
         } catch (error) {
+            if (error instanceof Error && error.message === 'Operation cancelled') {
+                console.log(`Editor loading cancelled for document ${documentId}`);
+                return;
+            }
             console.error('Failed to load editor:', error);
+        } finally {
+            // 清理操作记录
+            pendingOperations.value.delete(operationId);
+            if (currentLoadingDocumentId.value === documentId) {
+                currentLoadingDocumentId.value = null;
+            }
         }
     };
 
@@ -349,27 +517,33 @@ export const useEditorStore = defineStore('editor', () => {
         const instance = editorCache.value.instances[documentId];
         if (instance) {
             try {
+                // 如果正在加载这个文档，取消操作
+                if (currentLoadingDocumentId.value === documentId) {
+                    cancelPreviousOperations();
+                    currentLoadingDocumentId.value = null;
+                }
+
                 // 清除自动保存定时器
                 if (instance.autoSaveTimer) {
                     clearTimeout(instance.autoSaveTimer);
                     instance.autoSaveTimer = null;
                 }
-                
+
                 // 移除DOM元素
                 if (instance.view && instance.view.dom && instance.view.dom.parentElement) {
                     instance.view.dom.remove();
                 }
-                
+
                 // 销毁编辑器
                 if (instance.view && instance.view.destroy) {
                     instance.view.destroy();
                 }
-                
+
                 // 清理引用
                 if (currentEditor.value === instance.view) {
                     currentEditor.value = null;
                 }
-                
+
                 delete editorCache.value.instances[documentId];
 
                 const lruIndex = editorCache.value.lru.indexOf(documentId);
@@ -431,6 +605,10 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 清空所有编辑器
     const clearAllEditors = () => {
+        // 取消所有挂起的操作
+        cancelPreviousOperations();
+        currentLoadingDocumentId.value = null;
+        
         Object.values(editorCache.value.instances).forEach(instance => {
             // 清除自动保存定时器
             if (instance.autoSaveTimer) {
@@ -451,37 +629,36 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 更新扩展
     const updateExtension = async (id: ExtensionID, enabled: boolean, config?: any) => {
-        try {
-            // 如果只是更新启用状态
-            if (config === undefined) {
-                await ExtensionService.UpdateExtensionEnabled(id, enabled);
-            } else {
-                // 如果需要更新配置
-                await ExtensionService.UpdateExtensionState(id, enabled, config);
-            }
+        // 如果只是更新启用状态
+        if (config === undefined) {
+            await ExtensionService.UpdateExtensionEnabled(id, enabled);
+        } else {
+            // 如果需要更新配置
+            await ExtensionService.UpdateExtensionState(id, enabled, config);
+        }
 
-            // 更新前端编辑器扩展
-            const manager = getExtensionManager();
-            if (manager) {
-                manager.updateExtension(id, enabled, config || {});
-            }
+        // 更新前端编辑器扩展
+        const manager = getExtensionManager();
+        if (manager) {
+            manager.updateExtension(id, enabled, config || {});
+        }
 
-            // 重新加载扩展配置
-            await extensionStore.loadExtensions();
+        // 重新加载扩展配置
+        await extensionStore.loadExtensions();
 
-            // 更新快捷键映射
-            if (currentEditor.value) {
-                updateKeymapExtension(currentEditor.value);
-            }
-        } catch (error) {
-            throw error;
+        // 更新快捷键映射
+        if (currentEditor.value) {
+            updateKeymapExtension(currentEditor.value);
         }
     };
 
     // 监听文档切换
     watch(() => documentStore.currentDocument, (newDoc) => {
         if (newDoc && editorCache.value.containerElement) {
-            loadEditor(newDoc.id, newDoc.content);
+            // 使用 nextTick 确保DOM更新完成后再加载编辑器
+            nextTick(() => {
+                loadEditor(newDoc.id, newDoc.content);
+            });
         }
     });
 
@@ -512,7 +689,7 @@ export const useEditorStore = defineStore('editor', () => {
         applyThemeSettings,
         applyTabSettings,
         applyKeymapSettings,
-        
+
         // 扩展管理方法
         updateExtension,
 
