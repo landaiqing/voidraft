@@ -11,6 +11,7 @@ import BlockLanguageSelector from './BlockLanguageSelector.vue';
 import DocumentSelector from './DocumentSelector.vue';
 import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/languages';
+import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode';
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
@@ -19,124 +20,140 @@ const documentStore = useDocumentStore();
 const {t} = useI18n();
 const router = useRouter();
 
+// 当前块是否支持格式化的响应式状态
+const canFormatCurrentBlock = ref(false);
 
-// 设置窗口置顶
+// 窗口置顶状态管理
 const setWindowAlwaysOnTop = async (isTop: boolean) => {
   await runtime.Window.SetAlwaysOnTop(isTop);
 };
 
-// 切换窗口置顶
 const toggleAlwaysOnTop = async () => {
   await configStore.toggleAlwaysOnTop();
-  // 使用Window.SetAlwaysOnTop方法设置窗口置顶状态
   await runtime.Window.SetAlwaysOnTop(configStore.config.general.alwaysOnTop);
 };
 
 // 跳转到设置页面
 const goToSettings = () => {
-  const currentDocId = documentStore.currentDocumentId;
   router.push({
     path: '/settings',
-    query: { documentId: currentDocId || undefined }
+    query: { documentId: documentStore.currentDocumentId || undefined }
   });
 };
 
+// 执行格式化
+const formatCurrentBlock = () => {
+  if (!canFormatCurrentBlock.value || !editorStore.editorView) return;
+  formatBlockContent(editorStore.editorView);
+};
 
-// 当前块是否支持格式化的响应式状态
-const canFormatCurrentBlock = ref(false);
-
-// 更新格式化按钮状态
+// 格式化按钮状态更新
 const updateFormatButtonState = () => {
-  if (!editorStore.editorView) {
+  // 安全检查
+  const view = editorStore.editorView;
+  if (!view) {
     canFormatCurrentBlock.value = false;
     return;
   }
 
   try {
-    const state = editorStore.editorView.state;
+    // 获取活动块和语言信息
+    const state = view.state;
     const activeBlock = getActiveNoteBlock(state as any);
-    if (!activeBlock) {
-      canFormatCurrentBlock.value = false;
-      return;
-    }
-
-    const language = getLanguage(activeBlock.language.name as any);
-    canFormatCurrentBlock.value = !!(language && language.prettier);
+    
+    // 检查块和语言格式化支持
+    canFormatCurrentBlock.value = !!(
+      activeBlock && 
+      getLanguage(activeBlock.language.name as any)?.prettier
+    );
   } catch (error) {
+    console.warn('Error checking format capability:', error);
     canFormatCurrentBlock.value = false;
   }
 };
 
-// 编辑器事件监听器引用，用于清理
-let editorEventListeners: (() => void)[] = [];
+// 创建带300ms防抖的更新函数
+const debouncedUpdateFormatButton = (() => {
+  let timeout: number | null = null;
+  
+  return () => {
+    if (timeout) clearTimeout(timeout);
+    timeout = window.setTimeout(() => {
+      updateFormatButtonState();
+      timeout = null;
+    }, 300);
+  };
+})();
 
-// 监听编辑器初始化
+// 编辑器事件管理
+const setupEditorListeners = (view: any) => {
+  if (!view?.dom) return [];
+  
+  const events = [
+    { type: 'click', handler: updateFormatButtonState },
+    { type: 'keyup', handler: debouncedUpdateFormatButton },
+    { type: 'focus', handler: updateFormatButtonState }
+  ];
+  
+  // 注册所有事件
+  events.forEach(event => view.dom.addEventListener(event.type, event.handler));
+  
+  // 返回清理函数数组
+  return events.map(event => 
+    () => view.dom.removeEventListener(event.type, event.handler)
+  );
+};
+
+// 监听编辑器视图变化
+let cleanupListeners: (() => void)[] = [];
+
 watch(
-    () => editorStore.editorView,
-    (newView, oldView) => {
-      // 清理旧的监听器
-      editorEventListeners.forEach(cleanup => cleanup());
-      editorEventListeners = [];
-      
-      if (newView) {
-        updateFormatButtonState();
-        
-        // 添加点击监听器（用于检测光标位置变化）
-        const clickListener = () => {
-          setTimeout(updateFormatButtonState, 0);
-        };
-        newView.dom.addEventListener('click', clickListener);
-        editorEventListeners.push(() => newView.dom.removeEventListener('click', clickListener));
-        
-        // 添加键盘监听器（用于检测内容和光标变化）
-        const keyupListener = () => {
-          setTimeout(updateFormatButtonState, 0);
-        };
-        newView.dom.addEventListener('keyup', keyupListener);
-        editorEventListeners.push(() => newView.dom.removeEventListener('keyup', keyupListener));
-        
-      } else {
-        canFormatCurrentBlock.value = false;
-      }
-    },
-    {immediate: true}
+  () => editorStore.editorView,
+  (newView) => {
+    // 清理旧监听器
+    cleanupListeners.forEach(cleanup => cleanup());
+    cleanupListeners = [];
+    
+    if (newView) {
+      // 初始更新状态
+      updateFormatButtonState();
+      // 设置新监听器
+      cleanupListeners = setupEditorListeners(newView);
+    } else {
+      canFormatCurrentBlock.value = false;
+    }
+  },
+  { immediate: true }
 );
 
-// 定期更新格式化按钮状态
-let formatButtonUpdateTimer: number | null = null;
-
+// 组件生命周期
 const isLoaded = ref(false);
 
 onMounted(() => {
   isLoaded.value = true;
-  // 降低定时器频率，主要作为备用机制
-  formatButtonUpdateTimer = setInterval(updateFormatButtonState, 2000) as any;
+  // 首次更新格式化状态
+  updateFormatButtonState();
 });
 
 onUnmounted(() => {
-  // 清理定时器
-  if (formatButtonUpdateTimer) {
-    clearInterval(formatButtonUpdateTimer);
-    formatButtonUpdateTimer = null;
-  }
-  
-  // 清理编辑器事件监听器
-  editorEventListeners.forEach(cleanup => cleanup());
-  editorEventListeners = [];
+  // 清理所有事件监听器
+  cleanupListeners.forEach(cleanup => cleanup());
+  cleanupListeners = [];
 });
 
 // 监听置顶设置变化
 watch(
-    () => configStore.config.general.alwaysOnTop,
-    async (newValue) => {
-      if (!isLoaded.value) return;
+  () => configStore.config.general.alwaysOnTop,
+  async (newValue) => {
+    if (isLoaded.value) {
       await runtime.Window.SetAlwaysOnTop(newValue);
     }
+  }
 );
 
-// 在组件加载完成后应用置顶设置
-watch(isLoaded, async (newLoaded) => {
-  if (newLoaded && configStore.config.general.alwaysOnTop) {
+// 组件加载后应用置顶设置
+watch(isLoaded, async (loaded) => {
+  if (loaded && configStore.config.general.alwaysOnTop) {
     await setWindowAlwaysOnTop(true);
   }
 });
@@ -171,11 +188,12 @@ watch(isLoaded, async (newLoaded) => {
       <!-- 块语言选择器 -->
       <BlockLanguageSelector/>
 
-      <!-- 格式化提示按钮 - 只在支持的语言块中显示，不可点击 -->
+      <!-- 格式化按钮 - 支持点击操作 -->
       <div
           v-if="canFormatCurrentBlock"
           class="format-button"
           :title="t('toolbar.formatHint')"
+          @click="formatCurrentBlock"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -336,6 +354,7 @@ watch(isLoaded, async (newLoaded) => {
 
 
     .format-button {
+      cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -345,20 +364,10 @@ watch(isLoaded, async (newLoaded) => {
       border-radius: 3px;
       transition: all 0.2s ease;
 
-      //&:not(.disabled) {
-      //  cursor: pointer;
-      //
-      //  &:hover {
-      //    background-color: var(--border-color);
-      //    opacity: 0.8;
-      //  }
-      //}
-      //
-      //&.disabled {
-      //  cursor: not-allowed;
-      //  opacity: 0.5;
-      //  background-color: rgba(128, 128, 128, 0.1);
-      //}
+      &:hover {
+        background-color: var(--border-color);
+        opacity: 0.8;
+      }
 
       svg {
         width: 14px;

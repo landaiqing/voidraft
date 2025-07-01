@@ -429,7 +429,7 @@ onUnmounted(() => {
       margin-left: 2px;
       transition: transform 0.2s ease;
       
-      &:not(.open) {
+      &.open {
         transform: rotate(180deg);
       }
     }

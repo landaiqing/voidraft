@@ -6,65 +6,63 @@ import { getLanguage } from "./lang-parser/languages"
 import { SupportedLanguage } from "./types"
 
 export const formatBlockContent = (view) => {
-    const state = view.state
-    if (state.readOnly)
+    if (!view || view.state.readOnly)
         return false
-    const block = getActiveNoteBlock(state)
+        
+    // 获取初始信息，但不缓存state对象
+    const initialState = view.state
+    const block = getActiveNoteBlock(initialState)
 
     if (!block) {
         return false
     }
 
-    const language = getLanguage(block.language.name as SupportedLanguage)
+    const blockFrom = block.content.from
+    const blockTo = block.content.to
+    const blockLanguageName = block.language.name as SupportedLanguage
+    
+    const language = getLanguage(blockLanguageName)
     if (!language || !language.prettier) {
         return false
     }
     
-    // get current cursor position
-    const cursorPos = state.selection.asSingle().ranges[0].head
-    // get block content
-    const content = state.sliceDoc(block.content.from, block.content.to)
+    // 获取初始需要的信息
+    const cursorPos = initialState.selection.asSingle().ranges[0].head
+    const content = initialState.sliceDoc(blockFrom, blockTo)
+    const tabSize = initialState.tabSize
 
-    let useFormat = false
-    if (cursorPos == block.content.from || cursorPos == block.content.to) {
-        useFormat = true
-    }
+    // 检查光标是否在块的开始或结束
+    const cursorAtEdge = cursorPos == blockFrom || cursorPos == blockTo
 
-    // 执行异步格式化，但在回调中获取最新状态
+    // 执行异步格式化
     const performFormat = async () => {
         let formattedContent
         try {
-            if (useFormat) {
-                formattedContent = {
-                    formatted: await prettier.format(content, {
-                        parser: language.prettier!.parser,
-                        plugins: language.prettier!.plugins,
-                        tabWidth: state.tabSize,
-                    }),
-                }
-                formattedContent.cursorOffset = cursorPos == block.content.from ? 0 : formattedContent.formatted.length
-            } else {
-                // formatWithCursor 有性能问题，改用简单格式化 + 光标位置计算
-                const formatted = await prettier.format(content, {
-                    parser: language.prettier!.parser,
-                    plugins: language.prettier!.plugins,
-                    tabWidth: state.tabSize,
-                })
-                formattedContent = {
-                    formatted: formatted,
-                    cursorOffset: Math.min(cursorPos - block.content.from, formatted.length)
-                }
+            // 格式化代码
+            const formatted = await prettier.format(content, {
+                parser: language.prettier!.parser,
+                plugins: language.prettier!.plugins,
+                tabWidth: tabSize,
+            })
+            
+            // 计算新光标位置
+            const cursorOffset = cursorAtEdge 
+                ? (cursorPos == blockFrom ? 0 : formatted.length)
+                : Math.min(cursorPos - blockFrom, formatted.length)
+            
+            formattedContent = {
+                formatted,
+                cursorOffset
             }
         } catch (e) {
-            const hyphens = "----------------------------------------------------------------------------"
-            const errorMessage = (e as Error).message;
-            console.log(`Error when trying to format block:\n${hyphens}\n${errorMessage}\n${hyphens}`)
             return false
         }
         
         try {
-            // 重新获取当前状态和块信息，确保状态一致
+            // 格式化完成后再次获取最新状态
             const currentState = view.state
+            
+            // 重新获取当前块的位置
             const currentBlock = getActiveNoteBlock(currentState)
             
             if (!currentBlock) {
@@ -72,17 +70,22 @@ export const formatBlockContent = (view) => {
                 return false
             }
             
-            view.dispatch(currentState.update({
+            // 使用当前块的实际位置
+            const currentBlockFrom = currentBlock.content.from
+            const currentBlockTo = currentBlock.content.to
+            
+            // 基于最新状态创建更新
+            view.dispatch({
                 changes: {
-                    from: currentBlock.content.from,
-                    to: currentBlock.content.to,
+                    from: currentBlockFrom,
+                    to: currentBlockTo,
                     insert: formattedContent.formatted,
                 },
-                selection: EditorSelection.cursor(currentBlock.content.from + Math.min(formattedContent.cursorOffset, formattedContent.formatted.length)),
-            }, {
-                userEvent: "input",
+                selection: EditorSelection.cursor(currentBlockFrom + Math.min(formattedContent.cursorOffset, formattedContent.formatted.length)),
                 scrollIntoView: true,
-            }))
+                userEvent: "input"
+            })
+            
             return true;
         } catch (error) {
             console.error('Failed to apply formatting changes:', error);
