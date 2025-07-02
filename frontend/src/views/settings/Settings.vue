@@ -8,11 +8,6 @@ const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
 
-// 接收路由传入的参数
-const props = defineProps<{
-  returnDocumentId?: number | null
-}>();
-
 // 导航配置
 const navItems = [
   { id: 'general', icon: '⚙️', route: '/settings/general' },
@@ -33,15 +28,7 @@ const handleNavClick = (item: typeof navItems[0]) => {
 
 // 返回编辑器
 const goBackToEditor = async () => {
-  // 如果有返回文档ID，则传递参数
-  if (props.returnDocumentId) {
-    await router.push({
-      path: '/',
-      query: { documentId: props.returnDocumentId }
-    });
-  } else {
-    await router.push('/');
-  }
+  await router.push('/');
 };
 
 </script>

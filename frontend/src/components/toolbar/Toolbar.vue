@@ -35,10 +35,7 @@ const toggleAlwaysOnTop = async () => {
 
 // 跳转到设置页面
 const goToSettings = () => {
-  router.push({
-    path: '/settings',
-    query: { documentId: documentStore.currentDocumentId || undefined }
-  });
+  router.push('/settings');
 };
 
 // 执行格式化

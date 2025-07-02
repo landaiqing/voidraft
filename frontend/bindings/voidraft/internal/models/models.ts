@@ -159,7 +159,7 @@ export class ConfigMetadata {
 }
 
 /**
- * Document 表示一个文档（使用自增主键）
+ * Document represents a document in the system
  */
 export class Document {
     "id": number;
@@ -167,6 +167,7 @@ export class Document {
     "content": string;
     "createdAt": time$0.Time;
     "updatedAt": time$0.Time;
+    "is_deleted": boolean;
 
     /** Creates a new Document instance. */
     constructor($$source: Partial<Document> = {}) {
@@ -184,6 +185,9 @@ export class Document {
         }
         if (!("updatedAt" in $$source)) {
             this["updatedAt"] = null;
+        }
+        if (!("is_deleted" in $$source)) {
+            this["is_deleted"] = false;
         }
 
         Object.assign(this, $$source);

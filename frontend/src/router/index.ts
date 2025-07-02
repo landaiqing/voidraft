@@ -12,15 +12,13 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'Editor',
-    component: Editor,
-    props: route => ({ documentId: route.query.documentId ? Number(route.query.documentId) : null })
+    component: Editor
   },
   {
     path: '/settings',
     name: 'Settings',
     redirect: '/settings/general',
     component: Settings,
-    props: route => ({ returnDocumentId: route.query.documentId ? Number(route.query.documentId) : null }),
     children: [
       {
         path: 'general',

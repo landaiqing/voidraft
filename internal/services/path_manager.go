@@ -16,7 +16,7 @@ type PathManager struct {
 // NewPathManager 创建新的路径管理器
 func NewPathManager() *PathManager {
 	// 获取用户配置目录
-	userConfigDir, err := os.UserConfigDir()
+	userConfigDir, err := os.UserHomeDir()
 	if err != nil {
 		// 如果获取失败，使用当前目录
 		userConfigDir, _ = os.Getwd()

@@ -27,7 +27,7 @@ export function CreateDocument(title: string): Promise<models$0.Document | null>
 }
 
 /**
- * DeleteDocument deletes a document (not allowed if it's the only document)
+ * DeleteDocument marks a document as deleted (default document with ID=1 cannot be deleted)
  */
 export function DeleteDocument(id: number): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(412287269, id) as any;
@@ -47,7 +47,7 @@ export function GetDocumentByID(id: number): Promise<models$0.Document | null> &
 }
 
 /**
- * GetFirstDocumentID gets the first document's ID for frontend initialization
+ * GetFirstDocumentID gets the first active document's ID for frontend initialization
  */
 export function GetFirstDocumentID(): Promise<number> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2970773833) as any;
@@ -55,10 +55,22 @@ export function GetFirstDocumentID(): Promise<number> & { cancel(): void } {
 }
 
 /**
- * ListAllDocumentsMeta lists all document metadata
+ * ListAllDocumentsMeta lists all active (non-deleted) document metadata
  */
 export function ListAllDocumentsMeta(): Promise<(models$0.Document | null)[]> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3073950297) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType2($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * ListDeletedDocumentsMeta lists all deleted document metadata
+ */
+export function ListDeletedDocumentsMeta(): Promise<(models$0.Document | null)[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(490143787) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType2($result);
     }) as any;
@@ -71,6 +83,14 @@ export function ListAllDocumentsMeta(): Promise<(models$0.Document | null)[]> & 
  */
 export function OnDataPathChanged(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(269349439) as any;
+    return $resultPromise;
+}
+
+/**
+ * RestoreDocument restores a deleted document
+ */
+export function RestoreDocument(id: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(784200778, id) as any;
     return $resultPromise;
 }
 

@@ -106,7 +106,7 @@ type ConfigMetadata struct {
 // NewDefaultAppConfig 创建默认应用配置
 func NewDefaultAppConfig() *AppConfig {
 
-	currentDir, _ := os.UserConfigDir()
+	currentDir, _ := os.UserHomeDir()
 	dataDir := filepath.Join(currentDir, ".voidraft", "data")
 
 	return &AppConfig{

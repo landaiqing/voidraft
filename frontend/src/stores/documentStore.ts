@@ -190,10 +190,15 @@ export const useDocumentStore = defineStore('document', () => {
         try {
             await updateDocuments();
 
-            // 获取第一个文档ID并打开
-            const firstDocId = await DocumentService.GetFirstDocumentID();
-            if (firstDocId && documents.value[firstDocId]) {
-                await openDocument(firstDocId);
+            // 如果存在持久化的文档ID，尝试打开该文档
+            if (currentDocumentId.value && documents.value[currentDocumentId.value]) {
+                await openDocument(currentDocumentId.value);
+            } else {
+                // 否则获取第一个文档ID并打开
+                const firstDocId = await DocumentService.GetFirstDocumentID();
+                if (firstDocId && documents.value[firstDocId]) {
+                    await openDocument(firstDocId);
+                }
             }
         } catch (error) {
             console.error('Failed to initialize document store:', error);
@@ -221,4 +226,10 @@ export const useDocumentStore = defineStore('document', () => {
         closeDialog,
         initialize,
     };
+}, {
+    persist: {
+        key: 'voidraft-document',
+        storage: localStorage,
+        pick: ['currentDocumentId']
+    }
 }); 
