@@ -10,6 +10,7 @@ import {
     SystemThemeType,
     TabType,
     UpdatesConfig,
+    UpdateSourceType,
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/utils/configUtils';
@@ -77,7 +78,13 @@ const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
 
 const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
     version: 'updates.version',
-    autoUpdate: 'updates.autoUpdate'
+    autoUpdate: 'updates.autoUpdate',
+    primarySource: 'updates.primarySource',
+    backupSource: 'updates.backupSource',
+    backupBeforeUpdate: 'updates.backupBeforeUpdate',
+    updateTimeout: 'updates.updateTimeout',
+    github: 'updates.github',
+    gitea: 'updates.gitea'
 } as const;
 
 // 配置限制
@@ -155,6 +162,19 @@ const DEFAULT_CONFIG: AppConfig = {
     updates: {
         version: "1.0.0",
         autoUpdate: true,
+        primarySource: UpdateSourceType.UpdateSourceGithub,
+        backupSource: UpdateSourceType.UpdateSourceGitea,
+        backupBeforeUpdate: true,
+        updateTimeout: 30,
+        github: {
+            owner: "landaiqing",
+            repo: "voidraft",
+        },
+        gitea: {
+            baseURL: "https://git.landaiqing.cn",
+            owner: "landaiqing",
+            repo: "voidraft",
+        }
     },
     metadata: {
         version: '1.0.0',

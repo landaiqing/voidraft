@@ -1,40 +1,87 @@
 import {defineStore} from 'pinia'
 import {computed, ref} from 'vue'
-import {CheckForUpdates} from '@/../bindings/voidraft/internal/services/updateservice'
-import {UpdateCheckResult} from '@/../bindings/voidraft/internal/services/models'
+import {CheckForUpdates, ApplyUpdate, RestartApplication} from '@/../bindings/voidraft/internal/services/selfupdateservice'
+import {SelfUpdateResult} from '@/../bindings/voidraft/internal/services/models'
 import {useConfigStore} from './configStore'
+import * as runtime from "@wailsio/runtime"
 
 export const useUpdateStore = defineStore('update', () => {
     // 状态
     const isChecking = ref(false)
-    const updateResult = ref<UpdateCheckResult | null>(null)
+    const isUpdating = ref(false)
+    const updateResult = ref<SelfUpdateResult | null>(null)
     const hasCheckedOnStartup = ref(false)
+    const updateSuccess = ref(false)
+    const errorMessage = ref('')
 
     // 计算属性
     const hasUpdate = computed(() => updateResult.value?.hasUpdate || false)
-    const errorMessage = computed(() => updateResult.value?.error || '')
 
     // 检查更新
     const checkForUpdates = async (): Promise<boolean> => {
         if (isChecking.value) return false
 
+        // 重置错误信息
+        errorMessage.value = ''
         isChecking.value = true
         try {
             const result = await CheckForUpdates()
-            updateResult.value = result
-            return !result.error
+            if (result) {
+                updateResult.value = result
+                if (result.error) {
+                    errorMessage.value = result.error
+                    return false
+                }
+                return true
+            }
+            return false
         } catch (error) {
-            updateResult.value = new UpdateCheckResult({
-                hasUpdate: false,
-                currentVer: '1.0.0',
-                latestVer: '',
-                releaseNotes: '',
-                releaseURL: '',
-                error: 'Network error'
-            })
+            errorMessage.value = error instanceof Error ? error.message : 'Network error'
             return false
         } finally {
             isChecking.value = false
+        }
+    }
+
+    // 应用更新
+    const applyUpdate = async (): Promise<boolean> => {
+        if (isUpdating.value) return false
+
+        // 重置错误信息
+        errorMessage.value = ''
+        isUpdating.value = true
+        try {
+            const result = await ApplyUpdate()
+            if (result) {
+                updateResult.value = result
+                
+                if (result.error) {
+                    errorMessage.value = result.error
+                    return false
+                }
+                
+                if (result.updateApplied) {
+                    updateSuccess.value = true
+                    return true
+                }
+            }
+            return false
+        } catch (error) {
+            errorMessage.value = error instanceof Error ? error.message : 'Update failed'
+            return false
+        } finally {
+            isUpdating.value = false
+        }
+    }
+
+    // 重启应用
+    const restartApplication = async (): Promise<boolean> => {
+        try {
+            await RestartApplication()
+            return true
+        } catch (error) {
+            errorMessage.value = error instanceof Error ? error.message : 'Restart failed'
+            return false
         }
     }
 
@@ -50,9 +97,9 @@ export const useUpdateStore = defineStore('update', () => {
     }
 
     // 打开发布页面
-    const openReleaseURL = () => {
-        if (updateResult.value?.releaseURL) {
-            window.open(updateResult.value.releaseURL, '_blank')
+    const openReleaseURL = async () => {
+        if (updateResult.value?.assetURL) {
+            await runtime.Browser.OpenURL(updateResult.value.assetURL)
         }
     }
 
@@ -60,20 +107,27 @@ export const useUpdateStore = defineStore('update', () => {
     const reset = () => {
         updateResult.value = null
         isChecking.value = false
+        isUpdating.value = false
+        updateSuccess.value = false
+        errorMessage.value = ''
     }
 
     return {
         // 状态
         isChecking,
+        isUpdating,
         updateResult,
         hasCheckedOnStartup,
+        updateSuccess,
+        errorMessage,
 
         // 计算属性
         hasUpdate,
-        errorMessage,
 
         // 方法
         checkForUpdates,
+        applyUpdate,
+        restartApplication,
         checkOnStartup,
         openReleaseURL,
         reset

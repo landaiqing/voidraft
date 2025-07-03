@@ -116,9 +116,9 @@ export enum MigrationStatus {
 };
 
 /**
- * UpdateCheckResult 更新检查结果
+ * SelfUpdateResult 自我更新结果
  */
-export class UpdateCheckResult {
+export class SelfUpdateResult {
     /**
      * 是否有更新
      */
@@ -127,12 +127,22 @@ export class UpdateCheckResult {
     /**
      * 当前版本
      */
-    "currentVer": string;
+    "currentVersion": string;
 
     /**
      * 最新版本
      */
-    "latestVer": string;
+    "latestVersion": string;
+
+    /**
+     * 是否已应用更新
+     */
+    "updateApplied": boolean;
+
+    /**
+     * 下载链接
+     */
+    "assetURL": string;
 
     /**
      * 发布说明
@@ -140,44 +150,50 @@ export class UpdateCheckResult {
     "releaseNotes": string;
 
     /**
-     * 发布页面URL
-     */
-    "releaseURL": string;
-
-    /**
      * 错误信息
      */
     "error": string;
 
-    /** Creates a new UpdateCheckResult instance. */
-    constructor($$source: Partial<UpdateCheckResult> = {}) {
+    /**
+     * 更新源（github/gitea）
+     */
+    "source": string;
+
+    /** Creates a new SelfUpdateResult instance. */
+    constructor($$source: Partial<SelfUpdateResult> = {}) {
         if (!("hasUpdate" in $$source)) {
             this["hasUpdate"] = false;
         }
-        if (!("currentVer" in $$source)) {
-            this["currentVer"] = "";
+        if (!("currentVersion" in $$source)) {
+            this["currentVersion"] = "";
         }
-        if (!("latestVer" in $$source)) {
-            this["latestVer"] = "";
+        if (!("latestVersion" in $$source)) {
+            this["latestVersion"] = "";
+        }
+        if (!("updateApplied" in $$source)) {
+            this["updateApplied"] = false;
+        }
+        if (!("assetURL" in $$source)) {
+            this["assetURL"] = "";
         }
         if (!("releaseNotes" in $$source)) {
             this["releaseNotes"] = "";
         }
-        if (!("releaseURL" in $$source)) {
-            this["releaseURL"] = "";
-        }
         if (!("error" in $$source)) {
             this["error"] = "";
+        }
+        if (!("source" in $$source)) {
+            this["source"] = "";
         }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new UpdateCheckResult instance from a string or object.
+     * Creates a new SelfUpdateResult instance from a string or object.
      */
-    static createFrom($$source: any = {}): UpdateCheckResult {
+    static createFrom($$source: any = {}): SelfUpdateResult {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new UpdateCheckResult($$parsedSource as Partial<UpdateCheckResult>);
+        return new SelfUpdateResult($$parsedSource as Partial<SelfUpdateResult>);
     }
 }

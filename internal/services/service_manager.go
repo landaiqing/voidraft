@@ -20,7 +20,7 @@ type ServiceManager struct {
 	keyBindingService *KeyBindingService
 	extensionService  *ExtensionService
 	startupService    *StartupService
-	updateService     *UpdateService
+	selfUpdateService *SelfUpdateService
 	logger            *log.LoggerService
 }
 
@@ -62,11 +62,14 @@ func NewServiceManager() *ServiceManager {
 	// 初始化开机启动服务
 	startupService := NewStartupService(configService, logger)
 
-	// 初始化更新服务
-	updateService := NewUpdateService(configService, logger)
+	// 初始化自我更新服务
+	selfUpdateService, err := NewSelfUpdateService(configService, logger)
+	if err != nil {
+		panic(err)
+	}
 
 	// 使用新的配置通知系统设置热键配置变更监听
-	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
+	err = configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
 	})
 	if err != nil {
@@ -92,14 +95,14 @@ func NewServiceManager() *ServiceManager {
 		keyBindingService: keyBindingService,
 		extensionService:  extensionService,
 		startupService:    startupService,
-		updateService:     updateService,
+		selfUpdateService: selfUpdateService,
 		logger:            logger,
 	}
 }
 
 // GetServices 获取所有wails服务列表
 func (sm *ServiceManager) GetServices() []application.Service {
-	return []application.Service{
+	services := []application.Service{
 		application.NewService(sm.configService),
 		application.NewService(sm.documentService),
 		application.NewService(sm.migrationService),
@@ -110,8 +113,9 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
 		application.NewService(sm.startupService),
-		application.NewService(sm.updateService),
+		application.NewService(sm.selfUpdateService),
 	}
+	return services
 }
 
 // GetHotkeyService 获取热键服务实例
@@ -154,7 +158,7 @@ func (sm *ServiceManager) GetExtensionService() *ExtensionService {
 	return sm.extensionService
 }
 
-// GetUpdateService 获取更新服务实例
-func (sm *ServiceManager) GetUpdateService() *UpdateService {
-	return sm.updateService
+// GetSelfUpdateService 获取自我更新服务实例
+func (sm *ServiceManager) GetSelfUpdateService() *SelfUpdateService {
+	return sm.selfUpdateService
 }

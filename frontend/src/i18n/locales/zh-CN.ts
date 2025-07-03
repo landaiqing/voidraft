@@ -158,17 +158,23 @@ export default {
     autoSaveDelay: '自动保存延迟(毫秒)',
     updateSettings: '更新设置',
     autoCheckUpdates: '自动检查更新',
-    autoCheckUpdatesDescription: '启动应用时自动检查更新',
-    manualCheck: '手动检查',
+    autoCheckUpdatesDescription: '应用启动时自动检查更新',
+    manualCheck: '手动更新',
     currentVersion: '当前版本',
     checkForUpdates: '检查更新',
-    checking: '检查中...',
+    checking: '正在检查...',
     checkFailed: '检查失败',
     newVersionAvailable: '发现新版本',
-    upToDate: '您正在使用最新版本',
+    upToDate: '已是最新版本',
     viewUpdate: '查看更新',
-    releaseNotes: '更新内容',
+    releaseNotes: '更新日志',
     networkError: '网络连接错误，请检查网络设置',
+    updateNow: '立即更新',
+    updating: '正在更新...',
+    updateSuccess: '更新成功',
+    updateSuccessRestartRequired: '更新已成功应用，请重启应用以生效',
+    updateSuccessNoRestart: '更新已完成，无需重启',
+    restartNow: '立即重启',
     extensionsPage: {
       loading: '加载中',
       categoryEditing: '编辑增强',
@@ -216,5 +222,9 @@ export default {
       name: '选择框',
       description: '将 [x] 和 [ ] 渲染为可交互的选择框'
     }
+  },
+  monitor: {
+    memory: '内存',
+    clickToClean: '点击清理内存'
   }
 }; 

@@ -8,10 +8,10 @@ import * as ExtensionService from "./extensionservice.js";
 import * as HotkeyService from "./hotkeyservice.js";
 import * as KeyBindingService from "./keybindingservice.js";
 import * as MigrationService from "./migrationservice.js";
+import * as SelfUpdateService from "./selfupdateservice.js";
 import * as StartupService from "./startupservice.js";
 import * as SystemService from "./systemservice.js";
 import * as TrayService from "./trayservice.js";
-import * as UpdateService from "./updateservice.js";
 export {
     ConfigService,
     DialogService,
@@ -20,10 +20,10 @@ export {
     HotkeyService,
     KeyBindingService,
     MigrationService,
+    SelfUpdateService,
     StartupService,
     SystemService,
-    TrayService,
-    UpdateService
+    TrayService
 };
 
 export * from "./models.js";

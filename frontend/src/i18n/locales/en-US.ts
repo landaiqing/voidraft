@@ -156,15 +156,15 @@ export default {
     saveOptions: 'Save Options',
     autoSaveDelay: 'Auto Save Delay (ms)',
     updateSettings: 'Update Settings',
-    autoCheckUpdates: 'Auto Check Updates',
-    autoCheckUpdatesDescription: 'Automatically check for updates on startup',
-    manualCheck: 'Manual Check',
+    autoCheckUpdates: 'Automatically Check Updates',
+    autoCheckUpdatesDescription: 'Check for updates when application starts',
+    manualCheck: 'Manual Update',
     currentVersion: 'Current Version',
     checkForUpdates: 'Check for Updates',
     checking: 'Checking...',
     checkFailed: 'Check Failed',
     newVersionAvailable: 'New Version Available',
-    upToDate: 'You are using the latest version',
+    upToDate: 'Up to Date',
     viewUpdate: 'View Update',
     releaseNotes: 'Release Notes',
     networkError: 'Network connection error, please check your network settings',
@@ -177,7 +177,12 @@ export default {
       configuration: 'Configuration',
       resetToDefault: 'Reset to Default Configuration',
       // Keep necessary extension interface translations, configuration items display in English directly
-    }
+    },
+    updateNow: 'Update Now',
+    updating: 'Updating...',
+    updateSuccess: 'Update Success',
+    updateSuccessRestartRequired: 'Update has been successfully applied. Please restart the application.',
+    restartNow: 'Restart Now',
   },
   extensions: {
     rainbowBrackets: {
@@ -216,5 +221,9 @@ export default {
       name: 'Checkbox',
       description: 'Render [x] and [ ] as interactive checkboxes'
     }
+  },
+  monitor: {
+    memory: 'Memory',
+    clickToClean: 'Click to clean memory'
   }
 }; 

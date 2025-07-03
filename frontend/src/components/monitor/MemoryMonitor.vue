@@ -1,17 +1,39 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, nextTick, computed, watch } from 'vue';
 import { SystemService } from '@/../bindings/voidraft/internal/services';
 import type { MemoryStats } from '@/../bindings/voidraft/internal/services';
+import { useI18n } from 'vue-i18n';
+import { useThemeStore } from '@/stores/themeStore';
+import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
 
+const { t } = useI18n();
+const themeStore = useThemeStore();
 const memoryStats = ref<MemoryStats | null>(null);
 const formattedMemory = ref('');
 const isLoading = ref(true);
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let intervalId: ReturnType<typeof setInterval> | null = null;
 
-// 存储历史数据点 (最近60个数据点，每3秒一个点，总共3分钟历史)
+// 存储历史数据点 (最近60个数据点)
 const historyData = ref<number[]>([]);
 const maxDataPoints = 60;
+
+// 动态最大内存值（MB），初始为200MB，会根据实际使用动态调整
+const maxMemoryMB = ref(200);
+
+// 使用themeStore获取当前主题
+const isDarkTheme = computed(() => {
+  const theme = themeStore.currentTheme;
+  if (theme === SystemThemeType.SystemThemeAuto) {
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  }
+  return theme === SystemThemeType.SystemThemeDark;
+});
+
+// 监听主题变化，重新绘制图表
+watch(() => themeStore.currentTheme, () => {
+  nextTick(() => drawChart());
+});
 
 // 静默错误处理包装器
 const withSilentErrorHandling = async <T>(
@@ -47,8 +69,14 @@ const fetchMemoryStats = async () => {
       formattedMemory.value = `${heapMB.toFixed(0)}M`;
     }
     
-    // 添加新数据点到历史记录
-    const memoryUsagePercent = Math.min((stats.heapInUse / (100 * 1024 * 1024)) * 100, 100);
+    // 自动调整最大内存值，确保图表能够显示更大范围
+    if (heapMB > maxMemoryMB.value * 0.8) {
+      // 如果内存使用超过当前最大值的80%，则将最大值调整为当前使用值的2倍
+      maxMemoryMB.value = Math.ceil(heapMB * 2);
+    }
+    
+    // 添加新数据点到历史记录 - 使用动态最大值计算百分比
+    const memoryUsagePercent = Math.min((heapMB / maxMemoryMB.value) * 100, 100);
     historyData.value.push(memoryUsagePercent);
     
     // 保持最大数据点数量
@@ -62,7 +90,7 @@ const fetchMemoryStats = async () => {
     isLoading.value = false;
 };
 
-// 绘制实时曲线图
+// 绘制实时曲线图 - 简化版
 const drawChart = () => {
   if (!canvasRef.value || historyData.value.length === 0) return;
   
@@ -82,11 +110,16 @@ const drawChart = () => {
   // 清除画布
   ctx.clearRect(0, 0, width, height);
   
-  // 绘制背景网格 - 朦胧的网格，从上到下逐渐清晰
-  for (let i = 0; i <= 6; i++) {
-    const y = (height / 6) * i;
-    const opacity = 0.01 + (i / 6) * 0.03; // 从上到下逐渐清晰
-    ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+  // 根据主题选择合适的颜色 - 更柔和的颜色
+  const gridColor = isDarkTheme.value ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.07)';
+  const lineColor = isDarkTheme.value ? 'rgba(74, 158, 255, 0.6)' : 'rgba(37, 99, 235, 0.6)';
+  const fillColor = isDarkTheme.value ? 'rgba(74, 158, 255, 0.05)' : 'rgba(37, 99, 235, 0.05)';
+  const pointColor = isDarkTheme.value ? 'rgba(74, 158, 255, 0.8)' : 'rgba(37, 99, 235, 0.8)';
+  
+  // 绘制背景网格 - 更加柔和
+  for (let i = 0; i <= 4; i++) {
+    const y = (height / 4) * i;
+    ctx.strokeStyle = gridColor;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(0, y);
@@ -95,9 +128,9 @@ const drawChart = () => {
   }
   
   // 垂直网格线
-  for (let i = 0; i <= 8; i++) {
-    const x = (width / 8) * i;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
+  for (let i = 0; i <= 6; i++) {
+    const x = (width / 6) * i;
+    ctx.strokeStyle = gridColor;
     ctx.lineWidth = 0.5;
     ctx.beginPath();
     ctx.moveTo(x, 0);
@@ -112,13 +145,7 @@ const drawChart = () => {
   const stepX = width / (maxDataPoints - 1);
   const startX = width - (dataLength - 1) * stepX;
   
-  // 绘制填充区域 - 从上朦胧到下清晰的渐变
-  const gradient = ctx.createLinearGradient(0, 0, 0, height);
-  gradient.addColorStop(0, 'rgba(74, 158, 255, 0.1)'); // 顶部很淡
-  gradient.addColorStop(0.3, 'rgba(74, 158, 255, 0.15)');
-  gradient.addColorStop(0.7, 'rgba(74, 158, 255, 0.25)');
-  gradient.addColorStop(1, 'rgba(74, 158, 255, 0.4)'); // 底部较浓
-  
+  // 绘制填充区域 - 更柔和的填充
   ctx.beginPath();
   ctx.moveTo(startX, height);
   
@@ -126,17 +153,23 @@ const drawChart = () => {
   const firstY = height - (historyData.value[0] / 100) * height;
   ctx.lineTo(startX, firstY);
   
-  // 使用二次贝塞尔曲线平滑曲线
+  // 绘制数据点路径 - 使用曲线连接点，确保连续性
   for (let i = 1; i < dataLength; i++) {
     const x = startX + i * stepX;
     const y = height - (historyData.value[i] / 100) * height;
     
+    // 使用贝塞尔曲线平滑连接
     if (i < dataLength - 1) {
       const nextX = startX + (i + 1) * stepX;
       const nextY = height - (historyData.value[i + 1] / 100) * height;
-      const controlX = x + stepX / 2;
-      const controlY = y;
-      ctx.quadraticCurveTo(controlX, controlY, (x + nextX) / 2, (y + nextY) / 2);
+      const cpX1 = x - stepX / 4;
+      const cpY1 = y;
+      const cpX2 = x + stepX / 4;
+      const cpY2 = nextY;
+      
+      // 使用三次贝塞尔曲线平滑连接点
+      ctx.bezierCurveTo(cpX1, cpY1, cpX2, cpY2, nextX, nextY);
+      i++; // 跳过下一个点，因为已经在曲线中处理了
     } else {
       ctx.lineTo(x, y);
     }
@@ -146,68 +179,55 @@ const drawChart = () => {
   const lastX = startX + (dataLength - 1) * stepX;
   ctx.lineTo(lastX, height);
   ctx.closePath();
-  ctx.fillStyle = gradient;
+  ctx.fillStyle = fillColor;
   ctx.fill();
   
-  // 绘制主曲线 - 从上到下逐渐清晰
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
+  // 绘制主曲线 - 平滑连续的曲线
+  ctx.beginPath();
+  ctx.moveTo(startX, firstY);
   
-  // 分段绘制曲线，每段有不同的透明度
-  const segments = 10;
-  for (let seg = 0; seg < segments; seg++) {
-    const segmentStart = seg / segments;
-    const segmentEnd = (seg + 1) / segments;
-    const opacity = 0.3 + (seg / segments) * 0.7; // 从上0.3到下1.0
+  // 重新绘制曲线路径，但这次只绘制线条
+  for (let i = 1; i < dataLength; i++) {
+    const x = startX + i * stepX;
+    const y = height - (historyData.value[i] / 100) * height;
     
-    ctx.strokeStyle = `rgba(74, 158, 255, ${opacity})`;
-    ctx.lineWidth = 1.5 + (seg / segments) * 0.8; // 线条也从细到粗
-    
-    ctx.beginPath();
-    let segmentStarted = false;
-    
-    for (let i = 0; i < dataLength; i++) {
-      const x = startX + i * stepX;
-      const y = height - (historyData.value[i] / 100) * height;
-      const yPercent = 1 - (y / height);
+    // 使用贝塞尔曲线平滑连接
+    if (i < dataLength - 1) {
+      const nextX = startX + (i + 1) * stepX;
+      const nextY = height - (historyData.value[i + 1] / 100) * height;
+      const cpX1 = x - stepX / 4;
+      const cpY1 = y;
+      const cpX2 = x + stepX / 4;
+      const cpY2 = nextY;
       
-      if (yPercent >= segmentStart && yPercent <= segmentEnd) {
-        if (!segmentStarted) {
-          ctx.moveTo(x, y);
-          segmentStarted = true;
-        } else {
-          if (i < dataLength - 1) {
-            const nextX = startX + (i + 1) * stepX;
-            const nextY = height - (historyData.value[i + 1] / 100) * height;
-            const controlX = x + stepX / 2;
-            const controlY = y;
-            ctx.quadraticCurveTo(controlX, controlY, (x + nextX) / 2, (y + nextY) / 2);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-      }
-    }
-    
-    if (segmentStarted) {
-      ctx.stroke();
+      // 使用三次贝塞尔曲线平滑连接点
+      ctx.bezierCurveTo(cpX1, cpY1, cpX2, cpY2, nextX, nextY);
+      i++; // 跳过下一个点，因为已经在曲线中处理了
+    } else {
+      ctx.lineTo(x, y);
     }
   }
   
-  // 绘制当前值的高亮点 - 根据位置调整透明度
+  ctx.strokeStyle = lineColor;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+  
+  // 绘制当前值的高亮点
   const lastY = height - (historyData.value[dataLength - 1] / 100) * height;
-  const pointOpacity = 0.4 + (1 - lastY / height) * 0.6;
   
   // 外圈
-  ctx.fillStyle = `rgba(74, 158, 255, ${pointOpacity * 0.3})`;
+  ctx.fillStyle = pointColor;
+  ctx.globalAlpha = 0.4;
   ctx.beginPath();
-  ctx.arc(lastX, lastY, 4, 0, Math.PI * 2);
+  ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
   ctx.fill();
   
   // 内圈
-  ctx.fillStyle = `rgba(74, 158, 255, ${pointOpacity})`;
+  ctx.globalAlpha = 1;
   ctx.beginPath();
-  ctx.arc(lastX, lastY, 2, 0, Math.PI * 2);
+  ctx.arc(lastX, lastY, 1.5, 0, Math.PI * 2);
   ctx.fill();
 };
 
@@ -228,31 +248,59 @@ const handleResize = () => {
   }
 };
 
+// 仅监听系统主题变化
+const setupSystemThemeListener = () => {
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  const handleSystemThemeChange = () => {
+    // 仅当设置为auto时才响应系统主题变化
+    if (themeStore.currentTheme === SystemThemeType.SystemThemeAuto) {
+      nextTick(() => drawChart());
+    }
+  };
+
+  // 添加监听器
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+  }
+
+  // 返回清理函数
+  return () => {
+    if (mediaQuery.removeEventListener) {
+      mediaQuery.removeEventListener('change', handleSystemThemeChange);
+    }
+  };
+};
+
 onMounted(() => {
   fetchMemoryStats();
-  // 每3秒更新一次内存信息
+  // 每1秒更新一次内存信息
   intervalId = setInterval(fetchMemoryStats, 3000);
   
   // 监听窗口大小变化
   window.addEventListener('resize', handleResize);
-});
-
-onUnmounted(() => {
-  if (intervalId) {
-    clearInterval(intervalId);
-  }
-  window.removeEventListener('resize', handleResize);
+  
+  // 设置系统主题监听器（仅用于auto模式）
+  const cleanupThemeListener = setupSystemThemeListener();
+  
+  // 在卸载时清理
+  onUnmounted(() => {
+    if (intervalId) {
+      clearInterval(intervalId);
+    }
+    window.removeEventListener('resize', handleResize);
+    cleanupThemeListener();
+  });
 });
 </script>
 
 <template>
-  <div class="memory-monitor" @click="triggerGC" :title="`内存: ${formattedMemory} | 点击清理内存`">
+  <div class="memory-monitor" @click="triggerGC" :title="`${t('monitor.memory')}: ${formattedMemory} | ${t('monitor.clickToClean')}`">
     <div class="monitor-info">
       <div class="memory-label">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
         </svg>
-        <span>内存</span>
+        <span>{{ t('monitor.memory') }}</span>
       </div>
       <div class="memory-value" v-if="!isLoading">{{ formattedMemory }}</div>
       <div class="memory-loading" v-else>--</div>
@@ -279,11 +327,11 @@ onUnmounted(() => {
   &:hover {
     .monitor-info {
       .memory-label {
-        color: #4a9eff;
+        color: var(--selection-text);
       }
       
       .memory-value {
-        color: #ffffff;
+        color: var(--toolbar-text);
       }
     }
     
@@ -301,7 +349,7 @@ onUnmounted(() => {
       display: flex;
       align-items: center;
       gap: 4px;
-      color: #a0a0a0;
+      color: var(--text-secondary);
       font-size: 10px;
       font-weight: 500;
       transition: color 0.2s ease;
@@ -318,7 +366,7 @@ onUnmounted(() => {
     }
     
     .memory-value, .memory-loading {
-      color: #e0e0e0;
+      color: var(--toolbar-text-secondary);
       font-family: 'JetBrains Mono', 'Courier New', monospace;
       font-size: 9px;
       font-weight: 600;

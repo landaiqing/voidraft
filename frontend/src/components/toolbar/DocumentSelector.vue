@@ -95,7 +95,7 @@ const selectDoc = async (doc: Document) => {
       closeMenu();
     }
   } catch (error) {
-    console.error('切换文档失败:', error);
+    console.error('Failed to switch documents:', error);
   }
 };
 
@@ -128,7 +128,7 @@ const createDoc = async (title: string) => {
       await selectDoc(newDoc);
     }
   } catch (error) {
-    console.error('创建文档失败:', error);
+    console.error('Failed to create document:', error);
   }
 };
 

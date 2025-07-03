@@ -38,6 +38,29 @@ const (
 	SystemThemeAuto SystemThemeType = "auto"
 )
 
+// UpdateSourceType 更新源类型
+type UpdateSourceType string
+
+const (
+	// UpdateSourceGithub GitHub更新源
+	UpdateSourceGithub UpdateSourceType = "github"
+	// UpdateSourceGitea Gitea更新源
+	UpdateSourceGitea UpdateSourceType = "gitea"
+)
+
+// GithubConfig GitHub配置
+type GithubConfig struct {
+	Owner string `json:"owner"` // 仓库所有者
+	Repo  string `json:"repo"`  // 仓库名称
+}
+
+// GiteaConfig Gitea配置
+type GiteaConfig struct {
+	BaseURL string `json:"baseURL"` // Gitea服务器URL
+	Owner   string `json:"owner"`   // 仓库所有者
+	Repo    string `json:"repo"`    // 仓库名称
+}
+
 // GeneralConfig 通用设置配置
 type GeneralConfig struct {
 	AlwaysOnTop      bool   `json:"alwaysOnTop"`      // 窗口是否置顶
@@ -84,8 +107,14 @@ type AppearanceConfig struct {
 
 // UpdatesConfig 更新设置配置
 type UpdatesConfig struct {
-	Version    string `json:"version"`    // 当前版本号
-	AutoUpdate bool   `json:"autoUpdate"` // 是否自动更新
+	Version            string           `json:"version"`            // 当前版本号
+	AutoUpdate         bool             `json:"autoUpdate"`         // 是否自动更新
+	PrimarySource      UpdateSourceType `json:"primarySource"`      // 主要更新源
+	BackupSource       UpdateSourceType `json:"backupSource"`       // 备用更新源
+	BackupBeforeUpdate bool             `json:"backupBeforeUpdate"` // 更新前是否备份
+	UpdateTimeout      int              `json:"updateTimeout"`      // 更新超时时间(秒)
+	Github             GithubConfig     `json:"github"`             // GitHub配置
+	Gitea              GiteaConfig      `json:"gitea"`              // Gitea配置
 }
 
 // AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -142,8 +171,21 @@ func NewDefaultAppConfig() *AppConfig {
 			SystemTheme: SystemThemeAuto, // 默认使用深色系统主题
 		},
 		Updates: UpdatesConfig{
-			Version:    "1.0.0",
-			AutoUpdate: true,
+			Version:            "0.0.0",
+			AutoUpdate:         true,
+			PrimarySource:      UpdateSourceGithub,
+			BackupSource:       UpdateSourceGitea,
+			BackupBeforeUpdate: true,
+			UpdateTimeout:      30,
+			Github: GithubConfig{
+				Owner: "landaiqing",
+				Repo:  "voidraft",
+			},
+			Gitea: GiteaConfig{
+				BaseURL: "https://git.landaiqing.cn",
+				Owner:   "landaiqing",
+				Repo:    "voidraft",
+			},
 		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),

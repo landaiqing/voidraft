@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import {useI18n} from 'vue-i18n';
-import {computed, onMounted} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
+import { Remarkable } from 'remarkable';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
+
+// 初始化Remarkable实例并配置
+const md = new Remarkable({
+  html: true,       // 允许HTML
+  xhtmlOut: false,  // 不使用'/'闭合单标签
+  breaks: true,     // 将'\n'转换为<br>
+  typographer: true // 启用排版增强
+});
 
 // 计算属性
 const autoCheckUpdates = computed({
@@ -19,30 +28,30 @@ const autoCheckUpdates = computed({
   }
 });
 
-// 格式化发布说明
-const formatReleaseNotes = (notes: string) => {
-  if (!notes) return [];
-
-  // 简单的Markdown列表解析
-  return notes
-      .split('\n')
-      .filter(line => line.trim().startsWith('-') || line.trim().startsWith('*'))
-      .map(line => line.replace(/^[\s\-\*]+/, '').trim())
-      .filter(line => line.length > 0);
+// 使用Remarkable解析Markdown
+const parseMarkdown = (markdown: string) => {
+  if (!markdown) return '';
+  return md.render(markdown);
 };
 
-// 处理查看更新
-const viewUpdate = () => {
-  updateStore.openReleaseURL();
-};
-
-// 获取错误信息的国际化文本
-const getErrorMessage = (error: string) => {
-  if (error.includes('Network') || error.includes('network')) {
-    return t('settings.networkError');
+// 处理更新按钮点击
+const handleUpdateButtonClick = async () => {
+  if (updateStore.updateSuccess) {
+    // 如果更新成功，点击按钮重启应用
+    await updateStore.restartApplication();
+  } else if (updateStore.hasUpdate) {
+    // 如果有更新，点击按钮应用更新
+    await updateStore.applyUpdate();
+  } else {
+    // 否则检查更新
+    await updateStore.checkForUpdates();
   }
-  return error;
 };
+
+// 当前版本号
+const currentVersion = computed(() => {
+  return updateStore.updateResult?.currentVersion || configStore.config.updates.version;
+});
 </script>
 
 <template>
@@ -60,15 +69,26 @@ const getErrorMessage = (error: string) => {
     <!-- 手动检查更新 -->
     <SettingSection :title="t('settings.manualCheck')">
       <SettingItem 
-        :title="`${t('settings.currentVersion')}: ${updateStore.updateResult?.currentVer || configStore.config.updates.version}`"
+        :title="`${t('settings.currentVersion')}: ${currentVersion}`"
       >
         <button
             class="check-button"
-            @click="updateStore.checkForUpdates"
-            :disabled="updateStore.isChecking"
+            :class="{ 
+              'update-available-button': updateStore.hasUpdate && !updateStore.updateSuccess,
+              'update-success-button': updateStore.updateSuccess
+            }"
+            @click="handleUpdateButtonClick"
+            :disabled="updateStore.isChecking || updateStore.isUpdating"
         >
-          <span v-if="updateStore.isChecking" class="loading-spinner"></span>
-          {{ updateStore.isChecking ? t('settings.checking') : t('settings.checkForUpdates') }}
+          <span v-if="updateStore.isChecking || updateStore.isUpdating" class="loading-spinner"></span>
+          {{ updateStore.isChecking 
+            ? t('settings.checking')
+            : (updateStore.isUpdating 
+              ? t('settings.updating') 
+              : (updateStore.updateSuccess 
+                ? t('settings.restartNow') 
+                : (updateStore.hasUpdate ? t('settings.updateNow') : t('settings.checkForUpdates'))))
+          }}
         </button>
       </SettingItem>
 
@@ -78,42 +98,40 @@ const getErrorMessage = (error: string) => {
         <div v-if="updateStore.errorMessage" class="result-item error-result">
           <div class="result-text">
             <span class="result-icon">⚠️</span>
-            <span class="result-message">{{ getErrorMessage(updateStore.errorMessage) }}</span>
+            <div class="result-message">{{ updateStore.errorMessage }}</div>
+          </div>
+        </div>
+
+        <!-- 更新成功 -->
+        <div v-else-if="updateStore.updateSuccess" class="result-item update-success">
+          <div class="result-text">
+            <span class="result-icon">✅</span>
+            <span class="result-message">
+              {{ t('settings.updateSuccessRestartRequired') }}
+            </span>
           </div>
         </div>
 
         <!-- 有新版本 -->
         <div v-else-if="updateStore.hasUpdate" class="result-item update-result">
-          <div class="result-header">
-            <div class="result-text">
-              <span class="result-icon">🎉</span>
-              <span class="result-message">
-                {{ t('settings.newVersionAvailable') }}: {{ updateStore.updateResult?.latestVer }}
-              </span>
-            </div>
-            <button class="view-button" @click="viewUpdate">
-              {{ t('settings.viewUpdate') }}
-            </button>
+          <div class="result-text">
+            <span class="result-icon">🎉</span>
+            <span class="result-message">
+              {{ t('settings.newVersionAvailable') }}: {{ updateStore.updateResult?.latestVersion }}
+            </span>
           </div>
           
           <div v-if="updateStore.updateResult?.releaseNotes" class="release-notes">
             <div class="notes-title">{{ t('settings.releaseNotes') }}:</div>
-            <ul class="notes-list" v-if="formatReleaseNotes(updateStore.updateResult.releaseNotes).length > 0">
-              <li v-for="(note, index) in formatReleaseNotes(updateStore.updateResult.releaseNotes)" :key="index">
-                {{ note }}
-              </li>
-            </ul>
-            <div v-else class="notes-text">
-              {{ updateStore.updateResult.releaseNotes }}
-            </div>
+            <div class="markdown-content" v-html="parseMarkdown(updateStore.updateResult.releaseNotes)"></div>
           </div>
         </div>
 
         <!-- 已是最新版本 -->
         <div v-else-if="updateStore.updateResult && !updateStore.hasUpdate && !updateStore.errorMessage" 
-             class="result-item success-result">
+             class="result-item latest-version">
           <div class="result-text">
-            <span class="result-icon">✅</span>
+            <span class="result-icon">✓</span>
             <span class="result-message">{{ t('settings.upToDate') }}</span>
           </div>
         </div>
@@ -125,6 +143,7 @@ const getErrorMessage = (error: string) => {
 <style scoped lang="scss">
 .settings-page {
   max-width: 800px;
+  width: 100%; // 确保在小屏幕上也能占满可用空间
 }
 
 .check-button {
@@ -139,6 +158,8 @@ const getErrorMessage = (error: string) => {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 120px;
+  justify-content: center;
 
   &:hover:not(:disabled) {
     background-color: var(--settings-hover);
@@ -164,6 +185,28 @@ const getErrorMessage = (error: string) => {
     animation: spin 1s linear infinite;
   }
 
+  &.update-available-button {
+    background-color: #2196f3;
+    border-color: #2196f3;
+    color: white;
+    
+    &:hover {
+      background-color: #1976d2;
+      border-color: #1976d2;
+    }
+  }
+
+  &.update-success-button {
+    background-color: #4caf50;
+    border-color: #4caf50;
+    color: white;
+    
+    &:hover {
+      background-color: #43a047;
+      border-color: #43a047;
+    }
+  }
+
   @keyframes spin {
     to {
       transform: rotate(360deg);
@@ -172,122 +215,157 @@ const getErrorMessage = (error: string) => {
 }
 
 .check-results {
-  padding: 0 16px;
   margin-top: 16px;
+  width: 100%;
+  
+  // 为错误消息添加特殊样式
+  .error-result {
+    padding: 12px;
+    background-color: rgba(255, 82, 82, 0.05);
+    border-radius: 4px;
+    border-left: 3px solid var(--error-text, #ff5252);
+    margin-bottom: 8px;
+    
+    .result-message {
+      color: var(--error-text, #ff5252);
+      max-width: 100%;
+      overflow: visible;
+      padding-right: 8px; // 添加右侧内边距，防止文本贴近容器边缘
+    }
+  }
 }
 
 .result-item {
-  padding: 12px 0;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 8px;
   
   .result-text {
     display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 8px;
     font-size: 13px;
-    line-height: 1.4;
+    line-height: 1.5; // 增加行高，提高可读性
   }
 
   .result-icon {
     font-size: 16px;
     flex-shrink: 0;
+    margin-top: 1px;
   }
 
   .result-message {
     flex: 1;
-  }
-
-  .result-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-
-    .view-button {
-      padding: 4px 12px;
-      background-color: var(--settings-input-bg);
-      border: 1px solid var(--settings-input-border);
-      border-radius: 4px;
-      color: var(--settings-text);
-      cursor: pointer;
-      font-size: 11px;
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-
-      &:hover {
-        background-color: var(--settings-hover);
-        border-color: var(--settings-border);
-      }
-
-      &:active {
-        transform: translateY(1px);
-      }
-    }
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: break-word;
   }
 
   .release-notes {
-    margin-top: 8px;
-    padding-left: 24px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--settings-border, rgba(0,0,0,0.1));
 
     .notes-title {
       font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 6px;
+      font-weight: 500;
+      color: var(--settings-text);
+      margin-bottom: 8px;
     }
 
-    .notes-list {
-      margin: 0;
-      padding-left: 16px;
-      
-      li {
-        font-size: 12px;
-        color: var(--settings-text-secondary);
-        line-height: 1.4;
-        margin-bottom: 3px;
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-      }
-    }
-
-    .notes-text {
+    .markdown-content {
       font-size: 12px;
-      color: var(--settings-text-secondary);
+      color: var(--settings-text);
       line-height: 1.4;
-      white-space: pre-wrap;
-      word-wrap: break-word;
+      
+      /* Markdown内容样式 */
+      :deep(p) {
+        margin: 0 0 6px 0;
+      }
+      
+      :deep(ul), :deep(ol) {
+        margin: 6px 0;
+        padding-left: 16px;
+      }
+      
+      :deep(li) {
+        margin-bottom: 4px;
+      }
+      
+      :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
+        margin: 10px 0 6px 0;
+        font-size: 13px;
+      }
     }
   }
 }
 
 .error-result {
-  .result-message {
-    color: #f44336;
-  }
+  background-color: rgba(244, 67, 54, 0.03);
   
   .result-icon {
     color: #f44336;
+  }
+  
+  .result-message {
+    color: var(--error-text, #ff5252);
   }
 }
 
 .update-result {
+  background-color: rgba(33, 150, 243, 0.03);
+  
+  .result-icon {
+    color: #2196f3;
+  }
+  
   .result-message {
     color: #2196f3;
     font-weight: 500;
   }
+}
+
+.update-success {
+  background-color: rgba(76, 175, 80, 0.03);
   
   .result-icon {
-    color: #2196f3;
+    color: #4caf50;
+  }
+  
+  .result-message {
+    color: var(--settings-text);
   }
 }
 
-.success-result {
-  .result-message {
-    color: #4caf50;
-  }
+.latest-version {
+  background-color: transparent;
+  border-left: 3px solid #9e9e9e;
+  padding-left: 10px;
   
   .result-icon {
-    color: #4caf50;
+    color: #9e9e9e;
+  }
+  
+  .result-message {
+    color: var(--settings-text-secondary, #757575);
+    font-weight: normal;
+  }
+}
+
+// 响应式布局调整
+@media (max-width: 600px) {
+  .result-item {
+    padding: 10px;
+    
+    .result-text {
+      font-size: 12px; // 小屏幕上稍微减小字体
+    }
+  }
+  
+  .check-button {
+    min-width: 100px;
+    padding: 6px 12px;
   }
 }
 </style> 
