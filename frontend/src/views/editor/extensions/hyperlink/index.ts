@@ -30,11 +30,15 @@ class HyperLinkIcon extends WidgetType {
     toDOM() {
         const wrapper = document.createElement('a');
         wrapper.href = this.state.url;
-        wrapper.target = '_blank';
         wrapper.innerHTML = pathStr;
-        wrapper.className = 'cm-hyper-link-icon';
-        wrapper.rel = 'nofollow';
+        wrapper.className = 'cm-hyper-link-icon cm-hyper-link-underline';
         wrapper.title = this.state.url;
+        wrapper.setAttribute('data-url', this.state.url);
+        wrapper.onclick = (e) => {
+            e.preventDefault();
+            runtime.Browser.OpenURL(this.state.url);
+            return false;
+        };
         const anchor = this.state.anchor && this.state.anchor(wrapper);
         return anchor || wrapper;
     }
@@ -141,10 +145,12 @@ export const hyperLinkStyle = EditorView.baseTheme({
         color: '#0969da',
         cursor: 'pointer',
         transition: 'color 0.2s ease',
-        textDecoration: 'none',
+        textDecoration: 'underline',
+        textDecorationColor: '#0969da',
+        textDecorationThickness: '1px',
+        textUnderlineOffset: '2px',
         '&:hover': {
             color: '#0550ae',
-            textDecoration: 'underline',
         }
     },
     
@@ -160,9 +166,9 @@ export const hyperLinkStyle = EditorView.baseTheme({
         verticalAlign: 'middle',
         marginLeft: '0.2ch',
         color: '#656d76',
-        textDecoration: 'none',
         opacity: 0.7,
         transition: 'opacity 0.2s ease, color 0.2s ease',
+        cursor: 'pointer',
         '&:hover': {
             opacity: 1,
             color: '#0969da',
@@ -197,12 +203,17 @@ export const hyperLinkStyle = EditorView.baseTheme({
 export const hyperLinkClickHandler = EditorView.domEventHandlers({
     click: (event, view) => {
         const target = event.target as HTMLElement;
+        let urlElement = target;
         
-        if (target.classList.contains('cm-hyper-link-text')) {
-            const url = target.getAttribute('data-url');
+        while (urlElement && !urlElement.hasAttribute('data-url')) {
+            urlElement = urlElement.parentElement as HTMLElement;
+            if (!urlElement || urlElement === document.body) break;
+        }
+        
+        if (urlElement && urlElement.hasAttribute('data-url')) {
+            const url = urlElement.getAttribute('data-url');
             if (url) {
-                // window.open(url, '_blank', 'noopener,noreferrer');
-                runtime.Browser.OpenURL(url).then()
+                runtime.Browser.OpenURL(url)
                 event.preventDefault();
                 return true;
             }

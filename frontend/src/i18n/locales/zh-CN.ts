@@ -18,7 +18,7 @@ export default {
     blockLanguage: '块语言',
     searchLanguage: '搜索语言...',
     noLanguageFound: '未找到匹配的语言',
-    formatHint: '当前区块支持格式化，使用 Ctrl+Shift+F 进行格式化',
+    formatHint: '点击格式化区块（Ctrl+Shift+F）',
     // 文档选择器
     selectDocument: '选择文档',
     searchOrCreateDocument: '搜索或输入新文档名...',
@@ -202,12 +202,10 @@ export default {
       name: '小地图',
       description: '显示小地图视图'
     },
-
     search: {
       name: '搜索功能',
       description: '文本搜索和替换功能'
     },
-
     fold: {
       name: '代码折叠',
       description: '折叠和展开代码段以提高代码可读性'
@@ -221,6 +219,10 @@ export default {
     checkbox: {
       name: '选择框',
       description: '将 [x] 和 [ ] 渲染为可交互的选择框'
+    },
+    codeblock: {
+      name: '代码块',
+      description: '代码块相关功能'
     }
   },
   monitor: {

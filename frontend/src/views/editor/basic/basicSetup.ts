@@ -21,6 +21,8 @@ import {
 import {history} from '@codemirror/commands';
 import {highlightSelectionMatches} from '@codemirror/search';
 import {autocompletion, closeBrackets, closeBracketsKeymap} from '@codemirror/autocomplete';
+import createEditorContextMenu from '../contextMenu';
+
 // 基本编辑器设置
 export const createBasicSetup = (): Extension[] => {
     return [
@@ -52,6 +54,9 @@ export const createBasicSetup = (): Extension[] => {
 
         // 自动完成
         autocompletion(),
+
+        // 上下文菜单
+        createEditorContextMenu(),
 
         // 键盘映射
         keymap.of([

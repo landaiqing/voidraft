@@ -18,7 +18,7 @@ export default {
     blockLanguage: 'Block Language',
     searchLanguage: 'Search language...',
     noLanguageFound: 'No language found',
-    formatHint: 'Current block supports formatting, use Ctrl+Shift+F shortcut for formatting',
+    formatHint: 'Click Format Block (Ctrl+Shift+F)',
     // Document selector
     selectDocument: 'Select Document',
     searchOrCreateDocument: 'Search or enter new document name...',
@@ -201,12 +201,10 @@ export default {
       name: 'Minimap',
       description: 'Display minimap overview of the document'
     },
-
     search: {
       name: 'Search',
       description: 'Text search and replace functionality'
     },
-
     fold: {
       name: 'Code Folding',
       description: 'Collapse and expand code sections for better readability'
@@ -220,6 +218,10 @@ export default {
     checkbox: {
       name: 'Checkbox',
       description: 'Render [x] and [ ] as interactive checkboxes'
+    },
+    codeblock: {
+      name: 'Code Block',
+      description: 'Code block related functionality'
     }
   },
   monitor: {

@@ -9,19 +9,20 @@ import (
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	pathManager       *PathManager
-	configService     *ConfigService
-	documentService   *DocumentService
-	migrationService  *MigrationService
-	systemService     *SystemService
-	hotkeyService     *HotkeyService
-	dialogService     *DialogService
-	trayService       *TrayService
-	keyBindingService *KeyBindingService
-	extensionService  *ExtensionService
-	startupService    *StartupService
-	selfUpdateService *SelfUpdateService
-	logger            *log.LoggerService
+	pathManager        *PathManager
+	configService      *ConfigService
+	documentService    *DocumentService
+	migrationService   *MigrationService
+	systemService      *SystemService
+	hotkeyService      *HotkeyService
+	dialogService      *DialogService
+	trayService        *TrayService
+	keyBindingService  *KeyBindingService
+	extensionService   *ExtensionService
+	startupService     *StartupService
+	selfUpdateService  *SelfUpdateService
+	translationService *TranslationService
+	logger             *log.LoggerService
 }
 
 // NewServiceManager 创建新的服务管理器实例
@@ -68,6 +69,9 @@ func NewServiceManager() *ServiceManager {
 		panic(err)
 	}
 
+	// 初始化翻译服务
+	translationService := NewTranslationService(logger)
+
 	// 使用新的配置通知系统设置热键配置变更监听
 	err = configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
@@ -85,18 +89,19 @@ func NewServiceManager() *ServiceManager {
 	}
 
 	return &ServiceManager{
-		configService:     configService,
-		documentService:   documentService,
-		migrationService:  migrationService,
-		systemService:     systemService,
-		hotkeyService:     hotkeyService,
-		dialogService:     dialogService,
-		trayService:       trayService,
-		keyBindingService: keyBindingService,
-		extensionService:  extensionService,
-		startupService:    startupService,
-		selfUpdateService: selfUpdateService,
-		logger:            logger,
+		configService:      configService,
+		documentService:    documentService,
+		migrationService:   migrationService,
+		systemService:      systemService,
+		hotkeyService:      hotkeyService,
+		dialogService:      dialogService,
+		trayService:        trayService,
+		keyBindingService:  keyBindingService,
+		extensionService:   extensionService,
+		startupService:     startupService,
+		selfUpdateService:  selfUpdateService,
+		translationService: translationService,
+		logger:             logger,
 	}
 }
 
@@ -114,6 +119,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.extensionService),
 		application.NewService(sm.startupService),
 		application.NewService(sm.selfUpdateService),
+		application.NewService(sm.translationService),
 	}
 	return services
 }
@@ -161,4 +167,9 @@ func (sm *ServiceManager) GetExtensionService() *ExtensionService {
 // GetSelfUpdateService 获取自我更新服务实例
 func (sm *ServiceManager) GetSelfUpdateService() *SelfUpdateService {
 	return sm.selfUpdateService
+}
+
+// GetTranslationService 获取翻译服务实例
+func (sm *ServiceManager) GetTranslationService() *TranslationService {
+	return sm.translationService
 }

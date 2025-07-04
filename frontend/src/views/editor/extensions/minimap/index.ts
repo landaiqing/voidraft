@@ -97,6 +97,26 @@ const minimapClass = ViewPlugin.fromClass(
         }
       }
 
+      // 阻止小地图上的右键菜单
+      this.dom.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+
+      // 阻止小地图内部元素和画布上的右键菜单
+      this.inner.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+
+      this.canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      });
+
       if (config.autohide) {
         this.dom.classList.add('cm-minimap-autohide');
       }
