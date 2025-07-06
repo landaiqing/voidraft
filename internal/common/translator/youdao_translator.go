@@ -17,8 +17,9 @@ import (
 
 // YoudaoTranslator 有道翻译器结构体
 type YoudaoTranslator struct {
-	httpClient *http.Client  // HTTP客户端
-	Timeout    time.Duration // 请求超时时间
+	httpClient *http.Client            // HTTP客户端
+	Timeout    time.Duration           // 请求超时时间
+	languages  map[string]LanguageInfo // 支持的语言列表
 }
 
 // 常量定义
@@ -38,9 +39,21 @@ func NewYoudaoTranslator() *YoudaoTranslator {
 	translator := &YoudaoTranslator{
 		Timeout:    youdaoDefaultTimeout,
 		httpClient: &http.Client{Timeout: youdaoDefaultTimeout},
+		languages:  initYoudaoLanguages(),
 	}
 
 	return translator
+}
+
+// initYoudaoLanguages 初始化有道翻译器支持的语言列表
+func initYoudaoLanguages() map[string]LanguageInfo {
+	// 创建语言映射表
+	languages := make(map[string]LanguageInfo)
+
+	// 自动检测
+	languages["auto"] = LanguageInfo{Code: "auto", Name: "Auto"}
+
+	return languages
 }
 
 // SetTimeout 设置请求超时时间
@@ -57,6 +70,11 @@ func (t *YoudaoTranslator) Translate(text string, from language.Tag, to language
 
 // TranslateWithParams 使用简单字符串参数进行文本翻译
 func (t *YoudaoTranslator) TranslateWithParams(text string, params TranslationParams) (string, error) {
+	// 设置超时时间（如果有指定）
+	if params.Timeout > 0 {
+		t.SetTimeout(params.Timeout)
+	}
+
 	// 有道翻译不需要指定源语言和目标语言，它会自动检测
 	return t.translate(text)
 }
@@ -183,4 +201,21 @@ func (t *YoudaoTranslator) extractText(n *html.Node) string {
 	}
 
 	return result
+}
+
+// GetSupportedLanguages 获取翻译器支持的语言列表
+func (t *YoudaoTranslator) GetSupportedLanguages() map[string]LanguageInfo {
+	return t.languages
+}
+
+// IsLanguageSupported 检查指定的语言代码是否受支持
+func (t *YoudaoTranslator) IsLanguageSupported(languageCode string) bool {
+	_, ok := t.languages[strings.ToLower(languageCode)]
+	return ok
+}
+
+// GetStandardLanguageCode 获取标准化的语言代码
+func (t *YoudaoTranslator) GetStandardLanguageCode(languageCode string) string {
+	// 简单返回小写版本作为标准代码
+	return strings.ToLower(languageCode)
 }

@@ -381,6 +381,11 @@ export enum ExtensionID {
     ExtensionCheckbox = "checkbox",
 
     /**
+     * 划词翻译
+     */
+    ExtensionTranslator = "translator",
+
+    /**
      * UI增强扩展
      * 小地图
      */

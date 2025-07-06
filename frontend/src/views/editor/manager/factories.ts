@@ -11,6 +11,7 @@ import {hyperLink} from '../extensions/hyperlink'
 import {minimap} from '../extensions/minimap'
 import {vscodeSearch} from '../extensions/vscodeSearch'
 import {createCheckboxExtension} from '../extensions/checkbox'
+import {createTranslatorExtension} from '../extensions/translator'
 
 import {foldingOnIndent} from '../extensions/fold/foldExtension'
 
@@ -79,8 +80,6 @@ export const minimapFactory: ExtensionFactory = {
     }
 }
 
-
-
 /**
  * 超链接扩展工厂
  */
@@ -126,8 +125,6 @@ export const searchFactory: ExtensionFactory = {
     }
 }
 
-
-
 export const foldFactory: ExtensionFactory = {
     create(config: any) {
         return foldingOnIndent;
@@ -156,6 +153,29 @@ export const checkboxFactory: ExtensionFactory = {
 }
 
 /**
+ * 翻译扩展工厂
+ */
+export const translatorFactory: ExtensionFactory = {
+    create(config: any) {
+        return createTranslatorExtension({
+            defaultTranslator: config.defaultTranslator || 'bing',
+            minSelectionLength: config.minSelectionLength || 2,
+            maxTranslationLength: config.maxTranslationLength || 5000,
+        })
+    },
+    getDefaultConfig() {
+        return {
+            defaultTranslator: 'bing',
+            minSelectionLength: 2,
+            maxTranslationLength: 5000,
+        }
+    },
+    validateConfig(config: any) {
+        return typeof config === 'object'
+    }
+}
+
+/**
  * 所有扩展的统一配置
  * 排除$zero值以避免TypeScript类型错误
  */
@@ -177,6 +197,11 @@ const EXTENSION_CONFIGS = {
         displayNameKey: 'extensions.colorSelector.name',
         descriptionKey: 'extensions.colorSelector.description'
     },
+    [ExtensionID.ExtensionTranslator]: {
+        factory: translatorFactory,
+        displayNameKey: 'extensions.translator.name',
+        descriptionKey: 'extensions.translator.description'
+    },
 
     // UI增强扩展
     [ExtensionID.ExtensionMinimap]: {
@@ -184,7 +209,6 @@ const EXTENSION_CONFIGS = {
         displayNameKey: 'extensions.minimap.name',
         descriptionKey: 'extensions.minimap.description'
     },
-
 
     // 工具扩展
     [ExtensionID.ExtensionSearch]: {

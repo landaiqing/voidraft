@@ -20,7 +20,8 @@ const (
 	ExtensionColorSelector   ExtensionID = "colorSelector"   // 颜色选择器
 	ExtensionFold            ExtensionID = "fold"
 	ExtensionTextHighlight   ExtensionID = "textHighlight"
-	ExtensionCheckbox        ExtensionID = "checkbox" // 选择框
+	ExtensionCheckbox        ExtensionID = "checkbox"   // 选择框
+	ExtensionTranslator      ExtensionID = "translator" // 划词翻译
 
 	// UI增强扩展
 	ExtensionMinimap ExtensionID = "minimap" // 小地图
@@ -100,6 +101,23 @@ func NewDefaultExtensions() []Extension {
 			Enabled:   true,
 			IsDefault: true,
 			Config:    ExtensionConfig{},
+		},
+		{
+			ID:        ExtensionTranslator,
+			Enabled:   true,
+			IsDefault: true,
+			Config: ExtensionConfig{
+				"defaultSourceLang":    "auto",
+				"defaultTargetLang":    "zh",
+				"defaultTranslator":    "bing",
+				"showTranslateButton":  true,
+				"showButtonOnSelect":   true,
+				"buttonDisplayDelay":   300,
+				"tooltipTimeout":       0,
+				"maxTooltipWidth":      300,
+				"minSelectionLength":   2,
+				"maxTranslationLength": 5000,
+			},
 		},
 
 		// UI增强扩展

@@ -17,9 +17,10 @@ import (
 
 // DeeplTranslator DeepL翻译器结构体
 type DeeplTranslator struct {
-	DeeplHost  string        // DeepL服务主机
-	httpClient *http.Client  // HTTP客户端
-	Timeout    time.Duration // 请求超时时间
+	DeeplHost  string                  // DeepL服务主机
+	httpClient *http.Client            // HTTP客户端
+	Timeout    time.Duration           // 请求超时时间
+	languages  map[string]LanguageInfo // 支持的语言列表
 }
 
 // 常量定义
@@ -35,66 +36,6 @@ var (
 	ErrDeeplUnsupportedLang = errors.New("deepl translator unsupported language")
 	ErrDeeplResponseError   = errors.New("deepl translator response error")
 )
-
-// 语言映射
-var deeplLangMap = map[string]string{
-	"auto": "auto",
-	"de":   "DE",
-	"en":   "EN",
-	"es":   "ES",
-	"fr":   "FR",
-	"it":   "IT",
-	"ja":   "JA",
-	"ko":   "KO",
-	"nl":   "NL",
-	"pl":   "PL",
-	"pt":   "PT",
-	"ru":   "RU",
-	"zh":   "ZH",
-	"bg":   "BG",
-	"cs":   "CS",
-	"da":   "DA",
-	"el":   "EL",
-	"et":   "ET",
-	"fi":   "FI",
-	"hu":   "HU",
-	"lt":   "LT",
-	"lv":   "LV",
-	"ro":   "RO",
-	"sk":   "SK",
-	"sl":   "SL",
-	"sv":   "SV",
-}
-
-// 反向语言映射
-var deeplLangMapReverse = map[string]string{
-	"auto": "auto",
-	"DE":   "de",
-	"EN":   "en",
-	"ES":   "es",
-	"FR":   "fr",
-	"IT":   "it",
-	"JA":   "ja",
-	"KO":   "ko",
-	"NL":   "nl",
-	"PL":   "pl",
-	"PT":   "pt",
-	"RU":   "ru",
-	"ZH":   "zh",
-	"BG":   "bg",
-	"CS":   "cs",
-	"DA":   "da",
-	"EL":   "el",
-	"ET":   "et",
-	"FI":   "fi",
-	"HU":   "hu",
-	"LT":   "lt",
-	"LV":   "lv",
-	"RO":   "ro",
-	"SK":   "sk",
-	"SL":   "sl",
-	"SV":   "sv",
-}
 
 // DeeplRequest DeepL请求结构体
 type DeeplRequest struct {
@@ -156,9 +97,58 @@ func NewDeeplTranslator() *DeeplTranslator {
 		DeeplHost:  defaultDeeplHost,
 		Timeout:    deeplDefaultTimeout,
 		httpClient: &http.Client{Timeout: deeplDefaultTimeout},
+		languages:  initDeeplLanguages(),
 	}
 
 	return translator
+}
+
+// initDeeplLanguages 初始化DeepL翻译器支持的语言列表
+func initDeeplLanguages() map[string]LanguageInfo {
+	// 创建语言映射表
+	languages := make(map[string]LanguageInfo)
+
+	// 添加所有支持的语言
+	// 基于 DeepL API 支持的语言列表
+	// 参考: https://developers.deepl.com/docs/resources/supported-languages
+
+	// 源语言和目标语言
+	languages["ar"] = LanguageInfo{Code: "AR", Name: "Arabic"}
+	languages["bg"] = LanguageInfo{Code: "BG", Name: "Bulgarian"}
+	languages["cs"] = LanguageInfo{Code: "CS", Name: "Czech"}
+	languages["da"] = LanguageInfo{Code: "DA", Name: "Danish"}
+	languages["de"] = LanguageInfo{Code: "DE", Name: "German"}
+	languages["el"] = LanguageInfo{Code: "EL", Name: "Greek"}
+	languages["en"] = LanguageInfo{Code: "EN", Name: "English"}
+	languages["en-gb"] = LanguageInfo{Code: "EN-GB", Name: "English (British)"}
+	languages["en-us"] = LanguageInfo{Code: "EN-US", Name: "English (American)"}
+	languages["es"] = LanguageInfo{Code: "ES", Name: "Spanish"}
+	languages["et"] = LanguageInfo{Code: "ET", Name: "Estonian"}
+	languages["fi"] = LanguageInfo{Code: "FI", Name: "Finnish"}
+	languages["fr"] = LanguageInfo{Code: "FR", Name: "French"}
+	languages["hu"] = LanguageInfo{Code: "HU", Name: "Hungarian"}
+	languages["id"] = LanguageInfo{Code: "ID", Name: "Indonesian"}
+	languages["it"] = LanguageInfo{Code: "IT", Name: "Italian"}
+	languages["ja"] = LanguageInfo{Code: "JA", Name: "Japanese"}
+	languages["ko"] = LanguageInfo{Code: "KO", Name: "Korean"}
+	languages["lt"] = LanguageInfo{Code: "LT", Name: "Lithuanian"}
+	languages["lv"] = LanguageInfo{Code: "LV", Name: "Latvian"}
+	languages["nb"] = LanguageInfo{Code: "NB", Name: "Norwegian Bokmål"}
+	languages["nl"] = LanguageInfo{Code: "NL", Name: "Dutch"}
+	languages["pl"] = LanguageInfo{Code: "PL", Name: "Polish"}
+	languages["pt"] = LanguageInfo{Code: "PT", Name: "Portuguese"}
+	languages["pt-br"] = LanguageInfo{Code: "PT-BR", Name: "Portuguese (Brazilian)"}
+	languages["pt-pt"] = LanguageInfo{Code: "PT-PT", Name: "Portuguese (Portugal)"}
+	languages["ro"] = LanguageInfo{Code: "RO", Name: "Romanian"}
+	languages["ru"] = LanguageInfo{Code: "RU", Name: "Russian"}
+	languages["sk"] = LanguageInfo{Code: "SK", Name: "Slovak"}
+	languages["sl"] = LanguageInfo{Code: "SL", Name: "Slovenian"}
+	languages["sv"] = LanguageInfo{Code: "SV", Name: "Swedish"}
+	languages["tr"] = LanguageInfo{Code: "TR", Name: "Turkish"}
+	languages["uk"] = LanguageInfo{Code: "UK", Name: "Ukrainian"}
+	languages["zh"] = LanguageInfo{Code: "ZH", Name: "Chinese"}
+
+	return languages
 }
 
 // SetTimeout 设置请求超时时间
@@ -179,38 +169,34 @@ func (t *DeeplTranslator) Translate(text string, from language.Tag, to language.
 
 // TranslateWithParams 使用简单字符串参数进行文本翻译
 func (t *DeeplTranslator) TranslateWithParams(text string, params TranslationParams) (string, error) {
-	tries := params.Tries
-	if tries == 0 {
-		tries = defaultNumberOfRetries
+	// 设置超时时间（如果有指定）
+	if params.Timeout > 0 {
+		t.SetTimeout(params.Timeout)
 	}
 
-	var result string
-	var lastError error
-
-	for i := 0; i < tries; i++ {
-		if i > 0 && params.Delay > 0 {
-			time.Sleep(params.Delay)
-		}
-
-		result, lastError = t.translate(text, params.From, params.To)
-		if lastError == nil {
-			return result, nil
-		}
-	}
-
-	return "", lastError
+	// 直接执行一次翻译
+	return t.translate(text, params.From, params.To)
 }
 
 // translate 执行实际翻译操作
 func (t *DeeplTranslator) translate(text, from, to string) (string, error) {
 	// 转换语言代码为DeepL格式
-	sourceLang, ok := deeplLangMap[strings.ToLower(from)]
-	if !ok && from != "auto" {
+	fromLower := strings.ToLower(from)
+	toLower := strings.ToLower(to)
+
+	var sourceLang string
+	if fromLower == "auto" {
+		sourceLang = "auto"
+	} else if fromLangInfo, ok := t.languages[fromLower]; ok {
+		sourceLang = fromLangInfo.Code
+	} else {
 		sourceLang = "auto"
 	}
 
-	targetLang, ok := deeplLangMap[strings.ToLower(to)]
-	if !ok {
+	var targetLang string
+	if toLangInfo, ok := t.languages[toLower]; ok {
+		targetLang = toLangInfo.Code
+	} else {
 		return "", fmt.Errorf("%w: language '%s' not supported by DeepL", ErrDeeplUnsupportedLang, to)
 	}
 
@@ -262,39 +248,45 @@ func (t *DeeplTranslator) translate(text, from, to string) (string, error) {
 		return "", fmt.Errorf("failed to create request: %w", err)
 	}
 
+	// 设置请求头
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36")
+	req.Header.Set("Connection", "keep-alive")
+	req.Header.Set("Origin", "https://www.deepl.com")
+	req.Header.Set("Referer", "https://www.deepl.com/translator")
 
+	// 执行请求
 	resp, err := t.httpClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("%w: %v", ErrDeeplNetworkError, err)
 	}
 	defer resp.Body.Close()
 
+	// 检查响应状态
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%w: status code %d", ErrDeeplNetworkError, resp.StatusCode)
+		return "", fmt.Errorf("API error: status code %d", resp.StatusCode)
 	}
 
-	// 读取响应
+	// 读取响应内容
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", fmt.Errorf("failed to read response: %w", err)
 	}
 
 	// 解析响应
-	var deeplResp DeeplResponse
-	err = json.Unmarshal(body, &deeplResp)
-	if err != nil {
+	var response DeeplResponse
+	if err := json.Unmarshal(body, &response); err != nil {
 		return "", fmt.Errorf("%w: %v", ErrDeeplResponseError, err)
 	}
 
-	// 检查是否有有效的结果
-	if len(deeplResp.Result.Texts) == 0 {
-		return "", fmt.Errorf("%w: no translation result", ErrDeeplResponseError)
+	// 检查结果
+	if len(response.Result.Texts) == 0 {
+		return "", fmt.Errorf("%w: empty translation result", ErrDeeplResponseError)
 	}
 
 	// 返回翻译结果
-	return deeplResp.Result.Texts[0].Text, nil
+	return response.Result.Texts[0].Text, nil
 }
 
 // getICount 获取文本中'i'字符的数量
@@ -315,4 +307,21 @@ func getTimeStamp(iCount int) int64 {
 		return ts - (ts % int64(iCount)) + int64(iCount)
 	}
 	return ts
+}
+
+// GetSupportedLanguages 获取翻译器支持的语言列表
+func (t *DeeplTranslator) GetSupportedLanguages() map[string]LanguageInfo {
+	return t.languages
+}
+
+// IsLanguageSupported 检查指定的语言代码是否受支持
+func (t *DeeplTranslator) IsLanguageSupported(languageCode string) bool {
+	_, ok := t.languages[strings.ToLower(languageCode)]
+	return ok
+}
+
+// GetStandardLanguageCode 获取标准化的语言代码
+func (t *DeeplTranslator) GetStandardLanguageCode(languageCode string) string {
+	// 简单返回小写版本作为标准代码
+	return strings.ToLower(languageCode)
 }

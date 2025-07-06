@@ -197,6 +197,10 @@ export default {
       name: 'Color Selector',
       description: 'Visual color picker and color value display'
     },
+    translator: {
+      name: 'Text Translator',
+      description: 'Translate selected text with multiple translation services'
+    },
     minimap: {
       name: 'Minimap',
       description: 'Display minimap overview of the document'

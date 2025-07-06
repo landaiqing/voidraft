@@ -10,6 +10,10 @@
 // @ts-ignore: Unused imports
 import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as translator$0 from "../common/translator/models.js";
+
 /**
  * GetAvailableTranslators 获取所有可用翻译器类型
  * @returns {[]string} 翻译器类型列表
@@ -24,34 +28,33 @@ export function GetAvailableTranslators(): Promise<string[]> & { cancel(): void 
 }
 
 /**
- * SetActiveTranslator 设置活跃翻译器
+ * GetStandardLanguageCode 获取标准化的语言代码
+ */
+export function GetStandardLanguageCode(translatorType: translator$0.TranslatorType, languageCode: string): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1158131995, translatorType, languageCode) as any;
+    return $resultPromise;
+}
+
+/**
+ * GetTranslatorLanguages 获取翻译器的语言列表
  * @param {string} translatorType - 翻译器类型 ("google", "bing", "youdao", "deepl")
+ * @returns {map[string]string} 语言代码到名称的映射
  * @returns {error} 可能的错误
  */
-export function SetActiveTranslator(translatorType: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(620567821, translatorType) as any;
-    return $resultPromise;
+export function GetTranslatorLanguages(translatorType: translator$0.TranslatorType): Promise<{ [_: string]: translator$0.LanguageInfo }> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3976114458, translatorType) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType2($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
- * SetTimeout 设置翻译超时时间
- * @param {int} seconds - 超时秒数
+ * IsLanguageSupported 检查指定的语言代码是否受支持
  */
-export function SetTimeout(seconds: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3787687384, seconds) as any;
-    return $resultPromise;
-}
-
-/**
- * Translate 使用当前活跃翻译器进行翻译
- * @param {string} text - 待翻译文本
- * @param {string} from - 源语言代码 (如 "en", "zh", "auto")
- * @param {string} to - 目标语言代码 (如 "en", "zh")
- * @returns {string} 翻译后的文本
- * @returns {error} 可能的错误
- */
-export function Translate(text: string, $from: string, to: string): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2536995103, text, $from, to) as any;
+export function IsLanguageSupported(translatorType: translator$0.TranslatorType, languageCode: string): Promise<boolean> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2819945417, translatorType, languageCode) as any;
     return $resultPromise;
 }
 
@@ -69,19 +72,7 @@ export function TranslateWith(text: string, $from: string, to: string, translato
     return $resultPromise;
 }
 
-/**
- * TranslateWithFallback 尝试使用当前活跃翻译器翻译，如果失败则尝试备用翻译器
- * @param {string} text - 待翻译文本
- * @param {string} from - 源语言代码 (如 "en", "zh", "auto")
- * @param {string} to - 目标语言代码 (如 "en", "zh")
- * @returns {string} 翻译后的文本
- * @returns {string} 使用的翻译器类型
- * @returns {error} 可能的错误
- */
-export function TranslateWithFallback(text: string, $from: string, to: string): Promise<[string, string]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1705788405, text, $from, to) as any;
-    return $resultPromise;
-}
-
 // Private type creation functions
 const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = translator$0.LanguageInfo.createFrom;
+const $$createType2 = $Create.Map($Create.Any, $$createType1);

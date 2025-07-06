@@ -198,6 +198,10 @@ export default {
       name: '颜色选择器',
       description: '颜色值的可视化和选择'
     },
+    translator: {
+      name: '划词翻译',
+      description: '选择文本后显示翻译按钮，支持多种翻译服务'
+    },
     minimap: {
       name: '小地图',
       description: '显示小地图视图'
