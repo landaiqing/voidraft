@@ -2,33 +2,51 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
+	"time"
 	"voidraft/internal/models"
 
-	jsonparser "github.com/knadh/koanf/parsers/json"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/providers/structs"
-	"github.com/knadh/koanf/v2"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+)
+
+// SQL constants for extension operations
+const (
+	// Extension operations
+	sqlGetAllExtensions = `
+SELECT id, enabled, is_default, config 
+FROM extensions 
+ORDER BY id`
+
+	sqlGetExtensionByID = `
+SELECT id, enabled, is_default, config 
+FROM extensions 
+WHERE id = ?`
+
+	sqlInsertExtension = `
+INSERT INTO extensions (id, enabled, is_default, config, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?)`
+
+	sqlUpdateExtension = `
+UPDATE extensions 
+SET enabled = ?, config = ?, updated_at = ?
+WHERE id = ?`
+
+	sqlDeleteAllExtensions = `DELETE FROM extensions`
 )
 
 // ExtensionService 扩展管理服务
 type ExtensionService struct {
-	koanf        *koanf.Koanf
-	logger       *log.LoggerService
-	pathManager  *PathManager
-	fileProvider *file.File
+	databaseService *DatabaseService
+	logger          *log.LoggerService
 
 	mu       sync.RWMutex
 	ctx      context.Context
 	cancel   context.CancelFunc
 	initOnce sync.Once
-
-	// 配置迁移服务
-	migrationService *ConfigMigrationService[*models.ExtensionSettings]
 }
 
 // ExtensionError 扩展错误
@@ -55,31 +73,19 @@ func (e *ExtensionError) Is(target error) bool {
 }
 
 // NewExtensionService 创建扩展服务实例
-func NewExtensionService(logger *log.LoggerService, pathManager *PathManager) *ExtensionService {
+func NewExtensionService(databaseService *DatabaseService, logger *log.LoggerService) *ExtensionService {
 	if logger == nil {
 		logger = log.New()
-	}
-	if pathManager == nil {
-		pathManager = NewPathManager()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	k := koanf.New(".")
-
-	migrationService := NewExtensionMigrationService(logger, pathManager)
-
 	service := &ExtensionService{
-		koanf:            k,
-		logger:           logger,
-		pathManager:      pathManager,
-		ctx:              ctx,
-		cancel:           cancel,
-		migrationService: migrationService,
+		databaseService: databaseService,
+		logger:          logger,
+		ctx:             ctx,
+		cancel:          cancel,
 	}
-
-	// 异步初始化
-	go service.initialize()
 
 	return service
 }
@@ -87,95 +93,100 @@ func NewExtensionService(logger *log.LoggerService, pathManager *PathManager) *E
 // initialize 初始化配置
 func (es *ExtensionService) initialize() {
 	es.initOnce.Do(func() {
-		if err := es.initConfig(); err != nil {
-			es.logger.Error("failed to initialize extension config", "error", err)
+		if err := es.initDatabase(); err != nil {
+			es.logger.Error("failed to initialize extension database", "error", err)
 		}
 	})
 }
 
-// setDefaults 设置默认值
-func (es *ExtensionService) setDefaults() error {
-	defaultConfig := models.NewDefaultExtensionSettings()
-
-	if err := es.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
-		return &ExtensionError{"load_defaults", "", err}
-	}
-
-	return nil
-}
-
-// initConfig 初始化配置
-func (es *ExtensionService) initConfig() error {
+// initDatabase 初始化数据库数据
+func (es *ExtensionService) initDatabase() error {
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
-	// 检查配置文件是否存在
-	configPath := es.pathManager.GetExtensionsPath()
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return es.createDefaultConfig()
+	// 检查是否已有扩展数据
+	db := es.databaseService.GetDB()
+	if db == nil {
+		return &ExtensionError{"get_database", "", fmt.Errorf("database connection is nil")}
 	}
 
-	// 配置文件存在，先加载现有配置
-	es.fileProvider = file.Provider(configPath)
-	if err := es.koanf.Load(es.fileProvider, jsonparser.Parser()); err != nil {
-		return &ExtensionError{"load_config_file", "", err}
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM extensions").Scan(&count)
+	if err != nil {
+		return &ExtensionError{"check_extensions_count", "", err}
 	}
 
-	// 检查并执行配置迁移
-	if es.migrationService != nil {
-		result, err := es.migrationService.MigrateConfig(es.koanf)
+	es.logger.Info("Extension database check", "existing_count", count)
+
+	// 如果没有数据，插入默认配置
+	if count == 0 {
+		es.logger.Info("No extensions found, inserting default extensions...")
+		if err := es.insertDefaultExtensions(); err != nil {
+			es.logger.Error("Failed to insert default extensions", "error", err)
+			return err
+		}
+		es.logger.Info("Default extensions inserted successfully")
+	} else {
+		es.logger.Info("Extensions already exist, skipping default insertion")
+	}
+
+	return nil
+}
+
+// insertDefaultExtensions 插入默认扩展配置
+func (es *ExtensionService) insertDefaultExtensions() error {
+	defaultSettings := models.NewDefaultExtensionSettings()
+	db := es.databaseService.GetDB()
+	now := time.Now()
+
+	es.logger.Info("Starting to insert default extensions", "count", len(defaultSettings.Extensions))
+
+	for i, ext := range defaultSettings.Extensions {
+		es.logger.Info("Inserting extension", "index", i+1, "id", ext.ID, "enabled", ext.Enabled)
+
+		configJSON, err := json.Marshal(ext.Config)
 		if err != nil {
-			return &ExtensionError{"migrate_config", "", err}
+			es.logger.Error("Failed to marshal config", "extension", ext.ID, "error", err)
+			return &ExtensionError{"marshal_config", string(ext.ID), err}
 		}
 
-		if result.Migrated && result.ConfigUpdated {
-			// 迁移完成且配置已更新，重新创建文件提供器以监听新文件
-			es.fileProvider = file.Provider(configPath)
+		_, err = db.Exec(sqlInsertExtension,
+			string(ext.ID),
+			ext.Enabled,
+			ext.IsDefault,
+			string(configJSON),
+			now,
+			now,
+		)
+		if err != nil {
+			es.logger.Error("Failed to insert extension", "extension", ext.ID, "error", err)
+			return &ExtensionError{"insert_extension", string(ext.ID), err}
 		}
+
+		es.logger.Info("Successfully inserted extension", "id", ext.ID)
 	}
 
+	es.logger.Info("Completed inserting all default extensions")
 	return nil
 }
 
-// createDefaultConfig 创建默认配置文件
-func (es *ExtensionService) createDefaultConfig() error {
-	if err := es.pathManager.EnsureConfigDir(); err != nil {
-		return &ExtensionError{"create_config_dir", "", err}
-	}
+// OnStartup 启动时调用
+func (es *ExtensionService) OnStartup(ctx context.Context, _ application.ServiceOptions) error {
+	es.ctx = ctx
+	es.logger.Info("Extension service starting up")
 
-	if err := es.setDefaults(); err != nil {
-		return err
-	}
-
-	configBytes, err := es.koanf.Marshal(jsonparser.Parser())
-	if err != nil {
-		return &ExtensionError{"marshal_config", "", err}
-	}
-
-	if err := os.WriteFile(es.pathManager.GetExtensionsPath(), configBytes, 0644); err != nil {
-		return &ExtensionError{"write_config", "", err}
-	}
-
-	// 创建文件提供器
-	es.fileProvider = file.Provider(es.pathManager.GetExtensionsPath())
-	if err = es.koanf.Load(es.fileProvider, jsonparser.Parser()); err != nil {
-		return err
-	}
-	return nil
-}
-
-// saveConfig 保存配置到文件
-func (es *ExtensionService) saveExtensionConfig() error {
-	configBytes, err := es.koanf.Marshal(jsonparser.Parser())
-	if err != nil {
-		return &ExtensionError{"marshal_config", "", err}
-	}
-
-	if err := os.WriteFile(es.pathManager.GetExtensionsPath(), configBytes, 0644); err != nil {
-		return &ExtensionError{"write_config", "", err}
-	}
-
-	return nil
+	// 初始化数据库
+	var initErr error
+	es.initOnce.Do(func() {
+		es.logger.Info("Initializing extension database...")
+		if err := es.initDatabase(); err != nil {
+			es.logger.Error("failed to initialize extension database", "error", err)
+			initErr = err
+		} else {
+			es.logger.Info("Extension database initialized successfully")
+		}
+	})
+	return initErr
 }
 
 // GetAllExtensions 获取所有扩展配置
@@ -183,11 +194,31 @@ func (es *ExtensionService) GetAllExtensions() ([]models.Extension, error) {
 	es.mu.RLock()
 	defer es.mu.RUnlock()
 
-	var settings models.ExtensionSettings
-	if err := es.koanf.Unmarshal("", &settings); err != nil {
-		return nil, &ExtensionError{"unmarshal_config", "", err}
+	db := es.databaseService.GetDB()
+	rows, err := db.Query(sqlGetAllExtensions)
+	if err != nil {
+		return nil, &ExtensionError{"query_extensions", "", err}
 	}
-	return settings.Extensions, nil
+	defer rows.Close()
+
+	var extensions []models.Extension
+	for rows.Next() {
+		var ext models.Extension
+		var configJSON string
+		if err := rows.Scan(&ext.ID, &ext.Enabled, &ext.IsDefault, &configJSON); err != nil {
+			return nil, &ExtensionError{"scan_extension", "", err}
+		}
+		if err := json.Unmarshal([]byte(configJSON), &ext.Config); err != nil {
+			return nil, &ExtensionError{"unmarshal_config", string(ext.ID), err}
+		}
+		extensions = append(extensions, ext)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, &ExtensionError{"rows_error", "", err}
+	}
+
+	return extensions, nil
 }
 
 // UpdateExtensionEnabled 更新扩展启用状态
@@ -200,25 +231,28 @@ func (es *ExtensionService) UpdateExtensionState(id models.ExtensionID, enabled 
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
-	// 获取当前配置
-	var settings models.ExtensionSettings
-	if err := es.koanf.Unmarshal("", &settings); err != nil {
-		return &ExtensionError{"unmarshal_config", string(id), err}
+	db := es.databaseService.GetDB()
+	var configJSON []byte
+	var err error
+
+	if config != nil {
+		configJSON, err = json.Marshal(config)
+		if err != nil {
+			return &ExtensionError{"marshal_config", string(id), err}
+		}
+	} else {
+		// 如果没有提供配置，保持原有配置
+		var currentConfigJSON string
+		err = db.QueryRow("SELECT config FROM extensions WHERE id = ?", string(id)).Scan(&currentConfigJSON)
+		if err != nil {
+			return &ExtensionError{"query_current_config", string(id), err}
+		}
+		configJSON = []byte(currentConfigJSON)
 	}
 
-	// 更新扩展状态
-	if !settings.UpdateExtension(id, enabled, config) {
-		return &ExtensionError{"extension_not_found", string(id), nil}
-	}
-
-	// 重新加载到koanf
-	if err := es.koanf.Load(structs.Provider(&settings, "json"), nil); err != nil {
-		return &ExtensionError{"reload_config", string(id), err}
-	}
-
-	// 保存到文件
-	if err := es.saveExtensionConfig(); err != nil {
-		return &ExtensionError{"save_config", string(id), err}
+	_, err = db.Exec(sqlUpdateExtension, enabled, string(configJSON), time.Now(), string(id))
+	if err != nil {
+		return &ExtensionError{"update_extension", string(id), err}
 	}
 
 	es.logger.Info("extension state updated", "id", id, "enabled", enabled)
@@ -242,23 +276,18 @@ func (es *ExtensionService) ResetAllExtensionsToDefault() error {
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
-	// 加载默认配置
-	defaultSettings := models.NewDefaultExtensionSettings()
-	if err := es.koanf.Load(structs.Provider(defaultSettings, "json"), nil); err != nil {
-		return &ExtensionError{"load_defaults", "", err}
+	// 删除所有现有扩展
+	db := es.databaseService.GetDB()
+	_, err := db.Exec(sqlDeleteAllExtensions)
+	if err != nil {
+		return &ExtensionError{"delete_all_extensions", "", err}
 	}
 
-	// 保存到文件
-	if err := es.saveExtensionConfig(); err != nil {
-		return &ExtensionError{"save_config", "", err}
+	// 插入默认扩展配置
+	if err := es.insertDefaultExtensions(); err != nil {
+		return err
 	}
 
 	es.logger.Info("all extensions reset to default")
-	return nil
-}
-
-// OnShutdown 关闭服务
-func (es *ExtensionService) OnShutdown() error {
-	es.cancel()
 	return nil
 }

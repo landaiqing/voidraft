@@ -9,8 +9,8 @@ import (
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	pathManager        *PathManager
 	configService      *ConfigService
+	databaseService    *DatabaseService
 	documentService    *DocumentService
 	migrationService   *MigrationService
 	systemService      *SystemService
@@ -30,17 +30,17 @@ func NewServiceManager() *ServiceManager {
 	// 初始化日志服务
 	logger := log.New()
 
-	// 初始化路径管理器
-	pathManager := NewPathManager()
-
 	// 初始化配置服务
-	configService := NewConfigService(logger, pathManager)
+	configService := NewConfigService(logger)
+
+	// 初始化数据库服务
+	databaseService := NewDatabaseService(configService, logger)
 
 	// 初始化迁移服务
 	migrationService := NewMigrationService(logger)
 
 	// 初始化文档服务
-	documentService := NewDocumentService(configService, logger)
+	documentService := NewDocumentService(databaseService, logger)
 
 	// 初始化系统服务
 	systemService := NewSystemService(logger)
@@ -55,10 +55,10 @@ func NewServiceManager() *ServiceManager {
 	trayService := NewTrayService(logger, configService)
 
 	// 初始化快捷键服务
-	keyBindingService := NewKeyBindingService(logger, pathManager)
+	keyBindingService := NewKeyBindingService(databaseService, logger)
 
 	// 初始化扩展服务
-	extensionService := NewExtensionService(logger, pathManager)
+	extensionService := NewExtensionService(databaseService, logger)
 
 	// 初始化开机启动服务
 	startupService := NewStartupService(configService, logger)
@@ -82,7 +82,7 @@ func NewServiceManager() *ServiceManager {
 
 	// 设置数据路径变更监听，处理配置重置和路径变更
 	err = configService.SetDataPathChangeCallback(func() error {
-		return documentService.OnDataPathChanged()
+		return databaseService.OnDataPathChanged()
 	})
 	if err != nil {
 		panic(err)
@@ -90,6 +90,7 @@ func NewServiceManager() *ServiceManager {
 
 	return &ServiceManager{
 		configService:      configService,
+		databaseService:    databaseService,
 		documentService:    documentService,
 		migrationService:   migrationService,
 		systemService:      systemService,
@@ -106,17 +107,19 @@ func NewServiceManager() *ServiceManager {
 }
 
 // GetServices 获取所有wails服务列表
+// 注意：服务启动顺序很重要，DatabaseService 必须在依赖数据库的服务之前启动
 func (sm *ServiceManager) GetServices() []application.Service {
 	services := []application.Service{
 		application.NewService(sm.configService),
+		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
+		application.NewService(sm.keyBindingService),
+		application.NewService(sm.extensionService),
 		application.NewService(sm.migrationService),
 		application.NewService(sm.systemService),
 		application.NewService(sm.hotkeyService),
 		application.NewService(sm.dialogService),
 		application.NewService(sm.trayService),
-		application.NewService(sm.keyBindingService),
-		application.NewService(sm.extensionService),
 		application.NewService(sm.startupService),
 		application.NewService(sm.selfUpdateService),
 		application.NewService(sm.translationService),
@@ -172,4 +175,9 @@ func (sm *ServiceManager) GetSelfUpdateService() *SelfUpdateService {
 // GetTranslationService 获取翻译服务实例
 func (sm *ServiceManager) GetTranslationService() *TranslationService {
 	return sm.translationService
+}
+
+// GetDatabaseService 获取数据库服务实例
+func (sm *ServiceManager) GetDatabaseService() *DatabaseService {
+	return sm.databaseService
 }

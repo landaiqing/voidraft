@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 	"voidraft/internal/models"
@@ -19,7 +20,8 @@ import (
 type ConfigService struct {
 	koanf        *koanf.Koanf       // koanf 实例
 	logger       *log.LoggerService // 日志服务
-	pathManager  *PathManager       // 路径管理器
+	configDir    string             // 配置目录
+	settingsPath string             // 设置文件路径
 	mu           sync.RWMutex       // 读写锁
 	fileProvider *file.File         // 文件提供器，用于监听
 
@@ -53,41 +55,34 @@ func (e *ConfigError) Is(target error) bool {
 }
 
 // NewConfigService 创建新的配置服务实例
-func NewConfigService(logger *log.LoggerService, pathManager *PathManager) *ConfigService {
-	// 设置日志服务
-	if logger == nil {
-		logger = log.New()
+func NewConfigService(logger *log.LoggerService) *ConfigService {
+	// 获取用户主目录
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(fmt.Errorf("unable to get the user's home directory: %w", err))
 	}
 
-	// 设置路径管理器
-	if pathManager == nil {
-		pathManager = NewPathManager()
+	// 设置配置目录和设置文件路径
+	configDir := filepath.Join(homeDir, ".voidraft", "config")
+	settingsPath := filepath.Join(configDir, "settings.json")
+
+	cs := &ConfigService{
+		logger:           logger,
+		configDir:        configDir,
+		settingsPath:     settingsPath,
+		koanf:            koanf.New("."),
+		migrationService: NewAppConfigMigrationService(logger, configDir, settingsPath),
 	}
 
-	// 使用"."作为键路径分隔符
-	k := koanf.New(".")
+	// 初始化配置通知服务
+	cs.notificationService = NewConfigNotificationService(cs.koanf, logger)
 
-	notificationService := NewConfigNotificationService(k, logger)
-	migrationService := NewAppConfigMigrationService(logger, pathManager)
-
-	// 构造配置服务实例
-	service := &ConfigService{
-		koanf:               k,
-		logger:              logger,
-		pathManager:         pathManager,
-		notificationService: notificationService,
-		migrationService:    migrationService,
-	}
-
-	// 初始化配置
-	if err := service.initConfig(); err != nil {
-		panic(err)
-	}
+	cs.initConfig()
 
 	// 启动配置文件监听
-	service.startWatching()
+	cs.startWatching()
 
-	return service
+	return cs
 }
 
 // setDefaults 设置默认配置
@@ -107,13 +102,12 @@ func (cs *ConfigService) initConfig() error {
 	defer cs.mu.Unlock()
 
 	// 检查配置文件是否存在
-	configPath := cs.pathManager.GetSettingsPath()
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+	if _, err := os.Stat(cs.settingsPath); os.IsNotExist(err) {
 		return cs.createDefaultConfig()
 	}
 
 	// 配置文件存在，先加载现有配置
-	cs.fileProvider = file.Provider(configPath)
+	cs.fileProvider = file.Provider(cs.settingsPath)
 	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
 		return &ConfigError{Operation: "load_config_file", Err: err}
 	}
@@ -127,7 +121,7 @@ func (cs *ConfigService) initConfig() error {
 
 		if result.Migrated && result.ConfigUpdated {
 			// 迁移完成且配置已更新，重新创建文件提供器以监听新文件
-			cs.fileProvider = file.Provider(configPath)
+			cs.fileProvider = file.Provider(cs.settingsPath)
 		}
 	}
 
@@ -137,7 +131,7 @@ func (cs *ConfigService) initConfig() error {
 // createDefaultConfig 创建默认配置文件
 func (cs *ConfigService) createDefaultConfig() error {
 	// 确保配置目录存在
-	if err := cs.pathManager.EnsureConfigDir(); err != nil {
+	if err := os.MkdirAll(cs.configDir, 0755); err != nil {
 		return &ConfigError{Operation: "create_config_dir", Err: err}
 	}
 
@@ -150,7 +144,7 @@ func (cs *ConfigService) createDefaultConfig() error {
 	}
 
 	// 创建文件提供器
-	cs.fileProvider = file.Provider(cs.pathManager.GetSettingsPath())
+	cs.fileProvider = file.Provider(cs.settingsPath)
 
 	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
 		return &ConfigError{Operation: "load_config_file", Err: err}
@@ -252,7 +246,7 @@ func (cs *ConfigService) ResetConfig() error {
 	}
 
 	// 重新创建文件提供器
-	cs.fileProvider = file.Provider(cs.pathManager.GetSettingsPath())
+	cs.fileProvider = file.Provider(cs.settingsPath)
 
 	// 重新加载配置文件
 	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
@@ -277,7 +271,7 @@ func (cs *ConfigService) writeConfigToFile() error {
 		return &ConfigError{Operation: "marshal_config", Err: err}
 	}
 
-	if err := os.WriteFile(cs.pathManager.GetSettingsPath(), configBytes, 0644); err != nil {
+	if err := os.WriteFile(cs.settingsPath, configBytes, 0644); err != nil {
 		return &ConfigError{Operation: "write_config_file", Err: err}
 	}
 

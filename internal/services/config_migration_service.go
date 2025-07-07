@@ -44,7 +44,7 @@ type Migratable interface {
 // ConfigMigrationService 配置迁移服务
 type ConfigMigrationService[T Migratable] struct {
 	logger        *log.LoggerService
-	pathManager   *PathManager
+	configDir     string
 	configName    string
 	targetVersion string
 	configPath    string
@@ -60,12 +60,12 @@ type MigrationResult struct {
 // NewConfigMigrationService 创建配置迁移服务
 func NewConfigMigrationService[T Migratable](
 	logger *log.LoggerService,
-	pathManager *PathManager,
+	configDir string,
 	configName, targetVersion, configPath string,
 ) *ConfigMigrationService[T] {
 	return &ConfigMigrationService[T]{
 		logger:        orDefault(logger, log.New()),
-		pathManager:   orDefault(pathManager, NewPathManager()),
+		configDir:     configDir,
 		configName:    configName,
 		targetVersion: targetVersion,
 		configPath:    configPath,
@@ -138,7 +138,7 @@ func (cms *ConfigMigrationService[T]) createBackupOptimized() (string, error) {
 		return "", nil
 	}
 
-	configDir := cms.pathManager.GetConfigDir()
+	configDir := cms.configDir
 	timestamp := time.Now().Format("20060102150405")
 	newBackupPath := filepath.Join(configDir, fmt.Sprintf(BackupFilePattern, cms.configName, timestamp))
 
@@ -172,7 +172,7 @@ func (cms *ConfigMigrationService[T]) tryQuickRecovery(existingConfig *koanf.Koa
 
 // findLatestBackupQuick 快速查找最新备份（优化排序）
 func (cms *ConfigMigrationService[T]) findLatestBackupQuick() string {
-	pattern := filepath.Join(cms.pathManager.GetConfigDir(), fmt.Sprintf("%s.backup.*.json", cms.configName))
+	pattern := filepath.Join(cms.configDir, fmt.Sprintf("%s.backup.*.json", cms.configName))
 	matches, err := filepath.Glob(pattern)
 	if err != nil || len(matches) == 0 {
 		return ""
@@ -317,18 +317,18 @@ func chainLoad(k *koanf.Koanf, loaders ...func() error) error {
 }
 
 // 工厂函数
-func NewAppConfigMigrationService(logger *log.LoggerService, pathManager *PathManager) *ConfigMigrationService[*models.AppConfig] {
+func NewAppConfigMigrationService(logger *log.LoggerService, configDir, settingsPath string) *ConfigMigrationService[*models.AppConfig] {
 	return NewConfigMigrationService[*models.AppConfig](
-		logger, pathManager, "settings", CurrentAppConfigVersion, pathManager.GetSettingsPath())
+		logger, configDir, "settings", CurrentAppConfigVersion, settingsPath)
 }
 
-func NewKeyBindingMigrationService(logger *log.LoggerService, pathManager *PathManager) *ConfigMigrationService[*models.KeyBindingConfig] {
+func NewKeyBindingMigrationService(logger *log.LoggerService, configDir, keybindsPath string) *ConfigMigrationService[*models.KeyBindingConfig] {
 	return NewConfigMigrationService[*models.KeyBindingConfig](
-		logger, pathManager, "keybindings", CurrentKeyBindingConfigVersion, pathManager.GetKeybindsPath())
+		logger, configDir, "keybindings", CurrentKeyBindingConfigVersion, keybindsPath)
 }
 
 // NewExtensionMigrationService 创建扩展配置迁移服务
-func NewExtensionMigrationService(logger *log.LoggerService, pathManager *PathManager) *ConfigMigrationService[*models.ExtensionSettings] {
+func NewExtensionMigrationService(logger *log.LoggerService, configDir, extensionsPath string) *ConfigMigrationService[*models.ExtensionSettings] {
 	return NewConfigMigrationService[*models.ExtensionSettings](
-		logger, pathManager, "extensions", CurrentExtensionConfigVersion, pathManager.GetExtensionsPath())
+		logger, configDir, "extensions", CurrentExtensionConfigVersion, extensionsPath)
 }

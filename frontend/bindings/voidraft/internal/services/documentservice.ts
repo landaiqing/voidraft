@@ -79,14 +79,6 @@ export function ListDeletedDocumentsMeta(): Promise<(models$0.Document | null)[]
 }
 
 /**
- * OnDataPathChanged handles data path changes
- */
-export function OnDataPathChanged(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(269349439) as any;
-    return $resultPromise;
-}
-
-/**
  * RestoreDocument restores a deleted document
  */
 export function RestoreDocument(id: number): Promise<void> & { cancel(): void } {

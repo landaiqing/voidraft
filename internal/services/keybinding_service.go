@@ -4,31 +4,59 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
+	"time"
 	"voidraft/internal/models"
 
-	jsonparser "github.com/knadh/koanf/parsers/json"
-	"github.com/knadh/koanf/providers/file"
-	"github.com/knadh/koanf/providers/structs"
-	"github.com/knadh/koanf/v2"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+)
+
+// SQL 查询语句
+const (
+	// 快捷键操作
+	sqlGetAllKeyBindings = `
+		SELECT command, extension, key, enabled, is_default 
+		FROM key_bindings 
+		ORDER BY command
+	`
+
+	sqlGetKeyBindingByCommand = `
+		SELECT command, extension, key, enabled, is_default 
+		FROM key_bindings 
+		WHERE command = ?
+	`
+
+	sqlInsertKeyBinding = `
+		INSERT INTO key_bindings (command, extension, key, enabled, is_default, created_at, updated_at) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`
+
+	sqlUpdateKeyBinding = `
+		UPDATE key_bindings 
+		SET extension = ?, key = ?, enabled = ?, updated_at = ? 
+		WHERE command = ?
+	`
+
+	sqlDeleteKeyBinding = `
+		DELETE FROM key_bindings 
+		WHERE command = ?
+	`
+
+	sqlDeleteAllKeyBindings = `
+		DELETE FROM key_bindings
+	`
 )
 
 // KeyBindingService 快捷键管理服务
 type KeyBindingService struct {
-	koanf        *koanf.Koanf
-	logger       *log.LoggerService
-	pathManager  *PathManager
-	fileProvider *file.File
+	databaseService *DatabaseService
+	logger          *log.LoggerService
 
 	mu       sync.RWMutex
 	ctx      context.Context
 	cancel   context.CancelFunc
 	initOnce sync.Once
-
-	// 配置迁移服务
-	migrationService *ConfigMigrationService[*models.KeyBindingConfig]
 }
 
 // KeyBindingError 快捷键错误
@@ -55,138 +83,145 @@ func (e *KeyBindingError) Is(target error) bool {
 }
 
 // NewKeyBindingService 创建快捷键服务实例
-func NewKeyBindingService(logger *log.LoggerService, pathManager *PathManager) *KeyBindingService {
+func NewKeyBindingService(databaseService *DatabaseService, logger *log.LoggerService) *KeyBindingService {
 	if logger == nil {
 		logger = log.New()
-	}
-	if pathManager == nil {
-		pathManager = NewPathManager()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	k := koanf.New(".")
-
-	migrationService := NewKeyBindingMigrationService(logger, pathManager)
-
 	service := &KeyBindingService{
-		koanf:            k,
-		logger:           logger,
-		pathManager:      pathManager,
-		ctx:              ctx,
-		cancel:           cancel,
-		migrationService: migrationService,
+		databaseService: databaseService,
+		logger:          logger,
+		ctx:             ctx,
+		cancel:          cancel,
 	}
-
-	// 异步初始化
-	go service.initialize()
 
 	return service
 }
 
-// initialize 初始化配置
-func (kbs *KeyBindingService) initialize() {
-	kbs.initOnce.Do(func() {
-		if err := kbs.initConfig(); err != nil {
-			kbs.logger.Error("failed to initialize keybinding config", "error", err)
-		}
-	})
-}
-
-// setDefaults 设置默认值
-func (kbs *KeyBindingService) setDefaults() error {
-	defaultConfig := models.NewDefaultKeyBindingConfig()
-
-	if err := kbs.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
-		return &KeyBindingError{"load_defaults", "", err}
-	}
-
-	return nil
-}
-
-// initConfig 初始化配置
-func (kbs *KeyBindingService) initConfig() error {
+// initDatabase 初始化数据库数据
+func (kbs *KeyBindingService) initDatabase() error {
 	kbs.mu.Lock()
 	defer kbs.mu.Unlock()
 
-	// 检查配置文件是否存在
-	configPath := kbs.pathManager.GetKeybindsPath()
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return kbs.createDefaultConfig()
+	// 检查是否已有快捷键数据
+	db := kbs.databaseService.GetDB()
+	if db == nil {
+		return &KeyBindingError{"get_database", "", fmt.Errorf("database connection is nil")}
 	}
 
-	// 配置文件存在，先加载现有配置
-	kbs.fileProvider = file.Provider(configPath)
-	if err := kbs.koanf.Load(kbs.fileProvider, jsonparser.Parser()); err != nil {
-		return &KeyBindingError{"load_config_file", "", err}
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM key_bindings").Scan(&count)
+	if err != nil {
+		return &KeyBindingError{"check_keybindings_count", "", err}
 	}
 
-	// 检查并执行配置迁移
-	if kbs.migrationService != nil {
-		result, err := kbs.migrationService.MigrateConfig(kbs.koanf)
-		if err != nil {
-			return &KeyBindingError{"migrate_config", "", err}
-		}
+	kbs.logger.Info("KeyBinding database check", "existing_count", count)
 
-		if result.Migrated && result.ConfigUpdated {
-			// 迁移完成且配置已更新，重新创建文件提供器以监听新文件
-			kbs.fileProvider = file.Provider(configPath)
+	// 如果没有数据，插入默认配置
+	if count == 0 {
+		kbs.logger.Info("No key bindings found, inserting default key bindings...")
+		if err := kbs.insertDefaultKeyBindings(); err != nil {
+			kbs.logger.Error("Failed to insert default key bindings", "error", err)
+			return err
 		}
+		kbs.logger.Info("Default key bindings inserted successfully")
+	} else {
+		kbs.logger.Info("Key bindings already exist, skipping default insertion")
 	}
 
 	return nil
 }
 
-// createDefaultConfig 创建默认配置文件
-func (kbs *KeyBindingService) createDefaultConfig() error {
-	if err := kbs.pathManager.EnsureConfigDir(); err != nil {
-		return &KeyBindingError{"create_config_dir", "", err}
+// insertDefaultKeyBindings 插入默认快捷键配置
+func (kbs *KeyBindingService) insertDefaultKeyBindings() error {
+	defaultConfig := models.NewDefaultKeyBindingConfig()
+	db := kbs.databaseService.GetDB()
+	now := time.Now()
+
+	kbs.logger.Info("Starting to insert default key bindings", "count", len(defaultConfig.KeyBindings))
+
+	for i, kb := range defaultConfig.KeyBindings {
+		kbs.logger.Info("Inserting key binding", "index", i+1, "command", kb.Command, "key", kb.Key, "extension", kb.Extension)
+
+		_, err := db.Exec(sqlInsertKeyBinding,
+			kb.Command,
+			kb.Extension,
+			kb.Key,
+			kb.Enabled,
+			kb.IsDefault,
+			now,
+			now,
+		)
+		if err != nil {
+			kbs.logger.Error("Failed to insert key binding", "command", kb.Command, "error", err)
+			return &KeyBindingError{"insert_keybinding", string(kb.Command), err}
+		}
+
+		kbs.logger.Info("Successfully inserted key binding", "command", kb.Command)
 	}
 
-	if err := kbs.setDefaults(); err != nil {
-		return err
-	}
-
-	configBytes, err := kbs.koanf.Marshal(jsonparser.Parser())
-	if err != nil {
-		return &KeyBindingError{"marshal_config", "", err}
-	}
-
-	if err := os.WriteFile(kbs.pathManager.GetKeybindsPath(), configBytes, 0644); err != nil {
-		return &KeyBindingError{"write_config", "", err}
-	}
-
-	// 创建文件提供器
-	kbs.fileProvider = file.Provider(kbs.pathManager.GetKeybindsPath())
-	if err = kbs.koanf.Load(kbs.fileProvider, jsonparser.Parser()); err != nil {
-		return err
-	}
+	kbs.logger.Info("Completed inserting all default key bindings")
 	return nil
 }
 
 // GetKeyBindingConfig 获取完整快捷键配置
 func (kbs *KeyBindingService) GetKeyBindingConfig() (*models.KeyBindingConfig, error) {
-	kbs.mu.RLock()
-	defer kbs.mu.RUnlock()
-
-	var config models.KeyBindingConfig
-	if err := kbs.koanf.Unmarshal("", &config); err != nil {
-		return nil, &KeyBindingError{"unmarshal_config", "", err}
+	keyBindings, err := kbs.GetAllKeyBindings()
+	if err != nil {
+		return nil, err
 	}
-	return &config, nil
+
+	config := &models.KeyBindingConfig{
+		KeyBindings: keyBindings,
+	}
+	return config, nil
 }
 
 // GetAllKeyBindings 获取所有快捷键配置
 func (kbs *KeyBindingService) GetAllKeyBindings() ([]models.KeyBinding, error) {
-	config, err := kbs.GetKeyBindingConfig()
+	kbs.mu.RLock()
+	defer kbs.mu.RUnlock()
+
+	db := kbs.databaseService.GetDB()
+	rows, err := db.Query(sqlGetAllKeyBindings)
 	if err != nil {
-		return nil, err
+		return nil, &KeyBindingError{"query_keybindings", "", err}
 	}
-	return config.KeyBindings, nil
+	defer rows.Close()
+
+	var keyBindings []models.KeyBinding
+	for rows.Next() {
+		var kb models.KeyBinding
+		if err := rows.Scan(&kb.Command, &kb.Extension, &kb.Key, &kb.Enabled, &kb.IsDefault); err != nil {
+			return nil, &KeyBindingError{"scan_keybinding", "", err}
+		}
+		keyBindings = append(keyBindings, kb)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, &KeyBindingError{"rows_error", "", err}
+	}
+
+	return keyBindings, nil
 }
 
-// OnShutdown 关闭服务
-func (kbs *KeyBindingService) OnShutdown() error {
-	kbs.cancel()
-	return nil
+// OnStartup 启动时调用
+func (kbs *KeyBindingService) OnStartup(ctx context.Context, _ application.ServiceOptions) error {
+	kbs.ctx = ctx
+	kbs.logger.Info("KeyBinding service starting up")
+
+	// 初始化数据库
+	var initErr error
+	kbs.initOnce.Do(func() {
+		kbs.logger.Info("Initializing keybinding database...")
+		if err := kbs.initDatabase(); err != nil {
+			kbs.logger.Error("failed to initialize keybinding database", "error", err)
+			initErr = err
+		} else {
+			kbs.logger.Info("KeyBinding database initialized successfully")
+		}
+	})
+	return initErr
 }
