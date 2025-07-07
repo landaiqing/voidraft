@@ -1,59 +1,163 @@
-# Welcome to Your New Wails3 Project!
+# <img src="./frontend/public/appicon.png" alt="VoidRaft Logo" width="32" height="32" style="vertical-align: middle;"> VoidRaft
 
-Congratulations on generating your Wails3 application! This README will guide you through the next steps to get your project up and running.
+[中文](README_ZH.md) | **English**
 
-## Getting Started
+> *An elegant text snippet recording tool designed for developers.*
 
-1. Navigate to your project directory in the terminal.
+VoidRaft is a modern developer-focused text editor that allows you to record, organize, and manage various text snippets anytime, anywhere. Whether it's temporary code snippets, API responses, meeting notes, or daily to-do lists, VoidRaft provides a smooth and elegant editing experience.
 
-2. To run your application in development mode, use the following command:
+## Core Features
 
-   ```
-   wails3 dev
-   ```
+### Developer-Friendly
 
-   This will start your application and enable hot-reloading for both frontend and backend changes.
+- Multi-language code block support - Syntax highlighting for 30+ programming languages
+- Smart language detection - Automatically recognizes code block language types
+- Code formatting - Built-in Prettier support for one-click code beautification
+- Block editing mode - Split content into independent code blocks, each with different language settings
 
-3. To build your application for production, use:
+### Modern Interface
 
-   ```
-   wails3 build
-   ```
+- Clean and elegant design - Simple yet sophisticated user interface
+- Dark/Light themes - Adapts to different usage scenarios
+- Multi-language support - Built-in internationalization with multiple language switching
 
-   This will create a production-ready executable in the `build` directory.
+### Extension System
 
-## Exploring Wails3 Features
+- Modular architecture - Extensible editor based on CodeMirror 6
+- Rich extensions - Includes various practical editor extensions
+  - Rainbow bracket matching
+  - VSCode-style search and replace
+  - Color picker
+  - Built-in translation tool
+  - Text highlighting
+  - Code folding
+  - Hyperlink support
+  - Checkbox support
+  - Minimap
 
-Now that you have your project set up, it's time to explore the features that Wails3 offers:
+## Quick Start
 
-1. **Check out the examples**: The best way to learn is by example. Visit the `examples` directory in the `v3/examples` directory to see various sample applications.
+### Download and Use
 
-2. **Run an example**: To run any of the examples, navigate to the example's directory and use:
+1. Visit the releases page: https://github.com/landaiqing/voidraft/releases
+2. Select and download the appropriate version
+3. Run the installer and start using
 
-   ```
-   go run .
-   ```
+### Development Environment
 
-   Note: Some examples may be under development during the alpha phase.
+```bash
+# Clone the project
+git clone https://github.com/landaiqing/voidraft
+cd voidraft
 
-3. **Explore the documentation**: Visit the [Wails3 documentation](https://v3alpha.wails.io/) for in-depth guides and API references.
+# Install frontend dependencies
+cd frontend
+npm install
+cd ..
 
-4. **Join the community**: Have questions or want to share your progress? Join the [Wails Discord](https://discord.gg/JDdSxwjhGf) or visit the [Wails discussions on GitHub](https://github.com/wailsapp/wails/discussions).
+# Start development server
+wails3 dev
+```
+
+### Production Build
+
+```bash
+# Build application
+wails3 package
+```
+
+After building, the executable will be generated in the `bin` directory.
+
+## Technical Architecture
+
+### Core Technologies
+
+| Layer | Technology Stack |
+|-------|------------------|
+| Desktop Framework | Wails3 |
+| Backend Language | Go 1.21+ |
+| Frontend Framework | Vue 3 + TypeScript |
+| Editor Core | CodeMirror 6 |
+| Build Tool | Vite |
+| Data Storage | SQLite |
 
 ## Project Structure
 
-Take a moment to familiarize yourself with your project structure:
+```
+Voidraft/
+├── frontend/              # Vue 3 frontend application
+│   ├── src/
+│   │   ├── views/editor/  # Editor core views
+│   │   │   ├── extensions/ # Editor extension system
+│   │   │   │   ├── codeblock/    # Code block support
+│   │   │   │   ├── translator/   # Translation tool
+│   │   │   │   ├── minimap/     # Code minimap
+│   │   │   │   ├── vscodeSearch/ # VSCode-style search
+│   │   │   │   └── ...           # More extensions
+│   │   │   └── ...
+│   │   ├── components/    # Reusable components
+│   │   ├── stores/       # Pinia state management
+│   │   └── utils/         # Utility functions
+│   └── public/            # Static assets
+├── internal/             # Go backend core
+│   ├── services/          # Core business services
+│   ├── models/            # Data model definitions
+│   └── events/            # Event handling mechanisms
+└── main.go               # Application entry point
+```
 
-- `frontend/`: Contains your frontend code (HTML, CSS, JavaScript/TypeScript)
-- `main.go`: The entry point of your Go backend
-- `app.go`: Define your application structure and methods here
-- `wails.json`: Configuration file for your Wails project
+## Development Roadmap
 
-## Next Steps
+### Platform Extension Plans
 
-1. Modify the frontend in the `frontend/` directory to create your desired UI.
-2. Add backend functionality in `main.go`.
-3. Use `wails3 dev` to see your changes in real-time.
-4. When ready, build your application with `wails3 build`.
+| Platform | Status | Expected Time |
+|----------|--------|---------------|
+| macOS | Planned | Future versions |
+| Linux | Planned | Future versions |
 
-Happy coding with Wails3! If you encounter any issues or have questions, don't hesitate to consult the documentation or reach out to the Wails community.
+### Planned Features
+- [ ] Custom themes - Customize editor themes
+- [ ] Multi-window support - Support editing multiple documents simultaneously
+- [ ] Enhanced clipboard - Monitor and manage clipboard history
+  - Automatic text content saving
+  - Image content support
+  - History management
+- [ ] Data synchronization - Cloud backup for configurations and documents
+- [ ] Extension system - Support for custom plugins
+
+## Acknowledgments
+
+> Standing on the shoulders of giants, paying tribute to the open source spirit
+
+The birth of VoidRaft is inseparable from the following excellent open source projects:
+
+### Special Thanks
+
+- **[Heynote](https://github.com/heyman/heynote/)** - VoidRaft is a feature-enhanced version based on Heynote's concept
+  - Inherits Heynote's elegant block editing philosophy
+  - Adds more practical features on the original foundation
+  - Rebuilt with modern technology stack
+  - Provides richer extension system and customization options
+  - Thanks to the Heynote team for bringing innovative ideas to the developer community
+
+### Core Technology Stack
+
+| Technology | Purpose | Link |
+|------------|---------|------|
+| Wails3 | Cross-platform desktop application framework | [wails.io](https://v3alpha.wails.io/) |
+| Vue.js | Progressive frontend framework | [vuejs.org](https://vuejs.org/) |
+| CodeMirror 6 | Modern code editor | [codemirror.net](https://codemirror.net/) |
+| Prettier | Code formatting tool | [prettier.io](https://prettier.io/) |
+| TypeScript | Type-safe JavaScript | [typescriptlang.org](https://www.typescriptlang.org/) |
+
+## License
+
+This project is open source under the [MIT License](LICENSE).
+
+Welcome to Fork, Star, and contribute code.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/landaiqing/Voidraft.svg?style=social&label=Star)](https://github.com/yourusername/Voidraft)
+[![GitHub forks](https://img.shields.io/github/forks/landaiqing/Voidraft.svg?style=social&label=Fork)](https://github.com/yourusername/Voidraft)
+
+*Made with ❤️ by landaiqing*
