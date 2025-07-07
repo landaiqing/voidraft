@@ -162,12 +162,12 @@ func NewDefaultAppConfig() *AppConfig {
 			// Tab设置
 			EnableTabIndent: true,
 			TabSize:         4,
-			TabType:         TabTypeSpaces,
+			TabType:         TabTypeTab,
 			// 保存选项
 			AutoSaveDelay: 2000, // 2秒后自动保存
 		},
 		Appearance: AppearanceConfig{
-			Language:    LangZhCN,
+			Language:    LangEnUS,
 			SystemTheme: SystemThemeAuto, // 默认使用深色系统主题
 		},
 		Updates: UpdatesConfig{
