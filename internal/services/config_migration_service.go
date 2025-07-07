@@ -20,11 +20,6 @@ import (
 const (
 	// CurrentAppConfigVersion 当前应用配置版本
 	CurrentAppConfigVersion = "1.0.0"
-	// CurrentKeyBindingConfigVersion 当前快捷键配置版本
-	CurrentKeyBindingConfigVersion = "1.0.0"
-
-	CurrentExtensionConfigVersion = "1.0.0"
-
 	// BackupFilePattern 备份文件名模式
 	BackupFilePattern = "%s.backup.%s.json"
 
@@ -320,15 +315,4 @@ func chainLoad(k *koanf.Koanf, loaders ...func() error) error {
 func NewAppConfigMigrationService(logger *log.LoggerService, configDir, settingsPath string) *ConfigMigrationService[*models.AppConfig] {
 	return NewConfigMigrationService[*models.AppConfig](
 		logger, configDir, "settings", CurrentAppConfigVersion, settingsPath)
-}
-
-func NewKeyBindingMigrationService(logger *log.LoggerService, configDir, keybindsPath string) *ConfigMigrationService[*models.KeyBindingConfig] {
-	return NewConfigMigrationService[*models.KeyBindingConfig](
-		logger, configDir, "keybindings", CurrentKeyBindingConfigVersion, keybindsPath)
-}
-
-// NewExtensionMigrationService 创建扩展配置迁移服务
-func NewExtensionMigrationService(logger *log.LoggerService, configDir, extensionsPath string) *ConfigMigrationService[*models.ExtensionSettings] {
-	return NewConfigMigrationService[*models.ExtensionSettings](
-		logger, configDir, "extensions", CurrentExtensionConfigVersion, extensionsPath)
 }

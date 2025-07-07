@@ -171,7 +171,7 @@ func NewDefaultAppConfig() *AppConfig {
 			SystemTheme: SystemThemeAuto, // 默认使用深色系统主题
 		},
 		Updates: UpdatesConfig{
-			Version:            "0.0.0",
+			Version:            "1.0.0",
 			AutoUpdate:         true,
 			PrimarySource:      UpdateSourceGithub,
 			BackupSource:       UpdateSourceGitea,
