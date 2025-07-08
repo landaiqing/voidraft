@@ -283,6 +283,13 @@ func (hs *HotkeyService) IsRegistered() bool {
 	return hs.isRegistered.Load()
 }
 
+// ToggleWindow 切换窗口显示状态
+func (hs *HotkeyService) ToggleWindow() {
+	if hs.app != nil {
+		hs.app.EmitEvent("hotkey:toggle-window", nil)
+	}
+}
+
 // OnShutdown 关闭热键服务
 func (hs *HotkeyService) OnShutdown() error {
 	return hs.UnregisterHotkey()
