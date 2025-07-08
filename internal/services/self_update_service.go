@@ -7,11 +7,7 @@ import (
 	"github.com/creativeprojects/go-selfupdate"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"os"
-	"os/exec"
-	"path/filepath"
 	"runtime"
-	"strings"
-	"syscall"
 	"time"
 	"voidraft/internal/models"
 )
@@ -428,69 +424,7 @@ func (s *SelfUpdateService) getUpdateFromSource(ctx context.Context, sourceType 
 
 // RestartApplication 重启应用程序
 func (s *SelfUpdateService) RestartApplication() error {
-
-	// 获取当前可执行文件路径
-	exe, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	// Windows平台需要特殊处理
-	if runtime.GOOS == "windows" {
-
-		// 获取当前工作目录
-		workDir, err := os.Getwd()
-		if err != nil {
-			s.logger.Error("Failed to get working directory", "error", err)
-			workDir = filepath.Dir(exe) // 如果获取失败，使用可执行文件所在目录
-		}
-
-		// 创建批处理文件来重启应用程序
-		// 批处理文件会等待当前进程退出，然后启动新进程
-		batchFile := filepath.Join(os.TempDir(), "restart_voidraft.bat")
-		batchContent := fmt.Sprintf(`@echo off
-timeout /t 1 /nobreak > NUL
-cd /d "%s"
-start "" "%s" %s
-del "%s"
-`, workDir, exe, strings.Join(os.Args[1:], " "), batchFile)
-
-		s.logger.Info("Creating batch file", "path", batchFile, "content", batchContent)
-
-		// 写入批处理文件
-		err = os.WriteFile(batchFile, []byte(batchContent), 0644)
-		if err != nil {
-			return fmt.Errorf("failed to create batch file: %w", err)
-		}
-
-		// 启动批处理文件
-		cmd := exec.Command("cmd.exe", "/C", batchFile)
-		cmd.Stdout = nil
-		cmd.Stderr = nil
-		cmd.Stdin = nil
-		// 分离进程，这样即使父进程退出，批处理文件仍然会继续执行
-		cmd.SysProcAttr = &syscall.SysProcAttr{
-			CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP,
-		}
-
-		err = cmd.Start()
-		if err != nil {
-			return fmt.Errorf("failed to start batch file: %w", err)
-		}
-
-		// 立即退出当前进程
-		os.Exit(0)
-
-		return nil // 不会执行到这里
-	}
-
-	// 使用syscall.Exec替换当前进程
-	err = syscall.Exec(exe, os.Args, os.Environ())
-	if err != nil {
-		return fmt.Errorf("failed to exec: %w", err)
-	}
-
-	return nil
+	return s.restartApplication()
 }
 
 // updateConfigVersion 更新配置中的版本号
