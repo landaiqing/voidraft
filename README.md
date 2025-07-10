@@ -14,6 +14,7 @@ VoidRaft is a modern developer-focused text editor that allows you to record, or
 - Smart language detection - Automatically recognizes code block language types
 - Code formatting - Built-in Prettier support for one-click code beautification
 - Block editing mode - Split content into independent code blocks, each with different language settings
+- Multi-window support - edit multiple documents at the same time
 
 ### Modern Interface
 
@@ -53,6 +54,7 @@ cd voidraft
 # Install frontend dependencies
 cd frontend
 npm install
+npm run build
 cd ..
 
 # Start development server
@@ -117,11 +119,8 @@ Voidraft/
 
 ### Planned Features
 - [ ] Custom themes - Customize editor themes
-- [ ] Multi-window support - Support editing multiple documents simultaneously
+- ✅ Multi-window support - Support editing multiple documents simultaneously
 - [ ] Enhanced clipboard - Monitor and manage clipboard history
-  - Automatic text content saving
-  - Image content support
-  - History management
 - [ ] Data synchronization - Cloud backup for configurations and documents
 - [ ] Extension system - Support for custom plugins
 

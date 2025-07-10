@@ -5,10 +5,13 @@ import {useDocumentStore} from '@/stores/documentStore';
 import {useConfigStore} from '@/stores/configStore';
 import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
+import {useWindowStore} from "@/stores/windowStore";
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
 const configStore = useConfigStore();
+const windowStore = useWindowStore();
+
 
 const editorElement = ref<HTMLElement | null>(null);
 
@@ -21,8 +24,12 @@ const wheelHandler = createWheelZoomHandler(
 onMounted(async () => {
   if (!editorElement.value) return;
 
-  // 初始化文档存储，会自动使用持久化的文档ID
-  await documentStore.initialize();
+  // 从URL查询参数中获取documentId
+
+  const urlDocumentId = windowStore.currentDocumentId ? parseInt(windowStore.currentDocumentId) : undefined;
+  
+  // 初始化文档存储，优先使用URL参数中的文档ID
+  await documentStore.initialize(urlDocumentId);
   
   // 设置编辑器容器
   editorStore.setEditorContainer(editorElement.value);
@@ -69,4 +76,4 @@ onBeforeUnmount(() => {
 :deep(.cm-scroller) {
   overflow: auto;
 }
-</style> 
+</style>

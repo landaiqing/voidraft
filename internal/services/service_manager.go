@@ -14,6 +14,7 @@ type ServiceManager struct {
 	databaseService    *DatabaseService
 	sqliteService      *sqlite.Service
 	documentService    *DocumentService
+	windowService      *WindowService
 	migrationService   *MigrationService
 	systemService      *SystemService
 	hotkeyService      *HotkeyService
@@ -46,6 +47,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化文档服务
 	documentService := NewDocumentService(databaseService, logger)
+
+	// 初始化窗口服务
+	windowService := NewWindowService(logger, documentService)
 
 	// 初始化系统服务
 	systemService := NewSystemService(logger)
@@ -98,6 +102,7 @@ func NewServiceManager() *ServiceManager {
 		databaseService:    databaseService,
 		sqliteService:      sqliteService,
 		documentService:    documentService,
+		windowService:      windowService,
 		migrationService:   migrationService,
 		systemService:      systemService,
 		hotkeyService:      hotkeyService,
@@ -113,13 +118,13 @@ func NewServiceManager() *ServiceManager {
 }
 
 // GetServices 获取所有wails服务列表
-// 注意：服务启动顺序很重要，DatabaseService 必须在依赖数据库的服务之前启动
 func (sm *ServiceManager) GetServices() []application.Service {
 	services := []application.Service{
 		application.NewService(sm.configService),
-		application.NewService(sm.sqliteService),   // SQLite服务必须在数据库服务之前初始化
-		application.NewService(sm.databaseService), // 数据库服务必须在依赖它的服务之前初始化
+		application.NewService(sm.sqliteService),
+		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
+		application.NewService(sm.windowService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
 		application.NewService(sm.migrationService),
@@ -192,4 +197,14 @@ func (sm *ServiceManager) GetDatabaseService() *DatabaseService {
 // GetSQLiteService 获取SQLite服务实例
 func (sm *ServiceManager) GetSQLiteService() *sqlite.Service {
 	return sm.sqliteService
+}
+
+// GetWindowService 获取窗口服务实例
+func (sm *ServiceManager) GetWindowService() *WindowService {
+	return sm.windowService
+}
+
+// GetDocumentService 获取文档服务实例
+func (sm *ServiceManager) GetDocumentService() *DocumentService {
+	return sm.documentService
 }

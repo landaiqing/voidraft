@@ -95,26 +95,40 @@ const CONFIG_LIMITS = {
     tabType: {values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces}
 } as const;
 
-// 常用字体选项
-export const FONT_OPTIONS = [
+// 创建获取翻译的函数
+export const createFontOptions = (t: (key: string) => string) => [
     {
-        label: '鸿蒙字体',
+        label: t('settings.fontFamilies.harmonyOS'),
         value: '"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif'
     },
-    {label: '微软雅黑', value: '"Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif'},
-    {label: '苹方字体', value: '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif'},
     {
-        label: 'JetBrains Mono',
+        label: t('settings.fontFamilies.microsoftYahei'),
+        value: '"Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif'
+    },
+    {
+        label: t('settings.fontFamilies.pingfang'),
+        value: '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif'
+    },
+    {
+        label: t('settings.fontFamilies.jetbrainsMono'),
         value: '"JetBrains Mono", "Fira Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
     },
-    {label: 'Fira Code', value: '"Fira Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'},
-    {label: 'Source Code Pro', value: '"Source Code Pro", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'},
-    {label: 'Cascadia Code', value: '"Cascadia Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'},
     {
-        label: '系统等宽字体',
-        value: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace'
+        label: t('settings.fontFamilies.firaCode'),
+        value: '"Fira Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
+    },
+    {
+        label: t('settings.fontFamilies.sourceCodePro'),
+        value: '"Source Code Pro", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
+    },
+    {
+        label: t('settings.fontFamilies.cascadiaCode'),
+        value: '"Cascadia Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
     }
-] as const;
+];
+
+// 常用字体选项
+export const FONT_OPTIONS = createFontOptions((key) => key);
 
 // 获取浏览器的默认语言
 const getBrowserLanguage = (): SupportedLocaleType => {
@@ -184,7 +198,7 @@ const DEFAULT_CONFIG: AppConfig = {
 
 
 export const useConfigStore = defineStore('config', () => {
-    const {locale} = useI18n();
+    const {locale, t} = useI18n();
 
     // 响应式状态
     const state = reactive({
@@ -192,6 +206,9 @@ export const useConfigStore = defineStore('config', () => {
         isLoading: false,
         configLoaded: false
     });
+    
+    // 初始化FONT_OPTIONS国际化版本
+    const localizedFontOptions = computed(() => createFontOptions(t));
 
     // 计算属性 - 使用工厂函数简化
     const createLimitComputed = (key: NumberConfigKey) => computed(() => CONFIG_LIMITS[key]);
@@ -394,7 +411,8 @@ export const useConfigStore = defineStore('config', () => {
         config: computed(() => state.config),
         configLoaded: computed(() => state.configLoaded),
         isLoading: computed(() => state.isLoading),
-
+        localizedFontOptions,
+        
         // 限制常量
         ...limits,
 

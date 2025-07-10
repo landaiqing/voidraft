@@ -321,8 +321,8 @@ onUnmounted(() => {
         </div>
 
         <div class="hotkey-preview">
-          <span class="preview-label">预览：</span>
-          <span class="preview-hotkey">{{ hotkeyPreview || '无' }}</span>
+          <span class="preview-label">{{ t('settings.hotkeyPreview') }}</span>
+          <span class="preview-hotkey">{{ hotkeyPreview || t('settings.none') }}</span>
         </div>
       </div>
     </SettingSection>

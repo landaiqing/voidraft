@@ -1,6 +1,7 @@
 import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
+import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
 
 const SCRATCH_DOCUMENT_ID = 1; // 默认草稿文档ID
@@ -49,6 +50,17 @@ export const useDocumentStore = defineStore('document', () => {
     };
 
     // === 公共API ===
+
+    // 在新窗口中打开文档
+    const openDocumentInNewWindow = async (docId: number): Promise<boolean> => {
+        try {
+            await OpenDocumentWindow(docId);
+            return true;
+        } catch (error) {
+            console.error('Failed to open document in new window:', error);
+            return false;
+        }
+    };
 
     // 更新文档列表
     const updateDocuments = async () => {
@@ -186,12 +198,15 @@ export const useDocumentStore = defineStore('document', () => {
     };
 
     // === 初始化 ===
-    const initialize = async (): Promise<void> => {
+    const initialize = async (urlDocumentId?: number): Promise<void> => {
         try {
             await updateDocuments();
 
-            // 如果存在持久化的文档ID，尝试打开该文档
-            if (currentDocumentId.value && documents.value[currentDocumentId.value]) {
+            // 优先使用URL参数中的文档ID
+            if (urlDocumentId && documents.value[urlDocumentId]) {
+                await openDocument(urlDocumentId);
+            } else if (currentDocumentId.value && documents.value[currentDocumentId.value]) {
+                // 如果URL中没有指定文档ID，则使用持久化的文档ID
                 await openDocument(currentDocumentId.value);
             } else {
                 // 否则获取第一个文档ID并打开
@@ -218,6 +233,7 @@ export const useDocumentStore = defineStore('document', () => {
         // 方法
         updateDocuments,
         openDocument,
+        openDocumentInNewWindow,
         createNewDocument,
         saveNewDocument,
         updateDocumentMetadata,
@@ -232,4 +248,4 @@ export const useDocumentStore = defineStore('document', () => {
         storage: localStorage,
         pick: ['currentDocumentId']
     }
-}); 
+});

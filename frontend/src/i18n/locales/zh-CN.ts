@@ -29,6 +29,8 @@ export default {
     delete: '删除',
     confirm: '确认',
     confirmDelete: '再次点击确认删除',
+    openInNewWindow: '在新窗口中打开',
+    alreadyOpenInNewWindow: '已在新窗口中打开',
     documentNameTooLong: '文档名称不能超过{max}个字符',
     documentNameRequired: '文档名称不能为空',
     cannotDeleteLastDocument: '无法删除最后一个文档',
@@ -182,8 +184,29 @@ export default {
       categoryTools: '工具扩展',
       configuration: '配置',
       resetToDefault: '重置为默认配置',
-      // 保留必要的扩展界面翻译，配置项直接显示英文
-    }
+    },
+    fontWeights: {
+      '100': '极细 (100)',
+      '200': '超细 (200)',
+      '300': '细 (300)',
+      'normal': '正常 (400)',
+      '500': '中等 (500)',
+      '600': '半粗 (600)',
+      'bold': '粗体 (700)',
+      '800': '超粗 (800)',
+      '900': '极粗 (900)'
+    },
+    fontFamilies: {
+      harmonyOS: '鸿蒙字体',
+      microsoftYahei: '微软雅黑',
+      pingfang: '苹方字体',
+      jetbrainsMono: 'JetBrains Mono',
+      firaCode: 'Fira Code',
+      sourceCodePro: 'Source Code Pro',
+      cascadiaCode: 'Cascadia Code'
+    },
+    hotkeyPreview: '预览：',
+    none: '无',
   },
   extensions: {
     rainbowBrackets: {
@@ -233,4 +256,4 @@ export default {
     memory: '内存',
     clickToClean: '点击清理内存'
   }
-}; 
+};

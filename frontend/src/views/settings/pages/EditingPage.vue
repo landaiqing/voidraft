@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
-import { FONT_OPTIONS } from '@/stores/configStore';
 import { useI18n } from 'vue-i18n';
 import {computed, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -19,7 +18,7 @@ onMounted(async () => {
 });
 
 // 字体选择选项
-const fontFamilyOptions = FONT_OPTIONS;
+const fontFamilyOptions = computed(() => configStore.localizedFontOptions);
 const currentFontFamily = computed(() => configStore.config.editing.fontFamily);
 
 // 字体选择
@@ -33,15 +32,15 @@ const handleFontFamilyChange = async (event: Event) => {
 
 // 字体粗细选项
 const fontWeightOptions = [
-  { value: '100', label: '极细 (100)' },
-  { value: '200', label: '超细 (200)' },
-  { value: '300', label: '细 (300)' },
-  { value: 'normal', label: '正常 (400)' },
-  { value: '500', label: '中等 (500)' },
-  { value: '600', label: '半粗 (600)' },
-  { value: 'bold', label: '粗体 (700)' },
-  { value: '800', label: '超粗 (800)' },
-  { value: '900', label: '极粗 (900)' }
+  { value: '100', label: t('settings.fontWeights.100') },
+  { value: '200', label: t('settings.fontWeights.200') },
+  { value: '300', label: t('settings.fontWeights.300') },
+  { value: 'normal', label: t('settings.fontWeights.normal') },
+  { value: '500', label: t('settings.fontWeights.500') },
+  { value: '600', label: t('settings.fontWeights.600') },
+  { value: 'bold', label: t('settings.fontWeights.bold') },
+  { value: '800', label: t('settings.fontWeights.800') },
+  { value: '900', label: t('settings.fontWeights.900') }
 ];
 
 // 字体粗细选择
@@ -213,7 +212,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
     </SettingSection>
     
     <SettingSection :title="t('settings.saveOptions')">
-      <SettingItem :title="t('settings.autoSaveDelay')" :description="'定时保存间隔，每隔指定时间自动保存（仅在有变更时）'">
+      <SettingItem :title="t('settings.autoSaveDelay')">
         <input 
           type="number" 
           class="number-input" 

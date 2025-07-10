@@ -32,7 +32,6 @@ func main() {
 		0x0e, 0x0f, 0x0c, 0x0d, 0x0a, 0x0b, 0x08, 0x09,
 		0x06, 0x07, 0x04, 0x05, 0x02, 0x03, 0x00, 0x01,
 	}
-	var window *application.WebviewWindow
 	// Create a new Wails application by providing the necessary options.
 	// Variables 'Name' and 'Description' are for application metadata.
 	// 'Assets' configures the asset server with the 'FS' variable pointing to the frontend files.
@@ -52,18 +51,6 @@ func main() {
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID:      "com.voidraft",
 			EncryptionKey: encryptionKey,
-			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
-				if window != nil {
-					window.EmitEvent("secondInstanceLaunched", data)
-					window.Restore()
-					window.Focus()
-				}
-				log.Printf("Second instance launched with args: %v\n", data.Args)
-				log.Printf("Working directory: %s\n", data.WorkingDir)
-				if data.AdditionalData != nil {
-					log.Printf("Additional data: %v\n", data.AdditionalData)
-				}
-			},
 			AdditionalData: map[string]string{
 				"launchtime": time.Now().Local().String(),
 			},
@@ -100,6 +87,10 @@ func main() {
 	trayService := serviceManager.GetTrayService()
 	trayService.SetAppReferences(app, mainWindow)
 
+	// 获取窗口服务并设置应用引用
+	windowService := serviceManager.GetWindowService()
+	windowService.SetAppReferences(app, mainWindow)
+
 	// 设置系统托盘
 	systray.SetupSystemTray(app, mainWindow, assets, trayService)
 
@@ -113,9 +104,6 @@ func main() {
 	// 设置对话框服务的窗口绑定
 	dialogService := serviceManager.GetDialogService()
 	dialogService.SetWindow(mainWindow)
-
-	// 设置全局变量供单实例处理使用
-	window = mainWindow
 
 	// Create a goroutine that emits an event containing the current time every second.
 	// The frontend can listen to this event and update the UI accordingly.

@@ -29,6 +29,8 @@ export default {
     delete: 'Delete',
     confirm: 'Confirm',
     confirmDelete: 'Click again to confirm delete',
+    openInNewWindow: 'Open in New Window',
+    alreadyOpenInNewWindow: 'Already open in another window',
     documentNameTooLong: 'Document name cannot exceed {max} characters',
     documentNameRequired: 'Document name cannot be empty',
     cannotDeleteLastDocument: 'Cannot delete the last document',
@@ -143,6 +145,26 @@ export default {
     fontFamilyDescription: 'Choose editor font family',
     fontWeight: 'Font Weight',
     fontWeightDescription: 'Set the thickness of the font',
+    fontWeights: {
+      '100': 'Thin (100)',
+      '200': 'Extra Light (200)',
+      '300': 'Light (300)',
+      'normal': 'Regular (400)',
+      '500': 'Medium (500)',
+      '600': 'Semi Bold (600)',
+      'bold': 'Bold (700)',
+      '800': 'Extra Bold (800)',
+      '900': 'Black (900)'
+    },
+    fontFamilies: {
+      harmonyOS: 'HarmonyOS Sans',
+      microsoftYahei: 'Microsoft YaHei',
+      pingfang: 'PingFang SC',
+      jetbrainsMono: 'JetBrains Mono',
+      firaCode: 'Fira Code',
+      sourceCodePro: 'Source Code Pro',
+      cascadiaCode: 'Cascadia Code'
+    },
     lineHeight: 'Line Height',
     lineHeightDescription: 'Set the spacing between text lines',
     tabSettings: 'Tab Settings',
@@ -176,13 +198,14 @@ export default {
       categoryTools: 'Tools',
       configuration: 'Configuration',
       resetToDefault: 'Reset to Default Configuration',
-      // Keep necessary extension interface translations, configuration items display in English directly
     },
     updateNow: 'Update Now',
     updating: 'Updating...',
     updateSuccess: 'Update Success',
     updateSuccessRestartRequired: 'Update has been successfully applied. Please restart the application.',
     restartNow: 'Restart Now',
+    hotkeyPreview: 'Preview:',
+    none: 'None',
   },
   extensions: {
     rainbowBrackets: {
@@ -232,4 +255,4 @@ export default {
     memory: 'Memory',
     clickToClean: 'Click to clean memory'
   }
-}; 
+};

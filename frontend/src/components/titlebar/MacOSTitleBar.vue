@@ -44,19 +44,22 @@
     </div>
     
     <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent>
-      <div class="titlebar-title">voidraft</div>
+      <div class="titlebar-title">{{ titleText }}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import * as runtime from '@wailsio/runtime';
+import { useWindowStore } from '@/stores/windowStore';
+import { useDocumentStore } from '@/stores/documentStore';
 
 const { t } = useI18n();
 const isMaximized = ref(false);
 const showControlIcons = ref(false);
+const documentStore = useDocumentStore();
 
 const minimizeWindow = async () => {
   try {
@@ -100,6 +103,12 @@ const checkMaximizedState = async () => {
     // Error handling
   }
 };
+
+// 计算标题文本
+const titleText = computed(() => {
+  const currentDoc = documentStore.currentDocument;
+  return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
+});
 
 onMounted(async () => {
   await checkMaximizedState();
@@ -259,4 +268,4 @@ onUnmounted(() => {
     color: rgba(255, 255, 255, 0.8);
   }
 }
-</style> 
+</style>

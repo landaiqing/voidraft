@@ -5,7 +5,7 @@
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
       </div>
-      <div class="titlebar-title">voidraft</div>
+      <div class="titlebar-title">{{ titleText }}</div>
     </div>
 
     <div class="titlebar-controls" style="--wails-draggable:no-drag" @contextmenu.prevent>
@@ -40,12 +40,21 @@
 import {computed, onMounted, onUnmounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import * as runtime from '@wailsio/runtime';
+import { useWindowStore } from '@/stores/windowStore';
+import { useDocumentStore } from '@/stores/documentStore';
 
 const {t} = useI18n();
 const isMaximized = ref(false);
+const documentStore = useDocumentStore();
 
 // 计算属性用于图标，减少重复渲染
 const maximizeIcon = computed(() => isMaximized.value ? '&#xE923;' : '&#xE922;');
+
+// 计算标题文本
+const titleText = computed(() => {
+  const currentDoc = documentStore.currentDocument;
+  return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
+});
 
 const minimizeWindow = async () => {
   try {
@@ -239,4 +248,4 @@ onUnmounted(() => {
     opacity: 1;
   }
 }
-</style> 
+</style>

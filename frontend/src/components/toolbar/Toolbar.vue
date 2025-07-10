@@ -4,6 +4,7 @@ import {onMounted, onUnmounted, ref, watch, computed} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
 import {useUpdateStore} from '@/stores/updateStore';
+import {useWindowStore} from '@/stores/windowStore';
 import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
@@ -15,20 +16,23 @@ import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
+const windowStore = useWindowStore();
 const {t} = useI18n();
 const router = useRouter();
 
 // 当前块是否支持格式化的响应式状态
 const canFormatCurrentBlock = ref(false);
 
-// 窗口置顶状态管理
+// 窗口置顶状态管理（仅当前窗口，不同步到配置文件）
+const isCurrentWindowOnTop = ref(false);
+
 const setWindowAlwaysOnTop = async (isTop: boolean) => {
   await runtime.Window.SetAlwaysOnTop(isTop);
 };
 
 const toggleAlwaysOnTop = async () => {
-  await configStore.toggleAlwaysOnTop();
-  await runtime.Window.SetAlwaysOnTop(configStore.config.general.alwaysOnTop);
+  isCurrentWindowOnTop.value = !isCurrentWindowOnTop.value;
+  await runtime.Window.SetAlwaysOnTop(isCurrentWindowOnTop.value);
 };
 
 // 跳转到设置页面
@@ -136,20 +140,12 @@ onUnmounted(() => {
   cleanupListeners = [];
 });
 
-// 监听置顶设置变化
-watch(
-  () => configStore.config.general.alwaysOnTop,
-  async (newValue) => {
-    if (isLoaded.value) {
-      await runtime.Window.SetAlwaysOnTop(newValue);
-    }
-  }
-);
-
-// 组件加载后应用置顶设置
+// 组件加载后初始化置顶状态
 watch(isLoaded, async (loaded) => {
-  if (loaded && configStore.config.general.alwaysOnTop) {
-    await setWindowAlwaysOnTop(true);
+  if (loaded) {
+    // 初始化时从配置文件读取置顶状态
+    isCurrentWindowOnTop.value = configStore.config.general.alwaysOnTop;
+    await setWindowAlwaysOnTop(isCurrentWindowOnTop.value);
   }
 });
 
@@ -197,7 +193,7 @@ const updateButtonTitle = computed(() => {
       </span>
 
       <!-- 文档选择器 -->
-      <DocumentSelector/>
+      <DocumentSelector v-if="windowStore.isMainWindow"/>
 
       <!-- 块语言选择器 -->
       <BlockLanguageSelector/>
@@ -265,7 +261,7 @@ const updateButtonTitle = computed(() => {
       <!-- 窗口置顶图标按钮 -->
       <div
           class="pin-button"
-          :class="{ 'active': configStore.config.general.alwaysOnTop }"
+          :class="{ 'active': isCurrentWindowOnTop }"
           :title="t('toolbar.alwaysOnTop')"
           @click="toggleAlwaysOnTop"
       >
@@ -276,7 +272,7 @@ const updateButtonTitle = computed(() => {
       </div>
 
 
-      <button class="settings-btn" :title="t('toolbar.settings')" @click="goToSettings">
+      <button v-if="windowStore.isMainWindow" class="settings-btn" :title="t('toolbar.settings')" @click="goToSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="3"></circle>

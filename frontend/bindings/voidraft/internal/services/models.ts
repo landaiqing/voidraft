@@ -5,6 +5,10 @@
 // @ts-ignore: Unused imports
 import {Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
 /**
  * MemoryStats 内存统计信息
  */
@@ -197,3 +201,43 @@ export class SelfUpdateResult {
         return new SelfUpdateResult($$parsedSource as Partial<SelfUpdateResult>);
     }
 }
+
+/**
+ * WindowInfo 窗口信息
+ */
+export class WindowInfo {
+    "Window": application$0.WebviewWindow | null;
+    "DocumentID": number;
+    "Title": string;
+
+    /** Creates a new WindowInfo instance. */
+    constructor($$source: Partial<WindowInfo> = {}) {
+        if (!("Window" in $$source)) {
+            this["Window"] = null;
+        }
+        if (!("DocumentID" in $$source)) {
+            this["DocumentID"] = 0;
+        }
+        if (!("Title" in $$source)) {
+            this["Title"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WindowInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WindowInfo {
+        const $$createField0_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("Window" in $$parsedSource) {
+            $$parsedSource["Window"] = $$createField0_0($$parsedSource["Window"]);
+        }
+        return new WindowInfo($$parsedSource as Partial<WindowInfo>);
+    }
+}
+
+// Private type creation functions
+const $$createType0 = application$0.WebviewWindow.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);

@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
-import { useDocumentStore } from '@/stores/documentStore';
-import { useI18n } from 'vue-i18n';
-import type { Document } from '@/../bindings/voidraft/internal/models/models';
+import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue';
+import {useDocumentStore} from '@/stores/documentStore';
+import {useI18n} from 'vue-i18n';
+import type {Document} from '@/../bindings/voidraft/internal/models/models';
+import {useWindowStore} from "@/stores/windowStore";
 
 const documentStore = useDocumentStore();
-const { t } = useI18n();
+const windowStore = useWindowStore();
+const {t} = useI18n();
 
 // 组件状态
 const showMenu = ref(false);
@@ -15,30 +17,33 @@ const editingId = ref<number | null>(null);
 const editingTitle = ref('');
 const editInputRef = ref<HTMLInputElement>();
 const deleteConfirmId = ref<number | null>(null);
+// 添加错误提示状态
+const alreadyOpenDocId = ref<number | null>(null);
+const errorMessageTimer = ref<number | null>(null);
 
 // 过滤后的文档列表 + 创建选项
 const filteredItems = computed(() => {
   const docs = documentStore.documentList;
   const query = inputValue.value.trim();
-  
+
   if (!query) {
     return docs;
   }
-  
+
   // 过滤匹配的文档
-  const filtered = docs.filter(doc => 
-    doc.title.toLowerCase().includes(query.toLowerCase())
+  const filtered = docs.filter(doc =>
+      doc.title.toLowerCase().includes(query.toLowerCase())
   );
-  
+
   // 如果输入的不是已存在文档的完整标题，添加创建选项
   const exactMatch = docs.some(doc => doc.title.toLowerCase() === query.toLowerCase());
   if (!exactMatch && query.length > 0) {
     return [
-      { id: -1, title: t('toolbar.createDocument') + ` "${query}"`, isCreateOption: true } as any,
+      {id: -1, title: t('toolbar.createDocument') + ` "${query}"`, isCreateOption: true} as any,
       ...filtered
     ];
   }
-  
+
   return filtered;
 });
 
@@ -65,6 +70,18 @@ const closeMenu = () => {
   editingId.value = null;
   editingTitle.value = '';
   deleteConfirmId.value = null;
+  
+  // 清除错误状态和定时器
+  clearErrorMessage();
+};
+
+// 清除错误提示和定时器
+const clearErrorMessage = () => {
+  if (errorMessageTimer.value) {
+    clearTimeout(errorMessageTimer.value);
+    errorMessageTimer.value = null;
+  }
+  alreadyOpenDocId.value = null;
 };
 
 // 切换菜单
@@ -90,6 +107,23 @@ const selectItem = async (item: any) => {
 // 选择文档
 const selectDoc = async (doc: Document) => {
   try {
+    const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
+    if (hasOpen) {
+      // 设置错误状态并启动定时器
+      alreadyOpenDocId.value = doc.id;
+      
+      // 清除之前的定时器（如果存在）
+      if (errorMessageTimer.value) {
+        clearTimeout(errorMessageTimer.value);
+      }
+      
+      // 设置新的定时器，3秒后清除错误信息
+      errorMessageTimer.value = window.setTimeout(() => {
+        alreadyOpenDocId.value = null;
+        errorMessageTimer.value = null;
+      }, 3000);
+      return;
+    }
     const success = await documentStore.openDocument(doc.id);
     if (success) {
       closeMenu();
@@ -108,7 +142,7 @@ const validateTitle = (title: string): string | null => {
     return t('toolbar.documentNameRequired');
   }
   if (title.trim().length > MAX_TITLE_LENGTH) {
-    return t('toolbar.documentNameTooLong', { max: MAX_TITLE_LENGTH });
+    return t('toolbar.documentNameTooLong', {max: MAX_TITLE_LENGTH});
   }
   return null;
 };
@@ -118,7 +152,6 @@ const createDoc = async (title: string) => {
   const trimmedTitle = title.trim();
   const error = validateTitle(trimmedTitle);
   if (error) {
-    console.error('创建文档失败:', error);
     return;
   }
 
@@ -165,16 +198,26 @@ const saveEdit = async () => {
   editingTitle.value = '';
 };
 
+// 在新窗口打开文档
+const openInNewWindow = async (doc: Document, event: Event) => {
+  event.stopPropagation();
+  try {
+    await documentStore.openDocumentInNewWindow(doc.id);
+  } catch (error) {
+    console.error('Failed to open document in new window:', error);
+  }
+};
+
 // 处理删除 - 简化确认机制
 const handleDelete = async (doc: Document, event: Event) => {
   event.stopPropagation();
-  
+
   if (deleteConfirmId.value === doc.id) {
     // 确认删除
     try {
       await documentStore.deleteDocument(doc.id);
       await documentStore.updateDocuments();
-      
+
       // 如果删除的是当前文档，切换到第一个文档
       if (documentStore.currentDocument?.id === doc.id && documentStore.documentList.length > 0) {
         const firstDoc = documentStore.documentList[0];
@@ -190,7 +233,7 @@ const handleDelete = async (doc: Document, event: Event) => {
     // 进入确认状态
     deleteConfirmId.value = doc.id;
     editingId.value = null; // 清除编辑状态
-    
+
     // 3秒后自动取消确认状态
     setTimeout(() => {
       if (deleteConfirmId.value === doc.id) {
@@ -203,11 +246,11 @@ const handleDelete = async (doc: Document, event: Event) => {
 // 格式化时间
 const formatTime = (dateString: string | null) => {
   if (!dateString) return t('toolbar.unknownTime');
-  
+
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return t('toolbar.invalidDate');
-    
+
     // 根据当前语言显示时间格式
     const locale = t('locale') === 'zh-CN' ? 'zh-CN' : 'en-US';
     return date.toLocaleString(locale, {
@@ -285,6 +328,10 @@ onMounted(() => {
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   document.removeEventListener('keydown', handleKeydown);
+  // 清理定时器
+  if (errorMessageTimer.value) {
+    clearTimeout(errorMessageTimer.value);
+  }
 });
 </script>
 
@@ -300,79 +347,103 @@ onUnmounted(() => {
     <div v-if="showMenu" class="doc-menu">
       <!-- 输入框 -->
       <div class="input-box">
-        <input 
-          ref="inputRef"
-          v-model="inputValue"
-          type="text" 
-          class="main-input"
-          :placeholder="t('toolbar.searchOrCreateDocument')"
-          :maxlength="MAX_TITLE_LENGTH"
-          @keydown="handleInputKeydown"
+        <input
+            ref="inputRef"
+            v-model="inputValue"
+            type="text"
+            class="main-input"
+            :placeholder="t('toolbar.searchOrCreateDocument')"
+            :maxlength="MAX_TITLE_LENGTH"
+            @keydown="handleInputKeydown"
         />
-        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"></circle>
           <path d="m21 21-4.35-4.35"></path>
         </svg>
       </div>
-      
+
       <!-- 项目列表 -->
       <div class="item-list">
-        <div 
-          v-for="item in filteredItems" 
-          :key="item.id"
-          class="list-item"
-          :class="{ 
+        <div
+            v-for="item in filteredItems"
+            :key="item.id"
+            class="list-item"
+            :class="{
             'active': !item.isCreateOption && documentStore.currentDocument?.id === item.id,
             'create-item': item.isCreateOption
           }"
-          @click="selectItem(item)"
+            @click="selectItem(item)"
         >
           <!-- 创建选项 -->
           <div v-if="item.isCreateOption" class="create-option">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M5 12h14"></path>
               <path d="M12 5v14"></path>
             </svg>
             <span>{{ item.title }}</span>
           </div>
-          
+
           <!-- 文档项 -->
           <div v-else class="doc-item-content">
             <!-- 普通显示 -->
             <div v-if="editingId !== item.id" class="doc-info">
               <div class="doc-title">{{ item.title }}</div>
-              <div class="doc-date">{{ formatTime(item.updatedAt) }}</div>
+              <!-- 根据状态显示错误信息或时间 -->
+              <div v-if="alreadyOpenDocId === item.id" class="doc-error">
+                {{ t('toolbar.alreadyOpenInNewWindow') }}
+              </div>
+              <div v-else class="doc-date">{{ formatTime(item.updatedAt) }}</div>
             </div>
-            
+
             <!-- 编辑状态 -->
             <div v-else class="doc-edit">
               <input
-                :ref="el => editInputRef = el as HTMLInputElement"
-                v-model="editingTitle"
-                type="text"
-                class="edit-input"
-                :maxlength="MAX_TITLE_LENGTH"
-                @keydown="handleEditKeydown"
-                @blur="saveEdit"
-                @click.stop
+                  :ref="el => editInputRef = el as HTMLInputElement"
+                  v-model="editingTitle"
+                  type="text"
+                  class="edit-input"
+                  :maxlength="MAX_TITLE_LENGTH"
+                  @keydown="handleEditKeydown"
+                  @blur="saveEdit"
+                  @click.stop
               />
             </div>
-            
+
             <!-- 操作按钮 -->
             <div v-if="editingId !== item.id" class="doc-actions">
+              <!-- 只有非当前文档才显示在新窗口打开按钮 -->
+              <button
+                  v-if="documentStore.currentDocument?.id !== item.id"
+                  class="action-btn"
+                  @click="openInNewWindow(item, $event)"
+                  :title="t('toolbar.openInNewWindow')"
+              >
+                <svg width="12" height="12" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
+                     fill="currentColor">
+                  <path
+                      d="M172.8 1017.6c-89.6 0-166.4-70.4-166.4-166.4V441.6c0-89.6 70.4-166.4 166.4-166.4h416c89.6 0 166.4 70.4 166.4 166.4v416c0 89.6-70.4 166.4-166.4 166.4l-416-6.4z m0-659.2c-51.2 0-89.6 38.4-89.6 89.6v416c0 51.2 38.4 89.6 89.6 89.6h416c51.2 0 89.6-38.4 89.6-89.6V441.6c0-51.2-38.4-89.6-89.6-89.6H172.8z"></path>
+                  <path
+                      d="M851.2 19.2H435.2C339.2 19.2 268.8 96 268.8 185.6v25.6h70.4v-25.6c0-51.2 38.4-89.6 89.6-89.6h409.6c51.2 0 89.6 38.4 89.6 89.6v409.6c0 51.2-38.4 89.6-89.6 89.6h-38.4V768h51.2c96 0 166.4-76.8 166.4-166.4V185.6c0-96-76.8-166.4-166.4-166.4z"></path>
+                </svg>
+              </button>
               <button class="action-btn" @click="startRename(item, $event)" :title="t('toolbar.rename')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path>
                 </svg>
               </button>
-              <button 
-                v-if="documentStore.documentList.length > 1 && item.id !== 1"
-                class="action-btn delete-btn" 
-                :class="{ 'delete-confirm': deleteConfirmId === item.id }"
-                @click="handleDelete(item, $event)" 
-                :title="deleteConfirmId === item.id ? t('toolbar.confirmDelete') : t('toolbar.delete')"
+              <button
+                  v-if="documentStore.documentList.length > 1 && item.id !== 1"
+                  class="action-btn delete-btn"
+                  :class="{ 'delete-confirm': deleteConfirmId === item.id }"
+                  @click="handleDelete(item, $event)"
+                  :title="deleteConfirmId === item.id ? t('toolbar.confirmDelete') : t('toolbar.delete')"
               >
-                <svg v-if="deleteConfirmId !== item.id" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg v-if="deleteConfirmId !== item.id" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
+                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                     stroke-linejoin="round">
                   <polyline points="3,6 5,6 21,6"></polyline>
                   <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 </svg>
@@ -381,12 +452,12 @@ onUnmounted(() => {
             </div>
           </div>
         </div>
-        
+
         <!-- 空状态 -->
         <div v-if="filteredItems.length === 0" class="empty">
           {{ t('toolbar.noDocumentFound') }}
         </div>
-        
+
         <!-- 加载状态 -->
         <div v-if="documentStore.isLoading" class="loading">
           {{ t('toolbar.loading') }}
@@ -399,7 +470,7 @@ onUnmounted(() => {
 <style scoped lang="scss">
 .document-selector {
   position: relative;
-  
+
   .doc-btn {
     background: none;
     border: none;
@@ -411,30 +482,30 @@ onUnmounted(() => {
     gap: 3px;
     padding: 2px 4px;
     border-radius: 3px;
-    
+
     &:hover {
       background-color: var(--border-color);
       opacity: 0.8;
     }
-    
+
     .doc-name {
       max-width: 80px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    
+
     .arrow {
       font-size: 8px;
       margin-left: 2px;
       transition: transform 0.2s ease;
-      
+
       &.open {
         transform: rotate(180deg);
       }
     }
   }
-  
+
   .doc-menu {
     position: absolute;
     bottom: 100%;
@@ -448,12 +519,12 @@ onUnmounted(() => {
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     overflow: hidden;
-    
+
     .input-box {
       position: relative;
       padding: 8px;
       border-bottom: 1px solid var(--border-color);
-      
+
       .main-input {
         width: 100%;
         box-sizing: border-box;
@@ -464,16 +535,16 @@ onUnmounted(() => {
         font-size: 11px;
         color: var(--text-primary);
         outline: none;
-        
+
         &:focus {
           border-color: var(--text-muted);
         }
-        
+
         &::placeholder {
           color: var(--text-muted);
         }
       }
-      
+
       .input-icon {
         position: absolute;
         left: 14px;
@@ -483,34 +554,34 @@ onUnmounted(() => {
         pointer-events: none;
       }
     }
-    
+
     .item-list {
       max-height: 240px;
       overflow-y: auto;
-      
-              .list-item {
-          cursor: pointer;
-          border-bottom: 1px solid var(--border-color);
-          
-          &:hover {
-            background-color: var(--bg-hover);
-          }
-        
+
+      .list-item {
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+
+        &:hover {
+          background-color: var(--bg-hover);
+        }
+
         &.active {
           background-color: var(--selection-bg);
-          
+
           .doc-item-content .doc-info {
             .doc-title {
               color: var(--selection-text);
             }
-            
-            .doc-date {
+
+            .doc-date, .doc-error {
               color: var(--selection-text);
               opacity: 0.7;
             }
           }
         }
-        
+
         &.create-item {
           .create-option {
             display: flex;
@@ -519,24 +590,24 @@ onUnmounted(() => {
             padding: 8px 8px;
             font-size: 11px;
             font-weight: normal;
-            
+
             svg {
               flex-shrink: 0;
               color: var(--text-muted);
             }
           }
         }
-        
+
         .doc-item-content {
           display: flex;
           align-items: center;
           justify-content: space-between;
           padding: 8px 8px;
-          
+
           .doc-info {
             flex: 1;
             min-width: 0;
-            
+
             .doc-title {
               font-size: 12px;
               margin-bottom: 2px;
@@ -545,17 +616,24 @@ onUnmounted(() => {
               white-space: nowrap;
               font-weight: normal;
             }
-            
+
             .doc-date {
               font-size: 10px;
               color: var(--text-muted);
               opacity: 0.6;
             }
+            
+            .doc-error {
+              font-size: 10px;
+              color: var(--text-danger);
+              font-weight: 500;
+              animation: fadeInOut 3s forwards;
+            }
           }
-          
+
           .doc-edit {
             flex: 1;
-            
+
             .edit-input {
               width: 100%;
               box-sizing: border-box;
@@ -566,19 +644,19 @@ onUnmounted(() => {
               font-size: 11px;
               color: var(--text-primary);
               outline: none;
-              
+
               &:focus {
                 border-color: var(--text-muted);
               }
             }
           }
-          
+
           .doc-actions {
             display: flex;
             gap: 6px;
             opacity: 0;
             transition: opacity 0.2s ease;
-            
+
             .action-btn {
               background: none;
               border: none;
@@ -591,31 +669,31 @@ onUnmounted(() => {
               justify-content: center;
               min-width: 20px;
               min-height: 20px;
-              
+
               svg {
                 width: 12px;
                 height: 12px;
               }
-              
+
               &:hover {
                 background-color: var(--border-color);
                 color: var(--text-primary);
               }
-              
+
               &.delete-btn:hover {
                 color: var(--text-danger);
               }
-              
+
               &.delete-confirm {
                 background-color: var(--text-danger);
                 color: white;
-                
+
                 .confirm-text {
                   font-size: 10px;
                   padding: 0 4px;
                   font-weight: normal;
                 }
-                
+
                 &:hover {
                   background-color: var(--text-danger);
                   color: white !important; // 确保确认状态下文字始终为白色
@@ -625,12 +703,12 @@ onUnmounted(() => {
             }
           }
         }
-        
+
         &:hover .doc-actions {
           opacity: 1;
         }
       }
-      
+
       .empty, .loading {
         padding: 12px 8px;
         text-align: center;
@@ -639,25 +717,37 @@ onUnmounted(() => {
       }
     }
   }
-  
+
   // 自定义滚动条
   .item-list {
     &::-webkit-scrollbar {
       width: 4px;
     }
-    
+
     &::-webkit-scrollbar-track {
       background: transparent;
     }
-    
+
     &::-webkit-scrollbar-thumb {
       background-color: var(--border-color);
       border-radius: 2px;
-      
+
       &:hover {
         background-color: var(--text-muted);
       }
     }
   }
 }
-</style> 
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+</style>

@@ -33,13 +33,13 @@ func RegisterTrayEvents(app *application.App, systray *application.SystemTray, m
 
 // RegisterTrayMenuEvents 注册系统托盘菜单事件
 func RegisterTrayMenuEvents(app *application.App, menu *application.Menu, mainWindow *application.WebviewWindow) {
-	menu.Add("主窗口").OnClick(func(data *application.Context) {
+	menu.Add("Main window").OnClick(func(data *application.Context) {
 		mainWindow.Show()
 	})
 
 	menu.AddSeparator()
 
-	menu.Add("退出").OnClick(func(data *application.Context) {
+	menu.Add("Quit").OnClick(func(data *application.Context) {
 		app.Quit()
 	})
 }

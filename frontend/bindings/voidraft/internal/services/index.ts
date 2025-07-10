@@ -14,6 +14,7 @@ import * as StartupService from "./startupservice.js";
 import * as SystemService from "./systemservice.js";
 import * as TranslationService from "./translationservice.js";
 import * as TrayService from "./trayservice.js";
+import * as WindowService from "./windowservice.js";
 export {
     ConfigService,
     DatabaseService,
@@ -27,7 +28,8 @@ export {
     StartupService,
     SystemService,
     TranslationService,
-    TrayService
+    TrayService,
+    WindowService
 };
 
 export * from "./models.js";
