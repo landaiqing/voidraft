@@ -49,7 +49,7 @@ type ConfigListener struct {
 type ConfigNotificationService struct {
 	listeners map[ConfigChangeType][]*ConfigListener // 支持多监听器的map
 	mu        sync.RWMutex                           // 监听器map的读写锁
-	logger    *log.LoggerService                     // 日志服务
+	logger    *log.Service                           // 日志服务
 	koanf     *koanf.Koanf                           // koanf实例
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -57,7 +57,7 @@ type ConfigNotificationService struct {
 }
 
 // NewConfigNotificationService 创建配置通知服务
-func NewConfigNotificationService(k *koanf.Koanf, logger *log.LoggerService) *ConfigNotificationService {
+func NewConfigNotificationService(k *koanf.Koanf, logger *log.Service) *ConfigNotificationService {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ConfigNotificationService{
 		listeners: make(map[ConfigChangeType][]*ConfigListener),
@@ -445,8 +445,8 @@ func CreateDataPathListener(name string, callback func() error) *ConfigListener 
 	}
 }
 
-// OnShutdown 关闭服务
-func (cns *ConfigNotificationService) OnShutdown() error {
+// ServiceShutdown 关闭服务
+func (cns *ConfigNotificationService) ServiceShutdown() error {
 	cns.Cleanup()
 	return nil
 }

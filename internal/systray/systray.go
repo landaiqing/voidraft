@@ -10,7 +10,7 @@ import (
 // SetupSystemTray 设置系统托盘及其功能
 func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
 	// 创建系统托盘
-	systray := app.NewSystemTray()
+	systray := app.SystemTray.New()
 
 	// 设置图标
 	iconBytes, _ := assets.ReadFile("appicon.png")

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,7 +9,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-	_ "modernc.org/sqlite" // SQLite driver
+	"github.com/wailsapp/wails/v3/pkg/services/sqlite"
 )
 
 const (
@@ -64,14 +63,14 @@ CREATE TABLE IF NOT EXISTS key_bindings (
 // DatabaseService provides shared database functionality
 type DatabaseService struct {
 	configService *ConfigService
-	logger        *log.LoggerService
-	db            *sql.DB
+	logger        *log.Service
+	SQLite        *sqlite.Service
 	mu            sync.RWMutex
 	ctx           context.Context
 }
 
 // NewDatabaseService creates a new database service
-func NewDatabaseService(configService *ConfigService, logger *log.LoggerService) *DatabaseService {
+func NewDatabaseService(configService *ConfigService, logger *log.Service) *DatabaseService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -79,11 +78,12 @@ func NewDatabaseService(configService *ConfigService, logger *log.LoggerService)
 	return &DatabaseService{
 		configService: configService,
 		logger:        logger,
+		SQLite:        sqlite.New(),
 	}
 }
 
-// OnStartup initializes the service when the application starts
-func (ds *DatabaseService) OnStartup(ctx context.Context, _ application.ServiceOptions) error {
+// ServiceStartup initializes the service when the application starts
+func (ds *DatabaseService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	ds.ctx = ctx
 	return ds.initDatabase()
 }
@@ -111,24 +111,26 @@ func (ds *DatabaseService) initDatabase() error {
 		file.Close()
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
+	// 配置SQLite服务
+	ds.SQLite.Configure(&sqlite.Config{
+		DBSource: dbPath,
+	})
+
+	// 打开数据库连接
+	if err := ds.SQLite.Open(); err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 
-	ds.db = db
-
-	// Apply optimization settings
-	if _, err := db.Exec(sqlOptimizationSettings); err != nil {
+	// 应用性能优化设置
+	if err := ds.SQLite.Execute(sqlOptimizationSettings); err != nil {
 		return fmt.Errorf("failed to apply optimization settings: %w", err)
 	}
 
-	// Create all tables
+	// 创建表和索引
 	if err := ds.createTables(); err != nil {
 		return fmt.Errorf("failed to create tables: %w", err)
 	}
 
-	// Create indexes
 	if err := ds.createIndexes(); err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
@@ -154,7 +156,7 @@ func (ds *DatabaseService) createTables() error {
 	}
 
 	for _, table := range tables {
-		if _, err := ds.db.Exec(table); err != nil {
+		if err := ds.SQLite.Execute(table); err != nil {
 			return err
 		}
 	}
@@ -177,35 +179,25 @@ func (ds *DatabaseService) createIndexes() error {
 	}
 
 	for _, index := range indexes {
-		if _, err := ds.db.Exec(index); err != nil {
+		if err := ds.SQLite.Execute(index); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// GetDB returns the database connection
-func (ds *DatabaseService) GetDB() *sql.DB {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-	return ds.db
-}
-
-// OnShutdown shuts down the service when the application closes
-func (ds *DatabaseService) OnShutdown() error {
-	if ds.db != nil {
-		return ds.db.Close()
-	}
-	return nil
+// ServiceShutdown shuts down the service when the application closes
+func (ds *DatabaseService) ServiceShutdown() error {
+	return ds.SQLite.Close()
 }
 
 // OnDataPathChanged handles data path changes
 func (ds *DatabaseService) OnDataPathChanged() error {
-	// Close existing database
-	if ds.db != nil {
-		ds.db.Close()
+	// 关闭当前连接
+	if err := ds.SQLite.Close(); err != nil {
+		return err
 	}
 
-	// Reinitialize with new path
+	// 用新路径重新初始化
 	return ds.initDatabase()
 }

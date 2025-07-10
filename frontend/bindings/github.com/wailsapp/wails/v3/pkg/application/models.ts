@@ -11,15 +11,55 @@ import * as slog$0 from "../../../../../../log/slog/models.js";
 
 export class App {
     /**
-     * The main application menu
+     * Manager pattern for organized API
      */
-    "ApplicationMenu": Menu | null;
+    "Window": WindowManager | null;
+    "ContextMenu": ContextMenuManager | null;
+    "KeyBinding": KeyBindingManager | null;
+    "Browser": BrowserManager | null;
+    "Env": EnvironmentManager | null;
+    "Dialog": DialogManager | null;
+    "Event": EventManager | null;
+    "Menu": MenuManager | null;
+    "Screen": ScreenManager | null;
+    "Clipboard": ClipboardManager | null;
+    "SystemTray": SystemTrayManager | null;
     "Logger": slog$0.Logger | null;
 
     /** Creates a new App instance. */
     constructor($$source: Partial<App> = {}) {
-        if (!("ApplicationMenu" in $$source)) {
-            this["ApplicationMenu"] = null;
+        if (!("Window" in $$source)) {
+            this["Window"] = null;
+        }
+        if (!("ContextMenu" in $$source)) {
+            this["ContextMenu"] = null;
+        }
+        if (!("KeyBinding" in $$source)) {
+            this["KeyBinding"] = null;
+        }
+        if (!("Browser" in $$source)) {
+            this["Browser"] = null;
+        }
+        if (!("Env" in $$source)) {
+            this["Env"] = null;
+        }
+        if (!("Dialog" in $$source)) {
+            this["Dialog"] = null;
+        }
+        if (!("Event" in $$source)) {
+            this["Event"] = null;
+        }
+        if (!("Menu" in $$source)) {
+            this["Menu"] = null;
+        }
+        if (!("Screen" in $$source)) {
+            this["Screen"] = null;
+        }
+        if (!("Clipboard" in $$source)) {
+            this["Clipboard"] = null;
+        }
+        if (!("SystemTray" in $$source)) {
+            this["SystemTray"] = null;
         }
         if (!("Logger" in $$source)) {
             this["Logger"] = null;
@@ -34,31 +74,308 @@ export class App {
     static createFrom($$source: any = {}): App {
         const $$createField0_0 = $$createType1;
         const $$createField1_0 = $$createType3;
+        const $$createField2_0 = $$createType5;
+        const $$createField3_0 = $$createType7;
+        const $$createField4_0 = $$createType9;
+        const $$createField5_0 = $$createType11;
+        const $$createField6_0 = $$createType13;
+        const $$createField7_0 = $$createType15;
+        const $$createField8_0 = $$createType17;
+        const $$createField9_0 = $$createType19;
+        const $$createField10_0 = $$createType21;
+        const $$createField11_0 = $$createType23;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("ApplicationMenu" in $$parsedSource) {
-            $$parsedSource["ApplicationMenu"] = $$createField0_0($$parsedSource["ApplicationMenu"]);
+        if ("Window" in $$parsedSource) {
+            $$parsedSource["Window"] = $$createField0_0($$parsedSource["Window"]);
+        }
+        if ("ContextMenu" in $$parsedSource) {
+            $$parsedSource["ContextMenu"] = $$createField1_0($$parsedSource["ContextMenu"]);
+        }
+        if ("KeyBinding" in $$parsedSource) {
+            $$parsedSource["KeyBinding"] = $$createField2_0($$parsedSource["KeyBinding"]);
+        }
+        if ("Browser" in $$parsedSource) {
+            $$parsedSource["Browser"] = $$createField3_0($$parsedSource["Browser"]);
+        }
+        if ("Env" in $$parsedSource) {
+            $$parsedSource["Env"] = $$createField4_0($$parsedSource["Env"]);
+        }
+        if ("Dialog" in $$parsedSource) {
+            $$parsedSource["Dialog"] = $$createField5_0($$parsedSource["Dialog"]);
+        }
+        if ("Event" in $$parsedSource) {
+            $$parsedSource["Event"] = $$createField6_0($$parsedSource["Event"]);
+        }
+        if ("Menu" in $$parsedSource) {
+            $$parsedSource["Menu"] = $$createField7_0($$parsedSource["Menu"]);
+        }
+        if ("Screen" in $$parsedSource) {
+            $$parsedSource["Screen"] = $$createField8_0($$parsedSource["Screen"]);
+        }
+        if ("Clipboard" in $$parsedSource) {
+            $$parsedSource["Clipboard"] = $$createField9_0($$parsedSource["Clipboard"]);
+        }
+        if ("SystemTray" in $$parsedSource) {
+            $$parsedSource["SystemTray"] = $$createField10_0($$parsedSource["SystemTray"]);
         }
         if ("Logger" in $$parsedSource) {
-            $$parsedSource["Logger"] = $$createField1_0($$parsedSource["Logger"]);
+            $$parsedSource["Logger"] = $$createField11_0($$parsedSource["Logger"]);
         }
         return new App($$parsedSource as Partial<App>);
     }
 }
 
-export class Menu {
+/**
+ * BrowserManager manages browser-related operations
+ */
+export class BrowserManager {
 
-    /** Creates a new Menu instance. */
-    constructor($$source: Partial<Menu> = {}) {
+    /** Creates a new BrowserManager instance. */
+    constructor($$source: Partial<BrowserManager> = {}) {
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new Menu instance from a string or object.
+     * Creates a new BrowserManager instance from a string or object.
      */
-    static createFrom($$source: any = {}): Menu {
+    static createFrom($$source: any = {}): BrowserManager {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Menu($$parsedSource as Partial<Menu>);
+        return new BrowserManager($$parsedSource as Partial<BrowserManager>);
+    }
+}
+
+/**
+ * ClipboardManager manages clipboard operations
+ */
+export class ClipboardManager {
+
+    /** Creates a new ClipboardManager instance. */
+    constructor($$source: Partial<ClipboardManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ClipboardManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ClipboardManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ClipboardManager($$parsedSource as Partial<ClipboardManager>);
+    }
+}
+
+/**
+ * ContextMenuManager manages all context menu operations
+ */
+export class ContextMenuManager {
+
+    /** Creates a new ContextMenuManager instance. */
+    constructor($$source: Partial<ContextMenuManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ContextMenuManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ContextMenuManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ContextMenuManager($$parsedSource as Partial<ContextMenuManager>);
+    }
+}
+
+/**
+ * DialogManager manages dialog-related operations
+ */
+export class DialogManager {
+
+    /** Creates a new DialogManager instance. */
+    constructor($$source: Partial<DialogManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DialogManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DialogManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DialogManager($$parsedSource as Partial<DialogManager>);
+    }
+}
+
+/**
+ * EnvironmentManager manages environment-related operations
+ */
+export class EnvironmentManager {
+
+    /** Creates a new EnvironmentManager instance. */
+    constructor($$source: Partial<EnvironmentManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new EnvironmentManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): EnvironmentManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new EnvironmentManager($$parsedSource as Partial<EnvironmentManager>);
+    }
+}
+
+/**
+ * EventManager manages event-related operations
+ */
+export class EventManager {
+
+    /** Creates a new EventManager instance. */
+    constructor($$source: Partial<EventManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new EventManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): EventManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new EventManager($$parsedSource as Partial<EventManager>);
+    }
+}
+
+/**
+ * KeyBindingManager manages all key binding operations
+ */
+export class KeyBindingManager {
+
+    /** Creates a new KeyBindingManager instance. */
+    constructor($$source: Partial<KeyBindingManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new KeyBindingManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): KeyBindingManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new KeyBindingManager($$parsedSource as Partial<KeyBindingManager>);
+    }
+}
+
+/**
+ * MenuManager manages menu-related operations
+ */
+export class MenuManager {
+
+    /** Creates a new MenuManager instance. */
+    constructor($$source: Partial<MenuManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MenuManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MenuManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MenuManager($$parsedSource as Partial<MenuManager>);
+    }
+}
+
+export class ScreenManager {
+
+    /** Creates a new ScreenManager instance. */
+    constructor($$source: Partial<ScreenManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ScreenManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ScreenManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ScreenManager($$parsedSource as Partial<ScreenManager>);
+    }
+}
+
+/**
+ * ServiceOptions provides optional parameters for calls to [NewService].
+ */
+export class ServiceOptions {
+    /**
+     * Name can be set to override the name of the service
+     * for logging and debugging purposes.
+     * 
+     * If empty, it will default
+     * either to the value obtained through the [ServiceName] interface,
+     * or to the type name.
+     */
+    "Name": string;
+
+    /**
+     * If the service instance implements [http.Handler],
+     * it will be mounted on the internal asset server
+     * at the prefix specified by Route.
+     */
+    "Route": string;
+
+    /**
+     * MarshalError will be called if non-nil
+     * to marshal to JSON the error values returned by this service's methods.
+     * 
+     * MarshalError is not allowed to fail,
+     * but it may return a nil slice to fall back
+     * to the globally configured error handler.
+     * 
+     * If the returned slice is not nil, it must contain valid JSON.
+     */
+    "MarshalError": any;
+
+    /** Creates a new ServiceOptions instance. */
+    constructor($$source: Partial<ServiceOptions> = {}) {
+        if (!("Name" in $$source)) {
+            this["Name"] = "";
+        }
+        if (!("Route" in $$source)) {
+            this["Route"] = "";
+        }
+        if (!("MarshalError" in $$source)) {
+            this["MarshalError"] = null;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ServiceOptions instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ServiceOptions {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ServiceOptions($$parsedSource as Partial<ServiceOptions>);
+    }
+}
+
+/**
+ * SystemTrayManager manages system tray-related operations
+ */
+export class SystemTrayManager {
+
+    /** Creates a new SystemTrayManager instance. */
+    constructor($$source: Partial<SystemTrayManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SystemTrayManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SystemTrayManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SystemTrayManager($$parsedSource as Partial<SystemTrayManager>);
     }
 }
 
@@ -79,8 +396,48 @@ export class WebviewWindow {
     }
 }
 
+/**
+ * WindowManager manages all window-related operations
+ */
+export class WindowManager {
+
+    /** Creates a new WindowManager instance. */
+    constructor($$source: Partial<WindowManager> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WindowManager instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WindowManager {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WindowManager($$parsedSource as Partial<WindowManager>);
+    }
+}
+
 // Private type creation functions
-const $$createType0 = Menu.createFrom;
+const $$createType0 = WindowManager.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = slog$0.Logger.createFrom;
+const $$createType2 = ContextMenuManager.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = KeyBindingManager.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = BrowserManager.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = EnvironmentManager.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = DialogManager.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = EventManager.createFrom;
+const $$createType13 = $Create.Nullable($$createType12);
+const $$createType14 = MenuManager.createFrom;
+const $$createType15 = $Create.Nullable($$createType14);
+const $$createType16 = ScreenManager.createFrom;
+const $$createType17 = $Create.Nullable($$createType16);
+const $$createType18 = ClipboardManager.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = SystemTrayManager.createFrom;
+const $$createType21 = $Create.Nullable($$createType20);
+const $$createType22 = slog$0.Logger.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);

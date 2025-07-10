@@ -51,7 +51,7 @@ const (
 // KeyBindingService 快捷键管理服务
 type KeyBindingService struct {
 	databaseService *DatabaseService
-	logger          *log.LoggerService
+	logger          *log.Service
 
 	mu       sync.RWMutex
 	ctx      context.Context
@@ -83,7 +83,7 @@ func (e *KeyBindingError) Is(target error) bool {
 }
 
 // NewKeyBindingService 创建快捷键服务实例
-func NewKeyBindingService(databaseService *DatabaseService, logger *log.LoggerService) *KeyBindingService {
+func NewKeyBindingService(databaseService *DatabaseService, logger *log.Service) *KeyBindingService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -106,29 +106,26 @@ func (kbs *KeyBindingService) initDatabase() error {
 	defer kbs.mu.Unlock()
 
 	// 检查是否已有快捷键数据
-	db := kbs.databaseService.GetDB()
-	if db == nil {
-		return &KeyBindingError{"get_database", "", fmt.Errorf("database connection is nil")}
-	}
-
-	var count int
-	err := db.QueryRow("SELECT COUNT(*) FROM key_bindings").Scan(&count)
+	rows, err := kbs.databaseService.SQLite.Query("SELECT COUNT(*) FROM key_bindings")
 	if err != nil {
 		return &KeyBindingError{"check_keybindings_count", "", err}
 	}
 
-	kbs.logger.Info("KeyBinding database check", "existing_count", count)
+	if len(rows) == 0 {
+		return &KeyBindingError{"check_keybindings_count", "", fmt.Errorf("no rows returned")}
+	}
+
+	count, ok := rows[0]["COUNT(*)"].(int64)
+	if !ok {
+		return &KeyBindingError{"convert_count", "", fmt.Errorf("failed to convert count to int64")}
+	}
 
 	// 如果没有数据，插入默认配置
 	if count == 0 {
-		kbs.logger.Info("No key bindings found, inserting default key bindings...")
 		if err := kbs.insertDefaultKeyBindings(); err != nil {
 			kbs.logger.Error("Failed to insert default key bindings", "error", err)
 			return err
 		}
-		kbs.logger.Info("Default key bindings inserted successfully")
-	} else {
-		kbs.logger.Info("Key bindings already exist, skipping default insertion")
 	}
 
 	return nil
@@ -137,17 +134,13 @@ func (kbs *KeyBindingService) initDatabase() error {
 // insertDefaultKeyBindings 插入默认快捷键配置
 func (kbs *KeyBindingService) insertDefaultKeyBindings() error {
 	defaultConfig := models.NewDefaultKeyBindingConfig()
-	db := kbs.databaseService.GetDB()
 	now := time.Now()
 
-	kbs.logger.Info("Starting to insert default key bindings", "count", len(defaultConfig.KeyBindings))
+	for _, kb := range defaultConfig.KeyBindings {
 
-	for i, kb := range defaultConfig.KeyBindings {
-		kbs.logger.Info("Inserting key binding", "index", i+1, "command", kb.Command, "key", kb.Key, "extension", kb.Extension)
-
-		_, err := db.Exec(sqlInsertKeyBinding,
-			kb.Command,
-			kb.Extension,
+		err := kbs.databaseService.SQLite.Execute(sqlInsertKeyBinding,
+			string(kb.Command),   // 转换为字符串存储
+			string(kb.Extension), // 转换为字符串存储
 			kb.Key,
 			kb.Enabled,
 			kb.IsDefault,
@@ -155,28 +148,12 @@ func (kbs *KeyBindingService) insertDefaultKeyBindings() error {
 			now,
 		)
 		if err != nil {
-			kbs.logger.Error("Failed to insert key binding", "command", kb.Command, "error", err)
 			return &KeyBindingError{"insert_keybinding", string(kb.Command), err}
 		}
 
-		kbs.logger.Info("Successfully inserted key binding", "command", kb.Command)
 	}
 
-	kbs.logger.Info("Completed inserting all default key bindings")
 	return nil
-}
-
-// GetKeyBindingConfig 获取完整快捷键配置
-func (kbs *KeyBindingService) GetKeyBindingConfig() (*models.KeyBindingConfig, error) {
-	keyBindings, err := kbs.GetAllKeyBindings()
-	if err != nil {
-		return nil, err
-	}
-
-	config := &models.KeyBindingConfig{
-		KeyBindings: keyBindings,
-	}
-	return config, nil
 }
 
 // GetAllKeyBindings 获取所有快捷键配置
@@ -184,43 +161,50 @@ func (kbs *KeyBindingService) GetAllKeyBindings() ([]models.KeyBinding, error) {
 	kbs.mu.RLock()
 	defer kbs.mu.RUnlock()
 
-	db := kbs.databaseService.GetDB()
-	rows, err := db.Query(sqlGetAllKeyBindings)
+	rows, err := kbs.databaseService.SQLite.Query(sqlGetAllKeyBindings)
 	if err != nil {
 		return nil, &KeyBindingError{"query_keybindings", "", err}
 	}
-	defer rows.Close()
 
 	var keyBindings []models.KeyBinding
-	for rows.Next() {
+	for _, row := range rows {
 		var kb models.KeyBinding
-		if err := rows.Scan(&kb.Command, &kb.Extension, &kb.Key, &kb.Enabled, &kb.IsDefault); err != nil {
-			return nil, &KeyBindingError{"scan_keybinding", "", err}
-		}
-		keyBindings = append(keyBindings, kb)
-	}
 
-	if err := rows.Err(); err != nil {
-		return nil, &KeyBindingError{"rows_error", "", err}
+		if command, ok := row["command"].(string); ok {
+			kb.Command = models.KeyBindingCommand(command)
+		}
+
+		if extension, ok := row["extension"].(string); ok {
+			kb.Extension = models.ExtensionID(extension)
+		}
+
+		if key, ok := row["key"].(string); ok {
+			kb.Key = key
+		}
+
+		if enabled, ok := row["enabled"].(int64); ok {
+			kb.Enabled = enabled == 1
+		}
+
+		if isDefault, ok := row["is_default"].(int64); ok {
+			kb.IsDefault = isDefault == 1
+		}
+
+		keyBindings = append(keyBindings, kb)
 	}
 
 	return keyBindings, nil
 }
 
-// OnStartup 启动时调用
-func (kbs *KeyBindingService) OnStartup(ctx context.Context, _ application.ServiceOptions) error {
+// ServiceStartup 启动时调用
+func (kbs *KeyBindingService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	kbs.ctx = ctx
-	kbs.logger.Info("KeyBinding service starting up")
-
 	// 初始化数据库
 	var initErr error
 	kbs.initOnce.Do(func() {
-		kbs.logger.Info("Initializing keybinding database...")
 		if err := kbs.initDatabase(); err != nil {
 			kbs.logger.Error("failed to initialize keybinding database", "error", err)
 			initErr = err
-		} else {
-			kbs.logger.Info("KeyBinding database initialized successfully")
 		}
 	})
 	return initErr

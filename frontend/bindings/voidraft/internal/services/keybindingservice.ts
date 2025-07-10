@@ -12,6 +12,9 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
 /**
@@ -27,19 +30,13 @@ export function GetAllKeyBindings(): Promise<models$0.KeyBinding[]> & { cancel()
 }
 
 /**
- * GetKeyBindingConfig 获取完整快捷键配置
+ * ServiceStartup 启动时调用
  */
-export function GetKeyBindingConfig(): Promise<models$0.KeyBindingConfig | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3804318356) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType3($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2057121990, options) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions
 const $$createType0 = models$0.KeyBinding.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = models$0.KeyBindingConfig.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);

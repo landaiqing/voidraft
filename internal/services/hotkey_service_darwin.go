@@ -80,7 +80,7 @@ var globalHotkeyService *HotkeyService
 
 // HotkeyService macOS全局热键服务
 type HotkeyService struct {
-	logger        *log.LoggerService
+	logger        *log.Service
 	configService *ConfigService
 	app           *application.App
 	mu            sync.RWMutex
@@ -105,7 +105,7 @@ func (e *HotkeyError) Unwrap() error {
 }
 
 // NewHotkeyService 创建新的热键服务实例
-func NewHotkeyService(configService *ConfigService, logger *log.LoggerService) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, logger *log.Service) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -290,8 +290,8 @@ func (hs *HotkeyService) ToggleWindow() {
 	}
 }
 
-// OnShutdown 关闭热键服务
-func (hs *HotkeyService) OnShutdown() error {
+// ServiceShutdown 关闭热键服务
+func (hs *HotkeyService) ServiceShutdown() error {
 	return hs.UnregisterHotkey()
 }
 

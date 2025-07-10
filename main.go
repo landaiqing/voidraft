@@ -75,7 +75,7 @@ func main() {
 	// 'Mac' options tailor the window when running on macOS.
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
-	mainWindow := app.NewWebviewWindowWithOptions(application.WebviewWindowOptions{
+	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Title:                      "voidraft",
 		Width:                      700,
 		Height:                     800,
@@ -92,7 +92,7 @@ func main() {
 			Theme: application.SystemDefault,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
-		URL:              "/#/",
+		URL:              "/",
 	})
 	mainWindow.Center()
 
@@ -122,7 +122,7 @@ func main() {
 	go func() {
 		for {
 			now := time.Now().Format(time.RFC1123)
-			app.EmitEvent("time", now)
+			app.Event.Emit("time", now)
 			time.Sleep(time.Second)
 		}
 	}()

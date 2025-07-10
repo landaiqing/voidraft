@@ -964,84 +964,6 @@ export enum KeyBindingCommand {
 };
 
 /**
- * KeyBindingConfig 快捷键配置
- */
-export class KeyBindingConfig {
-    /**
-     * 快捷键列表
-     */
-    "keyBindings": KeyBinding[];
-
-    /**
-     * 配置元数据
-     */
-    "metadata": KeyBindingMetadata;
-
-    /** Creates a new KeyBindingConfig instance. */
-    constructor($$source: Partial<KeyBindingConfig> = {}) {
-        if (!("keyBindings" in $$source)) {
-            this["keyBindings"] = [];
-        }
-        if (!("metadata" in $$source)) {
-            this["metadata"] = (new KeyBindingMetadata());
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new KeyBindingConfig instance from a string or object.
-     */
-    static createFrom($$source: any = {}): KeyBindingConfig {
-        const $$createField0_0 = $$createType9;
-        const $$createField1_0 = $$createType10;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("keyBindings" in $$parsedSource) {
-            $$parsedSource["keyBindings"] = $$createField0_0($$parsedSource["keyBindings"]);
-        }
-        if ("metadata" in $$parsedSource) {
-            $$parsedSource["metadata"] = $$createField1_0($$parsedSource["metadata"]);
-        }
-        return new KeyBindingConfig($$parsedSource as Partial<KeyBindingConfig>);
-    }
-}
-
-/**
- * KeyBindingMetadata 快捷键配置元数据
- */
-export class KeyBindingMetadata {
-    /**
-     * 配置版本
-     */
-    "version": string;
-
-    /**
-     * 最后更新时间
-     */
-    "lastUpdated": string;
-
-    /** Creates a new KeyBindingMetadata instance. */
-    constructor($$source: Partial<KeyBindingMetadata> = {}) {
-        if (!("version" in $$source)) {
-            this["version"] = "";
-        }
-        if (!("lastUpdated" in $$source)) {
-            this["lastUpdated"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new KeyBindingMetadata instance from a string or object.
-     */
-    static createFrom($$source: any = {}): KeyBindingMetadata {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new KeyBindingMetadata($$parsedSource as Partial<KeyBindingMetadata>);
-    }
-}
-
-/**
  * LanguageType 语言类型定义
  */
 export enum LanguageType {
@@ -1204,8 +1126,8 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType11;
-        const $$createField7_0 = $$createType12;
+        const $$createField6_0 = $$createType8;
+        const $$createField7_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
@@ -1231,8 +1153,5 @@ var $$createType5 = (function $$initCreateType5(...args): any {
 });
 const $$createType6 = $Create.Map($Create.Any, $Create.Any);
 const $$createType7 = HotkeyCombo.createFrom;
-const $$createType8 = KeyBinding.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = KeyBindingMetadata.createFrom;
-const $$createType11 = GithubConfig.createFrom;
-const $$createType12 = GiteaConfig.createFrom;
+const $$createType8 = GithubConfig.createFrom;
+const $$createType9 = GiteaConfig.createFrom;

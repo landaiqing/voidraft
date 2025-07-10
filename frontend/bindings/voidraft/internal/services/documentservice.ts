@@ -12,6 +12,9 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
 /**
@@ -83,6 +86,14 @@ export function ListDeletedDocumentsMeta(): Promise<(models$0.Document | null)[]
  */
 export function RestoreDocument(id: number): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(784200778, id) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup initializes the service when the application starts
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1474135487, options) as any;
     return $resultPromise;
 }
 

@@ -24,7 +24,7 @@ import (
 
 // HotkeyService Windows全局热键服务
 type HotkeyService struct {
-	logger        *log.LoggerService
+	logger        *log.Service
 	configService *ConfigService
 	app           *application.App
 
@@ -52,7 +52,7 @@ func (e *HotkeyError) Unwrap() error {
 }
 
 // NewHotkeyService 创建热键服务实例
-func NewHotkeyService(configService *ConfigService, logger *log.LoggerService) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, logger *log.Service) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -202,7 +202,7 @@ func cBool(b bool) C.int {
 // toggleWindow 切换窗口
 func (hs *HotkeyService) toggleWindow() {
 	if hs.app != nil {
-		hs.app.EmitEvent("hotkey:toggle-window", nil)
+		hs.app.Event.Emit("hotkey:toggle-window", nil)
 	}
 }
 
@@ -259,7 +259,7 @@ func (hs *HotkeyService) IsRegistered() bool {
 	return hs.isRegistered.Load()
 }
 
-// OnShutdown 关闭服务
+// ServiceShutdown 关闭服务
 func (hs *HotkeyService) ServiceShutdown() error {
 	hs.cancel()
 	hs.wg.Wait()

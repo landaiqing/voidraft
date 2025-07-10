@@ -15,14 +15,14 @@ import (
 
 // DarwinStartupImpl macOS 平台开机启动实现
 type DarwinStartupImpl struct {
-	logger   *log.LoggerService
+	logger   *log.Service
 	disabled bool
 	appPath  string
 	appName  string
 }
 
 // newStartupImplementation 创建平台特定的开机启动实现
-func newStartupImplementation(logger *log.LoggerService) StartupImplementation {
+func newStartupImplementation(logger *log.Service) StartupImplementation {
 	return &DarwinStartupImpl{
 		logger: logger,
 	}

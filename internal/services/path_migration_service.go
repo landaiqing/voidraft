@@ -33,7 +33,7 @@ type MigrationProgress struct {
 
 // MigrationService 迁移服务
 type MigrationService struct {
-	logger   *log.LoggerService
+	logger   *log.Service
 	mu       sync.RWMutex
 	progress atomic.Value // stores MigrationProgress
 
@@ -42,7 +42,7 @@ type MigrationService struct {
 }
 
 // NewMigrationService 创建迁移服务
-func NewMigrationService(logger *log.LoggerService) *MigrationService {
+func NewMigrationService(logger *log.Service) *MigrationService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -417,8 +417,8 @@ func (ms *MigrationService) CancelMigration() error {
 	return fmt.Errorf("no active migration to cancel")
 }
 
-// OnShutdown 服务关闭
-func (ms *MigrationService) OnShutdown() error {
+// ServiceShutdown 服务关闭
+func (ms *MigrationService) ServiceShutdown() error {
 	ms.CancelMigration()
 	return nil
 }

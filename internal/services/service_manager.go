@@ -5,12 +5,14 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+	"github.com/wailsapp/wails/v3/pkg/services/sqlite"
 )
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
 	configService      *ConfigService
 	databaseService    *DatabaseService
+	sqliteService      *sqlite.Service
 	documentService    *DocumentService
 	migrationService   *MigrationService
 	systemService      *SystemService
@@ -22,7 +24,7 @@ type ServiceManager struct {
 	startupService     *StartupService
 	selfUpdateService  *SelfUpdateService
 	translationService *TranslationService
-	logger             *log.LoggerService
+	logger             *log.Service
 }
 
 // NewServiceManager 创建新的服务管理器实例
@@ -32,6 +34,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化配置服务
 	configService := NewConfigService(logger)
+
+	// 初始化SQLite服务
+	sqliteService := sqlite.New()
 
 	// 初始化数据库服务
 	databaseService := NewDatabaseService(configService, logger)
@@ -91,6 +96,7 @@ func NewServiceManager() *ServiceManager {
 	return &ServiceManager{
 		configService:      configService,
 		databaseService:    databaseService,
+		sqliteService:      sqliteService,
 		documentService:    documentService,
 		migrationService:   migrationService,
 		systemService:      systemService,
@@ -111,7 +117,8 @@ func NewServiceManager() *ServiceManager {
 func (sm *ServiceManager) GetServices() []application.Service {
 	services := []application.Service{
 		application.NewService(sm.configService),
-		application.NewService(sm.databaseService),
+		application.NewService(sm.sqliteService),   // SQLite服务必须在数据库服务之前初始化
+		application.NewService(sm.databaseService), // 数据库服务必须在依赖它的服务之前初始化
 		application.NewService(sm.documentService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
@@ -138,7 +145,7 @@ func (sm *ServiceManager) GetDialogService() *DialogService {
 }
 
 // GetLogger 获取日志服务实例
-func (sm *ServiceManager) GetLogger() *log.LoggerService {
+func (sm *ServiceManager) GetLogger() *log.Service {
 	return sm.logger
 }
 
@@ -180,4 +187,9 @@ func (sm *ServiceManager) GetTranslationService() *TranslationService {
 // GetDatabaseService 获取数据库服务实例
 func (sm *ServiceManager) GetDatabaseService() *DatabaseService {
 	return sm.databaseService
+}
+
+// GetSQLiteService 获取SQLite服务实例
+func (sm *ServiceManager) GetSQLiteService() *sqlite.Service {
+	return sm.sqliteService
 }

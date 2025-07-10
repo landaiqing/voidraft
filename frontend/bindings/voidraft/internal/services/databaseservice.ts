@@ -12,19 +12,7 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as sql$0 from "../../../database/sql/models.js";
-
-/**
- * GetDB returns the database connection
- */
-export function GetDB(): Promise<sql$0.DB | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(228760371) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
  * OnDataPathChanged handles data path changes
@@ -34,6 +22,18 @@ export function OnDataPathChanged(): Promise<void> & { cancel(): void } {
     return $resultPromise;
 }
 
-// Private type creation functions
-const $$createType0 = sql$0.DB.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
+/**
+ * ServiceShutdown shuts down the service when the application closes
+ */
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3907893632) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup initializes the service when the application starts
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2067840771, options) as any;
+    return $resultPromise;
+}

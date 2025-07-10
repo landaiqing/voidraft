@@ -15,7 +15,7 @@ import (
 type StoreOption struct {
 	FilePath string
 	AutoSave bool
-	Logger   *log.LoggerService
+	Logger   *log.Service
 }
 
 // Store 泛型存储服务
@@ -25,7 +25,7 @@ type Store[T any] struct {
 	dataMap  sync.Map     // thread-safe map
 	unsaved  atomic.Bool
 	initOnce sync.Once
-	logger   *log.LoggerService
+	logger   *log.Service
 }
 
 // NewStore 存储服务

@@ -11,7 +11,6 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-	_ "modernc.org/sqlite" // SQLite driver
 )
 
 // SQL constants for document operations
@@ -70,13 +69,13 @@ SELECT id FROM documents WHERE is_deleted = 0 ORDER BY id LIMIT 1`
 // DocumentService provides document management functionality
 type DocumentService struct {
 	databaseService *DatabaseService
-	logger          *log.LoggerService
+	logger          *log.Service
 	mu              sync.RWMutex
 	ctx             context.Context
 }
 
 // NewDocumentService creates a new document service
-func NewDocumentService(databaseService *DatabaseService, logger *log.LoggerService) *DocumentService {
+func NewDocumentService(databaseService *DatabaseService, logger *log.Service) *DocumentService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -87,8 +86,8 @@ func NewDocumentService(databaseService *DatabaseService, logger *log.LoggerServ
 	}
 }
 
-// OnStartup initializes the service when the application starts
-func (ds *DocumentService) OnStartup(ctx context.Context, _ application.ServiceOptions) error {
+// ServiceStartup initializes the service when the application starts
+func (ds *DocumentService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	ds.ctx = ctx
 	// Ensure default document exists
 	if err := ds.ensureDefaultDocument(); err != nil {
@@ -100,11 +99,18 @@ func (ds *DocumentService) OnStartup(ctx context.Context, _ application.ServiceO
 // ensureDefaultDocument ensures a default document exists
 func (ds *DocumentService) ensureDefaultDocument() error {
 	// Check if any document exists
-	var count int
-	db := ds.databaseService.GetDB()
-	err := db.QueryRow(sqlCountDocuments).Scan(&count)
+	rows, err := ds.databaseService.SQLite.Query(sqlCountDocuments)
 	if err != nil {
 		return err
+	}
+
+	if len(rows) == 0 {
+		return fmt.Errorf("failed to query document count")
+	}
+
+	count, ok := rows[0]["COUNT(*)"].(int64)
+	if !ok {
+		return fmt.Errorf("failed to convert count to int64")
 	}
 
 	// If no documents exist, create default document
@@ -121,20 +127,50 @@ func (ds *DocumentService) GetDocumentByID(id int64) (*models.Document, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	var doc models.Document
-	var isDeletedInt int
-	db := ds.databaseService.GetDB()
-	row := db.QueryRow(sqlGetDocumentByID, id)
-	err := row.Scan(&doc.ID, &doc.Title, &doc.Content, &doc.CreatedAt, &doc.UpdatedAt, &isDeletedInt)
+	rows, err := ds.databaseService.SQLite.Query(sqlGetDocumentByID, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
 		return nil, fmt.Errorf("failed to get document by ID: %w", err)
 	}
-	doc.IsDeleted = isDeletedInt == 1
 
-	return &doc, nil
+	if len(rows) == 0 {
+		return nil, nil
+	}
+
+	row := rows[0]
+	doc := &models.Document{}
+
+	// 从Row中提取数据
+	if idVal, ok := row["id"].(int64); ok {
+		doc.ID = idVal
+	}
+
+	if title, ok := row["title"].(string); ok {
+		doc.Title = title
+	}
+
+	if content, ok := row["content"].(string); ok {
+		doc.Content = content
+	}
+
+	if createdAt, ok := row["created_at"].(string); ok {
+		t, err := time.Parse("2006-01-02 15:04:05", createdAt)
+		if err == nil {
+			doc.CreatedAt = t
+		}
+	}
+
+	if updatedAt, ok := row["updated_at"].(string); ok {
+		t, err := time.Parse("2006-01-02 15:04:05", updatedAt)
+		if err == nil {
+			doc.UpdatedAt = t
+		}
+	}
+
+	if isDeletedInt, ok := row["is_deleted"].(int64); ok {
+		doc.IsDeleted = isDeletedInt == 1
+	}
+
+	return doc, nil
 }
 
 // CreateDocument creates a new document and returns the created document with ID
@@ -152,20 +188,30 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 		IsDeleted: false,
 	}
 
-	db := ds.databaseService.GetDB()
-	result, err := db.Exec(sqlInsertDocument, doc.Title, doc.Content, doc.CreatedAt, doc.UpdatedAt)
-	if err != nil {
+	// 执行插入操作
+	if err := ds.databaseService.SQLite.Execute(sqlInsertDocument,
+		doc.Title, doc.Content, doc.CreatedAt, doc.UpdatedAt); err != nil {
 		return nil, fmt.Errorf("failed to create document: %w", err)
 	}
 
-	// Get the auto-generated ID
-	id, err := result.LastInsertId()
+	// 获取自增ID
+	lastIDRows, err := ds.databaseService.SQLite.Query("SELECT last_insert_rowid()")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last insert ID: %w", err)
 	}
 
-	// Return the created document with ID
-	doc.ID = id
+	if len(lastIDRows) == 0 {
+		return nil, fmt.Errorf("no rows returned for last insert ID query")
+	}
+
+	// 从结果中提取ID
+	lastID, ok := lastIDRows[0]["last_insert_rowid()"].(int64)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert last insert ID to int64")
+	}
+
+	// 返回带ID的文档
+	doc.ID = lastID
 	return doc, nil
 }
 
@@ -174,8 +220,7 @@ func (ds *DocumentService) UpdateDocumentContent(id int64, content string) error
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	db := ds.databaseService.GetDB()
-	_, err := db.Exec(sqlUpdateDocumentContent, content, time.Now(), id)
+	err := ds.databaseService.SQLite.Execute(sqlUpdateDocumentContent, content, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to update document content: %w", err)
 	}
@@ -187,8 +232,7 @@ func (ds *DocumentService) UpdateDocumentTitle(id int64, title string) error {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	db := ds.databaseService.GetDB()
-	_, err := db.Exec(sqlUpdateDocumentTitle, title, time.Now(), id)
+	err := ds.databaseService.SQLite.Execute(sqlUpdateDocumentTitle, title, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to update document title: %w", err)
 	}
@@ -205,8 +249,7 @@ func (ds *DocumentService) DeleteDocument(id int64) error {
 		return fmt.Errorf("cannot delete the default document")
 	}
 
-	db := ds.databaseService.GetDB()
-	_, err := db.Exec(sqlMarkDocumentAsDeleted, time.Now(), id)
+	err := ds.databaseService.SQLite.Execute(sqlMarkDocumentAsDeleted, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to mark document as deleted: %w", err)
 	}
@@ -218,8 +261,7 @@ func (ds *DocumentService) RestoreDocument(id int64) error {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	db := ds.databaseService.GetDB()
-	_, err := db.Exec(sqlRestoreDocument, time.Now(), id)
+	err := ds.databaseService.SQLite.Execute(sqlRestoreDocument, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to restore document: %w", err)
 	}
@@ -231,22 +273,38 @@ func (ds *DocumentService) ListAllDocumentsMeta() ([]*models.Document, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	db := ds.databaseService.GetDB()
-	rows, err := db.Query(sqlListAllDocumentsMeta)
+	rows, err := ds.databaseService.SQLite.Query(sqlListAllDocumentsMeta)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list document meta: %w", err)
 	}
-	defer rows.Close()
 
 	var documents []*models.Document
-	for rows.Next() {
-		var doc models.Document
-		err := rows.Scan(&doc.ID, &doc.Title, &doc.CreatedAt, &doc.UpdatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan document meta: %w", err)
+	for _, row := range rows {
+		doc := &models.Document{IsDeleted: false}
+
+		if id, ok := row["id"].(int64); ok {
+			doc.ID = id
 		}
-		doc.IsDeleted = false
-		documents = append(documents, &doc)
+
+		if title, ok := row["title"].(string); ok {
+			doc.Title = title
+		}
+
+		if createdAt, ok := row["created_at"].(string); ok {
+			t, err := time.Parse("2006-01-02 15:04:05", createdAt)
+			if err == nil {
+				doc.CreatedAt = t
+			}
+		}
+
+		if updatedAt, ok := row["updated_at"].(string); ok {
+			t, err := time.Parse("2006-01-02 15:04:05", updatedAt)
+			if err == nil {
+				doc.UpdatedAt = t
+			}
+		}
+
+		documents = append(documents, doc)
 	}
 
 	return documents, nil
@@ -257,22 +315,38 @@ func (ds *DocumentService) ListDeletedDocumentsMeta() ([]*models.Document, error
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	db := ds.databaseService.GetDB()
-	rows, err := db.Query(sqlListDeletedDocumentsMeta)
+	rows, err := ds.databaseService.SQLite.Query(sqlListDeletedDocumentsMeta)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list deleted document meta: %w", err)
 	}
-	defer rows.Close()
 
 	var documents []*models.Document
-	for rows.Next() {
-		var doc models.Document
-		err := rows.Scan(&doc.ID, &doc.Title, &doc.CreatedAt, &doc.UpdatedAt)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan deleted document meta: %w", err)
+	for _, row := range rows {
+		doc := &models.Document{IsDeleted: true}
+
+		if id, ok := row["id"].(int64); ok {
+			doc.ID = id
 		}
-		doc.IsDeleted = true
-		documents = append(documents, &doc)
+
+		if title, ok := row["title"].(string); ok {
+			doc.Title = title
+		}
+
+		if createdAt, ok := row["created_at"].(string); ok {
+			t, err := time.Parse("2006-01-02 15:04:05", createdAt)
+			if err == nil {
+				doc.CreatedAt = t
+			}
+		}
+
+		if updatedAt, ok := row["updated_at"].(string); ok {
+			t, err := time.Parse("2006-01-02 15:04:05", updatedAt)
+			if err == nil {
+				doc.UpdatedAt = t
+			}
+		}
+
+		documents = append(documents, doc)
 	}
 
 	return documents, nil
@@ -283,14 +357,22 @@ func (ds *DocumentService) GetFirstDocumentID() (int64, error) {
 	ds.mu.RLock()
 	defer ds.mu.RUnlock()
 
-	db := ds.databaseService.GetDB()
-	var id int64
-	err := db.QueryRow(sqlGetFirstDocumentID).Scan(&id)
+	rows, err := ds.databaseService.SQLite.Query(sqlGetFirstDocumentID)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil // No documents exist
 		}
 		return 0, fmt.Errorf("failed to get first document ID: %w", err)
 	}
+
+	if len(rows) == 0 {
+		return 0, nil
+	}
+
+	id, ok := rows[0]["id"].(int64)
+	if !ok {
+		return 0, fmt.Errorf("failed to convert ID to int64")
+	}
+
 	return id, nil
 }

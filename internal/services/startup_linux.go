@@ -13,7 +13,7 @@ import (
 
 // LinuxStartupImpl Linux 平台开机启动实现
 type LinuxStartupImpl struct {
-	logger       *log.LoggerService
+	logger       *log.Service
 	autostartDir string
 	execPath     string
 	appName      string
@@ -37,7 +37,7 @@ X-GNOME-Autostart-enabled=true
 `
 
 // newStartupImplementation 创建平台特定的开机启动实现
-func newStartupImplementation(logger *log.LoggerService) StartupImplementation {
+func newStartupImplementation(logger *log.Service) StartupImplementation {
 	return &LinuxStartupImpl{
 		logger: logger,
 	}

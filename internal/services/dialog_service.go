@@ -7,12 +7,12 @@ import (
 
 // DialogService 对话框服务，处理文件选择等对话框操作
 type DialogService struct {
-	logger *log.LoggerService
+	logger *log.Service
 	window *application.WebviewWindow // 绑定的窗口
 }
 
 // NewDialogService 创建新的对话框服务实例
-func NewDialogService(logger *log.LoggerService) *DialogService {
+func NewDialogService(logger *log.Service) *DialogService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -30,7 +30,8 @@ func (ds *DialogService) SetWindow(window *application.WebviewWindow) {
 
 // SelectDirectory 打开目录选择对话框
 func (ds *DialogService) SelectDirectory() (string, error) {
-	dialog := application.OpenFileDialogWithOptions(&application.OpenFileDialogOptions{
+	dialog := application.OpenFileDialog()
+	dialog.SetOptions(&application.OpenFileDialogOptions{
 		// 目录选择配置
 		CanChooseDirectories:    true,  // 允许选择目录
 		CanChooseFiles:          false, // 不允许选择文件

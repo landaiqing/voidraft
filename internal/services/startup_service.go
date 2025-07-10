@@ -7,7 +7,7 @@ import (
 // StartupService 开机启动服务
 type StartupService struct {
 	configService *ConfigService
-	logger        *log.LoggerService
+	logger        *log.Service
 	impl          StartupImplementation
 	initError     error
 }
@@ -19,7 +19,7 @@ type StartupImplementation interface {
 }
 
 // NewStartupService 创建开机启动服务实例
-func NewStartupService(configService *ConfigService, logger *log.LoggerService) *StartupService {
+func NewStartupService(configService *ConfigService, logger *log.Service) *StartupService {
 	service := &StartupService{
 		configService: configService,
 		logger:        logger,

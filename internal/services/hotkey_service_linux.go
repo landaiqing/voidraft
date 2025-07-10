@@ -141,7 +141,7 @@ import (
 
 // HotkeyService Linux全局热键服务
 type HotkeyService struct {
-	logger        *log.LoggerService
+	logger        *log.Service
 	configService *ConfigService
 	app           *application.App
 
@@ -170,7 +170,7 @@ func (e *HotkeyError) Unwrap() error {
 }
 
 // NewHotkeyService 创建热键服务实例
-func NewHotkeyService(configService *ConfigService, logger *log.LoggerService) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, logger *log.Service) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -384,8 +384,8 @@ func (hs *HotkeyService) IsRegistered() bool {
 	return hs.isRegistered.Load()
 }
 
-// OnShutdown 关闭服务
-func (hs *HotkeyService) OnShutdown() error {
+// ServiceShutdown 关闭服务
+func (hs *HotkeyService) ServiceShutdown() error {
 	hs.cancel()
 	hs.wg.Wait()
 	C.closeX11Display()
