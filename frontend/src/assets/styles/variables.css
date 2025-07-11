@@ -28,6 +28,11 @@
   --dark-danger-color: #ff6b6b;
   --dark-bg-primary: #1a1a1a;
   --dark-bg-hover: #2a2a2a;
+  --dark-loading-bg-gradient: radial-gradient(#222922, #000500);
+  --dark-loading-color: #fff;
+  --dark-loading-glow: 0 0 10px rgba(50, 255, 50, 0.5), 0 0 5px rgba(100, 255, 100, 0.5);
+  --dark-loading-done-color: #6f6;
+  --dark-loading-overlay: linear-gradient(transparent 0%, rgba(10, 16, 10, 0.5) 50%);
   
   /* 浅色主题颜色变量 */
   --light-toolbar-bg: #f8f9fa;
@@ -55,6 +60,11 @@
   --light-danger-color: #dc3545;
   --light-bg-primary: #ffffff;
   --light-bg-hover: #f1f3f4;
+  --light-loading-bg-gradient: radial-gradient(#f0f6f0, #e5efe5);
+  --light-loading-color: #1a3c1a;
+  --light-loading-glow: 0 0 10px rgba(0, 160, 0, 0.3), 0 0 5px rgba(0, 120, 0, 0.2);
+  --light-loading-done-color: #008800;
+  --light-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
   
   /* 默认使用深色主题 */
   --toolbar-bg: var(--dark-toolbar-bg);
@@ -83,6 +93,12 @@
   --text-danger: var(--dark-danger-color);
   --bg-primary: var(--dark-bg-primary);
   --bg-hover: var(--dark-bg-hover);
+  --voidraft-bg-gradient: var(--dark-loading-bg-gradient);
+  --voidraft-loading-color: var(--dark-loading-color);
+  --voidraft-loading-glow: var(--dark-loading-glow);
+  --voidraft-loading-done-color: var(--dark-loading-done-color);
+  --voidraft-loading-overlay: var(--dark-loading-overlay);
+  --voidraft-mono-font: "HarmonyOS Sans Mono", monospace;
   
   color-scheme: light dark;
 }
@@ -116,6 +132,11 @@
     --text-danger: var(--dark-danger-color);
     --bg-primary: var(--dark-bg-primary);
     --bg-hover: var(--dark-bg-hover);
+    --voidraft-bg-gradient: var(--dark-loading-bg-gradient);
+    --voidraft-loading-color: var(--dark-loading-color);
+    --voidraft-loading-glow: var(--dark-loading-glow);
+    --voidraft-loading-done-color: var(--dark-loading-done-color);
+    --voidraft-loading-overlay: var(--dark-loading-overlay);
   }
 }
 
@@ -148,6 +169,11 @@
     --text-danger: var(--light-danger-color);
     --bg-primary: var(--light-bg-primary);
     --bg-hover: var(--light-bg-hover);
+    --voidraft-bg-gradient: var(--light-loading-bg-gradient);
+    --voidraft-loading-color: var(--light-loading-color);
+    --voidraft-loading-glow: var(--light-loading-glow);
+    --voidraft-loading-done-color: var(--light-loading-done-color);
+    --voidraft-loading-overlay: var(--light-loading-overlay);
   }
 }
 
@@ -179,6 +205,11 @@
   --text-danger: var(--light-danger-color);
   --bg-primary: var(--light-bg-primary);
   --bg-hover: var(--light-bg-hover);
+  --voidraft-bg-gradient: var(--light-loading-bg-gradient);
+  --voidraft-loading-color: var(--light-loading-color);
+  --voidraft-loading-glow: var(--light-loading-glow);
+  --voidraft-loading-done-color: var(--light-loading-done-color);
+  --voidraft-loading-overlay: var(--light-loading-overlay);
 }
 
 /* 手动选择深色主题 */
@@ -207,4 +238,11 @@
   --selection-bg: var(--dark-selection-bg);
   --selection-text: var(--dark-selection-text);
   --text-danger: var(--dark-danger-color);
+  --bg-primary: var(--dark-bg-primary);
+  --bg-hover: var(--dark-bg-hover);
+  --voidraft-bg-gradient: var(--dark-loading-bg-gradient);
+  --voidraft-loading-color: var(--dark-loading-color);
+  --voidraft-loading-glow: var(--dark-loading-glow);
+  --voidraft-loading-done-color: var(--dark-loading-done-color);
+  --voidraft-loading-overlay: var(--dark-loading-overlay);
 }

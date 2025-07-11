@@ -3,8 +3,7 @@ import { Range } from '@codemirror/state';
 
 // 生成彩虹颜色数组
 function generateColors(): string[] {
-    return [
-        'red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet',
+    return ['red', 'orange', 'yellow', 'green', 'blue', 'indigo', 'violet'
     ];
 }
 
@@ -75,13 +74,13 @@ export default function rainbowBracketsExtension() {
         rainbowBracketsPlugin,
         EditorView.baseTheme({
             // 为每种颜色定义CSS样式
-            '.cm-rainbow-bracket-red': { color: 'red' },
-            '.cm-rainbow-bracket-orange': { color: 'orange' },
-            '.cm-rainbow-bracket-yellow': { color: 'yellow' },
-            '.cm-rainbow-bracket-green': { color: 'green' },
-            '.cm-rainbow-bracket-blue': { color: 'blue' },
-            '.cm-rainbow-bracket-indigo': { color: 'indigo' },
-            '.cm-rainbow-bracket-violet': { color: 'violet' },
+            '.cm-rainbow-bracket-red': { color: '#FF6B6B' },
+            '.cm-rainbow-bracket-orange': { color: '#FF9E6B' },
+            '.cm-rainbow-bracket-yellow': { color: '#FFD166' },
+            '.cm-rainbow-bracket-green': { color: '#06D6A0' },
+            '.cm-rainbow-bracket-blue': { color: '#118AB2' },
+            '.cm-rainbow-bracket-indigo': { color: '#6B5B95' },
+            '.cm-rainbow-bracket-violet': { color: '#9B5DE5' },
         }),
     ];
 }

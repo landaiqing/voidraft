@@ -102,6 +102,11 @@ export class AppearanceConfig {
      */
     "systemTheme": SystemThemeType;
 
+    /**
+     * 自定义主题配置
+     */
+    "customTheme": CustomThemeConfig;
+
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
@@ -109,6 +114,9 @@ export class AppearanceConfig {
         }
         if (!("systemTheme" in $$source)) {
             this["systemTheme"] = ("" as SystemThemeType);
+        }
+        if (!("customTheme" in $$source)) {
+            this["customTheme"] = (new CustomThemeConfig());
         }
 
         Object.assign(this, $$source);
@@ -118,7 +126,11 @@ export class AppearanceConfig {
      * Creates a new AppearanceConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): AppearanceConfig {
+        const $$createField2_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("customTheme" in $$parsedSource) {
+            $$parsedSource["customTheme"] = $$createField2_0($$parsedSource["customTheme"]);
+        }
         return new AppearanceConfig($$parsedSource as Partial<AppearanceConfig>);
     }
 }
@@ -155,6 +167,49 @@ export class ConfigMetadata {
     static createFrom($$source: any = {}): ConfigMetadata {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new ConfigMetadata($$parsedSource as Partial<ConfigMetadata>);
+    }
+}
+
+/**
+ * CustomThemeConfig 自定义主题配置
+ */
+export class CustomThemeConfig {
+    /**
+     * 深色主题配置
+     */
+    "darkTheme": ThemeColorConfig;
+
+    /**
+     * 浅色主题配置
+     */
+    "lightTheme": ThemeColorConfig;
+
+    /** Creates a new CustomThemeConfig instance. */
+    constructor($$source: Partial<CustomThemeConfig> = {}) {
+        if (!("darkTheme" in $$source)) {
+            this["darkTheme"] = (new ThemeColorConfig());
+        }
+        if (!("lightTheme" in $$source)) {
+            this["lightTheme"] = (new ThemeColorConfig());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CustomThemeConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CustomThemeConfig {
+        const $$createField0_0 = $$createType6;
+        const $$createField1_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("darkTheme" in $$parsedSource) {
+            $$parsedSource["darkTheme"] = $$createField0_0($$parsedSource["darkTheme"]);
+        }
+        if ("lightTheme" in $$parsedSource) {
+            $$parsedSource["lightTheme"] = $$createField1_0($$parsedSource["lightTheme"]);
+        }
+        return new CustomThemeConfig($$parsedSource as Partial<CustomThemeConfig>);
     }
 }
 
@@ -334,7 +389,7 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField3_0 = $$createType5;
+        const $$createField3_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
             $$parsedSource["config"] = $$createField3_0($$parsedSource["config"]);
@@ -467,7 +522,7 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType7;
+        const $$createField5_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
             $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
@@ -1029,6 +1084,214 @@ export enum TabType {
 };
 
 /**
+ * ThemeColorConfig 主题颜色配置
+ */
+export class ThemeColorConfig {
+    /**
+     * 基础色调
+     * 主背景色
+     */
+    "background": string;
+
+    /**
+     * 次要背景色
+     */
+    "backgroundSecondary": string;
+
+    /**
+     * 面板背景
+     */
+    "surface": string;
+
+    /**
+     * 主文本色
+     */
+    "foreground": string;
+
+    /**
+     * 次要文本色
+     */
+    "foregroundSecondary": string;
+
+    /**
+     * 语法高亮
+     * 注释色
+     */
+    "comment": string;
+
+    /**
+     * 关键字
+     */
+    "keyword": string;
+
+    /**
+     * 字符串
+     */
+    "string": string;
+
+    /**
+     * 函数名
+     */
+    "function": string;
+
+    /**
+     * 数字
+     */
+    "number": string;
+
+    /**
+     * 操作符
+     */
+    "operator": string;
+
+    /**
+     * 变量
+     */
+    "variable": string;
+
+    /**
+     * 类型
+     */
+    "type": string;
+
+    /**
+     * 界面元素
+     * 光标
+     */
+    "cursor": string;
+
+    /**
+     * 选中背景
+     */
+    "selection": string;
+
+    /**
+     * 失焦选中背景
+     */
+    "selectionBlur": string;
+
+    /**
+     * 当前行高亮
+     */
+    "activeLine": string;
+
+    /**
+     * 行号
+     */
+    "lineNumber": string;
+
+    /**
+     * 活动行号
+     */
+    "activeLineNumber": string;
+
+    /**
+     * 边框分割线
+     * 边框色
+     */
+    "borderColor": string;
+
+    /**
+     * 浅色边框
+     */
+    "borderLight": string;
+
+    /**
+     * 搜索匹配
+     * 搜索匹配
+     */
+    "searchMatch": string;
+
+    /**
+     * 匹配括号
+     */
+    "matchingBracket": string;
+
+    /** Creates a new ThemeColorConfig instance. */
+    constructor($$source: Partial<ThemeColorConfig> = {}) {
+        if (!("background" in $$source)) {
+            this["background"] = "";
+        }
+        if (!("backgroundSecondary" in $$source)) {
+            this["backgroundSecondary"] = "";
+        }
+        if (!("surface" in $$source)) {
+            this["surface"] = "";
+        }
+        if (!("foreground" in $$source)) {
+            this["foreground"] = "";
+        }
+        if (!("foregroundSecondary" in $$source)) {
+            this["foregroundSecondary"] = "";
+        }
+        if (!("comment" in $$source)) {
+            this["comment"] = "";
+        }
+        if (!("keyword" in $$source)) {
+            this["keyword"] = "";
+        }
+        if (!("string" in $$source)) {
+            this["string"] = "";
+        }
+        if (!("function" in $$source)) {
+            this["function"] = "";
+        }
+        if (!("number" in $$source)) {
+            this["number"] = "";
+        }
+        if (!("operator" in $$source)) {
+            this["operator"] = "";
+        }
+        if (!("variable" in $$source)) {
+            this["variable"] = "";
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("cursor" in $$source)) {
+            this["cursor"] = "";
+        }
+        if (!("selection" in $$source)) {
+            this["selection"] = "";
+        }
+        if (!("selectionBlur" in $$source)) {
+            this["selectionBlur"] = "";
+        }
+        if (!("activeLine" in $$source)) {
+            this["activeLine"] = "";
+        }
+        if (!("lineNumber" in $$source)) {
+            this["lineNumber"] = "";
+        }
+        if (!("activeLineNumber" in $$source)) {
+            this["activeLineNumber"] = "";
+        }
+        if (!("borderColor" in $$source)) {
+            this["borderColor"] = "";
+        }
+        if (!("borderLight" in $$source)) {
+            this["borderLight"] = "";
+        }
+        if (!("searchMatch" in $$source)) {
+            this["searchMatch"] = "";
+        }
+        if (!("matchingBracket" in $$source)) {
+            this["matchingBracket"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ThemeColorConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ThemeColorConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ThemeColorConfig($$parsedSource as Partial<ThemeColorConfig>);
+    }
+}
+
+/**
  * UpdateSourceType 更新源类型
  */
 export enum UpdateSourceType {
@@ -1126,8 +1389,8 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType8;
-        const $$createField7_0 = $$createType9;
+        const $$createField6_0 = $$createType10;
+        const $$createField7_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
@@ -1145,13 +1408,15 @@ const $$createType1 = EditingConfig.createFrom;
 const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
 const $$createType4 = ConfigMetadata.createFrom;
-var $$createType5 = (function $$initCreateType5(...args): any {
-    if ($$createType5 === $$initCreateType5) {
-        $$createType5 = $$createType6;
+const $$createType5 = CustomThemeConfig.createFrom;
+const $$createType6 = ThemeColorConfig.createFrom;
+var $$createType7 = (function $$initCreateType7(...args): any {
+    if ($$createType7 === $$initCreateType7) {
+        $$createType7 = $$createType8;
     }
-    return $$createType5(...args);
+    return $$createType7(...args);
 });
-const $$createType6 = $Create.Map($Create.Any, $Create.Any);
-const $$createType7 = HotkeyCombo.createFrom;
-const $$createType8 = GithubConfig.createFrom;
-const $$createType9 = GiteaConfig.createFrom;
+const $$createType8 = $Create.Map($Create.Any, $Create.Any);
+const $$createType9 = HotkeyCombo.createFrom;
+const $$createType10 = GithubConfig.createFrom;
+const $$createType11 = GiteaConfig.createFrom;

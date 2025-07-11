@@ -1,6 +1,5 @@
 <template>
-  <div class="windows-titlebar" style="--wails-draggable:drag" @contextmenu.prevent @mouseenter="checkMaximizedState"
-       @mouseup="checkMaximizedState">
+  <div class="windows-titlebar" style="--wails-draggable:drag" @contextmenu.prevent>
     <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent>
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>

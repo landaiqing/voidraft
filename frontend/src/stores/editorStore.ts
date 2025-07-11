@@ -65,6 +65,9 @@ export const useEditorStore = defineStore('editor', () => {
         characters: 0,
         selectedCharacters: 0
     });
+    
+    // 编辑器加载状态
+    const isLoading = ref(false);
 
     // 异步操作竞态条件控制
     const operationSequence = ref(0);
@@ -434,10 +437,12 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 加载编辑器
     const loadEditor = async (documentId: number, content: string) => {
+        // 设置加载状态
+        isLoading.value = true;
         // 生成新的操作ID
         const operationId = getNextOperationId();
         const abortController = new AbortController();
-        
+
         try {
             // 验证参数
             if (!documentId) {
@@ -500,15 +505,20 @@ export const useEditorStore = defineStore('editor', () => {
         } catch (error) {
             if (error instanceof Error && error.message === 'Operation cancelled') {
                 console.log(`Editor loading cancelled for document ${documentId}`);
-                return;
+            } else {
+                console.error('Failed to load editor:', error);
             }
-            console.error('Failed to load editor:', error);
         } finally {
             // 清理操作记录
             pendingOperations.value.delete(operationId);
             if (currentLoadingDocumentId.value === documentId) {
                 currentLoadingDocumentId.value = null;
             }
+            
+            // 延迟一段时间后再取消加载状态
+            setTimeout(() => {
+                isLoading.value = false;
+            }, 800);
         }
     };
 
@@ -684,6 +694,7 @@ export const useEditorStore = defineStore('editor', () => {
         // 状态
         currentEditor,
         documentStats,
+        isLoading,
 
         // 方法
         setEditorContainer,

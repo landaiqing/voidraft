@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref, watch} from 'vue';
+import {onBeforeUnmount, onMounted, ref} from 'vue';
 import {useEditorStore} from '@/stores/editorStore';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useConfigStore} from '@/stores/configStore';
 import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 import {useWindowStore} from "@/stores/windowStore";
+import LoadingScreen from '@/components/loading/LoadingScreen.vue';
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
 const configStore = useConfigStore();
 const windowStore = useWindowStore();
-
 
 const editorElement = ref<HTMLElement | null>(null);
 
@@ -25,7 +25,6 @@ onMounted(async () => {
   if (!editorElement.value) return;
 
   // 从URL查询参数中获取documentId
-
   const urlDocumentId = windowStore.currentDocumentId ? parseInt(windowStore.currentDocumentId) : undefined;
   
   // 初始化文档存储，优先使用URL参数中的文档ID
@@ -48,6 +47,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="editor-container">
+    <LoadingScreen v-if="editorStore.isLoading" text="VOIDRAFT" />
     <div ref="editorElement" class="editor"></div>
     <Toolbar/>
   </div>
@@ -60,6 +60,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  position: relative;
 
   .editor {
     width: 100%;

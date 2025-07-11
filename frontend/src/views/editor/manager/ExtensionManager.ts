@@ -65,6 +65,10 @@ export class ExtensionManager {
     // 注册的扩展工厂
     private extensionFactories = new Map<ExtensionID, ExtensionFactory>()
     
+    // 防抖处理
+    private debounceTimers = new Map<ExtensionID, number>()
+    private debounceDelay = 300  // 默认防抖时间为300毫秒
+    
     /**
      * 注册扩展工厂
      * @param id 扩展ID
@@ -187,13 +191,24 @@ export class ExtensionManager {
     }
 
     /**
-     * 更新单个扩展配置并应用到所有视图
+     * 更新单个扩展配置并应用到所有视图（带防抖功能）
      * @param id 扩展ID
      * @param enabled 是否启用
      * @param config 扩展配置
      */
     updateExtension(id: ExtensionID, enabled: boolean, config: any = {}): void {
-        this.updateExtensionImmediate(id, enabled, config)
+        // 清除之前的定时器
+        if (this.debounceTimers.has(id)) {
+            window.clearTimeout(this.debounceTimers.get(id))
+        }
+        
+        // 设置新的定时器
+        const timerId = window.setTimeout(() => {
+            this.updateExtensionImmediate(id, enabled, config)
+            this.debounceTimers.delete(id)
+        }, this.debounceDelay)
+        
+        this.debounceTimers.set(id, timerId)
     }
 
     /**
@@ -262,6 +277,14 @@ export class ExtensionManager {
         enabled: boolean
         config: any
     }>): void {
+        // 清除所有相关的防抖定时器
+        for (const update of updates) {
+            if (this.debounceTimers.has(update.id)) {
+                window.clearTimeout(this.debounceTimers.get(update.id))
+                this.debounceTimers.delete(update.id)
+            }
+        }
+        
         // 更新所有扩展状态
         for (const update of updates) {
             // 获取扩展状态
@@ -357,6 +380,12 @@ export class ExtensionManager {
      * 销毁管理器
      */
     destroy(): void {
+        // 清除所有防抖定时器
+        for (const timerId of this.debounceTimers.values()) {
+            window.clearTimeout(timerId)
+        }
+        this.debounceTimers.clear()
+        
         this.viewsMap.clear()
         this.activeViewId = null
         this.extensionFactories.clear()

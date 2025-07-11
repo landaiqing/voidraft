@@ -15,6 +15,7 @@ VoidRaft is a modern developer-focused text editor that allows you to record, or
 - Code formatting - Built-in Prettier support for one-click code beautification
 - Block editing mode - Split content into independent code blocks, each with different language settings
 - Multi-window support - edit multiple documents at the same time
+- Support for custom themes - Custom editor themes
 
 ### Modern Interface
 
@@ -118,7 +119,7 @@ Voidraft/
 | Linux | Planned | Future versions |
 
 ### Planned Features
-- [ ] Custom themes - Customize editor themes
+- ✅ Custom themes - Customize editor themes
 - ✅ Multi-window support - Support editing multiple documents simultaneously
 - [ ] Enhanced clipboard - Monitor and manage clipboard history
 - [ ] Data synchronization - Cloud backup for configurations and documents

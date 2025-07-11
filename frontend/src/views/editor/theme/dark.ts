@@ -2,203 +2,205 @@ import {EditorView} from '@codemirror/view';
 import {HighlightStyle, syntaxHighlighting} from '@codemirror/language';
 import {tags} from '@lezer/highlight';
 
-const colors = {
-    // 基础色调
-    background: '#252B37',        // 主背景色
-    // backgroundAlt: '#252B37',     // 交替背景色
-    backgroundSecondary: '#213644', // 次要背景色
-    surface: '#474747',           // 面板背景
+// 默认深色主题颜色
+export const defaultDarkColors = {
+  // 基础色调
+  background: '#252B37',        // 主背景色
+  backgroundSecondary: '#213644', // 次要背景色
+  surface: '#474747',           // 面板背景
 
-    // 文本颜色
-    foreground: '#9BB586',        // 主文本色
-    foregroundSecondary: '#9c9c9c', // 次要文本色
-    comment: '#6272a4',           // 注释色
+  // 文本颜色
+  foreground: '#9BB586',        // 主文本色
+  foregroundSecondary: '#9c9c9c', // 次要文本色
+  comment: '#6272a4',           // 注释色
 
-    // 语法高亮色
-    keyword: '#ff79c6',           // 关键字
-    string: '#f1fa8c',            // 字符串
-    function: '#50fa7b',          // 函数名
-    number: '#bd93f9',            // 数字
-    operator: '#ff79c6',          // 操作符
-    variable: '#8fbcbb',          // 变量
-    type: '#8be9fd',             // 类型
+  // 语法高亮色
+  keyword: '#ff79c6',           // 关键字
+  string: '#f1fa8c',            // 字符串
+  function: '#50fa7b',          // 函数名
+  number: '#bd93f9',            // 数字
+  operator: '#ff79c6',          // 操作符
+  variable: '#8fbcbb',          // 变量
+  type: '#8be9fd',             // 类型
 
-    // 界面元素
-    cursor: '#fff',               // 光标
-    selection: '#0865a9aa',       // 选中背景
-    selectionBlur: '#225377aa',   // 失焦选中背景
-    activeLine: 'rgba(255,255,255,0.04)', // 当前行高亮
-    lineNumber: 'rgba(255,255,255, 0.15)', // 行号
-    activeLineNumber: 'rgba(255,255,255, 0.6)', // 活动行号
+  // 界面元素
+  cursor: '#ffffff',               // 光标
+  selection: '#0865a9',       // 选中背景
+  selectionBlur: '#225377',   // 失焦选中背景
+  activeLine: '#ffffff0a', // 当前行高亮
+  lineNumber: '#ffffff26', // 行号
+  activeLineNumber: '#ffffff99', // 活动行号
 
-    // 边框和分割线
-    border: '#1e222a',            // 边框色
-    borderLight: 'rgba(255,255,255, 0.1)', // 浅色边框
+  // 边框和分割线
+  borderColor: '#1e222a',            // 边框色
+  borderLight: '#ffffff19', // 浅色边框
 
-    // 搜索和匹配
-    searchMatch: '#8fbcbb',       // 搜索匹配
-    matchingBracket: 'rgba(255,255,255,0.1)', // 匹配括号
+  // 搜索和匹配
+  searchMatch: '#8fbcbb',       // 搜索匹配
+  matchingBracket: '#ffffff19', // 匹配括号
 };
 
-const darkTheme = EditorView.theme({
+// 创建深色主题
+export function createDarkTheme(colors = defaultDarkColors) {
+  const darkTheme = EditorView.theme({
     '&': {
-        color: colors.foreground,
-        backgroundColor: colors.background,
+      color: colors.foreground,
+      backgroundColor: colors.background,
     },
 
     // 确保编辑器容器背景一致
     '.cm-editor': {
-        backgroundColor: colors.background,
+      backgroundColor: colors.background,
     },
 
     // 确保滚动区域背景一致
     '.cm-scroller': {
-        backgroundColor: colors.background,
+      backgroundColor: colors.background,
     },
 
     // 编辑器内容
     '.cm-content': {
-        caretColor: colors.cursor,
-        paddingTop: '4px',
+      caretColor: colors.cursor,
+      paddingTop: '4px',
     },
 
     // 光标
     '.cm-cursor, .cm-dropCursor': {
-        borderLeftColor: colors.cursor,
-        borderLeftWidth: '2px',
-        paddingTop: '4px',
-        marginTop: '-2px',
+      borderLeftColor: colors.cursor,
+      borderLeftWidth: '2px',
+      paddingTop: '4px',
+      marginTop: '-2px',
     },
 
     // 选择
     '.cm-selectionBackground': {
-        backgroundColor: colors.selectionBlur,
+      backgroundColor: colors.selectionBlur,
     },
     '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
-        backgroundColor: colors.selection,
+      backgroundColor: colors.selection,
     },
     '.cm-activeLine.code-empty-block-selected': {
-        backgroundColor: colors.selection,
+      backgroundColor: colors.selection,
     },
 
     // 当前行高亮
     '.cm-activeLine': {
-        backgroundColor: colors.activeLine
+      backgroundColor: colors.activeLine
     },
 
     // 行号区域
     '.cm-gutters': {
-        backgroundColor: 'rgba(0,0,0, 0.1)',
-        color: colors.lineNumber,
-        border: 'none',
-        padding: '0 2px 0 4px',
-        userSelect: 'none',
+      backgroundColor: 'rgba(0,0,0, 0.1)',
+      color: colors.lineNumber,
+      border: 'none',
+      padding: '0 2px 0 4px',
+      userSelect: 'none',
     },
     '.cm-activeLineGutter': {
-        backgroundColor: 'transparent',
-        color: colors.activeLineNumber,
+      backgroundColor: 'transparent',
+      color: colors.activeLineNumber,
     },
 
     // 折叠功能
     '.cm-foldGutter': {
-        marginLeft: '0px',
+      marginLeft: '0px',
     },
     '.cm-foldGutter .cm-gutterElement': {
-        opacity: 0,
-        transition: 'opacity 400ms',
+      opacity: 0,
+      transition: 'opacity 400ms',
     },
     '.cm-gutters:hover .cm-gutterElement': {
-        opacity: 1,
+      opacity: 1,
     },
     '.cm-foldPlaceholder': {
-        backgroundColor: 'transparent',
-        border: 'none',
-        color: '#ddd',
+      backgroundColor: 'transparent',
+      border: 'none',
+      color: '#ddd',
     },
 
 
     // 搜索匹配
     '.cm-searchMatch': {
-        backgroundColor: 'transparent',
-        outline: `1px solid ${colors.searchMatch}`,
+      backgroundColor: 'transparent',
+      outline: `1px solid ${colors.searchMatch}`,
     },
     '.cm-searchMatch.cm-searchMatch-selected': {
-        backgroundColor: colors.foreground,
-        color: colors.background,
+      backgroundColor: colors.foreground,
+      color: colors.background,
     },
     '.cm-selectionMatch': {
-        backgroundColor: '#50606D',
+      backgroundColor: '#50606D',
     },
 
     // 括号匹配
     '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
-        outline: `0.5px solid ${colors.searchMatch}`,
+      outline: `0.5px solid ${colors.searchMatch}`,
     },
     '&.cm-focused .cm-matchingBracket': {
-        backgroundColor: colors.matchingBracket,
-        color: 'inherit',
+      backgroundColor: colors.matchingBracket,
+      color: 'inherit',
     },
     '&.cm-focused .cm-nonmatchingBracket': {
-        outline: '0.5px solid #bc8f8f',
+      outline: '0.5px solid #bc8f8f',
     },
 
     // 编辑器焦点
     '&.cm-editor.cm-focused': {
-        outline: 'none',
+      outline: 'none',
     },
 
     // 工具提示
     '.cm-tooltip': {
-        border: 'none',
-        backgroundColor: colors.surface,
+      border: 'none',
+      backgroundColor: colors.surface,
     },
     '.cm-tooltip .cm-tooltip-arrow:before': {
-        borderTopColor: 'transparent',
-        borderBottomColor: 'transparent',
+      borderTopColor: 'transparent',
+      borderBottomColor: 'transparent',
     },
     '.cm-tooltip .cm-tooltip-arrow:after': {
-        borderTopColor: colors.surface,
-        borderBottomColor: colors.surface,
+      borderTopColor: colors.surface,
+      borderBottomColor: colors.surface,
     },
     '.cm-tooltip-autocomplete': {
-        '& > ul > li[aria-selected]': {
-            backgroundColor: colors.activeLine,
-            color: colors.foreground,
-        },
+      '& > ul > li[aria-selected]': {
+        backgroundColor: colors.activeLine,
+        color: colors.foreground,
+      },
     },
 
     // 代码块层
     '.code-blocks-layer': {
-        width: '100%',
+      width: '100%',
     },
     '.code-blocks-layer .block-even, .code-blocks-layer .block-odd': {
-        width: '100%',
-        boxSizing: 'content-box',
+      width: '100%',
+      boxSizing: 'content-box',
     },
     '.code-blocks-layer .block-even': {
-        background: colors.background,
-        borderTop: `1px solid ${colors.border}`,
+      background: colors.background,
+      borderTop: `1px solid ${colors.borderColor}`,
     },
     '.code-blocks-layer .block-even:first-child': {
-        borderTop: 'none',
+      borderTop: 'none',
     },
     '.code-blocks-layer .block-odd': {
-        background: colors.backgroundSecondary,
-        borderTop: `1px solid ${colors.border}`,
+      background: colors.backgroundSecondary,
+      borderTop: `1px solid ${colors.borderColor}`,
     },
 
     // 代码块开始标记
     '.code-block-start': {
-        height: '12px',
-        position: 'relative',
+      height: '12px',
+      position: 'relative',
     },
     '.code-block-start.first': {
-        height: '0px',
+      height: '0px',
     },
-}, {dark: true});
+  }, {dark: true});
 
-// 语法高亮样式
-const darkHighlightStyle = HighlightStyle.define([
+  // 语法高亮样式
+  const darkHighlightStyle = HighlightStyle.define([
     {tag: tags.keyword, color: colors.keyword},
     {tag: [tags.name, tags.deleted, tags.character, tags.propertyName, tags.macroName], color: colors.variable},
     {tag: [tags.variableName], color: colors.variable},
@@ -229,9 +231,13 @@ const darkHighlightStyle = HighlightStyle.define([
     {tag: [tags.heading1, tags.heading2], fontSize: '1.4em'},
     {tag: [tags.heading3, tags.heading4], fontSize: '1.2em'},
     {tag: [tags.heading5, tags.heading6], fontSize: '1.1em'},
-]);
+  ]);
 
-export const dark = [
+  return [
     darkTheme,
     syntaxHighlighting(darkHighlightStyle),
-]; 
+  ];
+}
+
+// 默认深色主题
+export const dark = createDarkTheme(defaultDarkColors); 

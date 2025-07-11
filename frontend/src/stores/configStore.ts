@@ -73,7 +73,8 @@ const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
 
 const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
     language: 'appearance.language',
-    systemTheme: 'appearance.systemTheme'
+    systemTheme: 'appearance.systemTheme',
+    customTheme: 'appearance.customTheme'
 } as const;
 
 const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
@@ -171,7 +172,77 @@ const DEFAULT_CONFIG: AppConfig = {
     },
     appearance: {
         language: LanguageType.LangZhCN,
-        systemTheme: SystemThemeType.SystemThemeAuto
+        systemTheme: SystemThemeType.SystemThemeAuto,
+        customTheme: {
+            darkTheme: {
+                // 基础色调
+                background: '#252B37',
+                backgroundSecondary: '#213644',
+                surface: '#474747',
+                foreground: '#9BB586',
+                foregroundSecondary: '#9c9c9c',
+                
+                // 语法高亮
+                comment: '#6272a4',
+                keyword: '#ff79c6',
+                string: '#f1fa8c',
+                function: '#50fa7b',
+                number: '#bd93f9',
+                operator: '#ff79c6',
+                variable: '#8fbcbb',
+                type: '#8be9fd',
+                
+                // 界面元素
+                cursor: '#fff',
+                selection: '#0865a9aa',
+                selectionBlur: '#225377aa',
+                activeLine: 'rgba(255,255,255,0.04)',
+                lineNumber: 'rgba(255,255,255, 0.15)',
+                activeLineNumber: 'rgba(255,255,255, 0.6)',
+                
+                // 边框分割线
+                borderColor: '#1e222a',
+                borderLight: 'rgba(255,255,255, 0.1)',
+                
+                // 搜索匹配
+                searchMatch: '#8fbcbb',
+                matchingBracket: 'rgba(255,255,255,0.1)'
+            },
+            lightTheme: {
+                // 基础色调
+                background: '#ffffff',
+                backgroundSecondary: '#f1faf1',
+                surface: '#f5f5f5',
+                foreground: '#444d56',
+                foregroundSecondary: '#6a737d',
+                
+                // 语法高亮
+                comment: '#6a737d',
+                keyword: '#d73a49',
+                string: '#032f62',
+                function: '#005cc5',
+                number: '#005cc5',
+                operator: '#d73a49',
+                variable: '#24292e',
+                type: '#6f42c1',
+                
+                // 界面元素
+                cursor: '#000',
+                selection: '#77baff8c',
+                selectionBlur: '#b2c2ca85',
+                activeLine: '#000000',
+                lineNumber: '#000000',
+                activeLineNumber: '#000000',
+                
+                // 边框分割线
+                borderColor: '#dfdfdf',
+                borderLight: '#0000000C',
+                
+                // 搜索匹配
+                searchMatch: '#005cc5',
+                matchingBracket: 'rgba(0,0,0,0.1)'
+            }
+        }
     },
     updates: {
         version: "1.0.0",
@@ -363,6 +434,51 @@ export const useConfigStore = defineStore('config', () => {
         await updateAppearanceConfig('systemTheme', systemTheme);
     };
 
+    // 更新自定义主题方法
+    const updateCustomTheme = async (themeType: 'darkTheme' | 'lightTheme', colorKey: string, colorValue: string): Promise<void> => {
+        // 确保配置已加载
+        if (!state.configLoaded && !state.isLoading) {
+            await initConfig();
+        }
+
+        try {
+            // 深拷贝当前配置
+            const customTheme = JSON.parse(JSON.stringify(state.config.appearance.customTheme));
+            
+            // 更新对应主题的颜色值
+            customTheme[themeType][colorKey] = colorValue;
+            
+            // 更新整个自定义主题配置到后端
+            await ConfigService.Set(APPEARANCE_CONFIG_KEY_MAP.customTheme, customTheme);
+            
+            // 更新前端状态
+            state.config.appearance.customTheme = customTheme;
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    // 设置整个自定义主题配置
+    const setCustomTheme = async (customTheme: any): Promise<void> => {
+        // 确保配置已加载
+        if (!state.configLoaded && !state.isLoading) {
+            await initConfig();
+        }
+
+        try {
+            // 更新整个自定义主题配置到后端
+            await ConfigService.Set(APPEARANCE_CONFIG_KEY_MAP.customTheme, customTheme);
+            
+            // 更新前端状态
+            state.config.appearance.customTheme = customTheme;
+            
+            // 确保Vue能检测到变化
+            state.config.appearance = { ...state.config.appearance };
+        } catch (error) {
+            throw error;
+        }
+    };
+
     // 初始化语言设置
     const initializeLanguage = async (): Promise<void> => {
         try {
@@ -426,6 +542,8 @@ export const useConfigStore = defineStore('config', () => {
 
         // 主题相关方法
         setSystemTheme,
+        updateCustomTheme,
+        setCustomTheme,
 
         // 字体大小操作
         ...adjusters.fontSize,

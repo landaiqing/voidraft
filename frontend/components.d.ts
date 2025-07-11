@@ -11,6 +11,7 @@ declare module 'vue' {
     BlockLanguageSelector: typeof import('./src/components/toolbar/BlockLanguageSelector.vue')['default']
     DocumentSelector: typeof import('./src/components/toolbar/DocumentSelector.vue')['default']
     LinuxTitleBar: typeof import('./src/components/titlebar/LinuxTitleBar.vue')['default']
+    LoadingScreen: typeof import('./src/components/loading/LoadingScreen.vue')['default']
     MacOSTitleBar: typeof import('./src/components/titlebar/MacOSTitleBar.vue')['default']
     MemoryMonitor: typeof import('./src/components/monitor/MemoryMonitor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

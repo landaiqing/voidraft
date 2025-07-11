@@ -19,7 +19,7 @@ import (
 
 const (
 	// CurrentAppConfigVersion 当前应用配置版本
-	CurrentAppConfigVersion = "1.0.0"
+	CurrentAppConfigVersion = "1.2.0"
 	// BackupFilePattern 备份文件名模式
 	BackupFilePattern = "%s.backup.%s.json"
 
