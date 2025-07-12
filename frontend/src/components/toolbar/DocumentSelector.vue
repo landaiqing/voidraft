@@ -213,8 +213,29 @@ const handleDelete = async (doc: Document, event: Event) => {
   event.stopPropagation();
 
   if (deleteConfirmId.value === doc.id) {
-    // 确认删除
+    // 确认删除前检查文档是否在其他窗口打开
     try {
+      const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
+      if (hasOpen) {
+        // 设置错误状态并启动定时器
+        alreadyOpenDocId.value = doc.id;
+        
+        // 清除之前的定时器（如果存在）
+        if (errorMessageTimer.value) {
+          clearTimeout(errorMessageTimer.value);
+        }
+        
+        // 设置新的定时器，3秒后清除错误信息
+        errorMessageTimer.value = window.setTimeout(() => {
+          alreadyOpenDocId.value = null;
+          errorMessageTimer.value = null;
+        }, 3000);
+        
+        // 取消删除确认状态
+        deleteConfirmId.value = null;
+        return;
+      }
+      
       await documentStore.deleteDocument(doc.id);
       await documentStore.updateDocuments();
 
