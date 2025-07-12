@@ -1,5 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&display=swap');
+@import url('./space-mono-font.css');
+@import url('./ibm-plex-mono-font.css');
 
 /* 浅色主题 */
 :root {

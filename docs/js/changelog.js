@@ -433,43 +433,101 @@ document.addEventListener('DOMContentLoaded', () => {
   function parseMarkdown(markdown) {
     if (!markdown) return '';
     
-    // Links - [text](url)
+    // 预处理：保留原始换行符，用特殊标记替换
+    const preservedLineBreaks = '___LINE_BREAK___';
+    markdown = markdown.replace(/\n/g, preservedLineBreaks);
+    
+    // 引用块 - > text
+    markdown = markdown.replace(/&gt;\s*(.*?)(?=&gt;|$)/g, '<blockquote>$1</blockquote>');
+    markdown = markdown.replace(/>\s*(.*?)(?=>|$)/g, '<blockquote>$1</blockquote>');
+    
+    // 链接 - [text](url)
     markdown = markdown.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
     
-    // Headings - # Heading
-    markdown = markdown.replace(/^### (.*$)/gm, '<h3>$1</h3>');
-    markdown = markdown.replace(/^## (.*$)/gm, '<h2>$1</h2>');
-    markdown = markdown.replace(/^# (.*$)/gm, '<h1>$1</h1>');
+    // 标题 - # Heading
+    markdown = markdown.replace(/^### (.*?)(?=___LINE_BREAK___|$)/gm, '<h3>$1</h3>');
+    markdown = markdown.replace(/^## (.*?)(?=___LINE_BREAK___|$)/gm, '<h2>$1</h2>');
+    markdown = markdown.replace(/^# (.*?)(?=___LINE_BREAK___|$)/gm, '<h1>$1</h1>');
     
-    // Bold - **text**
+    // 粗体 - **text**
     markdown = markdown.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
-    // Italic - *text*
+    // 斜体 - *text*
     markdown = markdown.replace(/\*(.*?)\*/g, '<em>$1</em>');
     
-    // Code blocks - ```code```
+    // 代码块 - ```code```
     markdown = markdown.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
     
-    // Inline code - `code`
+    // 行内代码 - `code`
     markdown = markdown.replace(/`([^`]+)`/g, '<code>$1</code>');
     
-    // Lists - * item
-    markdown = markdown.replace(/^\* (.*$)/gm, '<ul><li>$1</li></ul>');
+    // 处理列表项
+    // 先将每个列表项转换为HTML
+    markdown = markdown.replace(/- (.*?)(?=___LINE_BREAK___- |___LINE_BREAK___$|$)/g, '<li>$1</li>');
+    markdown = markdown.replace(/\* (.*?)(?=___LINE_BREAK___\* |___LINE_BREAK___$|$)/g, '<li>$1</li>');
+    markdown = markdown.replace(/\d+\. (.*?)(?=___LINE_BREAK___\d+\. |___LINE_BREAK___$|$)/g, '<li>$1</li>');
     
-    // Lists - 1. item
-    markdown = markdown.replace(/^\d+\. (.*$)/gm, '<ol><li>$1</li></ol>');
+    // 然后将连续的列表项包装在ul或ol中
+    const listItemRegex = /<li>.*?<\/li>/g;
+    const listItems = markdown.match(listItemRegex) || [];
     
-    // Merge adjacent list items
-    markdown = markdown.replace(/<\/ul>\s*<ul>/g, '');
-    markdown = markdown.replace(/<\/ol>\s*<ol>/g, '');
+    if (listItems.length > 0) {
+      // 将连续的列表项组合在一起
+      let lastIndex = 0;
+      let result = '';
+      let inList = false;
+      
+      listItems.forEach(item => {
+        const itemIndex = markdown.indexOf(item, lastIndex);
+        
+        // 添加列表项之前的内容
+        if (itemIndex > lastIndex) {
+          result += markdown.substring(lastIndex, itemIndex);
+        }
+        
+        // 如果不在列表中，开始一个新列表
+        if (!inList) {
+          result += '<ul>';
+          inList = true;
+        }
+        
+        // 添加列表项
+        result += item;
+        
+        // 更新lastIndex
+        lastIndex = itemIndex + item.length;
+        
+        // 检查下一个内容是否是列表项
+        const nextItemIndex = markdown.indexOf('<li>', lastIndex);
+        if (nextItemIndex === -1 || nextItemIndex > lastIndex + 20) { // 如果下一个列表项不紧邻
+          result += '</ul>';
+          inList = false;
+        }
+      });
+      
+      // 添加剩余内容
+      if (lastIndex < markdown.length) {
+        result += markdown.substring(lastIndex);
+      }
+      
+      markdown = result;
+    }
     
-    // Paragraphs - blank line
-    markdown = markdown.replace(/\n\n/g, '</p><p>');
+    // 处理水平分隔线
+    markdown = markdown.replace(/---/g, '<hr>');
     
-    // Line breaks - two spaces at end of line
-    markdown = markdown.replace(/  \n/g, '<br>');
+    // 恢复换行符
+    markdown = markdown.replace(/___LINE_BREAK___/g, '<br>');
     
-    return `<p>${markdown}</p>`;
+    // 处理段落
+    markdown = markdown.replace(/<br><br>/g, '</p><p>');
+    
+    // 包装在段落标签中
+    if (!markdown.startsWith('<p>')) {
+      markdown = `<p>${markdown}</p>`;
+    }
+    
+    return markdown;
   }
   
   // Update translations when language changes

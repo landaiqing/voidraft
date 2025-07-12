@@ -70,11 +70,9 @@ function initLanguageToggle() {
   const langToggle = document.getElementById('lang-toggle');
   if (!langToggle) return;
   
-  // Get initial language from local storage or browser preference
+  // Get initial language from local storage or default to English
   const savedLang = localStorage.getItem('lang');
-  const userLang = navigator.language || navigator.userLanguage;
-  const defaultLang = userLang.includes('zh') ? 'zh' : 'en';
-  const lang = savedLang || defaultLang;
+  const lang = savedLang || 'en';
   
   // Set current language and apply it
   window.currentLang = lang;
