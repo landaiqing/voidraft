@@ -34,6 +34,11 @@ export class AppConfig {
     "updates": UpdatesConfig;
 
     /**
+     * Git同步设置
+     */
+    "sync": GitSyncConfig;
+
+    /**
      * 配置元数据
      */
     "metadata": ConfigMetadata;
@@ -52,6 +57,9 @@ export class AppConfig {
         if (!("updates" in $$source)) {
             this["updates"] = (new UpdatesConfig());
         }
+        if (!("sync" in $$source)) {
+            this["sync"] = (new GitSyncConfig());
+        }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
         }
@@ -68,6 +76,7 @@ export class AppConfig {
         const $$createField2_0 = $$createType2;
         const $$createField3_0 = $$createType3;
         const $$createField4_0 = $$createType4;
+        const $$createField5_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("general" in $$parsedSource) {
             $$parsedSource["general"] = $$createField0_0($$parsedSource["general"]);
@@ -81,8 +90,11 @@ export class AppConfig {
         if ("updates" in $$parsedSource) {
             $$parsedSource["updates"] = $$createField3_0($$parsedSource["updates"]);
         }
+        if ("sync" in $$parsedSource) {
+            $$parsedSource["sync"] = $$createField4_0($$parsedSource["sync"]);
+        }
         if ("metadata" in $$parsedSource) {
-            $$parsedSource["metadata"] = $$createField4_0($$parsedSource["metadata"]);
+            $$parsedSource["metadata"] = $$createField5_0($$parsedSource["metadata"]);
         }
         return new AppConfig($$parsedSource as Partial<AppConfig>);
     }
@@ -126,7 +138,7 @@ export class AppearanceConfig {
      * Creates a new AppearanceConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): AppearanceConfig {
-        const $$createField2_0 = $$createType5;
+        const $$createField2_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("customTheme" in $$parsedSource) {
             $$parsedSource["customTheme"] = $$createField2_0($$parsedSource["customTheme"]);
@@ -134,6 +146,31 @@ export class AppearanceConfig {
         return new AppearanceConfig($$parsedSource as Partial<AppearanceConfig>);
     }
 }
+
+/**
+ * AuthMethod 定义Git认证方式
+ */
+export enum AuthMethod {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * 个人访问令牌
+     */
+    Token = "token",
+
+    /**
+     * SSH密钥
+     */
+    SSHKey = "ssh_key",
+
+    /**
+     * 用户名密码
+     */
+    UserPass = "user_pass",
+};
 
 /**
  * ConfigMetadata 配置元数据
@@ -200,8 +237,8 @@ export class CustomThemeConfig {
      * Creates a new CustomThemeConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): CustomThemeConfig {
-        const $$createField0_0 = $$createType6;
-        const $$createField1_0 = $$createType6;
+        const $$createField0_0 = $$createType7;
+        const $$createField1_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("darkTheme" in $$parsedSource) {
             $$parsedSource["darkTheme"] = $$createField0_0($$parsedSource["darkTheme"]);
@@ -224,6 +261,11 @@ export class Document {
     "updatedAt": time$0.Time;
     "is_deleted": boolean;
 
+    /**
+     * 锁定标志，锁定的文档无法被删除
+     */
+    "is_locked": boolean;
+
     /** Creates a new Document instance. */
     constructor($$source: Partial<Document> = {}) {
         if (!("id" in $$source)) {
@@ -243,6 +285,9 @@ export class Document {
         }
         if (!("is_deleted" in $$source)) {
             this["is_deleted"] = false;
+        }
+        if (!("is_locked" in $$source)) {
+            this["is_locked"] = false;
         }
 
         Object.assign(this, $$source);
@@ -389,7 +434,7 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField3_0 = $$createType7;
+        const $$createField3_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
             $$parsedSource["config"] = $$createField3_0($$parsedSource["config"]);
@@ -522,12 +567,97 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType9;
+        const $$createField5_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
             $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
         }
         return new GeneralConfig($$parsedSource as Partial<GeneralConfig>);
+    }
+}
+
+/**
+ * GitSyncConfig 保存Git同步的配置信息
+ */
+export class GitSyncConfig {
+    "enabled": boolean;
+    "repo_url": string;
+    "branch": string;
+    "auth_method": AuthMethod;
+    "username"?: string;
+    "password"?: string;
+    "token"?: string;
+    "ssh_key_path"?: string;
+    "ssh_key_passphrase"?: string;
+
+    /**
+     * 同步间隔（分钟）
+     */
+    "sync_interval": number;
+    "last_sync_time": time$0.Time;
+
+    /**
+     * 是否启用自动同步
+     */
+    "auto_sync": boolean;
+    "local_repo_path": string;
+
+    /**
+     * 合并冲突策略
+     */
+    "sync_strategy": SyncStrategy;
+
+    /**
+     * 要同步的文件列表，默认为数据库文件
+     */
+    "files_to_sync": string[];
+
+    /** Creates a new GitSyncConfig instance. */
+    constructor($$source: Partial<GitSyncConfig> = {}) {
+        if (!("enabled" in $$source)) {
+            this["enabled"] = false;
+        }
+        if (!("repo_url" in $$source)) {
+            this["repo_url"] = "";
+        }
+        if (!("branch" in $$source)) {
+            this["branch"] = "";
+        }
+        if (!("auth_method" in $$source)) {
+            this["auth_method"] = ("" as AuthMethod);
+        }
+        if (!("sync_interval" in $$source)) {
+            this["sync_interval"] = 0;
+        }
+        if (!("last_sync_time" in $$source)) {
+            this["last_sync_time"] = null;
+        }
+        if (!("auto_sync" in $$source)) {
+            this["auto_sync"] = false;
+        }
+        if (!("local_repo_path" in $$source)) {
+            this["local_repo_path"] = "";
+        }
+        if (!("sync_strategy" in $$source)) {
+            this["sync_strategy"] = ("" as SyncStrategy);
+        }
+        if (!("files_to_sync" in $$source)) {
+            this["files_to_sync"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitSyncConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitSyncConfig {
+        const $$createField14_0 = $$createType11;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("files_to_sync" in $$parsedSource) {
+            $$parsedSource["files_to_sync"] = $$createField14_0($$parsedSource["files_to_sync"]);
+        }
+        return new GitSyncConfig($$parsedSource as Partial<GitSyncConfig>);
     }
 }
 
@@ -1039,6 +1169,26 @@ export enum LanguageType {
 };
 
 /**
+ * SyncStrategy 定义同步策略
+ */
+export enum SyncStrategy {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * LocalFirst 本地优先：如有冲突，保留本地修改
+     */
+    LocalFirst = "local_first",
+
+    /**
+     * RemoteFirst 远程优先：如有冲突，采用远程版本
+     */
+    RemoteFirst = "remote_first",
+};
+
+/**
  * SystemThemeType 系统主题类型定义
  */
 export enum SystemThemeType {
@@ -1389,8 +1539,8 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType10;
-        const $$createField7_0 = $$createType11;
+        const $$createField6_0 = $$createType12;
+        const $$createField7_0 = $$createType13;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
@@ -1407,16 +1557,18 @@ const $$createType0 = GeneralConfig.createFrom;
 const $$createType1 = EditingConfig.createFrom;
 const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
-const $$createType4 = ConfigMetadata.createFrom;
-const $$createType5 = CustomThemeConfig.createFrom;
-const $$createType6 = ThemeColorConfig.createFrom;
-var $$createType7 = (function $$initCreateType7(...args): any {
-    if ($$createType7 === $$initCreateType7) {
-        $$createType7 = $$createType8;
+const $$createType4 = GitSyncConfig.createFrom;
+const $$createType5 = ConfigMetadata.createFrom;
+const $$createType6 = CustomThemeConfig.createFrom;
+const $$createType7 = ThemeColorConfig.createFrom;
+var $$createType8 = (function $$initCreateType8(...args): any {
+    if ($$createType8 === $$initCreateType8) {
+        $$createType8 = $$createType9;
     }
-    return $$createType7(...args);
+    return $$createType8(...args);
 });
-const $$createType8 = $Create.Map($Create.Any, $Create.Any);
-const $$createType9 = HotkeyCombo.createFrom;
-const $$createType10 = GithubConfig.createFrom;
-const $$createType11 = GiteaConfig.createFrom;
+const $$createType9 = $Create.Map($Create.Any, $Create.Any);
+const $$createType10 = HotkeyCombo.createFrom;
+const $$createType11 = $Create.Array($Create.Any);
+const $$createType12 = GithubConfig.createFrom;
+const $$createType13 = GiteaConfig.createFrom;

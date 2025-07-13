@@ -4,11 +4,11 @@ import "time"
 
 // KeyBinding 单个快捷键绑定
 type KeyBinding struct {
-	Command   KeyBindingCommand `json:"command"`   // 快捷键动作
-	Extension ExtensionID       `json:"extension"` // 所属扩展
-	Key       string            `json:"key"`       // 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
-	Enabled   bool              `json:"enabled"`   // 是否启用
-	IsDefault bool              `json:"isDefault"` // 是否为默认快捷键
+	Command   KeyBindingCommand `json:"command" db:"command"`      // 快捷键动作
+	Extension ExtensionID       `json:"extension" db:"extension"`  // 所属扩展
+	Key       string            `json:"key" db:"key"`              // 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
+	Enabled   bool              `json:"enabled" db:"enabled"`      // 是否启用
+	IsDefault bool              `json:"isDefault" db:"is_default"` // 是否为默认快捷键
 }
 
 // KeyBindingCommand 快捷键命令

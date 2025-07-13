@@ -4,10 +4,10 @@ import "time"
 
 // Extension 单个扩展配置
 type Extension struct {
-	ID        ExtensionID     `json:"id"`        // 扩展唯一标识
-	Enabled   bool            `json:"enabled"`   // 是否启用
-	IsDefault bool            `json:"isDefault"` // 是否为默认扩展
-	Config    ExtensionConfig `json:"config"`    // 扩展配置项
+	ID        ExtensionID     `json:"id" db:"id"`                // 扩展唯一标识
+	Enabled   bool            `json:"enabled" db:"enabled"`      // 是否启用
+	IsDefault bool            `json:"isDefault" db:"is_default"` // 是否为默认扩展
+	Config    ExtensionConfig `json:"config" db:"config"`        // 扩展配置项
 }
 
 // ExtensionID 扩展标识符

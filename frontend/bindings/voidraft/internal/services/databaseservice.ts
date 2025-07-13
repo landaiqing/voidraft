@@ -23,6 +23,14 @@ export function OnDataPathChanged(): Promise<void> & { cancel(): void } {
 }
 
 /**
+ * RegisterModel 注册模型与表的映射关系
+ */
+export function RegisterModel(tableName: string, model: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(175397515, tableName, model) as any;
+    return $resultPromise;
+}
+
+/**
  * ServiceShutdown shuts down the service when the application closes
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {

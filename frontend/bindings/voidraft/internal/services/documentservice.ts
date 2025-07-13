@@ -82,6 +82,14 @@ export function ListDeletedDocumentsMeta(): Promise<(models$0.Document | null)[]
 }
 
 /**
+ * LockDocument 锁定文档，防止删除
+ */
+export function LockDocument(id: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1889494473, id) as any;
+    return $resultPromise;
+}
+
+/**
  * RestoreDocument restores a deleted document
  */
 export function RestoreDocument(id: number): Promise<void> & { cancel(): void } {
@@ -94,6 +102,14 @@ export function RestoreDocument(id: number): Promise<void> & { cancel(): void } 
  */
 export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1474135487, options) as any;
+    return $resultPromise;
+}
+
+/**
+ * UnlockDocument 解锁文档
+ */
+export function UnlockDocument(id: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(222307930, id) as any;
     return $resultPromise;
 }
 

@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"strings"
 	"sync"
+	"time"
+	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
@@ -31,7 +35,8 @@ CREATE TABLE IF NOT EXISTS documents (
     content TEXT DEFAULT '∞∞∞text-a',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    is_deleted INTEGER DEFAULT 0
+    is_deleted INTEGER DEFAULT 0,
+    is_locked INTEGER DEFAULT 0
 )`
 
 	// Extensions table
@@ -58,7 +63,33 @@ CREATE TABLE IF NOT EXISTS key_bindings (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(command, extension)
 )`
+
+	// Git sync logs table
+	sqlCreateSyncLogsTable = `
+CREATE TABLE IF NOT EXISTS sync_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    action TEXT NOT NULL, 
+    status TEXT NOT NULL,
+    message TEXT,
+    commit_id TEXT,
+    changed_files INTEGER DEFAULT 0,
+    repo_url TEXT NOT NULL,
+    branch TEXT NOT NULL
+)`
 )
+
+// ColumnInfo 存储列的信息
+type ColumnInfo struct {
+	SQLType      string
+	DefaultValue string
+}
+
+// TableModel 表示表与模型之间的映射关系
+type TableModel struct {
+	TableName string
+	Model     interface{}
+}
 
 // DatabaseService provides shared database functionality
 type DatabaseService struct {
@@ -67,6 +98,7 @@ type DatabaseService struct {
 	SQLite        *sqlite.Service
 	mu            sync.RWMutex
 	ctx           context.Context
+	tableModels   []TableModel // 注册的表模型
 }
 
 // NewDatabaseService creates a new database service
@@ -75,11 +107,28 @@ func NewDatabaseService(configService *ConfigService, logger *log.Service) *Data
 		logger = log.New()
 	}
 
-	return &DatabaseService{
+	ds := &DatabaseService{
 		configService: configService,
 		logger:        logger,
 		SQLite:        sqlite.New(),
 	}
+
+	// 注册所有模型
+	ds.registerAllModels()
+
+	return ds
+}
+
+// registerAllModels 注册所有数据模型，集中管理表-模型映射
+func (ds *DatabaseService) registerAllModels() {
+	// 文档表
+	ds.RegisterModel("documents", &models.Document{})
+	// 扩展表
+	ds.RegisterModel("extensions", &models.Extension{})
+	// 快捷键表
+	ds.RegisterModel("key_bindings", &models.KeyBinding{})
+	// 同步日志表
+	ds.RegisterModel("sync_logs", &models.SyncLogEntry{})
 }
 
 // ServiceStartup initializes the service when the application starts
@@ -135,6 +184,11 @@ func (ds *DatabaseService) initDatabase() error {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
 
+	// 执行模型与表结构同步
+	if err := ds.syncAllModelTables(); err != nil {
+		return fmt.Errorf("failed to sync model tables: %w", err)
+	}
+
 	return nil
 }
 
@@ -153,6 +207,7 @@ func (ds *DatabaseService) createTables() error {
 		sqlCreateDocumentsTable,
 		sqlCreateExtensionsTable,
 		sqlCreateKeyBindingsTable,
+		sqlCreateSyncLogsTable,
 	}
 
 	for _, table := range tables {
@@ -176,6 +231,10 @@ func (ds *DatabaseService) createIndexes() error {
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_command ON key_bindings(command)`,
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_extension ON key_bindings(extension)`,
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_enabled ON key_bindings(enabled)`,
+		// Sync logs indexes
+		`CREATE INDEX IF NOT EXISTS idx_sync_logs_timestamp ON sync_logs(timestamp DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_sync_logs_action ON sync_logs(action)`,
+		`CREATE INDEX IF NOT EXISTS idx_sync_logs_status ON sync_logs(status)`,
 	}
 
 	for _, index := range indexes {
@@ -184,6 +243,149 @@ func (ds *DatabaseService) createIndexes() error {
 		}
 	}
 	return nil
+}
+
+// RegisterModel 注册模型与表的映射关系
+func (ds *DatabaseService) RegisterModel(tableName string, model interface{}) {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	ds.tableModels = append(ds.tableModels, TableModel{
+		TableName: tableName,
+		Model:     model,
+	})
+}
+
+// syncAllModelTables 同步所有注册的模型与表结构
+func (ds *DatabaseService) syncAllModelTables() error {
+	for _, tm := range ds.tableModels {
+		if err := ds.syncModelTable(tm.TableName, tm.Model); err != nil {
+			return fmt.Errorf("failed to sync table %s: %w", tm.TableName, err)
+		}
+	}
+	return nil
+}
+
+// syncModelTable 同步模型与表结构
+func (ds *DatabaseService) syncModelTable(tableName string, model interface{}) error {
+	// 获取表结构元数据
+	columns, err := ds.getTableColumns(tableName)
+	if err != nil {
+		return fmt.Errorf("failed to get table columns: %w", err)
+	}
+
+	// 使用反射从模型中提取字段信息
+	expectedColumns, err := ds.getModelColumns(model)
+	if err != nil {
+		return fmt.Errorf("failed to get model columns: %w", err)
+	}
+
+	// 检查缺失的列并添加
+	for colName, colInfo := range expectedColumns {
+		if _, exists := columns[colName]; !exists {
+			// 执行添加列的SQL
+			alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s DEFAULT %s",
+				tableName, colName, colInfo.SQLType, colInfo.DefaultValue)
+			if err := ds.SQLite.Execute(alterSQL); err != nil {
+				return fmt.Errorf("failed to add column %s: %w", colName, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// getTableColumns 获取表的列信息
+func (ds *DatabaseService) getTableColumns(table string) (map[string]string, error) {
+	query := fmt.Sprintf("PRAGMA table_info(%s)", table)
+	rows, err := ds.SQLite.Query(query)
+	if err != nil {
+		return nil, err
+	}
+
+	columns := make(map[string]string)
+	for _, row := range rows {
+		name, ok1 := row["name"].(string)
+		typeName, ok2 := row["type"].(string)
+
+		if !ok1 || !ok2 {
+			continue
+		}
+
+		columns[name] = typeName
+	}
+
+	return columns, nil
+}
+
+// getModelColumns 从模型结构体中提取数据库列信息
+func (ds *DatabaseService) getModelColumns(model interface{}) (map[string]ColumnInfo, error) {
+	columns := make(map[string]ColumnInfo)
+
+	// 使用反射获取结构体的类型信息
+	t := reflect.TypeOf(model)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+
+	if t.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("model must be a struct or a pointer to struct")
+	}
+
+	// 遍历所有字段
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		// 获取数据库字段名
+		dbTag := field.Tag.Get("db")
+		if dbTag == "" {
+			// 如果没有db标签，则使用字段名的蛇形命名方式
+			dbTag = toSnakeCase(field.Name)
+		}
+
+		// 获取字段类型对应的SQL类型和默认值
+		sqlType, defaultVal := getSQLTypeAndDefault(field.Type)
+
+		columns[dbTag] = ColumnInfo{
+			SQLType:      sqlType,
+			DefaultValue: defaultVal,
+		}
+	}
+
+	return columns, nil
+}
+
+// toSnakeCase 将驼峰命名转换为蛇形命名
+func toSnakeCase(s string) string {
+	var result strings.Builder
+	for i, r := range s {
+		if i > 0 && 'A' <= r && r <= 'Z' {
+			result.WriteRune('_')
+		}
+		result.WriteRune(r)
+	}
+	return strings.ToLower(result.String())
+}
+
+// getSQLTypeAndDefault 根据Go类型获取对应的SQL类型和默认值
+func getSQLTypeAndDefault(t reflect.Type) (string, string) {
+	switch t.Kind() {
+	case reflect.Bool:
+		return "INTEGER", "0"
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return "INTEGER", "0"
+	case reflect.Float32, reflect.Float64:
+		return "REAL", "0.0"
+	case reflect.String:
+		return "TEXT", "''"
+	default:
+		// 处理特殊类型
+		if t == reflect.TypeOf(time.Time{}) {
+			return "DATETIME", "CURRENT_TIMESTAMP"
+		}
+		return "TEXT", "NULL"
+	}
 }
 
 // ServiceShutdown shuts down the service when the application closes

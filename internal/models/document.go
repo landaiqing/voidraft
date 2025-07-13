@@ -12,9 +12,10 @@ type Document struct {
 	CreatedAt time.Time `json:"createdAt" db:"created_at"`
 	UpdatedAt time.Time `json:"updatedAt" db:"updated_at"`
 	IsDeleted bool      `json:"is_deleted"`
+	IsLocked  bool      `json:"is_locked" db:"is_locked"` // 锁定标志，锁定的文档无法被删除
 }
 
-// NewDocument 创建新文档（不需要传ID，由数据库自增）
+// NewDocument 创建新文档
 func NewDocument(title, content string) *Document {
 	now := time.Now()
 	return &Document{
@@ -23,6 +24,7 @@ func NewDocument(title, content string) *Document {
 		CreatedAt: now,
 		UpdatedAt: now,
 		IsDeleted: false,
+		IsLocked:  false, // 默认不锁定
 	}
 }
 

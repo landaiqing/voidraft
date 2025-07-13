@@ -18,28 +18,28 @@ const (
 
 	// Document operations
 	sqlGetDocumentByID = `
-SELECT id, title, content, created_at, updated_at, is_deleted 
+SELECT id, title, content, created_at, updated_at, is_deleted, is_locked 
 FROM documents 
 WHERE id = ?`
 
 	sqlInsertDocument = `
-INSERT INTO documents (title, content, created_at, updated_at, is_deleted)
-VALUES (?, ?, ?, ?, 0)`
+INSERT INTO documents (title, content, created_at, updated_at, is_deleted, is_locked)
+VALUES (?, ?, ?, ?, 0, 0)`
 
 	sqlUpdateDocumentContent = `
 UPDATE documents 
 SET content = ?, updated_at = ?
-WHERE id = ?`
+WHERE id = ? AND is_deleted = 0`
 
 	sqlUpdateDocumentTitle = `
 UPDATE documents 
 SET title = ?, updated_at = ?
-WHERE id = ?`
+WHERE id = ? AND is_deleted = 0`
 
 	sqlMarkDocumentAsDeleted = `
 UPDATE documents 
 SET is_deleted = 1, updated_at = ?
-WHERE id = ?`
+WHERE id = ? AND is_locked = 0`
 
 	sqlRestoreDocument = `
 UPDATE documents 
@@ -47,13 +47,13 @@ SET is_deleted = 0, updated_at = ?
 WHERE id = ?`
 
 	sqlListAllDocumentsMeta = `
-SELECT id, title, created_at, updated_at 
+SELECT id, title, created_at, updated_at, is_locked 
 FROM documents 
 WHERE is_deleted = 0
 ORDER BY updated_at DESC`
 
 	sqlListDeletedDocumentsMeta = `
-SELECT id, title, created_at, updated_at 
+SELECT id, title, created_at, updated_at, is_locked 
 FROM documents 
 WHERE is_deleted = 1
 ORDER BY updated_at DESC`
@@ -62,6 +62,16 @@ ORDER BY updated_at DESC`
 SELECT id FROM documents WHERE is_deleted = 0 ORDER BY id LIMIT 1`
 
 	sqlCountDocuments = `SELECT COUNT(*) FROM documents WHERE is_deleted = 0`
+
+	sqlSetDocumentLocked = `
+UPDATE documents
+SET is_locked = 1, updated_at = ?
+WHERE id = ?`
+
+	sqlSetDocumentUnlocked = `
+UPDATE documents
+SET is_locked = 0, updated_at = ?
+WHERE id = ?`
 
 	sqlDefaultDocumentID = 1 // 默认文档的ID
 )
@@ -80,16 +90,19 @@ func NewDocumentService(databaseService *DatabaseService, logger *log.Service) *
 		logger = log.New()
 	}
 
-	return &DocumentService{
+	ds := &DocumentService{
 		databaseService: databaseService,
 		logger:          logger,
 	}
+
+	return ds
 }
 
 // ServiceStartup initializes the service when the application starts
 func (ds *DocumentService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	ds.ctx = ctx
-	// Ensure default document exists
+
+	// 确保默认文档存在
 	if err := ds.ensureDefaultDocument(); err != nil {
 		return fmt.Errorf("failed to ensure default document: %w", err)
 	}
@@ -170,6 +183,10 @@ func (ds *DocumentService) GetDocumentByID(id int64) (*models.Document, error) {
 		doc.IsDeleted = isDeletedInt == 1
 	}
 
+	if isLockedInt, ok := row["is_locked"].(int64); ok {
+		doc.IsLocked = isLockedInt == 1
+	}
+
 	return doc, nil
 }
 
@@ -186,6 +203,7 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 		CreatedAt: now,
 		UpdatedAt: now,
 		IsDeleted: false,
+		IsLocked:  false,
 	}
 
 	// 执行插入操作
@@ -213,6 +231,61 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 	// 返回带ID的文档
 	doc.ID = lastID
 	return doc, nil
+}
+
+// LockDocument 锁定文档，防止删除
+func (ds *DocumentService) LockDocument(id int64) error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	// 检查文档是否存在且未删除
+	doc, err := ds.GetDocumentByID(id)
+	if err != nil {
+		return fmt.Errorf("failed to get document: %w", err)
+	}
+	if doc == nil {
+		return fmt.Errorf("document not found: %d", id)
+	}
+	if doc.IsDeleted {
+		return fmt.Errorf("cannot lock deleted document: %d", id)
+	}
+
+	// 如果已经锁定，无需操作
+	if doc.IsLocked {
+		return nil
+	}
+
+	err = ds.databaseService.SQLite.Execute(sqlSetDocumentLocked, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to lock document: %w", err)
+	}
+	return nil
+}
+
+// UnlockDocument 解锁文档
+func (ds *DocumentService) UnlockDocument(id int64) error {
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
+	// 检查文档是否存在
+	doc, err := ds.GetDocumentByID(id)
+	if err != nil {
+		return fmt.Errorf("failed to get document: %w", err)
+	}
+	if doc == nil {
+		return fmt.Errorf("document not found: %d", id)
+	}
+
+	// 如果未锁定，无需操作
+	if !doc.IsLocked {
+		return nil
+	}
+
+	err = ds.databaseService.SQLite.Execute(sqlSetDocumentUnlocked, time.Now(), id)
+	if err != nil {
+		return fmt.Errorf("failed to unlock document: %w", err)
+	}
+	return nil
 }
 
 // UpdateDocumentContent updates the content of a document
@@ -249,7 +322,19 @@ func (ds *DocumentService) DeleteDocument(id int64) error {
 		return fmt.Errorf("cannot delete the default document")
 	}
 
-	err := ds.databaseService.SQLite.Execute(sqlMarkDocumentAsDeleted, time.Now(), id)
+	// 检查文档是否锁定
+	doc, err := ds.GetDocumentByID(id)
+	if err != nil {
+		return fmt.Errorf("failed to get document: %w", err)
+	}
+	if doc == nil {
+		return fmt.Errorf("document not found: %d", id)
+	}
+	if doc.IsLocked {
+		return fmt.Errorf("cannot delete locked document: %d", id)
+	}
+
+	err = ds.databaseService.SQLite.Execute(sqlMarkDocumentAsDeleted, time.Now(), id)
 	if err != nil {
 		return fmt.Errorf("failed to mark document as deleted: %w", err)
 	}
@@ -304,6 +389,10 @@ func (ds *DocumentService) ListAllDocumentsMeta() ([]*models.Document, error) {
 			}
 		}
 
+		if isLockedInt, ok := row["is_locked"].(int64); ok {
+			doc.IsLocked = isLockedInt == 1
+		}
+
 		documents = append(documents, doc)
 	}
 
@@ -344,6 +433,10 @@ func (ds *DocumentService) ListDeletedDocumentsMeta() ([]*models.Document, error
 			if err == nil {
 				doc.UpdatedAt = t
 			}
+		}
+
+		if isLockedInt, ok := row["is_locked"].(int64); ok {
+			doc.IsLocked = isLockedInt == 1
 		}
 
 		documents = append(documents, doc)
