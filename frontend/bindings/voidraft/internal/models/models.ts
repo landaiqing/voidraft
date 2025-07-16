@@ -34,9 +34,9 @@ export class AppConfig {
     "updates": UpdatesConfig;
 
     /**
-     * Git同步设置
+     * Git备份设置
      */
-    "sync": GitSyncConfig;
+    "backup": GitBackupConfig;
 
     /**
      * 配置元数据
@@ -57,8 +57,8 @@ export class AppConfig {
         if (!("updates" in $$source)) {
             this["updates"] = (new UpdatesConfig());
         }
-        if (!("sync" in $$source)) {
-            this["sync"] = (new GitSyncConfig());
+        if (!("backup" in $$source)) {
+            this["backup"] = (new GitBackupConfig());
         }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
@@ -90,8 +90,8 @@ export class AppConfig {
         if ("updates" in $$parsedSource) {
             $$parsedSource["updates"] = $$createField3_0($$parsedSource["updates"]);
         }
-        if ("sync" in $$parsedSource) {
-            $$parsedSource["sync"] = $$createField4_0($$parsedSource["sync"]);
+        if ("backup" in $$parsedSource) {
+            $$parsedSource["backup"] = $$createField4_0($$parsedSource["backup"]);
         }
         if ("metadata" in $$parsedSource) {
             $$parsedSource["metadata"] = $$createField5_0($$parsedSource["metadata"]);
@@ -148,6 +148,8 @@ export class AppearanceConfig {
 }
 
 /**
+ * Git备份相关类型定义
+ *
  * AuthMethod 定义Git认证方式
  */
 export enum AuthMethod {
@@ -157,18 +159,10 @@ export enum AuthMethod {
     $zero = "",
 
     /**
-     * 个人访问令牌
+     * 认证方式
      */
     Token = "token",
-
-    /**
-     * SSH密钥
-     */
     SSHKey = "ssh_key",
-
-    /**
-     * 用户名密码
-     */
     UserPass = "user_pass",
 };
 
@@ -577,12 +571,11 @@ export class GeneralConfig {
 }
 
 /**
- * GitSyncConfig 保存Git同步的配置信息
+ * GitBackupConfig Git备份配置
  */
-export class GitSyncConfig {
+export class GitBackupConfig {
     "enabled": boolean;
     "repo_url": string;
-    "branch": string;
     "auth_method": AuthMethod;
     "username"?: string;
     "password"?: string;
@@ -591,73 +584,38 @@ export class GitSyncConfig {
     "ssh_key_passphrase"?: string;
 
     /**
-     * 同步间隔（分钟）
+     * 分钟
      */
-    "sync_interval": number;
-    "last_sync_time": time$0.Time;
+    "backup_interval": number;
+    "auto_backup": boolean;
 
-    /**
-     * 是否启用自动同步
-     */
-    "auto_sync": boolean;
-    "local_repo_path": string;
-
-    /**
-     * 合并冲突策略
-     */
-    "sync_strategy": SyncStrategy;
-
-    /**
-     * 要同步的文件列表，默认为数据库文件
-     */
-    "files_to_sync": string[];
-
-    /** Creates a new GitSyncConfig instance. */
-    constructor($$source: Partial<GitSyncConfig> = {}) {
+    /** Creates a new GitBackupConfig instance. */
+    constructor($$source: Partial<GitBackupConfig> = {}) {
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
         }
         if (!("repo_url" in $$source)) {
             this["repo_url"] = "";
         }
-        if (!("branch" in $$source)) {
-            this["branch"] = "";
-        }
         if (!("auth_method" in $$source)) {
             this["auth_method"] = ("" as AuthMethod);
         }
-        if (!("sync_interval" in $$source)) {
-            this["sync_interval"] = 0;
+        if (!("backup_interval" in $$source)) {
+            this["backup_interval"] = 0;
         }
-        if (!("last_sync_time" in $$source)) {
-            this["last_sync_time"] = null;
-        }
-        if (!("auto_sync" in $$source)) {
-            this["auto_sync"] = false;
-        }
-        if (!("local_repo_path" in $$source)) {
-            this["local_repo_path"] = "";
-        }
-        if (!("sync_strategy" in $$source)) {
-            this["sync_strategy"] = ("" as SyncStrategy);
-        }
-        if (!("files_to_sync" in $$source)) {
-            this["files_to_sync"] = [];
+        if (!("auto_backup" in $$source)) {
+            this["auto_backup"] = false;
         }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new GitSyncConfig instance from a string or object.
+     * Creates a new GitBackupConfig instance from a string or object.
      */
-    static createFrom($$source: any = {}): GitSyncConfig {
-        const $$createField14_0 = $$createType11;
+    static createFrom($$source: any = {}): GitBackupConfig {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("files_to_sync" in $$parsedSource) {
-            $$parsedSource["files_to_sync"] = $$createField14_0($$parsedSource["files_to_sync"]);
-        }
-        return new GitSyncConfig($$parsedSource as Partial<GitSyncConfig>);
+        return new GitBackupConfig($$parsedSource as Partial<GitBackupConfig>);
     }
 }
 
@@ -1169,26 +1127,6 @@ export enum LanguageType {
 };
 
 /**
- * SyncStrategy 定义同步策略
- */
-export enum SyncStrategy {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * LocalFirst 本地优先：如有冲突，保留本地修改
-     */
-    LocalFirst = "local_first",
-
-    /**
-     * RemoteFirst 远程优先：如有冲突，采用远程版本
-     */
-    RemoteFirst = "remote_first",
-};
-
-/**
  * SystemThemeType 系统主题类型定义
  */
 export enum SystemThemeType {
@@ -1539,8 +1477,8 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType12;
-        const $$createField7_0 = $$createType13;
+        const $$createField6_0 = $$createType11;
+        const $$createField7_0 = $$createType12;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
@@ -1557,7 +1495,7 @@ const $$createType0 = GeneralConfig.createFrom;
 const $$createType1 = EditingConfig.createFrom;
 const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
-const $$createType4 = GitSyncConfig.createFrom;
+const $$createType4 = GitBackupConfig.createFrom;
 const $$createType5 = ConfigMetadata.createFrom;
 const $$createType6 = CustomThemeConfig.createFrom;
 const $$createType7 = ThemeColorConfig.createFrom;
@@ -1569,6 +1507,5 @@ var $$createType8 = (function $$initCreateType8(...args): any {
 });
 const $$createType9 = $Create.Map($Create.Any, $Create.Any);
 const $$createType10 = HotkeyCombo.createFrom;
-const $$createType11 = $Create.Array($Create.Any);
-const $$createType12 = GithubConfig.createFrom;
-const $$createType13 = GiteaConfig.createFrom;
+const $$createType11 = GithubConfig.createFrom;
+const $$createType12 = GiteaConfig.createFrom;

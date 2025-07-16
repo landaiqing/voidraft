@@ -119,6 +119,7 @@ export default {
     general: 'General',
     editing: 'Editor',
     appearance: 'Appearance',
+    backupPage: 'Backup',
     keyBindings: 'Key Bindings',
     updates: 'Updates',
     reset: 'Reset',
@@ -242,6 +243,49 @@ export default {
     restartNow: 'Restart Now',
     hotkeyPreview: 'Preview:',
     none: 'None',
+    backup: {
+      basicSettings: 'Basic Settings',
+      enableBackup: 'Enable Git Backup',
+      autoBackup: 'Auto Backup',
+      backupInterval: 'Backup Interval',
+      intervals: {
+        '5min': '5 minutes',
+        '10min': '10 minutes',
+        '15min': '15 minutes',
+        '30min': '30 minutes',
+        '1hour': '1 hour'
+      },
+      repositoryConfig: 'Repository Configuration',
+      repoUrl: 'Repository URL',
+      repoUrlPlaceholder: 'Enter Git repository URL',
+      authConfig: 'Authentication Configuration',
+      authMethod: 'Authentication Method',
+      authMethods: {
+        token: 'Access Token',
+        sshKey: 'SSH Key',
+        userPass: 'Username/Password'
+      },
+      username: 'Username',
+      usernamePlaceholder: 'Enter username',
+      password: 'Password',
+      passwordPlaceholder: 'Enter password',
+      token: 'Access Token',
+      tokenPlaceholder: 'Enter access token',
+      sshKeyPath: 'SSH Key Path',
+      sshKeyPathPlaceholder: 'Select SSH key file',
+      sshKeyPassphrase: 'SSH Key Passphrase',
+      sshKeyPassphrasePlaceholder: 'Enter SSH key passphrase',
+      backupOperations: 'Backup Operations',
+      pushToRemote: 'Push to Remote',
+      pushing: 'Pushing...',
+      actions: {
+        push: 'Push',
+      },
+      status: {
+        success: 'Success',
+        failed: 'Failed'
+      }
+    },
   },
   extensions: {
     rainbowBrackets: {

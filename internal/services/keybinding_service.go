@@ -105,19 +105,15 @@ func (kbs *KeyBindingService) initDatabase() error {
 	kbs.mu.Lock()
 	defer kbs.mu.Unlock()
 
+	if kbs.databaseService == nil || kbs.databaseService.db == nil {
+		return &KeyBindingError{"check_db", "", errors.New("database service not available")}
+	}
+
 	// 检查是否已有快捷键数据
-	rows, err := kbs.databaseService.SQLite.Query("SELECT COUNT(*) FROM key_bindings")
+	var count int64
+	err := kbs.databaseService.db.QueryRow("SELECT COUNT(*) FROM key_bindings").Scan(&count)
 	if err != nil {
 		return &KeyBindingError{"check_keybindings_count", "", err}
-	}
-
-	if len(rows) == 0 {
-		return &KeyBindingError{"check_keybindings_count", "", fmt.Errorf("no rows returned")}
-	}
-
-	count, ok := rows[0]["COUNT(*)"].(int64)
-	if !ok {
-		return &KeyBindingError{"convert_count", "", fmt.Errorf("failed to convert count to int64")}
 	}
 
 	// 如果没有数据，插入默认配置
@@ -134,11 +130,10 @@ func (kbs *KeyBindingService) initDatabase() error {
 // insertDefaultKeyBindings 插入默认快捷键配置
 func (kbs *KeyBindingService) insertDefaultKeyBindings() error {
 	defaultConfig := models.NewDefaultKeyBindingConfig()
-	now := time.Now()
+	now := time.Now().Format("2006-01-02 15:04:05")
 
 	for _, kb := range defaultConfig.KeyBindings {
-
-		err := kbs.databaseService.SQLite.Execute(sqlInsertKeyBinding,
+		_, err := kbs.databaseService.db.Exec(sqlInsertKeyBinding,
 			string(kb.Command),   // 转换为字符串存储
 			string(kb.Extension), // 转换为字符串存储
 			kb.Key,
@@ -150,7 +145,6 @@ func (kbs *KeyBindingService) insertDefaultKeyBindings() error {
 		if err != nil {
 			return &KeyBindingError{"insert_keybinding", string(kb.Command), err}
 		}
-
 	}
 
 	return nil
@@ -161,36 +155,44 @@ func (kbs *KeyBindingService) GetAllKeyBindings() ([]models.KeyBinding, error) {
 	kbs.mu.RLock()
 	defer kbs.mu.RUnlock()
 
-	rows, err := kbs.databaseService.SQLite.Query(sqlGetAllKeyBindings)
+	if kbs.databaseService == nil || kbs.databaseService.db == nil {
+		return nil, &KeyBindingError{"query_db", "", errors.New("database service not available")}
+	}
+
+	rows, err := kbs.databaseService.db.Query(sqlGetAllKeyBindings)
 	if err != nil {
 		return nil, &KeyBindingError{"query_keybindings", "", err}
 	}
+	defer rows.Close()
 
 	var keyBindings []models.KeyBinding
-	for _, row := range rows {
+	for rows.Next() {
 		var kb models.KeyBinding
+		var command, extension string
+		var enabled, isDefault int
 
-		if command, ok := row["command"].(string); ok {
-			kb.Command = models.KeyBindingCommand(command)
+		err := rows.Scan(
+			&command,
+			&extension,
+			&kb.Key,
+			&enabled,
+			&isDefault,
+		)
+
+		if err != nil {
+			return nil, &KeyBindingError{"scan_keybinding", "", err}
 		}
 
-		if extension, ok := row["extension"].(string); ok {
-			kb.Extension = models.ExtensionID(extension)
-		}
-
-		if key, ok := row["key"].(string); ok {
-			kb.Key = key
-		}
-
-		if enabled, ok := row["enabled"].(int64); ok {
-			kb.Enabled = enabled == 1
-		}
-
-		if isDefault, ok := row["is_default"].(int64); ok {
-			kb.IsDefault = isDefault == 1
-		}
+		kb.Command = models.KeyBindingCommand(command)
+		kb.Extension = models.ExtensionID(extension)
+		kb.Enabled = enabled == 1
+		kb.IsDefault = isDefault == 1
 
 		keyBindings = append(keyBindings, kb)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, &KeyBindingError{"iterate_keybindings", "", err}
 	}
 
 	return keyBindings, nil

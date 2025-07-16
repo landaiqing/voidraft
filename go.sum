@@ -58,8 +58,8 @@ github.com/go-git/go-git/v5 v5.16.2 h1:fT6ZIOjE5iEnkzKyxTHK1W4HGAsPhqEqiSAssSO77
 github.com/go-git/go-git/v5 v5.16.2/go.mod h1:4Ge4alE/5gPs30F2H1esi2gPd69R0C39lolkucHBOp8=
 github.com/go-ole/go-ole v1.3.0 h1:Dt6ye7+vXGIKZ7Xtk4s6/xVdGDQynvom7xCFEdWr6uE=
 github.com/go-ole/go-ole v1.3.0/go.mod h1:5LS6F96DhAwUc7C+1HLexzMXY1xGRSryjyPPKW6zv78=
-github.com/go-viper/mapstructure/v2 v2.3.0 h1:27XbWsHIqhbdR5TIC911OfYvgSaW93HM+dX7970Q7jk=
-github.com/go-viper/mapstructure/v2 v2.3.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
+github.com/go-viper/mapstructure/v2 v2.4.0 h1:EBsztssimR/CONLSZZ04E8qAkxNYq4Qp9LvH92wZUgs=
+github.com/go-viper/mapstructure/v2 v2.4.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
 github.com/godbus/dbus/v5 v5.1.0 h1:4KLkAxT3aOY8Li4FRJe/KvhoNFFxo0m6fNuFUO8QJUk=
 github.com/godbus/dbus/v5 v5.1.0/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 h1:f+oWsMOmNPc8JmEHVZIycC7hBoQxHH9pNKQORJNozsQ=
@@ -164,8 +164,8 @@ github.com/wailsapp/go-webview2 v1.0.21 h1:k3dtoZU4KCoN/AEIbWiPln3P2661GtA2oEgA2
 github.com/wailsapp/go-webview2 v1.0.21/go.mod h1:qJmWAmAmaniuKGZPWwne+uor3AHMB5PFhqiK0Bbj8kc=
 github.com/wailsapp/mimetype v1.4.1 h1:pQN9ycO7uo4vsUUuPeHEYoUkLVkaRntMnHJxVwYhwHs=
 github.com/wailsapp/mimetype v1.4.1/go.mod h1:9aV5k31bBOv5z6u+QP8TltzvNGJPmNJD4XlAL3U+j3o=
-github.com/wailsapp/wails/v3 v3.0.0-alpha.11 h1:MYZk2ci8fBd3loWanLzAYgAFcmq4qTRFyNggVqHMaHY=
-github.com/wailsapp/wails/v3 v3.0.0-alpha.11/go.mod h1:4LCCW7s9e4PuSmu7l9OTvfWIGMO8TaSiftSeR5NpBIc=
+github.com/wailsapp/wails/v3 v3.0.0-alpha.12 h1:z4wYfujk5tSuZXh+59S2DdEncQHG63CW51i2mZFKLS8=
+github.com/wailsapp/wails/v3 v3.0.0-alpha.12/go.mod h1:4LCCW7s9e4PuSmu7l9OTvfWIGMO8TaSiftSeR5NpBIc=
 github.com/xanzy/go-gitlab v0.115.0 h1:6DmtItNcVe+At/liXSgfE/DZNZrGfalQmBRmOcJjOn8=
 github.com/xanzy/go-gitlab v0.115.0/go.mod h1:5XCDtM7AM6WMKmfDdOiEpyRWUqui2iS9ILfvCZ2gJ5M=
 github.com/xanzy/ssh-agent v0.3.3 h1:+/15pJfg/RsTxqYcX6fHqOXZwwMP+2VyYWJeWM2qQFM=

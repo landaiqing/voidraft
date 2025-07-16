@@ -23,6 +23,14 @@ export function SelectDirectory(): Promise<string> & { cancel(): void } {
 }
 
 /**
+ * SelectFile 打开文件选择对话框
+ */
+export function SelectFile(): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(37302920) as any;
+    return $resultPromise;
+}
+
+/**
  * SetWindow 设置绑定的窗口
  */
 export function SetWindow(window: application$0.WebviewWindow | null): Promise<void> & { cancel(): void } {

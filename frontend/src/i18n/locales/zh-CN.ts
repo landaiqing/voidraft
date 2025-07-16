@@ -119,6 +119,7 @@ export default {
     general: '常规',
     editing: '编辑器',
     appearance: '外观',
+    backupPage: '备份',
     extensions: '扩展',
     keyBindings: '快捷键',
     updates: '更新',
@@ -243,6 +244,49 @@ export default {
     },
     hotkeyPreview: '预览：',
     none: '无',
+    backup: {
+      basicSettings: '基本设置',
+      enableBackup: '启用备份',
+      autoBackup: '自动备份',
+      backupInterval: '备份间隔',
+      intervals: {
+        '5min': '5分钟',
+        '10min': '10分钟',
+        '15min': '15分钟',
+        '30min': '30分钟',
+        '1hour': '1小时'
+      },
+      repositoryConfig: '仓库配置',
+      repoUrl: '仓库地址',
+      repoUrlPlaceholder: '请输入Git仓库地址',
+      authConfig: '认证配置',
+      authMethod: '认证方式',
+      authMethods: {
+        token: '访问令牌',
+        sshKey: 'SSH密钥',
+        userPass: '用户名密码'
+      },
+      username: '用户名',
+      usernamePlaceholder: '请输入用户名',
+      password: '密码',
+      passwordPlaceholder: '请输入密码',
+      token: '访问令牌',
+      tokenPlaceholder: '请输入访问令牌',
+      sshKeyPath: 'SSH密钥路径',
+      sshKeyPathPlaceholder: '请选择SSH密钥文件',
+      sshKeyPassphrase: 'SSH密钥密码',
+      sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
+      backupOperations: '备份操作',
+      pushToRemote: '推送到远程',
+      pushing: '推送中...',
+      actions: {
+        push: '推送',
+      },
+      status: {
+        success: '成功',
+        failed: '失败'
+      }
+    },
   },
   extensions: {
     rainbowBrackets: {

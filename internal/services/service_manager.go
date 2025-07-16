@@ -5,14 +5,12 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-	"github.com/wailsapp/wails/v3/pkg/services/sqlite"
 )
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
 	configService      *ConfigService
 	databaseService    *DatabaseService
-	sqliteService      *sqlite.Service
 	documentService    *DocumentService
 	windowService      *WindowService
 	migrationService   *MigrationService
@@ -25,6 +23,7 @@ type ServiceManager struct {
 	startupService     *StartupService
 	selfUpdateService  *SelfUpdateService
 	translationService *TranslationService
+	BackupService      *BackupService
 	logger             *log.Service
 }
 
@@ -35,9 +34,6 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化配置服务
 	configService := NewConfigService(logger)
-
-	// 初始化SQLite服务
-	sqliteService := sqlite.New()
 
 	// 初始化数据库服务
 	databaseService := NewDatabaseService(configService, logger)
@@ -81,6 +77,9 @@ func NewServiceManager() *ServiceManager {
 	// 初始化翻译服务
 	translationService := NewTranslationService(logger)
 
+	// 初始化备份服务
+	backupService := NewBackupService(configService, databaseService, logger)
+
 	// 使用新的配置通知系统设置热键配置变更监听
 	err = configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
@@ -97,10 +96,17 @@ func NewServiceManager() *ServiceManager {
 		panic(err)
 	}
 
+	// 设置备份配置变更监听，处理备份配置变更
+	err = configService.SetBackupConfigChangeCallback(func(config *models.GitBackupConfig) error {
+		return backupService.HandleConfigChange(config)
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	return &ServiceManager{
 		configService:      configService,
 		databaseService:    databaseService,
-		sqliteService:      sqliteService,
 		documentService:    documentService,
 		windowService:      windowService,
 		migrationService:   migrationService,
@@ -113,6 +119,7 @@ func NewServiceManager() *ServiceManager {
 		startupService:     startupService,
 		selfUpdateService:  selfUpdateService,
 		translationService: translationService,
+		BackupService:      backupService,
 		logger:             logger,
 	}
 }
@@ -121,7 +128,6 @@ func NewServiceManager() *ServiceManager {
 func (sm *ServiceManager) GetServices() []application.Service {
 	services := []application.Service{
 		application.NewService(sm.configService),
-		application.NewService(sm.sqliteService),
 		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
 		application.NewService(sm.windowService),
@@ -135,6 +141,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.startupService),
 		application.NewService(sm.selfUpdateService),
 		application.NewService(sm.translationService),
+		application.NewService(sm.BackupService),
 	}
 	return services
 }
@@ -192,11 +199,6 @@ func (sm *ServiceManager) GetTranslationService() *TranslationService {
 // GetDatabaseService 获取数据库服务实例
 func (sm *ServiceManager) GetDatabaseService() *DatabaseService {
 	return sm.databaseService
-}
-
-// GetSQLiteService 获取SQLite服务实例
-func (sm *ServiceManager) GetSQLiteService() *sqlite.Service {
-	return sm.sqliteService
 }
 
 // GetWindowService 获取窗口服务实例

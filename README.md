@@ -121,8 +121,8 @@ Voidraft/
 ### Planned Features
 - ✅ Custom themes - Customize editor themes
 - ✅ Multi-window support - Support editing multiple documents simultaneously
+- ✅ Data synchronization - Cloud backup for documents
 - [ ] Enhanced clipboard - Monitor and manage clipboard history
-- [ ] Data synchronization - Cloud backup for configurations and documents
 - [ ] Extension system - Support for custom plugins
 
 ## Acknowledgments

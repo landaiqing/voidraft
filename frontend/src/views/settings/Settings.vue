@@ -13,6 +13,7 @@ const navItems = [
   { id: 'general', icon: '⚙️', route: '/settings/general' },
   { id: 'editing', icon: '✏️', route: '/settings/editing' },
   { id: 'appearance', icon: '🎨', route: '/settings/appearance' },
+  { id: 'backupPage', icon: '🔗', route: '/settings/backup' },
   { id: 'extensions', icon: '🧩', route: '/settings/extensions' },
   { id: 'keyBindings', icon: '⌨️', route: '/settings/key-bindings' },
   { id: 'updates', icon: '🔄', route: '/settings/updates' }
@@ -194,11 +195,11 @@ const goBackToEditor = async () => {
   .settings-content {
     flex: 1;
     height: 100%;
-    padding: 20px;
-    overflow-y: auto;
+    padding: 0 20px;
+    overflow-y: scroll;
     background-color: var(--settings-bg);
   }
 }
 
 
-</style> 
+</style>

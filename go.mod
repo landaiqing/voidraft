@@ -5,15 +5,17 @@ go 1.24.4
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/creativeprojects/go-selfupdate v1.5.0
+	github.com/go-git/go-git/v5 v5.16.2
 	github.com/knadh/koanf/parsers/json v1.0.0
 	github.com/knadh/koanf/providers/file v1.2.0
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.2.2
 	github.com/robertkrimen/otto v0.5.1
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.11
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.12
 	golang.org/x/net v0.42.0
 	golang.org/x/sys v0.34.0
 	golang.org/x/text v0.27.0
+	modernc.org/sqlite v1.38.0
 )
 
 require (
@@ -35,9 +37,8 @@ require (
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
-	github.com/go-git/go-git/v5 v5.16.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/go-viper/mapstructure/v2 v2.3.0 // indirect
+	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-github/v30 v30.1.0 // indirect
@@ -82,5 +83,4 @@ require (
 	modernc.org/libc v1.66.3 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.38.0 // indirect
 )

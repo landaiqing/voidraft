@@ -7,6 +7,7 @@ import AppearancePage from '@/views/settings/pages/AppearancePage.vue';
 import KeyBindingsPage from '@/views/settings/pages/KeyBindingsPage.vue';
 import UpdatesPage from '@/views/settings/pages/UpdatesPage.vue';
 import ExtensionsPage from '@/views/settings/pages/ExtensionsPage.vue';
+import BackupPage from '@/views/settings/pages/BackupPage.vue';
 
 const routes: RouteRecordRaw[] = [
   {
@@ -49,6 +50,11 @@ const routes: RouteRecordRaw[] = [
         path: 'updates',
         name: 'SettingsUpdates',
         component: UpdatesPage
+      },
+      {
+        path: 'backup',
+        name: 'SettingsBackup',
+        component: BackupPage
       }
     ]
   }
@@ -59,4 +65,4 @@ const router = createRouter({
   routes: routes
 });
 
-export default router; 
+export default router;

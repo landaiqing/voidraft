@@ -298,6 +298,16 @@ func (cs *ConfigService) SetDataPathChangeCallback(callback func() error) error 
 	return cs.notificationService.RegisterListener(dataPathListener)
 }
 
+// SetBackupConfigChangeCallback 设置备份配置变更回调
+func (cs *ConfigService) SetBackupConfigChangeCallback(callback func(config *models.GitBackupConfig) error) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	// 创建备份配置监听器并注册
+	backupListener := CreateBackupConfigListener("DefaultBackupConfigListener", callback)
+	return cs.notificationService.RegisterListener(backupListener)
+}
+
 // ServiceShutdown 关闭服务
 func (cs *ConfigService) ServiceShutdown() error {
 	cs.stopWatching()

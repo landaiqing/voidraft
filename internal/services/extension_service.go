@@ -104,19 +104,15 @@ func (es *ExtensionService) initDatabase() error {
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
+	if es.databaseService == nil || es.databaseService.db == nil {
+		return &ExtensionError{"check_db", "", errors.New("database service not available")}
+	}
+
 	// 检查是否已有扩展数据
-	rows, err := es.databaseService.SQLite.Query("SELECT COUNT(*) FROM extensions")
+	var count int64
+	err := es.databaseService.db.QueryRow("SELECT COUNT(*) FROM extensions").Scan(&count)
 	if err != nil {
 		return &ExtensionError{"check_extensions_count", "", err}
-	}
-
-	if len(rows) == 0 {
-		return &ExtensionError{"check_extensions_count", "", fmt.Errorf("no rows returned")}
-	}
-
-	count, ok := rows[0]["COUNT(*)"].(int64)
-	if !ok {
-		return &ExtensionError{"convert_count", "", fmt.Errorf("failed to convert count to int64")}
 	}
 
 	// 如果没有数据，插入默认配置
@@ -133,16 +129,15 @@ func (es *ExtensionService) initDatabase() error {
 // insertDefaultExtensions 插入默认扩展配置
 func (es *ExtensionService) insertDefaultExtensions() error {
 	defaultSettings := models.NewDefaultExtensionSettings()
-	now := time.Now()
+	now := time.Now().Format("2006-01-02 15:04:05")
 
 	for _, ext := range defaultSettings.Extensions {
-
 		configJSON, err := json.Marshal(ext.Config)
 		if err != nil {
 			return &ExtensionError{"marshal_config", string(ext.ID), err}
 		}
 
-		err = es.databaseService.SQLite.Execute(sqlInsertExtension,
+		_, err = es.databaseService.db.Exec(sqlInsertExtension,
 			string(ext.ID),
 			ext.Enabled,
 			ext.IsDefault,
@@ -153,7 +148,6 @@ func (es *ExtensionService) insertDefaultExtensions() error {
 		if err != nil {
 			return &ExtensionError{"insert_extension", string(ext.ID), err}
 		}
-
 	}
 
 	return nil
@@ -179,36 +173,49 @@ func (es *ExtensionService) GetAllExtensions() ([]models.Extension, error) {
 	es.mu.RLock()
 	defer es.mu.RUnlock()
 
-	rows, err := es.databaseService.SQLite.Query(sqlGetAllExtensions)
+	if es.databaseService == nil || es.databaseService.db == nil {
+		return nil, &ExtensionError{"query_db", "", errors.New("database service not available")}
+	}
+
+	rows, err := es.databaseService.db.Query(sqlGetAllExtensions)
 	if err != nil {
 		return nil, &ExtensionError{"query_extensions", "", err}
 	}
+	defer rows.Close()
 
 	var extensions []models.Extension
-	for _, row := range rows {
+	for rows.Next() {
 		var ext models.Extension
+		var id string
+		var configJSON string
+		var enabled, isDefault int
 
-		if id, ok := row["id"].(string); ok {
-			ext.ID = models.ExtensionID(id)
+		err := rows.Scan(
+			&id,
+			&enabled,
+			&isDefault,
+			&configJSON,
+		)
+
+		if err != nil {
+			return nil, &ExtensionError{"scan_extension", "", err}
 		}
 
-		if enabled, ok := row["enabled"].(int64); ok {
-			ext.Enabled = enabled == 1
-		}
+		ext.ID = models.ExtensionID(id)
+		ext.Enabled = enabled == 1
+		ext.IsDefault = isDefault == 1
 
-		if isDefault, ok := row["is_default"].(int64); ok {
-			ext.IsDefault = isDefault == 1
+		var config models.ExtensionConfig
+		if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
+			return nil, &ExtensionError{"unmarshal_config", id, err}
 		}
-
-		if configJSON, ok := row["config"].(string); ok {
-			var config models.ExtensionConfig
-			if err := json.Unmarshal([]byte(configJSON), &config); err != nil {
-				return nil, &ExtensionError{"unmarshal_config", string(ext.ID), err}
-			}
-			ext.Config = config
-		}
+		ext.Config = config
 
 		extensions = append(extensions, ext)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, &ExtensionError{"iterate_extensions", "", err}
 	}
 
 	return extensions, nil
@@ -224,6 +231,10 @@ func (es *ExtensionService) UpdateExtensionState(id models.ExtensionID, enabled 
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
+	if es.databaseService == nil || es.databaseService.db == nil {
+		return &ExtensionError{"check_db", string(id), errors.New("database service not available")}
+	}
+
 	var configJSON []byte
 	var err error
 
@@ -234,24 +245,19 @@ func (es *ExtensionService) UpdateExtensionState(id models.ExtensionID, enabled 
 		}
 	} else {
 		// 如果没有提供配置，保持原有配置
-		rows, err := es.databaseService.SQLite.Query("SELECT config FROM extensions WHERE id = ?", string(id))
+		var currentConfigJSON string
+		err := es.databaseService.db.QueryRow("SELECT config FROM extensions WHERE id = ?", string(id)).Scan(&currentConfigJSON)
 		if err != nil {
 			return &ExtensionError{"query_current_config", string(id), err}
 		}
-
-		if len(rows) == 0 {
-			return &ExtensionError{"query_current_config", string(id), fmt.Errorf("extension not found")}
-		}
-
-		currentConfigJSON, ok := rows[0]["config"].(string)
-		if !ok {
-			return &ExtensionError{"convert_config", string(id), fmt.Errorf("failed to get current config")}
-		}
-
 		configJSON = []byte(currentConfigJSON)
 	}
 
-	err = es.databaseService.SQLite.Execute(sqlUpdateExtension, enabled, string(configJSON), time.Now(), string(id))
+	_, err = es.databaseService.db.Exec(sqlUpdateExtension,
+		enabled,
+		string(configJSON),
+		time.Now().Format("2006-01-02 15:04:05"),
+		string(id))
 	if err != nil {
 		return &ExtensionError{"update_extension", string(id), err}
 	}
@@ -276,8 +282,12 @@ func (es *ExtensionService) ResetAllExtensionsToDefault() error {
 	es.mu.Lock()
 	defer es.mu.Unlock()
 
+	if es.databaseService == nil || es.databaseService.db == nil {
+		return &ExtensionError{"check_db", "", errors.New("database service not available")}
+	}
+
 	// 删除所有现有扩展
-	err := es.databaseService.SQLite.Execute(sqlDeleteAllExtensions)
+	_, err := es.databaseService.db.Exec(sqlDeleteAllExtensions)
 	if err != nil {
 		return &ExtensionError{"delete_all_extensions", "", err}
 	}

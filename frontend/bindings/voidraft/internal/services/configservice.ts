@@ -59,6 +59,14 @@ export function Set(key: string, value: any): Promise<void> & { cancel(): void }
 }
 
 /**
+ * SetBackupConfigChangeCallback 设置备份配置变更回调
+ */
+export function SetBackupConfigChangeCallback(callback: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3264871659, callback) as any;
+    return $resultPromise;
+}
+
+/**
  * SetDataPathChangeCallback 设置数据路径配置变更回调
  */
 export function SetDataPathChangeCallback(callback: any): Promise<void> & { cancel(): void } {

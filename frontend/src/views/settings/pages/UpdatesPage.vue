@@ -266,6 +266,7 @@ const currentVersion = computed(() => {
     margin-top: 12px;
     padding-top: 12px;
     border-top: 1px solid var(--settings-border, rgba(0,0,0,0.1));
+    background: transparent;
 
     .notes-title {
       font-size: 12px;
@@ -278,24 +279,76 @@ const currentVersion = computed(() => {
       font-size: 12px;
       color: var(--settings-text);
       line-height: 1.4;
+      background: transparent;
       
       /* Markdown内容样式 */
       :deep(p) {
         margin: 0 0 6px 0;
+        background: transparent;
       }
       
       :deep(ul), :deep(ol) {
         margin: 6px 0;
         padding-left: 16px;
+        background: transparent;
       }
       
       :deep(li) {
         margin-bottom: 4px;
+        background: transparent;
       }
       
       :deep(h1), :deep(h2), :deep(h3), :deep(h4), :deep(h5), :deep(h6) {
         margin: 10px 0 6px 0;
         font-size: 13px;
+        background: transparent;
+      }
+
+      :deep(pre), :deep(code) {
+        background-color: var(--settings-code-bg, rgba(0,0,0,0.05));
+        border-radius: 3px;
+        padding: 2px 4px;
+        font-family: monospace;
+      }
+
+      :deep(pre) {
+        padding: 8px;
+        overflow-x: auto;
+        margin: 6px 0;
+      }
+
+      :deep(blockquote) {
+        border-left: 3px solid var(--settings-border, rgba(0,0,0,0.1));
+        margin: 6px 0;
+        padding-left: 10px;
+        color: var(--settings-text-secondary, #757575);
+        background: transparent;
+      }
+
+      :deep(a) {
+        color: var(--theme-primary, #2196f3);
+        text-decoration: none;
+        
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      :deep(table) {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 6px 0;
+        background: transparent;
+      }
+
+      :deep(th), :deep(td) {
+        border: 1px solid var(--settings-border, rgba(0,0,0,0.1));
+        padding: 4px 8px;
+        background: transparent;
+      }
+
+      :deep(th) {
+        background-color: var(--settings-table-header-bg, rgba(0,0,0,0.02));
       }
     }
   }

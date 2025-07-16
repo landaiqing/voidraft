@@ -2,18 +2,18 @@ package services
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-	"github.com/wailsapp/wails/v3/pkg/services/sqlite"
+	_ "modernc.org/sqlite"
 )
 
 const (
@@ -63,20 +63,6 @@ CREATE TABLE IF NOT EXISTS key_bindings (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(command, extension)
 )`
-
-	// Git sync logs table
-	sqlCreateSyncLogsTable = `
-CREATE TABLE IF NOT EXISTS sync_logs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-    action TEXT NOT NULL, 
-    status TEXT NOT NULL,
-    message TEXT,
-    commit_id TEXT,
-    changed_files INTEGER DEFAULT 0,
-    repo_url TEXT NOT NULL,
-    branch TEXT NOT NULL
-)`
 )
 
 // ColumnInfo 存储列的信息
@@ -95,7 +81,7 @@ type TableModel struct {
 type DatabaseService struct {
 	configService *ConfigService
 	logger        *log.Service
-	SQLite        *sqlite.Service
+	db            *sql.DB
 	mu            sync.RWMutex
 	ctx           context.Context
 	tableModels   []TableModel // 注册的表模型
@@ -110,7 +96,6 @@ func NewDatabaseService(configService *ConfigService, logger *log.Service) *Data
 	ds := &DatabaseService{
 		configService: configService,
 		logger:        logger,
-		SQLite:        sqlite.New(),
 	}
 
 	// 注册所有模型
@@ -127,8 +112,6 @@ func (ds *DatabaseService) registerAllModels() {
 	ds.RegisterModel("extensions", &models.Extension{})
 	// 快捷键表
 	ds.RegisterModel("key_bindings", &models.KeyBinding{})
-	// 同步日志表
-	ds.RegisterModel("sync_logs", &models.SyncLogEntry{})
 }
 
 // ServiceStartup initializes the service when the application starts
@@ -150,28 +133,19 @@ func (ds *DatabaseService) initDatabase() error {
 		return fmt.Errorf("failed to create database directory: %w", err)
 	}
 
-	// 检查数据库文件是否存在，如果不存在则创建
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		// 创建空文件
-		file, err := os.Create(dbPath)
-		if err != nil {
-			return fmt.Errorf("failed to create database file: %w", err)
-		}
-		file.Close()
-	}
-
-	// 配置SQLite服务
-	ds.SQLite.Configure(&sqlite.Config{
-		DBSource: dbPath,
-	})
-
 	// 打开数据库连接
-	if err := ds.SQLite.Open(); err != nil {
+	ds.db, err = sql.Open("sqlite", dbPath)
+	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 
+	// 测试连接
+	if err := ds.db.Ping(); err != nil {
+		return fmt.Errorf("failed to ping database: %w", err)
+	}
+
 	// 应用性能优化设置
-	if err := ds.SQLite.Execute(sqlOptimizationSettings); err != nil {
+	if _, err := ds.db.Exec(sqlOptimizationSettings); err != nil {
 		return fmt.Errorf("failed to apply optimization settings: %w", err)
 	}
 
@@ -207,11 +181,10 @@ func (ds *DatabaseService) createTables() error {
 		sqlCreateDocumentsTable,
 		sqlCreateExtensionsTable,
 		sqlCreateKeyBindingsTable,
-		sqlCreateSyncLogsTable,
 	}
 
 	for _, table := range tables {
-		if err := ds.SQLite.Execute(table); err != nil {
+		if _, err := ds.db.Exec(table); err != nil {
 			return err
 		}
 	}
@@ -231,14 +204,10 @@ func (ds *DatabaseService) createIndexes() error {
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_command ON key_bindings(command)`,
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_extension ON key_bindings(extension)`,
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_enabled ON key_bindings(enabled)`,
-		// Sync logs indexes
-		`CREATE INDEX IF NOT EXISTS idx_sync_logs_timestamp ON sync_logs(timestamp DESC)`,
-		`CREATE INDEX IF NOT EXISTS idx_sync_logs_action ON sync_logs(action)`,
-		`CREATE INDEX IF NOT EXISTS idx_sync_logs_status ON sync_logs(status)`,
 	}
 
 	for _, index := range indexes {
-		if err := ds.SQLite.Execute(index); err != nil {
+		if _, err := ds.db.Exec(index); err != nil {
 			return err
 		}
 	}
@@ -286,7 +255,7 @@ func (ds *DatabaseService) syncModelTable(tableName string, model interface{}) e
 			// 执行添加列的SQL
 			alterSQL := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s DEFAULT %s",
 				tableName, colName, colInfo.SQLType, colInfo.DefaultValue)
-			if err := ds.SQLite.Execute(alterSQL); err != nil {
+			if _, err := ds.db.Exec(alterSQL); err != nil {
 				return fmt.Errorf("failed to add column %s: %w", colName, err)
 			}
 		}
@@ -298,21 +267,28 @@ func (ds *DatabaseService) syncModelTable(tableName string, model interface{}) e
 // getTableColumns 获取表的列信息
 func (ds *DatabaseService) getTableColumns(table string) (map[string]string, error) {
 	query := fmt.Sprintf("PRAGMA table_info(%s)", table)
-	rows, err := ds.SQLite.Query(query)
+	rows, err := ds.db.Query(query)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	columns := make(map[string]string)
-	for _, row := range rows {
-		name, ok1 := row["name"].(string)
-		typeName, ok2 := row["type"].(string)
+	for rows.Next() {
+		var cid int
+		var name, typeName string
+		var notNull, pk int
+		var dflt_value interface{}
 
-		if !ok1 || !ok2 {
-			continue
+		if err := rows.Scan(&cid, &name, &typeName, &notNull, &dflt_value, &pk); err != nil {
+			return nil, err
 		}
 
 		columns[name] = typeName
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return columns, nil
@@ -336,11 +312,11 @@ func (ds *DatabaseService) getModelColumns(model interface{}) (map[string]Column
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		// 获取数据库字段名
+		// 只处理有db标签的字段
 		dbTag := field.Tag.Get("db")
 		if dbTag == "" {
-			// 如果没有db标签，则使用字段名的蛇形命名方式
-			dbTag = toSnakeCase(field.Name)
+			// 如果没有db标签，跳过该字段
+			continue
 		}
 
 		// 获取字段类型对应的SQL类型和默认值
@@ -353,18 +329,6 @@ func (ds *DatabaseService) getModelColumns(model interface{}) (map[string]Column
 	}
 
 	return columns, nil
-}
-
-// toSnakeCase 将驼峰命名转换为蛇形命名
-func toSnakeCase(s string) string {
-	var result strings.Builder
-	for i, r := range s {
-		if i > 0 && 'A' <= r && r <= 'Z' {
-			result.WriteRune('_')
-		}
-		result.WriteRune(r)
-	}
-	return strings.ToLower(result.String())
 }
 
 // getSQLTypeAndDefault 根据Go类型获取对应的SQL类型和默认值
@@ -390,14 +354,19 @@ func getSQLTypeAndDefault(t reflect.Type) (string, string) {
 
 // ServiceShutdown shuts down the service when the application closes
 func (ds *DatabaseService) ServiceShutdown() error {
-	return ds.SQLite.Close()
+	if ds.db != nil {
+		return ds.db.Close()
+	}
+	return nil
 }
 
 // OnDataPathChanged handles data path changes
 func (ds *DatabaseService) OnDataPathChanged() error {
 	// 关闭当前连接
-	if err := ds.SQLite.Close(); err != nil {
-		return err
+	if ds.db != nil {
+		if err := ds.db.Close(); err != nil {
+			return err
+		}
 	}
 
 	// 用新路径重新初始化

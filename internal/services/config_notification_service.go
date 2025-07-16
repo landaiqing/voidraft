@@ -22,6 +22,8 @@ const (
 	ConfigChangeTypeHotkey ConfigChangeType = "hotkey"
 	// ConfigChangeTypeDataPath 数据路径配置变更
 	ConfigChangeTypeDataPath ConfigChangeType = "datapath"
+	// ConfigChangeTypeBackup 备份配置变更
+	ConfigChangeTypeBackup ConfigChangeType = "backup"
 )
 
 // ConfigChangeCallback 配置变更回调函数类型
@@ -435,6 +437,29 @@ func CreateDataPathListener(name string, callback func() error) *ConfigListener 
 			return nil
 		},
 		DebounceDelay: 100 * time.Millisecond,
+		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {
+			var config models.AppConfig
+			if err := k.Unmarshal("", &config); err != nil {
+				return nil
+			}
+			return &config
+		},
+	}
+}
+
+// CreateBackupConfigListener 创建备份配置监听器
+func CreateBackupConfigListener(name string, callback func(config *models.GitBackupConfig) error) *ConfigListener {
+	return &ConfigListener{
+		Name:       name,
+		ChangeType: ConfigChangeTypeBackup,
+		Callback: func(changeType ConfigChangeType, oldConfig, newConfig *models.AppConfig) error {
+			if newConfig == nil {
+				defaultConfig := models.NewDefaultAppConfig()
+				return callback(&defaultConfig.Backup)
+			}
+			return callback(&newConfig.Backup)
+		},
+		DebounceDelay: 200 * time.Millisecond,
 		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {
 			var config models.AppConfig
 			if err := k.Unmarshal("", &config); err != nil {

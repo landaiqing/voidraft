@@ -124,7 +124,7 @@ type AppConfig struct {
 	Editing    EditingConfig    `json:"editing"`    // 编辑设置
 	Appearance AppearanceConfig `json:"appearance"` // 外观设置
 	Updates    UpdatesConfig    `json:"updates"`    // 更新设置
-	Sync       GitSyncConfig    `json:"sync"`       // Git同步设置
+	Backup     GitBackupConfig  `json:"backup"`     // Git备份设置
 	Metadata   ConfigMetadata   `json:"metadata"`   // 配置元数据
 }
 
@@ -139,7 +139,6 @@ func NewDefaultAppConfig() *AppConfig {
 
 	currentDir, _ := os.UserHomeDir()
 	dataDir := filepath.Join(currentDir, ".voidraft", "data")
-	repoPath := filepath.Join(currentDir, ".voidraft", "sync-repo")
 
 	return &AppConfig{
 		General: GeneralConfig{
@@ -175,10 +174,10 @@ func NewDefaultAppConfig() *AppConfig {
 			CustomTheme: *NewDefaultCustomThemeConfig(),
 		},
 		Updates: UpdatesConfig{
-			Version:            "1.2.0",
+			Version:            "1.3.0",
 			AutoUpdate:         true,
-			PrimarySource:      UpdateSourceGithub,
-			BackupSource:       UpdateSourceGitea,
+			PrimarySource:      UpdateSourceGitea,
+			BackupSource:       UpdateSourceGithub,
 			BackupBeforeUpdate: true,
 			UpdateTimeout:      30,
 			Github: GithubConfig{
@@ -191,21 +190,16 @@ func NewDefaultAppConfig() *AppConfig {
 				Repo:    "voidraft",
 			},
 		},
-		Sync: GitSyncConfig{
-			Enabled:       false,
-			RepoURL:       "",
-			Branch:        "main",
-			AuthMethod:    Token,
-			Username:      "",
-			Password:      "",
-			Token:         "",
-			SSHKeyPath:    "",
-			SyncInterval:  60,
-			LastSyncTime:  time.Time{},
-			AutoSync:      true,
-			LocalRepoPath: repoPath,
-			SyncStrategy:  LocalFirst,
-			FilesToSync:   []string{"voidraft.db"},
+		Backup: GitBackupConfig{
+			Enabled:        false,
+			RepoURL:        "",
+			AuthMethod:     UserPass,
+			Username:       "",
+			Password:       "",
+			Token:          "",
+			SSHKeyPath:     "",
+			BackupInterval: 60,
+			AutoBackup:     false,
 		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),

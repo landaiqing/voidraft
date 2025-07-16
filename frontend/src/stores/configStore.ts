@@ -11,14 +11,14 @@ import {
     TabType,
     UpdatesConfig,
     UpdateSourceType,
-    GitSyncConfig,
-    AuthMethod,
-    SyncStrategy
+    GitBackupConfig,
+    AuthMethod
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/utils/configUtils';
 import {WindowController} from '@/utils/windowController';
 import * as runtime from '@wailsio/runtime';
+import {useBackupStore} from '@/stores/backupStore';
 // 国际化相关导入
 export type SupportedLocaleType = 'zh-CN' | 'en-US';
 
@@ -51,8 +51,8 @@ type UpdatesConfigKeyMap = {
     readonly [K in keyof UpdatesConfig]: string;
 };
 
-type SyncConfigKeyMap = {
-    readonly [K in keyof GitSyncConfig]: string;
+type BackupConfigKeyMap = {
+    readonly [K in keyof GitBackupConfig]: string;
 };
 
 type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
@@ -95,22 +95,18 @@ const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
     gitea: 'updates.gitea'
 } as const;
 
-const SYNC_CONFIG_KEY_MAP: SyncConfigKeyMap = {
-    enabled: 'sync.enabled',
-    repo_url: 'sync.repo_url',
-    branch: 'sync.branch',
-    auth_method: 'sync.auth_method',
-    username: 'sync.username',
-    password: 'sync.password',
-    token: 'sync.token',
-    ssh_key_path: 'sync.ssh_key_path',
-    ssh_key_passphrase: 'sync.ssh_key_passphrase',
-    sync_interval: 'sync.sync_interval',
-    last_sync_time: 'sync.last_sync_time',
-    auto_sync: 'sync.auto_sync',
-    local_repo_path: 'sync.local_repo_path',
-    sync_strategy: 'sync.sync_strategy',
-    files_to_sync: 'sync.files_to_sync'
+const BACKUP_CONFIG_KEY_MAP: BackupConfigKeyMap = {
+    enabled: 'backup.enabled',
+    repo_url: 'backup.repo_url',
+    auth_method: 'backup.auth_method',
+    username: 'backup.username',
+    password: 'backup.password',
+    token: 'backup.token',
+    ssh_key_path: 'backup.ssh_key_path',
+    ssh_key_passphrase: 'backup.ssh_key_passphrase',
+    backup_interval: 'backup.backup_interval',
+    auto_backup: 'backup.auto_backup',
+
 } as const;
 
 // 配置限制
@@ -286,22 +282,17 @@ const DEFAULT_CONFIG: AppConfig = {
             repo: "voidraft",
         }
     },
-    sync: {
+    backup: {
         enabled: false,
         repo_url: "",
-        branch: "main",
-        auth_method: AuthMethod.Token,
+        auth_method: AuthMethod.UserPass,
         username: "",
         password: "",
         token: "",
         ssh_key_path: "",
         ssh_key_passphrase: "",
-        sync_interval: 60,
-        last_sync_time: null,
-        auto_sync: true,
-        local_repo_path: "",
-        sync_strategy: SyncStrategy.LocalFirst,
-        files_to_sync: ["voidraft.db"]
+        backup_interval: 60,
+        auto_backup: true,
     },
     metadata: {
         version: '1.0.0',
@@ -390,19 +381,19 @@ export const useConfigStore = defineStore('config', () => {
         state.config.updates[key] = value;
     };
 
-    const updateSyncConfig = async <K extends keyof GitSyncConfig>(key: K, value: GitSyncConfig[K]): Promise<void> => {
+    const updateBackupConfig = async <K extends keyof GitBackupConfig>(key: K, value: GitBackupConfig[K]): Promise<void> => {
         // 确保配置已加载
         if (!state.configLoaded && !state.isLoading) {
             await initConfig();
         }
 
-        const backendKey = SYNC_CONFIG_KEY_MAP[key];
+        const backendKey = BACKUP_CONFIG_KEY_MAP[key];
         if (!backendKey) {
-            throw new Error(`No backend key mapping found for sync.${key.toString()}`);
+            throw new Error(`No backend key mapping found for backup.${key.toString()}`);
         }
 
         await ConfigService.Set(backendKey, value);
-        state.config.sync[key] = value;
+        state.config.backup[key] = value;
     };
 
     // 加载配置
@@ -419,7 +410,7 @@ export const useConfigStore = defineStore('config', () => {
                 if (appConfig.editing) Object.assign(state.config.editing, appConfig.editing);
                 if (appConfig.appearance) Object.assign(state.config.appearance, appConfig.appearance);
                 if (appConfig.updates) Object.assign(state.config.updates, appConfig.updates);
-                if (appConfig.sync) Object.assign(state.config.sync, appConfig.sync);
+                if (appConfig.backup) Object.assign(state.config.backup, appConfig.backup);
                 if (appConfig.metadata) Object.assign(state.config.metadata, appConfig.metadata);
             }
 
@@ -654,18 +645,16 @@ export const useConfigStore = defineStore('config', () => {
         // 更新配置相关方法
         setAutoUpdate: async (value: boolean) => await updateUpdatesConfig('autoUpdate', value),
 
-        // Git同步配置相关方法
-        setGitSyncEnabled: (value: boolean) => updateSyncConfig('enabled', value),
-        setGitRepoUrl: (value: string) => updateSyncConfig('repo_url', value),
-        setGitBranch: (value: string) => updateSyncConfig('branch', value),
-        setAuthMethod: (value: AuthMethod) => updateSyncConfig('auth_method', value),
-        setGitUsername: (value: string) => updateSyncConfig('username', value),
-        setGitPassword: (value: string) => updateSyncConfig('password', value),
-        setGitToken: (value: string) => updateSyncConfig('token', value),
-        setSSHKeyPath: (value: string) => updateSyncConfig('ssh_key_path', value),
-        setSyncInterval: (value: number) => updateSyncConfig('sync_interval', value),
-        setAutoSync: (value: boolean) => updateSyncConfig('auto_sync', value),
-        setSyncStrategy: (value: SyncStrategy) => updateSyncConfig('sync_strategy', value),
-        setFilesToSync: (value: string[]) => updateSyncConfig('files_to_sync', value),
+        // 备份配置相关方法
+        setEnableBackup: async (value: boolean) => {await updateBackupConfig('enabled', value);},
+        setAutoBackup: async (value: boolean) => {await updateBackupConfig('auto_backup', value);},
+        setRepoUrl: async (value: string) => await updateBackupConfig('repo_url', value),
+        setAuthMethod: async (value: AuthMethod) => await updateBackupConfig('auth_method', value),
+        setUsername: async (value: string) => await updateBackupConfig('username', value),
+        setPassword: async (value: string) => await updateBackupConfig('password', value),
+        setToken: async (value: string) => await updateBackupConfig('token', value),
+        setSshKeyPath: async (value: string) => await updateBackupConfig('ssh_key_path', value),
+        setSshKeyPassphrase: async (value: string) => await updateBackupConfig('ssh_key_passphrase', value),
+        setBackupInterval: async (value: number) => await updateBackupConfig('backup_interval', value),
     };
 });

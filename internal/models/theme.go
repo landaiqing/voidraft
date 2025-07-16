@@ -66,9 +66,9 @@ func NewDefaultDarkTheme() ThemeColorConfig {
 		Cursor:           "#ffffff",
 		Selection:        "#0865a9",
 		SelectionBlur:    "#225377",
-		ActiveLine:       "#ffffff",
-		LineNumber:       "#ffffff",
-		ActiveLineNumber: "#ffffff",
+		ActiveLine:       "#ffffff0a",
+		LineNumber:       "#ffffff26",
+		ActiveLineNumber: "#ffffff99",
 
 		// 边框分割线
 		BorderColor: "#1e222a",
@@ -104,17 +104,17 @@ func NewDefaultLightTheme() ThemeColorConfig {
 		Cursor:           "#000000",
 		Selection:        "#77baff",
 		SelectionBlur:    "#b2c2ca",
-		ActiveLine:       "#000000",
-		LineNumber:       "#000000",
-		ActiveLineNumber: "#000000",
+		ActiveLine:       "#0000000a",
+		LineNumber:       "#00000040",
+		ActiveLineNumber: "#000000aa",
 
 		// 边框分割线
 		BorderColor: "#dfdfdf",
-		BorderLight: "#0000000d",
+		BorderLight: "#0000000c",
 
 		// 搜索匹配
 		SearchMatch:     "#005cc5",
-		MatchingBracket: "#0000001a",
+		MatchingBracket: "#00000019",
 	}
 }
 
