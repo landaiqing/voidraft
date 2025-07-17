@@ -39,21 +39,25 @@ export const useBackupStore = defineStore('backup', () => {
         pushError.value = false
     }
 
-    // 清除错误信息
+    // 清除错误信息和错误图标
     const clearError = () => {
         if (errorTimer !== null) {
             window.clearTimeout(errorTimer)
             errorTimer = null
         }
         error.value = null
+        pushError.value = false
     }
 
-    // 设置错误信息并自动清除
-    const setErrorWithAutoHide = (errorMessage: string, hideAfter: number = 5000) => {
-        clearError() // 清除之前的错误定时器
+    // 设置错误信息和错误图标并自动清除
+    const setErrorWithAutoHide = (errorMessage: string, hideAfter: number = 3000) => {
+        clearError()
+        clearPushStatus()
         error.value = errorMessage
+        pushError.value = true
         errorTimer = window.setTimeout(() => {
             error.value = null
+            pushError.value = false
             errorTimer = null
         }, hideAfter)
     }
@@ -76,18 +80,12 @@ export const useBackupStore = defineStore('backup', () => {
             }, 3000)
         } catch (err: any) {
             setErrorWithAutoHide(err?.message || 'Backup operation failed')
-            // 显示错误状态，并设置3秒后自动消失
-            pushError.value = true
-            pushStatusTimer = window.setTimeout(() => {
-                pushError.value = false
-                pushStatusTimer = null
-            }, 3000)
         } finally {
             isPushing.value = false
         }
     }
 
-    // 初始化备份服务（只在应用启动时调用一次）
+    // 初始化备份服务
     const initialize = async () => {
         if (!isEnabled.value) return
         
