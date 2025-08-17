@@ -80,7 +80,7 @@ var globalHotkeyService *HotkeyService
 
 // HotkeyService macOS全局热键服务
 type HotkeyService struct {
-	logger        *log.Service
+	logger        *log.LogService
 	configService *ConfigService
 	app           *application.App
 	mu            sync.RWMutex
@@ -105,7 +105,7 @@ func (e *HotkeyError) Unwrap() error {
 }
 
 // NewHotkeyService 创建新的热键服务实例
-func NewHotkeyService(configService *ConfigService, logger *log.Service) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, logger *log.LogService) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}

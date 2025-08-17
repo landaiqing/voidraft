@@ -30,14 +30,14 @@ type BackupService struct {
 	configService    *ConfigService
 	dbService        *DatabaseService
 	repository       *git.Repository
-	logger           *log.Service
+	logger           *log.LogService
 	isInitialized    bool
 	autoBackupTicker *time.Ticker
 	autoBackupStop   chan bool
 }
 
 // NewBackupService 创建新的备份服务实例
-func NewBackupService(configService *ConfigService, dbService *DatabaseService, logger *log.Service) *BackupService {
+func NewBackupService(configService *ConfigService, dbService *DatabaseService, logger *log.LogService) *BackupService {
 	return &BackupService{
 		configService: configService,
 		dbService:     dbService,

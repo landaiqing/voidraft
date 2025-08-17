@@ -15,7 +15,7 @@ import (
 
 // WindowsStartupImpl Windows 平台开机启动实现
 type WindowsStartupImpl struct {
-	logger      *log.Service
+	logger      *log.LogService
 	registryKey string
 	execPath    string
 	workingDir  string
@@ -23,7 +23,7 @@ type WindowsStartupImpl struct {
 }
 
 // newStartupImplementation 创建平台特定的开机启动实现
-func newStartupImplementation(logger *log.Service) StartupImplementation {
+func newStartupImplementation(logger *log.LogService) StartupImplementation {
 	return &WindowsStartupImpl{
 		logger: logger,
 	}

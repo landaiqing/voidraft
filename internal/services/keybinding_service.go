@@ -51,7 +51,7 @@ const (
 // KeyBindingService 快捷键管理服务
 type KeyBindingService struct {
 	databaseService *DatabaseService
-	logger          *log.Service
+	logger          *log.LogService
 
 	mu       sync.RWMutex
 	ctx      context.Context
@@ -83,7 +83,7 @@ func (e *KeyBindingError) Is(target error) bool {
 }
 
 // NewKeyBindingService 创建快捷键服务实例
-func NewKeyBindingService(databaseService *DatabaseService, logger *log.Service) *KeyBindingService {
+func NewKeyBindingService(databaseService *DatabaseService, logger *log.LogService) *KeyBindingService {
 	if logger == nil {
 		logger = log.New()
 	}

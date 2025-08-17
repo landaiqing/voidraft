@@ -79,13 +79,13 @@ WHERE id = ?`
 // DocumentService provides document management functionality
 type DocumentService struct {
 	databaseService *DatabaseService
-	logger          *log.Service
+	logger          *log.LogService
 	mu              sync.RWMutex
 	ctx             context.Context
 }
 
 // NewDocumentService creates a new document service
-func NewDocumentService(databaseService *DatabaseService, logger *log.Service) *DocumentService {
+func NewDocumentService(databaseService *DatabaseService, logger *log.LogService) *DocumentService {
 	if logger == nil {
 		logger = log.New()
 	}

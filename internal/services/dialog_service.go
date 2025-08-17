@@ -7,12 +7,12 @@ import (
 
 // DialogService 对话框服务，处理文件选择等对话框操作
 type DialogService struct {
-	logger *log.Service
+	logger *log.LogService
 	window *application.WebviewWindow // 绑定的窗口
 }
 
 // NewDialogService 创建新的对话框服务实例
-func NewDialogService(logger *log.Service) *DialogService {
+func NewDialogService(logger *log.LogService) *DialogService {
 	if logger == nil {
 		logger = log.New()
 	}

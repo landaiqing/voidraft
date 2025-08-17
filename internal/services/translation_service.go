@@ -10,7 +10,7 @@ import (
 
 // TranslationService 翻译服务
 type TranslationService struct {
-	logger         *log.Service
+	logger         *log.LogService
 	factory        *translator.TranslatorFactory
 	defaultTimeout time.Duration
 	translators    map[translator.TranslatorType]translator.Translator
@@ -18,7 +18,7 @@ type TranslationService struct {
 }
 
 // NewTranslationService 创建翻译服务实例
-func NewTranslationService(logger *log.Service) *TranslationService {
+func NewTranslationService(logger *log.LogService) *TranslationService {
 	service := &TranslationService{
 		logger:         logger,
 		factory:        translator.NewTranslatorFactory(),

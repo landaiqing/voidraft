@@ -107,6 +107,12 @@ const selectItem = async (item: any) => {
 // 选择文档
 const selectDoc = async (doc: Document) => {
   try {
+    // 如果选择的就是当前文档，直接关闭菜单
+    if (documentStore.currentDocument?.id === doc.id) {
+      closeMenu();
+      return;
+    }
+
     const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
     if (hasOpen) {
       // 设置错误状态并启动定时器

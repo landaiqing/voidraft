@@ -24,7 +24,7 @@ type ServiceManager struct {
 	selfUpdateService  *SelfUpdateService
 	translationService *TranslationService
 	BackupService      *BackupService
-	logger             *log.Service
+	logger             *log.LogService
 }
 
 // NewServiceManager 创建新的服务管理器实例
@@ -157,7 +157,7 @@ func (sm *ServiceManager) GetDialogService() *DialogService {
 }
 
 // GetLogger 获取日志服务实例
-func (sm *ServiceManager) GetLogger() *log.Service {
+func (sm *ServiceManager) GetLogger() *log.LogService {
 	return sm.logger
 }
 

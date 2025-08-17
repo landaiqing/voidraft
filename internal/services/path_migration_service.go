@@ -33,7 +33,7 @@ type MigrationProgress struct {
 
 // MigrationService 迁移服务
 type MigrationService struct {
-	logger   *log.Service
+	logger   *log.LogService
 	mu       sync.RWMutex
 	progress atomic.Value // stores MigrationProgress
 
@@ -42,7 +42,7 @@ type MigrationService struct {
 }
 
 // NewMigrationService 创建迁移服务
-func NewMigrationService(logger *log.Service) *MigrationService {
+func NewMigrationService(logger *log.LogService) *MigrationService {
 	if logger == nil {
 		logger = log.New()
 	}

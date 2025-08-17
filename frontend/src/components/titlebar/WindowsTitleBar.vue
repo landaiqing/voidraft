@@ -1,5 +1,5 @@
 <template>
-  <div class="windows-titlebar" style="--wails-draggable:drag" @contextmenu.prevent>
+  <div class="windows-titlebar" style="--wails-draggable:drag">
     <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent>
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
@@ -36,11 +36,10 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, onUnmounted, ref} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import * as runtime from '@wailsio/runtime';
-import { useWindowStore } from '@/stores/windowStore';
-import { useDocumentStore } from '@/stores/documentStore';
+import {useDocumentStore} from '@/stores/documentStore';
 
 const {t} = useI18n();
 const isMaximized = ref(false);
@@ -59,30 +58,16 @@ const minimizeWindow = async () => {
   try {
     await runtime.Window.Minimise();
   } catch (error) {
-    // Error handling
+    console.error(error);
   }
 };
 
 const toggleMaximize = async () => {
   try {
-    // 立即更新UI状态，提供即时反馈
-    const newState = !isMaximized.value;
-    isMaximized.value = newState;
-
-    // 然后执行实际操作
-    if (newState) {
-      await runtime.Window.Maximise();
-    } else {
-      await runtime.Window.UnMaximise();
-    }
-
-    // 操作完成后再次确认状态（防止操作失败时状态不一致）
-    setTimeout(async () => {
-      await checkMaximizedState();
-    }, 100);
+    await runtime.Window.ToggleMaximise();
+    await checkMaximizedState();
   } catch (error) {
-    // 如果操作失败，恢复原状态
-    isMaximized.value = !isMaximized.value;
+    console.error(error);
   }
 };
 
@@ -90,7 +75,7 @@ const closeWindow = async () => {
   try {
     await runtime.Window.Close();
   } catch (error) {
-    // Error handling
+    console.error(error);
   }
 };
 
@@ -98,31 +83,12 @@ const checkMaximizedState = async () => {
   try {
     isMaximized.value = await runtime.Window.IsMaximised();
   } catch (error) {
-    // Error handling
+    console.error(error);
   }
 };
 
 onMounted(async () => {
   await checkMaximizedState();
-
-  runtime.Events.On('window:maximised', () => {
-    isMaximized.value = true;
-  });
-
-  runtime.Events.On('window:unmaximised', () => {
-    isMaximized.value = false;
-  });
-
-  runtime.Events.On('window:focus', async () => {
-    await checkMaximizedState();
-  });
-
-});
-
-onUnmounted(() => {
-  runtime.Events.Off('window:maximised');
-  runtime.Events.Off('window:unmaximised');
-  runtime.Events.Off('window:focus');
 });
 </script>
 

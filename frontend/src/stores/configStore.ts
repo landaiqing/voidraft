@@ -16,9 +16,7 @@ import {
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/utils/configUtils';
-import {WindowController} from '@/utils/windowController';
 import * as runtime from '@wailsio/runtime';
-import {useBackupStore} from '@/stores/backupStore';
 // 国际化相关导入
 export type SupportedLocaleType = 'zh-CN' | 'en-US';
 
@@ -416,9 +414,6 @@ export const useConfigStore = defineStore('config', () => {
 
             state.configLoaded = true;
 
-            // 初始化热键监听器
-            const windowController = WindowController.getInstance();
-            await windowController.initializeHotkeyListener();
         } finally {
             state.isLoading = false;
         }

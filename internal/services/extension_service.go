@@ -41,7 +41,7 @@ WHERE id = ?`
 // ExtensionService 扩展管理服务
 type ExtensionService struct {
 	databaseService *DatabaseService
-	logger          *log.Service
+	logger          *log.LogService
 
 	mu       sync.RWMutex
 	ctx      context.Context
@@ -73,7 +73,7 @@ func (e *ExtensionError) Is(target error) bool {
 }
 
 // NewExtensionService 创建扩展服务实例
-func NewExtensionService(databaseService *DatabaseService, logger *log.Service) *ExtensionService {
+func NewExtensionService(databaseService *DatabaseService, logger *log.LogService) *ExtensionService {
 	if logger == nil {
 		logger = log.New()
 	}

@@ -7,14 +7,14 @@ import (
 
 // TrayService 系统托盘服务
 type TrayService struct {
-	logger        *log.Service
+	logger        *log.LogService
 	configService *ConfigService
 	app           *application.App
 	mainWindow    *application.WebviewWindow
 }
 
 // NewTrayService 创建新的系统托盘服务实例
-func NewTrayService(logger *log.Service, configService *ConfigService) *TrayService {
+func NewTrayService(logger *log.LogService, configService *ConfigService) *TrayService {
 	return &TrayService{
 		logger:        logger,
 		configService: configService,
@@ -42,7 +42,6 @@ func (ts *TrayService) HandleWindowClose() {
 	if ts.ShouldMinimizeToTray() {
 		// 隐藏到托盘
 		ts.mainWindow.Hide()
-		ts.app.Event.Emit("window:hidden", nil)
 	} else {
 		// 直接退出应用
 		ts.app.Quit()
@@ -54,7 +53,6 @@ func (ts *TrayService) HandleWindowMinimize() {
 	if ts.ShouldMinimizeToTray() {
 		// 隐藏到托盘
 		ts.mainWindow.Hide()
-		ts.app.Event.Emit("window:hidden", nil)
 	}
 }
 
@@ -64,9 +62,6 @@ func (ts *TrayService) ShowWindow() {
 		ts.mainWindow.Show()
 		ts.mainWindow.Restore()
 		ts.mainWindow.Focus()
-		if ts.app != nil {
-			ts.app.Event.Emit("window:shown", nil)
-		}
 	}
 }
 

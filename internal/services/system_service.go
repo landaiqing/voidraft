@@ -9,7 +9,7 @@ import (
 
 // SystemService 系统监控服务
 type SystemService struct {
-	logger *log.Service
+	logger *log.LogService
 }
 
 // MemoryStats 内存统计信息
@@ -29,7 +29,7 @@ type MemoryStats struct {
 }
 
 // NewSystemService 创建新的系统服务实例
-func NewSystemService(logger *log.Service) *SystemService {
+func NewSystemService(logger *log.LogService) *SystemService {
 	return &SystemService{
 		logger: logger,
 	}

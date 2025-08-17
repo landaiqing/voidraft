@@ -38,7 +38,7 @@ type Migratable interface {
 
 // ConfigMigrationService 配置迁移服务
 type ConfigMigrationService[T Migratable] struct {
-	logger        *log.Service
+	logger        *log.LogService
 	configDir     string
 	configName    string
 	targetVersion string
@@ -54,7 +54,7 @@ type MigrationResult struct {
 
 // NewConfigMigrationService 创建配置迁移服务
 func NewConfigMigrationService[T Migratable](
-	logger *log.Service,
+	logger *log.LogService,
 	configDir string,
 	configName, targetVersion, configPath string,
 ) *ConfigMigrationService[T] {
@@ -312,7 +312,7 @@ func chainLoad(k *koanf.Koanf, loaders ...func() error) error {
 }
 
 // 工厂函数
-func NewAppConfigMigrationService(logger *log.Service, configDir, settingsPath string) *ConfigMigrationService[*models.AppConfig] {
+func NewAppConfigMigrationService(logger *log.LogService, configDir, settingsPath string) *ConfigMigrationService[*models.AppConfig] {
 	return NewConfigMigrationService[*models.AppConfig](
 		logger, configDir, "settings", CurrentAppConfigVersion, settingsPath)
 }

@@ -18,7 +18,7 @@ type WindowInfo struct {
 
 // WindowService 窗口管理服务
 type WindowService struct {
-	logger          *log.Service
+	logger          *log.LogService
 	documentService *DocumentService
 	app             *application.App
 	mainWindow      *application.WebviewWindow
@@ -27,7 +27,7 @@ type WindowService struct {
 }
 
 // NewWindowService 创建新的窗口服务实例
-func NewWindowService(logger *log.Service, documentService *DocumentService) *WindowService {
+func NewWindowService(logger *log.LogService, documentService *DocumentService) *WindowService {
 	if logger == nil {
 		logger = log.New()
 	}

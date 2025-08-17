@@ -18,12 +18,12 @@ import (
 
 // ConfigService 应用配置服务
 type ConfigService struct {
-	koanf        *koanf.Koanf // koanf 实例
-	logger       *log.Service // 日志服务
-	configDir    string       // 配置目录
-	settingsPath string       // 设置文件路径
-	mu           sync.RWMutex // 读写锁
-	fileProvider *file.File   // 文件提供器，用于监听
+	koanf        *koanf.Koanf    // koanf 实例
+	logger       *log.LogService // 日志服务
+	configDir    string          // 配置目录
+	settingsPath string          // 设置文件路径
+	mu           sync.RWMutex    // 读写锁
+	fileProvider *file.File      // 文件提供器，用于监听
 
 	// 配置通知服务
 	notificationService *ConfigNotificationService
@@ -55,7 +55,7 @@ func (e *ConfigError) Is(target error) bool {
 }
 
 // NewConfigService 创建新的配置服务实例
-func NewConfigService(logger *log.Service) *ConfigService {
+func NewConfigService(logger *log.LogService) *ConfigService {
 	// 获取用户主目录
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

@@ -26,7 +26,7 @@ type SelfUpdateResult struct {
 
 // SelfUpdateService 自我更新服务
 type SelfUpdateService struct {
-	logger        *log.Service
+	logger        *log.LogService
 	configService *ConfigService
 	config        *models.AppConfig
 
@@ -35,7 +35,7 @@ type SelfUpdateService struct {
 }
 
 // NewSelfUpdateService 创建自我更新服务实例
-func NewSelfUpdateService(configService *ConfigService, logger *log.Service) (*SelfUpdateService, error) {
+func NewSelfUpdateService(configService *ConfigService, logger *log.LogService) (*SelfUpdateService, error) {
 	// 获取配置
 	appConfig, err := configService.GetConfig()
 	if err != nil {

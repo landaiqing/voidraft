@@ -80,7 +80,7 @@ type TableModel struct {
 // DatabaseService provides shared database functionality
 type DatabaseService struct {
 	configService *ConfigService
-	logger        *log.Service
+	logger        *log.LogService
 	db            *sql.DB
 	mu            sync.RWMutex
 	ctx           context.Context
@@ -88,7 +88,7 @@ type DatabaseService struct {
 }
 
 // NewDatabaseService creates a new database service
-func NewDatabaseService(configService *ConfigService, logger *log.Service) *DatabaseService {
+func NewDatabaseService(configService *ConfigService, logger *log.LogService) *DatabaseService {
 	if logger == nil {
 		logger = log.New()
 	}

@@ -53,7 +53,6 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import * as runtime from '@wailsio/runtime';
-import { useWindowStore } from '@/stores/windowStore';
 import { useDocumentStore } from '@/stores/documentStore';
 
 const { t } = useI18n();
@@ -65,26 +64,16 @@ const minimizeWindow = async () => {
   try {
     await runtime.Window.Minimise();
   } catch (error) {
-    // Error handling
+    console.error(error)
   }
 };
 
 const toggleMaximize = async () => {
   try {
-    const newState = !isMaximized.value;
-    isMaximized.value = newState;
-    
-    if (newState) {
-      await runtime.Window.Maximise();
-    } else {
-      await runtime.Window.UnMaximise();
-    }
-    
-    setTimeout(async () => {
-      await checkMaximizedState();
-    }, 100);
+    await runtime.Window.ToggleMaximise();
+    await checkMaximizedState();
   } catch (error) {
-    isMaximized.value = !isMaximized.value;
+    console.error(error)
   }
 };
 
@@ -92,7 +81,7 @@ const closeWindow = async () => {
   try {
     await runtime.Window.Close();
   } catch (error) {
-    // Error handling
+    console.error(error)
   }
 };
 
@@ -100,7 +89,7 @@ const checkMaximizedState = async () => {
   try {
     isMaximized.value = await runtime.Window.IsMaximised();
   } catch (error) {
-    // Error handling
+    console.error(error)
   }
 };
 
@@ -112,24 +101,6 @@ const titleText = computed(() => {
 
 onMounted(async () => {
   await checkMaximizedState();
-  
-  runtime.Events.On('window:maximised', () => {
-    isMaximized.value = true;
-  });
-  
-  runtime.Events.On('window:unmaximised', () => {
-    isMaximized.value = false;
-  });
-
-  runtime.Events.On('window:focus', async () => {
-    await checkMaximizedState();
-  });
-
-});
-onUnmounted(() => {
-  runtime.Events.Off('window:maximised');
-  runtime.Events.Off('window:unmaximised');
-  runtime.Events.Off('window:focus');
 });
 </script>
 
