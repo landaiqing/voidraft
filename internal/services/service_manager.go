@@ -23,6 +23,7 @@ type ServiceManager struct {
 	startupService     *StartupService
 	selfUpdateService  *SelfUpdateService
 	translationService *TranslationService
+	themeService       *ThemeService
 	BackupService      *BackupService
 	logger             *log.LogService
 }
@@ -77,6 +78,9 @@ func NewServiceManager() *ServiceManager {
 	// 初始化翻译服务
 	translationService := NewTranslationService(logger)
 
+	// 初始化主题服务
+	themeService := NewThemeService(databaseService, logger)
+
 	// 初始化备份服务
 	backupService := NewBackupService(configService, databaseService, logger)
 
@@ -119,6 +123,7 @@ func NewServiceManager() *ServiceManager {
 		startupService:     startupService,
 		selfUpdateService:  selfUpdateService,
 		translationService: translationService,
+		themeService:       themeService,
 		BackupService:      backupService,
 		logger:             logger,
 	}
@@ -141,6 +146,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.startupService),
 		application.NewService(sm.selfUpdateService),
 		application.NewService(sm.translationService),
+		application.NewService(sm.themeService),
 		application.NewService(sm.BackupService),
 	}
 	return services
@@ -209,4 +215,9 @@ func (sm *ServiceManager) GetWindowService() *WindowService {
 // GetDocumentService 获取文档服务实例
 func (sm *ServiceManager) GetDocumentService() *DocumentService {
 	return sm.documentService
+}
+
+// GetThemeService 获取主题服务实例
+func (sm *ServiceManager) GetThemeService() *ThemeService {
+	return sm.themeService
 }

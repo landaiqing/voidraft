@@ -114,11 +114,6 @@ export class AppearanceConfig {
      */
     "systemTheme": SystemThemeType;
 
-    /**
-     * 自定义主题配置
-     */
-    "customTheme": CustomThemeConfig;
-
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
@@ -126,9 +121,6 @@ export class AppearanceConfig {
         }
         if (!("systemTheme" in $$source)) {
             this["systemTheme"] = ("" as SystemThemeType);
-        }
-        if (!("customTheme" in $$source)) {
-            this["customTheme"] = (new CustomThemeConfig());
         }
 
         Object.assign(this, $$source);
@@ -138,11 +130,7 @@ export class AppearanceConfig {
      * Creates a new AppearanceConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): AppearanceConfig {
-        const $$createField2_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("customTheme" in $$parsedSource) {
-            $$parsedSource["customTheme"] = $$createField2_0($$parsedSource["customTheme"]);
-        }
         return new AppearanceConfig($$parsedSource as Partial<AppearanceConfig>);
     }
 }
@@ -198,49 +186,6 @@ export class ConfigMetadata {
     static createFrom($$source: any = {}): ConfigMetadata {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new ConfigMetadata($$parsedSource as Partial<ConfigMetadata>);
-    }
-}
-
-/**
- * CustomThemeConfig 自定义主题配置
- */
-export class CustomThemeConfig {
-    /**
-     * 深色主题配置
-     */
-    "darkTheme": ThemeColorConfig;
-
-    /**
-     * 浅色主题配置
-     */
-    "lightTheme": ThemeColorConfig;
-
-    /** Creates a new CustomThemeConfig instance. */
-    constructor($$source: Partial<CustomThemeConfig> = {}) {
-        if (!("darkTheme" in $$source)) {
-            this["darkTheme"] = (new ThemeColorConfig());
-        }
-        if (!("lightTheme" in $$source)) {
-            this["lightTheme"] = (new ThemeColorConfig());
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new CustomThemeConfig instance from a string or object.
-     */
-    static createFrom($$source: any = {}): CustomThemeConfig {
-        const $$createField0_0 = $$createType7;
-        const $$createField1_0 = $$createType7;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("darkTheme" in $$parsedSource) {
-            $$parsedSource["darkTheme"] = $$createField0_0($$parsedSource["darkTheme"]);
-        }
-        if ("lightTheme" in $$parsedSource) {
-            $$parsedSource["lightTheme"] = $$createField1_0($$parsedSource["lightTheme"]);
-        }
-        return new CustomThemeConfig($$parsedSource as Partial<CustomThemeConfig>);
     }
 }
 
@@ -428,7 +373,7 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField3_0 = $$createType8;
+        const $$createField3_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
             $$parsedSource["config"] = $$createField3_0($$parsedSource["config"]);
@@ -561,7 +506,7 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType10;
+        const $$createField5_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
             $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
@@ -1172,6 +1117,58 @@ export enum TabType {
 };
 
 /**
+ * Theme 主题数据库模型
+ */
+export class Theme {
+    "id": number;
+    "name": string;
+    "type": ThemeType;
+    "colors": ThemeColorConfig;
+    "isDefault": boolean;
+    "createdAt": time$0.Time;
+    "updatedAt": time$0.Time;
+
+    /** Creates a new Theme instance. */
+    constructor($$source: Partial<Theme> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("type" in $$source)) {
+            this["type"] = ("" as ThemeType);
+        }
+        if (!("colors" in $$source)) {
+            this["colors"] = (new ThemeColorConfig());
+        }
+        if (!("isDefault" in $$source)) {
+            this["isDefault"] = false;
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = null;
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = null;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Theme instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Theme {
+        const $$createField3_0 = $$createType9;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("colors" in $$parsedSource) {
+            $$parsedSource["colors"] = $$createField3_0($$parsedSource["colors"]);
+        }
+        return new Theme($$parsedSource as Partial<Theme>);
+    }
+}
+
+/**
  * ThemeColorConfig 主题颜色配置
  */
 export class ThemeColorConfig {
@@ -1380,6 +1377,19 @@ export class ThemeColorConfig {
 }
 
 /**
+ * ThemeType 主题类型枚举
+ */
+export enum ThemeType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    ThemeTypeDark = "dark",
+    ThemeTypeLight = "light",
+};
+
+/**
  * UpdateSourceType 更新源类型
  */
 export enum UpdateSourceType {
@@ -1477,8 +1487,8 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType11;
-        const $$createField7_0 = $$createType12;
+        const $$createField6_0 = $$createType10;
+        const $$createField7_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
@@ -1497,15 +1507,14 @@ const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
 const $$createType4 = GitBackupConfig.createFrom;
 const $$createType5 = ConfigMetadata.createFrom;
-const $$createType6 = CustomThemeConfig.createFrom;
-const $$createType7 = ThemeColorConfig.createFrom;
-var $$createType8 = (function $$initCreateType8(...args): any {
-    if ($$createType8 === $$initCreateType8) {
-        $$createType8 = $$createType9;
+var $$createType6 = (function $$initCreateType6(...args): any {
+    if ($$createType6 === $$initCreateType6) {
+        $$createType6 = $$createType7;
     }
-    return $$createType8(...args);
+    return $$createType6(...args);
 });
-const $$createType9 = $Create.Map($Create.Any, $Create.Any);
-const $$createType10 = HotkeyCombo.createFrom;
-const $$createType11 = GithubConfig.createFrom;
-const $$createType12 = GiteaConfig.createFrom;
+const $$createType7 = $Create.Map($Create.Any, $Create.Any);
+const $$createType8 = HotkeyCombo.createFrom;
+const $$createType9 = ThemeColorConfig.createFrom;
+const $$createType10 = GithubConfig.createFrom;
+const $$createType11 = GiteaConfig.createFrom;

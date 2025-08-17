@@ -63,6 +63,19 @@ CREATE TABLE IF NOT EXISTS key_bindings (
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(command, extension)
 )`
+
+	// Themes table
+	sqlCreateThemesTable = `
+CREATE TABLE IF NOT EXISTS themes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    colors TEXT NOT NULL,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(type, is_default)
+)`
 )
 
 // ColumnInfo 存储列的信息
@@ -112,6 +125,8 @@ func (ds *DatabaseService) registerAllModels() {
 	ds.RegisterModel("extensions", &models.Extension{})
 	// 快捷键表
 	ds.RegisterModel("key_bindings", &models.KeyBinding{})
+	// 主题表
+	ds.RegisterModel("themes", &models.Theme{})
 }
 
 // ServiceStartup initializes the service when the application starts
@@ -181,6 +196,7 @@ func (ds *DatabaseService) createTables() error {
 		sqlCreateDocumentsTable,
 		sqlCreateExtensionsTable,
 		sqlCreateKeyBindingsTable,
+		sqlCreateThemesTable,
 	}
 
 	for _, table := range tables {
@@ -204,6 +220,9 @@ func (ds *DatabaseService) createIndexes() error {
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_command ON key_bindings(command)`,
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_extension ON key_bindings(extension)`,
 		`CREATE INDEX IF NOT EXISTS idx_key_bindings_enabled ON key_bindings(enabled)`,
+		// Themes indexes
+		`CREATE INDEX IF NOT EXISTS idx_themes_type ON themes(type)`,
+		`CREATE INDEX IF NOT EXISTS idx_themes_is_default ON themes(is_default)`,
 	}
 
 	for _, index := range indexes {

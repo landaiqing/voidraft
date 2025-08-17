@@ -16,8 +16,8 @@ const themeStore = useThemeStore();
 
 // 添加临时颜色状态
 const tempColors = ref({
-  darkTheme: { ...configStore.config.appearance.customTheme?.darkTheme || defaultDarkColors },
-  lightTheme: { ...configStore.config.appearance.customTheme?.lightTheme || defaultLightColors }
+  darkTheme: { ...defaultDarkColors },
+  lightTheme: { ...defaultLightColors }
 });
 
 // 标记是否有未保存的更改
@@ -71,9 +71,9 @@ const currentThemeMode = computed(() => {
   return isDark ? 'dark' : 'light';
 });
 
-// 监听配置变更，更新临时颜色
+// 监听主题颜色变更，更新临时颜色
 watch(
-  () => configStore.config.appearance.customTheme,
+  () => themeStore.themeColors,
   (newValue) => {
     if (!hasUnsavedChanges.value) {
       tempColors.value = {

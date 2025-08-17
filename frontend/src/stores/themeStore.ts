@@ -1,6 +1,7 @@
 import {defineStore} from 'pinia';
 import {computed, reactive} from 'vue';
-import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
+import {SystemThemeType, ThemeType, ThemeColorConfig} from '@/../bindings/voidraft/internal/models/models';
+import {ThemeService} from '@/../bindings/voidraft/internal/services';
 import {useConfigStore} from './configStore';
 import {useEditorStore} from './editorStore';
 import {defaultDarkColors} from '@/views/editor/theme/dark';
@@ -24,16 +25,21 @@ export const useThemeStore = defineStore('theme', () => {
     configStore.config?.appearance?.systemTheme || SystemThemeType.SystemThemeAuto
   );
 
-  // 初始化主题颜色 - 从配置加载
-  const initializeThemeColors = () => {
-    const customTheme = configStore.config?.appearance?.customTheme;
-    if (customTheme) {
-      if (customTheme.darkTheme) {
-        Object.assign(themeColors.darkTheme, customTheme.darkTheme);
+  // 初始化主题颜色 - 从数据库加载
+  const initializeThemeColors = async () => {
+    try {
+      const themes = await ThemeService.GetDefaultThemes();
+      if (themes.dark) {
+        Object.assign(themeColors.darkTheme, themes.dark.colors);
       }
-      if (customTheme.lightTheme) {
-        Object.assign(themeColors.lightTheme, customTheme.lightTheme);
+      if (themes.light) {
+        Object.assign(themeColors.lightTheme, themes.light.colors);
       }
+    } catch (error) {
+      console.warn('Failed to load themes from database, using defaults:', error);
+      // 如果数据库加载失败，使用默认主题
+      Object.assign(themeColors.darkTheme, defaultDarkColors);
+      Object.assign(themeColors.lightTheme, defaultLightColors);
     }
   };
 
@@ -46,10 +52,10 @@ export const useThemeStore = defineStore('theme', () => {
   };
 
   // 初始化主题
-  const initializeTheme = () => {
+  const initializeTheme = async () => {
     const theme = configStore.config?.appearance?.systemTheme || SystemThemeType.SystemThemeAuto;
     applyThemeToDOM(theme);
-    initializeThemeColors();
+    await initializeThemeColors();
   };
 
   // 设置主题
@@ -84,30 +90,34 @@ export const useThemeStore = defineStore('theme', () => {
     return hasChanges;
   };
   
-  // 保存主题颜色到配置
+  // 保存主题颜色到数据库
   const saveThemeColors = async () => {
-    const customTheme = {
-      darkTheme: { ...themeColors.darkTheme },
-      lightTheme: { ...themeColors.lightTheme }
-    };
-    
-    await configStore.setCustomTheme(customTheme);
+    try {
+      const darkColors = ThemeColorConfig.createFrom(themeColors.darkTheme);
+      const lightColors = ThemeColorConfig.createFrom(themeColors.lightTheme);
+      
+      await ThemeService.UpdateThemeColors(ThemeType.ThemeTypeDark, darkColors);
+      await ThemeService.UpdateThemeColors(ThemeType.ThemeTypeLight, lightColors);
+    } catch (error) {
+      console.error('Failed to save theme colors:', error);
+      throw error;
+    }
   };
   
   // 重置主题颜色
   const resetThemeColors = async (themeType: 'darkTheme' | 'lightTheme') => {
     try {
-      // 1. 更新内存中的颜色状态
+      const dbThemeType = themeType === 'darkTheme' ? ThemeType.ThemeTypeDark : ThemeType.ThemeTypeLight;
+      
+      // 1. 调用后端重置服务
+      await ThemeService.ResetThemeColors(dbThemeType);
+      
+      // 2. 更新内存中的颜色状态
       if (themeType === 'darkTheme') {
         Object.assign(themeColors.darkTheme, defaultDarkColors);
-      }
-      
-      if (themeType === 'lightTheme') {
+      } else {
         Object.assign(themeColors.lightTheme, defaultLightColors);
       }
-      
-      // 2. 保存到配置
-      await saveThemeColors();
       
       // 3. 刷新编辑器主题
       refreshEditorTheme();

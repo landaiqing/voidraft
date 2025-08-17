@@ -1,5 +1,20 @@
 package models
 
+import (
+	"database/sql/driver"
+	"encoding/json"
+	"fmt"
+	"time"
+)
+
+// ThemeType 主题类型枚举
+type ThemeType string
+
+const (
+	ThemeTypeDark  ThemeType = "dark"
+	ThemeTypeLight ThemeType = "light"
+)
+
 // ThemeColorConfig 主题颜色配置
 type ThemeColorConfig struct {
 	// 基础色调
@@ -36,15 +51,44 @@ type ThemeColorConfig struct {
 	MatchingBracket string `json:"matchingBracket"` // 匹配括号
 }
 
-// CustomThemeConfig 自定义主题配置
-type CustomThemeConfig struct {
-	DarkTheme  ThemeColorConfig `json:"darkTheme"`  // 深色主题配置
-	LightTheme ThemeColorConfig `json:"lightTheme"` // 浅色主题配置
+// Theme 主题数据库模型
+type Theme struct {
+	ID        int              `db:"id" json:"id"`
+	Name      string           `db:"name" json:"name"`
+	Type      ThemeType        `db:"type" json:"type"`
+	Colors    ThemeColorConfig `db:"colors" json:"colors"`
+	IsDefault bool             `db:"is_default" json:"isDefault"`
+	CreatedAt time.Time        `db:"created_at" json:"createdAt"`
+	UpdatedAt time.Time        `db:"updated_at" json:"updatedAt"`
+}
+
+// Value 实现 driver.Valuer 接口，用于将 ThemeColorConfig 存储到数据库
+func (tc ThemeColorConfig) Value() (driver.Value, error) {
+	return json.Marshal(tc)
+}
+
+// Scan 实现 sql.Scanner 接口，用于从数据库读取 ThemeColorConfig
+func (tc *ThemeColorConfig) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+
+	var bytes []byte
+	switch v := value.(type) {
+	case []byte:
+		bytes = v
+	case string:
+		bytes = []byte(v)
+	default:
+		return fmt.Errorf("cannot scan %T into ThemeColorConfig", value)
+	}
+
+	return json.Unmarshal(bytes, tc)
 }
 
 // NewDefaultDarkTheme 创建默认深色主题配置
-func NewDefaultDarkTheme() ThemeColorConfig {
-	return ThemeColorConfig{
+func NewDefaultDarkTheme() *ThemeColorConfig {
+	return &ThemeColorConfig{
 		// 基础色调
 		Background:          "#252B37",
 		BackgroundSecondary: "#213644",
@@ -81,8 +125,8 @@ func NewDefaultDarkTheme() ThemeColorConfig {
 }
 
 // NewDefaultLightTheme 创建默认浅色主题配置
-func NewDefaultLightTheme() ThemeColorConfig {
-	return ThemeColorConfig{
+func NewDefaultLightTheme() *ThemeColorConfig {
+	return &ThemeColorConfig{
 		// 基础色调
 		Background:          "#ffffff",
 		BackgroundSecondary: "#f1faf1",
@@ -115,13 +159,5 @@ func NewDefaultLightTheme() ThemeColorConfig {
 		// 搜索匹配
 		SearchMatch:     "#005cc5",
 		MatchingBracket: "#00000019",
-	}
-}
-
-// NewDefaultCustomThemeConfig 创建默认自定义主题配置
-func NewDefaultCustomThemeConfig() *CustomThemeConfig {
-	return &CustomThemeConfig{
-		DarkTheme:  NewDefaultDarkTheme(),
-		LightTheme: NewDefaultLightTheme(),
 	}
 }

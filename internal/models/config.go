@@ -101,9 +101,8 @@ type EditingConfig struct {
 
 // AppearanceConfig 外观设置配置
 type AppearanceConfig struct {
-	Language    LanguageType      `json:"language"`    // 界面语言
-	SystemTheme SystemThemeType   `json:"systemTheme"` // 系统界面主题
-	CustomTheme CustomThemeConfig `json:"customTheme"` // 自定义主题配置
+	Language    LanguageType    `json:"language"`    // 界面语言
+	SystemTheme SystemThemeType `json:"systemTheme"` // 系统界面主题
 }
 
 // UpdatesConfig 更新设置配置
@@ -171,7 +170,6 @@ func NewDefaultAppConfig() *AppConfig {
 		Appearance: AppearanceConfig{
 			Language:    LangEnUS,
 			SystemTheme: SystemThemeAuto,
-			CustomTheme: *NewDefaultCustomThemeConfig(),
 		},
 		Updates: UpdatesConfig{
 			Version:            "1.3.0",
