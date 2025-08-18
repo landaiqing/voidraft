@@ -32,8 +32,8 @@ export function GetCurrentHotkey(): Promise<models$0.HotkeyCombo | null> & { can
 /**
  * Initialize 初始化热键服务
  */
-export function Initialize(app: application$0.App | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3671360458, app) as any;
+export function Initialize(app: application$0.App | null, mainWindow: application$0.WebviewWindow | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3671360458, app, mainWindow) as any;
     return $resultPromise;
 }
 

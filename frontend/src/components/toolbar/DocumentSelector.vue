@@ -214,7 +214,7 @@ const openInNewWindow = async (doc: Document, event: Event) => {
   }
 };
 
-// 处理删除 - 简化确认机制
+// 处理删除
 const handleDelete = async (doc: Document, event: Event) => {
   event.stopPropagation();
 
@@ -242,9 +242,13 @@ const handleDelete = async (doc: Document, event: Event) => {
         return;
       }
       
-      await documentStore.deleteDocument(doc.id);
-      await documentStore.updateDocuments();
+      const deleteSuccess = await documentStore.deleteDocument(doc.id);
 
+      if (!deleteSuccess) {
+        return;
+      }
+      
+      await documentStore.updateDocuments();
       // 如果删除的是当前文档，切换到第一个文档
       if (documentStore.currentDocument?.id === doc.id && documentStore.documentList.length > 0) {
         const firstDoc = documentStore.documentList[0];

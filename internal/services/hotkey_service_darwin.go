@@ -82,10 +82,13 @@ var globalHotkeyService *HotkeyService
 type HotkeyService struct {
 	logger        *log.LogService
 	configService *ConfigService
+	windowService *WindowService
 	app           *application.App
+	mainWindow    *application.WebviewWindow
 	mu            sync.RWMutex
 	isRegistered  atomic.Bool
 	currentHotkey *models.HotkeyCombo
+	cancelFunc    atomic.Value // 使用atomic.Value存储cancel函数，避免竞态条件
 }
 
 // HotkeyError 热键错误
@@ -104,8 +107,26 @@ func (e *HotkeyError) Unwrap() error {
 	return e.Err
 }
 
+// setCancelFunc 原子地设置cancel函数
+func (hs *HotkeyService) setCancelFunc(cancel context.CancelFunc) {
+	hs.cancelFunc.Store(cancel)
+}
+
+// getCancelFunc 原子地获取cancel函数
+func (hs *HotkeyService) getCancelFunc() context.CancelFunc {
+	if cancel := hs.cancelFunc.Load(); cancel != nil {
+		return cancel.(context.CancelFunc)
+	}
+	return nil
+}
+
+// clearCancelFunc 原子地清除cancel函数
+func (hs *HotkeyService) clearCancelFunc() {
+	hs.cancelFunc.Store((*context.CancelFunc)(nil))
+}
+
 // NewHotkeyService 创建新的热键服务实例
-func NewHotkeyService(configService *ConfigService, logger *log.LogService) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, windowService *WindowService, logger *log.LogService) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}
@@ -113,6 +134,7 @@ func NewHotkeyService(configService *ConfigService, logger *log.LogService) *Hot
 	service := &HotkeyService{
 		logger:        logger,
 		configService: configService,
+		windowService: windowService,
 	}
 
 	// 设置全局实例
@@ -122,8 +144,9 @@ func NewHotkeyService(configService *ConfigService, logger *log.LogService) *Hot
 }
 
 // Initialize 初始化热键服务
-func (hs *HotkeyService) Initialize(app *application.App) error {
+func (hs *HotkeyService) Initialize(app *application.App, mainWindow *application.WebviewWindow) error {
 	hs.app = app
+	hs.mainWindow = mainWindow
 
 	// 加载并应用当前配置
 	config, err := hs.configService.GetConfig()
@@ -285,9 +308,59 @@ func (hs *HotkeyService) IsRegistered() bool {
 
 // ToggleWindow 切换窗口显示状态
 func (hs *HotkeyService) ToggleWindow() {
-	if hs.app != nil {
-		hs.app.EmitEvent("hotkey:toggle-window", nil)
+	if hs.mainWindow == nil {
+		hs.logger.Error("main window not set")
+		return
 	}
+
+	// 检查主窗口是否可见
+	if hs.isWindowVisible(hs.mainWindow) {
+		// 如果主窗口可见，隐藏所有窗口
+		hs.hideAllWindows()
+	} else {
+		// 如果主窗口不可见，显示所有窗口
+		hs.showAllWindows()
+	}
+}
+
+// isWindowVisible 检查窗口是否可见
+func (hs *HotkeyService) isWindowVisible(window *application.WebviewWindow) bool {
+	return window.IsVisible()
+}
+
+// hideAllWindows 隐藏所有窗口
+func (hs *HotkeyService) hideAllWindows() {
+	// 隐藏主窗口
+	hs.mainWindow.Hide()
+
+	// 隐藏所有子窗口
+	if hs.windowService != nil {
+		openWindows := hs.windowService.GetOpenWindows()
+		for _, windowInfo := range openWindows {
+			windowInfo.Window.Hide()
+		}
+	}
+
+	hs.logger.Debug("all windows hidden")
+}
+
+// showAllWindows 显示所有窗口
+func (hs *HotkeyService) showAllWindows() {
+	// 显示主窗口
+	hs.mainWindow.Show()
+	hs.mainWindow.Restore()
+	hs.mainWindow.Focus()
+
+	// 显示所有子窗口
+	if hs.windowService != nil {
+		openWindows := hs.windowService.GetOpenWindows()
+		for _, windowInfo := range openWindows {
+			windowInfo.Window.Show()
+			windowInfo.Window.Restore()
+		}
+	}
+
+	hs.logger.Debug("all windows shown")
 }
 
 // ServiceShutdown 关闭热键服务

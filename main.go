@@ -25,6 +25,7 @@ var assets embed.FS
 // logs any error that might occur.
 func main() {
 	serviceManager := services.NewServiceManager()
+	var window *application.WebviewWindow
 
 	var encryptionKey = [32]byte{
 		0x1e, 0x1f, 0x1c, 0x1d, 0x1a, 0x1b, 0x18, 0x19,
@@ -51,6 +52,13 @@ func main() {
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID:      "com.voidraft",
 			EncryptionKey: encryptionKey,
+			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
+				if window != nil {
+					window.Show()
+					window.Restore()
+					window.Focus()
+				}
+			},
 			AdditionalData: map[string]string{
 				"launchtime": time.Now().Local().String(),
 			},
@@ -82,6 +90,7 @@ func main() {
 		URL:              "/",
 	})
 	mainWindow.Center()
+	window = mainWindow
 
 	// 获取托盘服务并设置应用引用
 	trayService := serviceManager.GetTrayService()
@@ -96,7 +105,7 @@ func main() {
 
 	// 初始化热键服务
 	hotkeyService := serviceManager.GetHotkeyService()
-	err := hotkeyService.Initialize(app)
+	err := hotkeyService.Initialize(app, mainWindow)
 	if err != nil {
 		panic(err)
 	}

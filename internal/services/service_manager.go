@@ -40,7 +40,7 @@ func NewServiceManager() *ServiceManager {
 	databaseService := NewDatabaseService(configService, logger)
 
 	// 初始化迁移服务
-	migrationService := NewMigrationService(logger)
+	migrationService := NewMigrationService(databaseService, logger)
 
 	// 初始化文档服务
 	documentService := NewDocumentService(databaseService, logger)
@@ -52,7 +52,7 @@ func NewServiceManager() *ServiceManager {
 	systemService := NewSystemService(logger)
 
 	// 初始化热键服务
-	hotkeyService := NewHotkeyService(configService, logger)
+	hotkeyService := NewHotkeyService(configService, windowService, logger)
 
 	// 初始化对话服务
 	dialogService := NewDialogService(logger)

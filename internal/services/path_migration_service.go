@@ -33,22 +33,24 @@ type MigrationProgress struct {
 
 // MigrationService 迁移服务
 type MigrationService struct {
-	logger   *log.LogService
-	mu       sync.RWMutex
-	progress atomic.Value // stores MigrationProgress
+	logger    *log.LogService
+	dbService *DatabaseService
+	mu        sync.RWMutex
+	progress  atomic.Value // stores MigrationProgress
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
 // NewMigrationService 创建迁移服务
-func NewMigrationService(logger *log.LogService) *MigrationService {
+func NewMigrationService(dbService *DatabaseService, logger *log.LogService) *MigrationService {
 	if logger == nil {
 		logger = log.New()
 	}
 
 	ms := &MigrationService{
-		logger: logger,
+		logger:    logger,
+		dbService: dbService,
 	}
 
 	// 初始化进度
@@ -104,6 +106,17 @@ func (ms *MigrationService) MigrateDirectory(srcPath, dstPath string) error {
 		return ms.failWithError(err)
 	}
 
+	// 迁移前断开数据库连接
+	ms.updateProgress(MigrationProgress{
+		Status:   MigrationStatusMigrating,
+		Progress: 10,
+	})
+
+	if ms.dbService != nil {
+		if err := ms.dbService.ServiceShutdown(); err != nil {
+			ms.logger.Error("Failed to close database connection", "error", err)
+		}
+	}
 	// 执行原子迁移
 	if err := ms.atomicMove(ctx, srcPath, dstPath); err != nil {
 		return ms.failWithError(err)
@@ -177,10 +190,17 @@ func (ms *MigrationService) atomicMove(ctx context.Context, srcPath, dstPath str
 	})
 
 	if err := os.Rename(srcPath, dstPath); err == nil {
+		// 重命名成功，更新进度到90%
+		ms.updateProgress(MigrationProgress{
+			Status:   MigrationStatusMigrating,
+			Progress: 90,
+		})
+		ms.logger.Info("Directory migration completed using direct rename", "src", srcPath, "dst", dstPath)
 		return nil
 	}
 
 	// 重命名失败，使用压缩迁移
+	ms.logger.Info("Direct rename failed, using compress migration", "src", srcPath, "dst", dstPath)
 	ms.updateProgress(MigrationProgress{
 		Status:   MigrationStatusMigrating,
 		Progress: 30,
@@ -249,12 +269,18 @@ func (ms *MigrationService) compressMove(ctx context.Context, srcPath, dstPath s
 	default:
 	}
 
+	// 验证迁移是否成功
+	if err := ms.verifyMigration(dstPath); err != nil {
+		// 迁移验证失败，清理目标目录
+		os.RemoveAll(dstPath)
+		return fmt.Errorf("migration verification failed: %v", err)
+	}
+
 	// 删除源目录
 	ms.updateProgress(MigrationProgress{
 		Status:   MigrationStatusMigrating,
 		Progress: 90,
 	})
-
 	os.RemoveAll(srcPath)
 	return nil
 }
@@ -402,6 +428,29 @@ func (ms *MigrationService) isSubDirectory(parent, target string) bool {
 	parent = filepath.Clean(parent) + string(filepath.Separator)
 	target = filepath.Clean(target) + string(filepath.Separator)
 	return len(target) > len(parent) && strings.HasPrefix(target, parent)
+}
+
+// verifyMigration 验证迁移是否成功
+func (ms *MigrationService) verifyMigration(dstPath string) error {
+	// 检查目标目录是否存在
+	dstStat, err := os.Stat(dstPath)
+	if err != nil {
+		return fmt.Errorf("target directory does not exist: %v", err)
+	}
+	if !dstStat.IsDir() {
+		return fmt.Errorf("target path is not a directory")
+	}
+
+	// 简单验证：检查目标目录是否非空
+	isEmpty, err := ms.isDirectoryEmpty(dstPath)
+	if err != nil {
+		return fmt.Errorf("failed to check target directory: %v", err)
+	}
+	if isEmpty {
+		return fmt.Errorf("target directory is empty after migration")
+	}
+
+	return nil
 }
 
 // CancelMigration 取消迁移

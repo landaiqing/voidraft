@@ -143,15 +143,17 @@ import (
 type HotkeyService struct {
 	logger        *log.LogService
 	configService *ConfigService
+	windowService *WindowService
 	app           *application.App
+	mainWindow    *application.WebviewWindow
 
 	mu            sync.RWMutex
 	currentHotkey *models.HotkeyCombo
 	isRegistered  atomic.Bool
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	ctx        context.Context
+	cancelFunc atomic.Value // 使用atomic.Value存储cancel函数，避免竞态条件
+	wg         sync.WaitGroup
 }
 
 // HotkeyError 热键错误
@@ -169,24 +171,46 @@ func (e *HotkeyError) Unwrap() error {
 	return e.Err
 }
 
+// setCancelFunc 原子地设置cancel函数
+func (hs *HotkeyService) setCancelFunc(cancel context.CancelFunc) {
+	hs.cancelFunc.Store(cancel)
+}
+
+// getCancelFunc 原子地获取cancel函数
+func (hs *HotkeyService) getCancelFunc() context.CancelFunc {
+	if cancel := hs.cancelFunc.Load(); cancel != nil {
+		return cancel.(context.CancelFunc)
+	}
+	return nil
+}
+
+// clearCancelFunc 原子地清除cancel函数
+func (hs *HotkeyService) clearCancelFunc() {
+	hs.cancelFunc.Store((*context.CancelFunc)(nil))
+}
+
 // NewHotkeyService 创建热键服务实例
-func NewHotkeyService(configService *ConfigService, logger *log.LogService) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, windowService *WindowService, logger *log.LogService) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	return &HotkeyService{
+	service := &HotkeyService{
 		logger:        logger,
 		configService: configService,
+		windowService: windowService,
 		ctx:           ctx,
-		cancel:        cancel,
 	}
+	// 初始化时设置cancel函数
+	service.setCancelFunc(cancel)
+	return service
 }
 
 // Initialize 初始化热键服务
-func (hs *HotkeyService) Initialize(app *application.App) error {
+func (hs *HotkeyService) Initialize(app *application.App, mainWindow *application.WebviewWindow) error {
 	hs.app = app
+	hs.mainWindow = mainWindow
 
 	if int(C.initX11Display()) == 0 {
 		return &HotkeyError{"init_x11", fmt.Errorf("failed to initialize X11 display")}
@@ -253,7 +277,7 @@ func (hs *HotkeyService) RegisterHotkey(hotkey *models.HotkeyCombo) error {
 
 	hs.currentHotkey = hotkey
 	hs.isRegistered.Store(true)
-	hs.cancel = cancel
+	hs.setCancelFunc(cancel)
 
 	return nil
 }
@@ -271,8 +295,9 @@ func (hs *HotkeyService) unregisterInternal() error {
 		return nil
 	}
 
-	if hs.cancel != nil {
-		hs.cancel()
+	// 原子地获取并调用cancel函数
+	if cancel := hs.getCancelFunc(); cancel != nil {
+		cancel()
 		hs.wg.Wait()
 	}
 
@@ -283,6 +308,7 @@ func (hs *HotkeyService) unregisterInternal() error {
 
 	hs.currentHotkey = nil
 	hs.isRegistered.Store(false)
+	hs.clearCancelFunc()
 	return nil
 }
 
@@ -298,7 +324,8 @@ func (hs *HotkeyService) UpdateHotkey(enable bool, hotkey *models.HotkeyCombo) e
 func (hs *HotkeyService) hotkeyListener(ctx context.Context, ready chan<- error) {
 	defer hs.wg.Done()
 
-	ticker := time.NewTicker(100 * time.Millisecond)
+	// 优化轮询频率从100ms改为50ms，提高响应性
+	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 
 	ready <- nil // 标记准备就绪
@@ -315,11 +342,61 @@ func (hs *HotkeyService) hotkeyListener(ctx context.Context, ready chan<- error)
 	}
 }
 
-// toggleWindow 切换窗口
+// toggleWindow 切换窗口显示状态
 func (hs *HotkeyService) toggleWindow() {
-	if hs.app != nil {
-		hs.app.EmitEvent("hotkey:toggle-window", nil)
+	if hs.mainWindow == nil {
+		hs.logger.Error("main window not set")
+		return
 	}
+
+	// 检查主窗口是否可见
+	if hs.isWindowVisible(hs.mainWindow) {
+		// 如果主窗口可见，隐藏所有窗口
+		hs.hideAllWindows()
+	} else {
+		// 如果主窗口不可见，显示所有窗口
+		hs.showAllWindows()
+	}
+}
+
+// isWindowVisible 检查窗口是否可见
+func (hs *HotkeyService) isWindowVisible(window *application.WebviewWindow) bool {
+	return window.IsVisible()
+}
+
+// hideAllWindows 隐藏所有窗口
+func (hs *HotkeyService) hideAllWindows() {
+	// 隐藏主窗口
+	hs.mainWindow.Hide()
+
+	// 隐藏所有子窗口
+	if hs.windowService != nil {
+		openWindows := hs.windowService.GetOpenWindows()
+		for _, windowInfo := range openWindows {
+			windowInfo.Window.Hide()
+		}
+	}
+
+	hs.logger.Debug("all windows hidden")
+}
+
+// showAllWindows 显示所有窗口
+func (hs *HotkeyService) showAllWindows() {
+	// 显示主窗口
+	hs.mainWindow.Show()
+	hs.mainWindow.Restore()
+	hs.mainWindow.Focus()
+
+	// 显示所有子窗口
+	if hs.windowService != nil {
+		openWindows := hs.windowService.GetOpenWindows()
+		for _, windowInfo := range openWindows {
+			windowInfo.Window.Show()
+			windowInfo.Window.Restore()
+		}
+	}
+
+	hs.logger.Debug("all windows shown")
 }
 
 // keyToX11KeyCode 键名转X11键码
@@ -386,7 +463,10 @@ func (hs *HotkeyService) IsRegistered() bool {
 
 // ServiceShutdown 关闭服务
 func (hs *HotkeyService) ServiceShutdown() error {
-	hs.cancel()
+	// 原子地获取并调用cancel函数
+	if cancel := hs.getCancelFunc(); cancel != nil {
+		cancel()
+	}
 	hs.wg.Wait()
 	C.closeX11Display()
 	return nil

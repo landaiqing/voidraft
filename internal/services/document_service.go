@@ -315,6 +315,7 @@ func (ds *DocumentService) DeleteDocument(id int64) error {
 	defer ds.mu.Unlock()
 
 	if ds.databaseService == nil || ds.databaseService.db == nil {
+		ds.logger.Error("database service not available")
 		return errors.New("database service not available")
 	}
 
