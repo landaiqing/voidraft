@@ -160,12 +160,10 @@ export const useDocumentStore = defineStore('document', () => {
         try {
             // 检查是否是默认文档（使用ID判断）
             if (docId === SCRATCH_DOCUMENT_ID) {
-                console.log('Cannot delete default document (ID=1)');
                 return false;
             }
 
             await DocumentService.DeleteDocument(docId);
-            console.log('Backend delete successful for doc:', docId);
 
             // 更新本地状态
             delete documents.value[docId];

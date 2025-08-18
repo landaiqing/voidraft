@@ -216,14 +216,11 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 
 // LockDocument 锁定文档，防止删除
 func (ds *DocumentService) LockDocument(id int64) error {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-
 	if ds.databaseService == nil || ds.databaseService.db == nil {
 		return errors.New("database service not available")
 	}
 
-	// 检查文档是否存在且未删除
+	// 先检查文档是否存在且未删除（不加锁避免死锁）
 	doc, err := ds.GetDocumentByID(id)
 	if err != nil {
 		return fmt.Errorf("failed to get document: %w", err)
@@ -240,6 +237,10 @@ func (ds *DocumentService) LockDocument(id int64) error {
 		return nil
 	}
 
+	// 现在加锁执行锁定操作
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+
 	_, err = ds.databaseService.db.Exec(sqlSetDocumentLocked, time.Now().Format("2006-01-02 15:04:05"), id)
 	if err != nil {
 		return fmt.Errorf("failed to lock document: %w", err)
@@ -249,14 +250,11 @@ func (ds *DocumentService) LockDocument(id int64) error {
 
 // UnlockDocument 解锁文档
 func (ds *DocumentService) UnlockDocument(id int64) error {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-
 	if ds.databaseService == nil || ds.databaseService.db == nil {
 		return errors.New("database service not available")
 	}
 
-	// 检查文档是否存在
+	// 先检查文档是否存在（不加锁避免死锁）
 	doc, err := ds.GetDocumentByID(id)
 	if err != nil {
 		return fmt.Errorf("failed to get document: %w", err)
@@ -269,6 +267,10 @@ func (ds *DocumentService) UnlockDocument(id int64) error {
 	if !doc.IsLocked {
 		return nil
 	}
+
+	// 现在加锁执行解锁操作
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
 	_, err = ds.databaseService.db.Exec(sqlSetDocumentUnlocked, time.Now().Format("2006-01-02 15:04:05"), id)
 	if err != nil {
@@ -311,9 +313,6 @@ func (ds *DocumentService) UpdateDocumentTitle(id int64, title string) error {
 
 // DeleteDocument marks a document as deleted (default document with ID=1 cannot be deleted)
 func (ds *DocumentService) DeleteDocument(id int64) error {
-	ds.mu.Lock()
-	defer ds.mu.Unlock()
-
 	if ds.databaseService == nil || ds.databaseService.db == nil {
 		ds.logger.Error("database service not available")
 		return errors.New("database service not available")
@@ -324,7 +323,7 @@ func (ds *DocumentService) DeleteDocument(id int64) error {
 		return fmt.Errorf("cannot delete the default document")
 	}
 
-	// 检查文档是否锁定
+	// 先检查文档是否存在和锁定状态（不加锁避免死锁）
 	doc, err := ds.GetDocumentByID(id)
 	if err != nil {
 		return fmt.Errorf("failed to get document: %w", err)
@@ -335,6 +334,10 @@ func (ds *DocumentService) DeleteDocument(id int64) error {
 	if doc.IsLocked {
 		return fmt.Errorf("cannot delete locked document: %d", id)
 	}
+
+	// 现在加锁执行删除操作
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
 
 	_, err = ds.databaseService.db.Exec(sqlMarkDocumentAsDeleted, time.Now().Format("2006-01-02 15:04:05"), id)
 	if err != nil {
