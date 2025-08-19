@@ -179,14 +179,16 @@ func (hs *HotkeyService) setCancelFunc(cancel context.CancelFunc) {
 // getCancelFunc 原子地获取cancel函数
 func (hs *HotkeyService) getCancelFunc() context.CancelFunc {
 	if cancel := hs.cancelFunc.Load(); cancel != nil {
-		return cancel.(context.CancelFunc)
+		if cancelFunc, ok := cancel.(context.CancelFunc); ok {
+			return cancelFunc
+		}
 	}
 	return nil
 }
 
 // clearCancelFunc 原子地清除cancel函数
 func (hs *HotkeyService) clearCancelFunc() {
-	hs.cancelFunc.Store((*context.CancelFunc)(nil))
+	hs.cancelFunc.Store((context.CancelFunc)(nil))
 }
 
 // NewHotkeyService 创建热键服务实例
