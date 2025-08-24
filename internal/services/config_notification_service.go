@@ -24,6 +24,8 @@ const (
 	ConfigChangeTypeDataPath ConfigChangeType = "datapath"
 	// ConfigChangeTypeBackup 备份配置变更
 	ConfigChangeTypeBackup ConfigChangeType = "backup"
+	// ConfigChangeTypeWindowSnap 窗口吸附配置变更
+	ConfigChangeTypeWindowSnap ConfigChangeType = "windowsnap"
 )
 
 // ConfigChangeCallback 配置变更回调函数类型
@@ -458,6 +460,29 @@ func CreateBackupConfigListener(name string, callback func(config *models.GitBac
 				return callback(&defaultConfig.Backup)
 			}
 			return callback(&newConfig.Backup)
+		},
+		DebounceDelay: 200 * time.Millisecond,
+		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {
+			var config models.AppConfig
+			if err := k.Unmarshal("", &config); err != nil {
+				return nil
+			}
+			return &config
+		},
+	}
+}
+
+// CreateWindowSnapConfigListener 创建窗口吸附配置监听器
+func CreateWindowSnapConfigListener(name string, callback func(enabled bool, threshold int) error) *ConfigListener {
+	return &ConfigListener{
+		Name:       name,
+		ChangeType: ConfigChangeTypeWindowSnap,
+		Callback: func(changeType ConfigChangeType, oldConfig, newConfig *models.AppConfig) error {
+			if newConfig == nil {
+				defaultConfig := models.NewDefaultAppConfig()
+				return callback(defaultConfig.General.EnableWindowSnap, defaultConfig.General.SnapThreshold)
+			}
+			return callback(newConfig.General.EnableWindowSnap, newConfig.General.SnapThreshold)
 		},
 		DebounceDelay: 200 * time.Millisecond,
 		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {

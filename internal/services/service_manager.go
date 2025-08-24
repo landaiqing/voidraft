@@ -13,6 +13,7 @@ type ServiceManager struct {
 	databaseService    *DatabaseService
 	documentService    *DocumentService
 	windowService      *WindowService
+	windowSnapService  *WindowSnapService
 	migrationService   *MigrationService
 	systemService      *SystemService
 	hotkeyService      *HotkeyService
@@ -47,6 +48,12 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化窗口服务
 	windowService := NewWindowService(logger, documentService)
+
+	// 初始化窗口吸附服务
+	windowSnapService := NewWindowSnapService(logger, configService)
+
+	// 将吸附服务与窗口服务关联
+	windowService.SetWindowSnapService(windowSnapService)
 
 	// 初始化系统服务
 	systemService := NewSystemService(logger)
@@ -108,11 +115,20 @@ func NewServiceManager() *ServiceManager {
 		panic(err)
 	}
 
+	// 设置窗口吸附配置变更回调
+	err = configService.SetWindowSnapConfigChangeCallback(func(enabled bool, threshold int) error {
+		return windowSnapService.OnWindowSnapConfigChanged(enabled, threshold)
+	})
+	if err != nil {
+		panic(err)
+	}
+
 	return &ServiceManager{
 		configService:      configService,
 		databaseService:    databaseService,
 		documentService:    documentService,
 		windowService:      windowService,
+		windowSnapService:  windowSnapService,
 		migrationService:   migrationService,
 		systemService:      systemService,
 		hotkeyService:      hotkeyService,
@@ -136,6 +152,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
 		application.NewService(sm.windowService),
+		application.NewService(sm.windowSnapService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
 		application.NewService(sm.migrationService),
@@ -220,4 +237,9 @@ func (sm *ServiceManager) GetDocumentService() *DocumentService {
 // GetThemeService 获取主题服务实例
 func (sm *ServiceManager) GetThemeService() *ThemeService {
 	return sm.themeService
+}
+
+// GetWindowSnapService 获取窗口吸附服务实例
+func (sm *ServiceManager) GetWindowSnapService() *WindowSnapService {
+	return sm.windowSnapService
 }

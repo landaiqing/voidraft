@@ -308,6 +308,16 @@ func (cs *ConfigService) SetBackupConfigChangeCallback(callback func(config *mod
 	return cs.notificationService.RegisterListener(backupListener)
 }
 
+// SetWindowSnapConfigChangeCallback 设置窗口吸附配置变更回调
+func (cs *ConfigService) SetWindowSnapConfigChangeCallback(callback func(enabled bool, threshold int) error) error {
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
+	// 创建窗口吸附配置监听器并注册
+	windowSnapListener := CreateWindowSnapConfigListener("DefaultWindowSnapConfigListener", callback)
+	return cs.notificationService.RegisterListener(windowSnapListener)
+}
+
 // ServiceShutdown 关闭服务
 func (cs *ConfigService) ServiceShutdown() error {
 	cs.stopWatching()

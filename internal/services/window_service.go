@@ -9,14 +9,14 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
-// WindowInfo 窗口信息
+// WindowInfo 窗口信息（简化版）
 type WindowInfo struct {
 	Window     *application.WebviewWindow
 	DocumentID int64
 	Title      string
 }
 
-// WindowService 窗口管理服务
+// WindowService 窗口管理服务（专注于窗口生命周期管理）
 type WindowService struct {
 	logger          *log.LogService
 	documentService *DocumentService
@@ -24,6 +24,9 @@ type WindowService struct {
 	mainWindow      *application.WebviewWindow
 	windows         map[int64]*WindowInfo // documentID -> WindowInfo
 	mu              sync.RWMutex
+
+	// 吸附服务引用
+	windowSnapService *WindowSnapService
 }
 
 // NewWindowService 创建新的窗口服务实例
@@ -39,10 +42,20 @@ func NewWindowService(logger *log.LogService, documentService *DocumentService) 
 	}
 }
 
+// SetWindowSnapService 设置窗口吸附服务引用
+func (ws *WindowService) SetWindowSnapService(snapService *WindowSnapService) {
+	ws.windowSnapService = snapService
+}
+
 // SetAppReferences 设置应用和主窗口引用
 func (ws *WindowService) SetAppReferences(app *application.App, mainWindow *application.WebviewWindow) {
 	ws.app = app
 	ws.mainWindow = mainWindow
+
+	// 如果吸附服务已设置，也为它设置引用
+	if ws.windowSnapService != nil {
+		ws.windowSnapService.SetAppReferences(app, mainWindow)
+	}
 }
 
 // OpenDocumentWindow 为指定文档ID打开新窗口
@@ -101,8 +114,13 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 	}
 	ws.windows[documentID] = windowInfo
 
-	// 注册窗口关闭事件
+	// 注册窗口事件
 	ws.registerWindowEvents(newWindow, documentID)
+
+	// 向吸附服务注册新窗口
+	if ws.windowSnapService != nil {
+		ws.windowSnapService.RegisterWindow(documentID, newWindow, doc.Title)
+	}
 
 	return nil
 }
@@ -119,12 +137,17 @@ func (ws *WindowService) registerWindowEvents(window *application.WebviewWindow,
 func (ws *WindowService) onWindowClosing(documentID int64) {
 	ws.mu.Lock()
 	defer ws.mu.Unlock()
+
 	windowInfo, exists := ws.windows[documentID]
 	if exists {
 		windowInfo.Window.Close()
 		delete(ws.windows, documentID)
-	}
 
+		// 从吸附服务中取消注册
+		if ws.windowSnapService != nil {
+			ws.windowSnapService.UnregisterWindow(documentID)
+		}
+	}
 }
 
 // GetOpenWindows 获取所有打开的窗口信息
@@ -146,4 +169,19 @@ func (ws *WindowService) IsDocumentWindowOpen(documentID int64) bool {
 
 	_, exists := ws.windows[documentID]
 	return exists
+}
+
+// ServiceShutdown 实现服务关闭接口
+func (ws *WindowService) ServiceShutdown() error {
+	// 关闭所有窗口
+	ws.mu.Lock()
+	defer ws.mu.Unlock()
+
+	for documentID := range ws.windows {
+		if ws.windowSnapService != nil {
+			ws.windowSnapService.UnregisterWindow(documentID)
+		}
+	}
+
+	return nil
 }

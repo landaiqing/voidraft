@@ -468,6 +468,17 @@ export class GeneralConfig {
     "startAtLogin": boolean;
 
     /**
+     * 窗口吸附设置
+     * 是否启用窗口吸附功能
+     */
+    "enableWindowSnap": boolean;
+
+    /**
+     * 吸附距离阈值(像素)
+     */
+    "snapThreshold": number;
+
+    /**
      * 全局热键设置
      * 是否启用全局热键
      */
@@ -492,6 +503,12 @@ export class GeneralConfig {
         if (!("startAtLogin" in $$source)) {
             this["startAtLogin"] = false;
         }
+        if (!("enableWindowSnap" in $$source)) {
+            this["enableWindowSnap"] = false;
+        }
+        if (!("snapThreshold" in $$source)) {
+            this["snapThreshold"] = 0;
+        }
         if (!("enableGlobalHotkey" in $$source)) {
             this["enableGlobalHotkey"] = false;
         }
@@ -506,10 +523,10 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField5_0 = $$createType8;
+        const $$createField7_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
-            $$parsedSource["globalHotkey"] = $$createField5_0($$parsedSource["globalHotkey"]);
+            $$parsedSource["globalHotkey"] = $$createField7_0($$parsedSource["globalHotkey"]);
         }
         return new GeneralConfig($$parsedSource as Partial<GeneralConfig>);
     }

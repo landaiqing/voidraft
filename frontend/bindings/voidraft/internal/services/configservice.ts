@@ -82,6 +82,14 @@ export function SetHotkeyChangeCallback(callback: any): Promise<void> & { cancel
     return $resultPromise;
 }
 
+/**
+ * SetWindowSnapConfigChangeCallback 设置窗口吸附配置变更回调
+ */
+export function SetWindowSnapConfigChangeCallback(callback: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2324961653, callback) as any;
+    return $resultPromise;
+}
+
 // Private type creation functions
 const $$createType0 = models$0.AppConfig.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
