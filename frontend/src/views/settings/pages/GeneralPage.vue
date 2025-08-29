@@ -159,6 +159,12 @@ const enableSystemTray = computed({
   set: (value: boolean) => configStore.setEnableSystemTray(value)
 });
 
+// 计算属性 - 启用窗口吸附
+const enableWindowSnap = computed({
+  get: () => configStore.config.general.enableWindowSnap,
+  set: (value: boolean) => configStore.setEnableWindowSnap(value)
+});
+
 // 计算属性 - 开机启动
 const startAtLogin = computed({
   get: () => configStore.config.general.startAtLogin,
@@ -333,6 +339,9 @@ onUnmounted(() => {
       </SettingItem>
       <SettingItem :title="t('settings.enableSystemTray')">
         <ToggleSwitch v-model="enableSystemTray"/>
+      </SettingItem>
+      <SettingItem :title="t('settings.enableWindowSnap')">
+        <ToggleSwitch v-model="enableWindowSnap"/>
       </SettingItem>
     </SettingSection>
 

@@ -135,6 +135,7 @@ export default {
     showInSystemTray: '在系统托盘中显示',
     enableSystemTray: '启用系统托盘',
     alwaysOnTop: '窗口始终置顶',
+    enableWindowSnap: '启用窗口吸附',
     startup: '启动设置',
     startAtLogin: '开机自启动',
     dataStorage: '数据存储',

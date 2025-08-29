@@ -134,6 +134,7 @@ export default {
     showInSystemTray: 'Show in System Tray',
     enableSystemTray: 'Enable System Tray',
     alwaysOnTop: 'Always on Top',
+    enableWindowSnap: 'Enable Window Snapping',
     startup: 'Startup Settings',
     startAtLogin: 'Start at Login',
     dataStorage: 'Data Storage',
