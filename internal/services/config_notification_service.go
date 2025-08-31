@@ -288,25 +288,6 @@ func deepCopyValue(src, dst reflect.Value) {
 	}
 }
 
-// deepCopyConfig 保留原有的JSON深拷贝方法作为备用
-func deepCopyConfig(src *models.AppConfig) *models.AppConfig {
-	if src == nil {
-		return nil
-	}
-
-	jsonBytes, err := json.Marshal(src)
-	if err != nil {
-		return src
-	}
-
-	var dst models.AppConfig
-	if err := json.Unmarshal(jsonBytes, &dst); err != nil {
-		return src
-	}
-
-	return &dst
-}
-
 // debounceNotify 防抖通知
 func (cns *ConfigNotificationService) debounceNotify(listener *ConfigListener, oldConfig, newConfig *models.AppConfig) {
 	listener.mu.Lock()

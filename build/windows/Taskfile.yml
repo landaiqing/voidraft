@@ -14,13 +14,16 @@ tasks:
       - task: common:generate:icons
     cmds:
       - task: generate:syso
-      - go build {{.BUILD_FLAGS}} -o {{.BIN_DIR}}/{{.APP_NAME}}.exe
+      - go build {{.BUILD_FLAGS}} -ldflags="{{.LDFLAGS}} {{.VERSION_FLAGS}}" -o {{.BIN_DIR}}/{{.APP_NAME}}.exe
       - cmd: powershell Remove-item *.syso
         platforms: [windows]
       - cmd: rm -f *.syso
         platforms: [linux, darwin]
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production -trimpath -buildvcs=false -ldflags="-w -s -H windowsgui"{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production -trimpath -buildvcs=false{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      LDFLAGS: '{{if eq .PRODUCTION "true"}}-w -s -H windowsgui{{else}}{{end}}'
+      VERSION_FLAGS:
+        sh: 'powershell -Command "(Get-Content version.txt) -replace ''VERSION='', ''-X voidraft/internal/version.Version=''"'
     env:
       GOOS: windows
       CGO_ENABLED: 1

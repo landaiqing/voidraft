@@ -12,13 +12,25 @@ vars:
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
 
 tasks:
+  version:
+    summary: Generate version information
+    cmds:
+      - '{{if eq OS "windows"}}cmd /c ".\scripts\version.bat"{{else}}bash ./scripts/version.sh{{end}}'
+    sources:
+      - scripts/version.bat
+      - scripts/version.sh
+    generates:
+      - version.txt
+
   build:
     summary: Builds the application
+    deps: [version]
     cmds:
       - task: "{{OS}}:build"
 
   package:
     summary: Packages a production build of the application
+    deps: [version]
     cmds:
       - task: "{{OS}}:package"
 

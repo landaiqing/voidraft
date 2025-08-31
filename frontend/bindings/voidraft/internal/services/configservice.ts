@@ -35,6 +35,22 @@ export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): vo
 }
 
 /**
+ * GetConfigDir 获取配置目录
+ */
+export function GetConfigDir(): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2275626561) as any;
+    return $resultPromise;
+}
+
+/**
+ * GetSettingsPath 获取设置文件路径
+ */
+export function GetSettingsPath(): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2175583370) as any;
+    return $resultPromise;
+}
+
+/**
  * ResetConfig 强制重置所有配置为默认值
  */
 export function ResetConfig(): Promise<void> & { cancel(): void } {

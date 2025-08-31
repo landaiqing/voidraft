@@ -11,9 +11,12 @@ tasks:
       - task: common:build:frontend
       - task: common:generate:icons
     cmds:
-      - go build {{.BUILD_FLAGS}} -o {{.BIN_DIR}}/{{.APP_NAME}}
+      - go build {{.BUILD_FLAGS}} -ldflags="{{.LDFLAGS}} {{.VERSION_FLAGS}}" -o {{.BIN_DIR}}/{{.APP_NAME}}
     vars:
-      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production -trimpath -buildvcs=false -ldflags="-w -s"{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      BUILD_FLAGS: '{{if eq .PRODUCTION "true"}}-tags production -trimpath -buildvcs=false{{else}}-buildvcs=false -gcflags=all="-l"{{end}}'
+      LDFLAGS: '{{if eq .PRODUCTION "true"}}-w -s{{else}}{{end}}'
+      VERSION_FLAGS:
+        sh: 'grep "VERSION=" version.txt | cut -d"=" -f2 | xargs -I {} echo "-X voidraft/internal/version.Version={}"'
     env:
       GOOS: linux
       CGO_ENABLED: 1

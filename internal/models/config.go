@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+	"voidraft/internal/version"
 )
 
 // TabType 定义了制表符类型
@@ -178,7 +179,7 @@ func NewDefaultAppConfig() *AppConfig {
 			SystemTheme: SystemThemeAuto,
 		},
 		Updates: UpdatesConfig{
-			Version:            "1.3.0",
+			Version:            version.Version,
 			AutoUpdate:         true,
 			PrimarySource:      UpdateSourceGitea,
 			BackupSource:       UpdateSourceGithub,
@@ -207,7 +208,7 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),
-			Version:     "1.2.0",
+			Version:     version.Version,
 		},
 	}
 }

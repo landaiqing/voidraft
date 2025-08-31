@@ -27,8 +27,9 @@ type ConfigService struct {
 
 	// 配置通知服务
 	notificationService *ConfigNotificationService
-	// 配置迁移服务
-	migrationService *ConfigMigrationService[*models.AppConfig]
+
+	// 配置迁移器
+	configMigrator *ConfigMigrator
 }
 
 // ConfigError 配置错误
@@ -67,15 +68,17 @@ func NewConfigService(logger *log.LogService) *ConfigService {
 	settingsPath := filepath.Join(configDir, "settings.json")
 
 	cs := &ConfigService{
-		logger:           logger,
-		configDir:        configDir,
-		settingsPath:     settingsPath,
-		koanf:            koanf.New("."),
-		migrationService: NewAppConfigMigrationService(logger, configDir, settingsPath),
+		logger:       logger,
+		configDir:    configDir,
+		settingsPath: settingsPath,
+		koanf:        koanf.New("."),
 	}
 
 	// 初始化配置通知服务
 	cs.notificationService = NewConfigNotificationService(cs.koanf, logger)
+
+	// 初始化配置迁移器
+	cs.configMigrator = NewConfigMigrator(logger, configDir, "settings", settingsPath)
 
 	cs.initConfig()
 
@@ -106,23 +109,36 @@ func (cs *ConfigService) initConfig() error {
 		return cs.createDefaultConfig()
 	}
 
-	// 配置文件存在，先加载现有配置
+	// 检查并自动迁移配置
+	cs.checkConfigMigration()
+
+	// 配置文件存在，直接加载现有配置
 	cs.fileProvider = file.Provider(cs.settingsPath)
 	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
 		return &ConfigError{Operation: "load_config_file", Err: err}
 	}
 
-	// 检查并执行配置迁移
-	if cs.migrationService != nil {
-		result, err := cs.migrationService.MigrateConfig(cs.koanf)
-		if err != nil {
-			return &ConfigError{Operation: "migrate_config", Err: err}
-		}
+	return nil
+}
 
-		if result.Migrated && result.ConfigUpdated {
-			// 迁移完成且配置已更新，重新创建文件提供器以监听新文件
-			cs.fileProvider = file.Provider(cs.settingsPath)
-		}
+// checkConfigMigration 检查配置迁移
+func (cs *ConfigService) checkConfigMigration() error {
+	if cs.configMigrator == nil {
+		return nil
+	}
+
+	defaultConfig := models.NewDefaultAppConfig()
+	result, err := cs.configMigrator.AutoMigrate(defaultConfig, cs.koanf)
+
+	if err != nil {
+		cs.logger.Error("Failed to check config migration", "error", err)
+		return err
+	}
+
+	if result != nil && result.Migrated {
+		cs.logger.Info("Config migration performed",
+			"fields", result.MissingFields,
+			"backup", result.BackupPath)
 	}
 
 	return nil
@@ -325,4 +341,14 @@ func (cs *ConfigService) ServiceShutdown() error {
 		cs.notificationService.Cleanup()
 	}
 	return nil
+}
+
+// GetConfigDir 获取配置目录
+func (cs *ConfigService) GetConfigDir() string {
+	return cs.configDir
+}
+
+// GetSettingsPath 获取设置文件路径
+func (cs *ConfigService) GetSettingsPath() string {
+	return cs.settingsPath
 }
