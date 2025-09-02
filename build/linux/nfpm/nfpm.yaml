@@ -3,26 +3,26 @@
 #
 # The lines below are called `modelines`. See `:help modeline`
 
-name: "Voidraft"
+name: "voidraft"
 arch: ${GOARCH}
 platform: "linux"
 version: "0.0.1.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "Voidraft"
-vendor: "Voidraft"
-homepage: "https://wails.io"
+description: "voidraft"
+vendor: "voidraft"
+homepage: "https://voidraft.landaiqing.cn"
 license: "MIT"
 release: "1"
 
 contents:
-  - src: "./bin/Voidraft"
-    dst: "/usr/local/bin/Voidraft"
+  - src: "./bin/voidraft"
+    dst: "/usr/local/bin/voidraft"
   - src: "./build/appicon.png"
-    dst: "/usr/share/icons/hicolor/128x128/apps/Voidraft.png"
-  - src: "./build/linux/Voidraft.desktop"
-    dst: "/usr/share/applications/Voidraft.desktop"
+    dst: "/usr/share/icons/hicolor/128x128/apps/voidraft.png"
+  - src: "./build/linux/voidraft.desktop"
+    dst: "/usr/share/applications/voidraft.desktop"
 
 depends:
   - gtk3

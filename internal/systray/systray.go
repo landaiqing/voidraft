@@ -12,12 +12,12 @@ func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow
 	// 创建系统托盘
 	systray := app.SystemTray.New()
 
+	// 设置标签
+	systray.SetLabel("voidraft")
+	systray.Label()
 	// 设置图标
 	iconBytes, _ := assets.ReadFile("appicon.png")
 	systray.SetIcon(iconBytes)
-
-	// 设置标签
-	systray.SetLabel("VoidRaft")
 
 	// 创建托盘菜单
 	menu := app.NewMenu()

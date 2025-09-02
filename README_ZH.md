@@ -1,10 +1,10 @@
-# <img src="./frontend/public/appicon.png" alt="Voidraft Logo" width="32" height="32" style="vertical-align: middle;"> Voidraft
+# <img src="./frontend/public/appicon.png" alt="voidraft Logo" width="32" height="32" style="vertical-align: middle;"> voidraft
 
 **中文** | [English](README.md)
 
 > *一个专为开发者打造的优雅文本片段记录工具。*
 
-Voidraft 是一个现代化的开发者专用文本编辑器，让你能够随时随地记录、整理和管理各种文本片段。无论是临时的代码片段、API 响应、会议笔记，还是日常的待办事项，Voidraft 都能为你提供流畅而优雅的编辑体验。
+voidraft 是一个现代化的开发者专用文本编辑器，让你能够随时随地记录、整理和管理各种文本片段。无论是临时的代码片段、API 响应、会议笔记，还是日常的待办事项，voidraft 都能为你提供流畅而优雅的编辑体验。
 
 ## 核心特性
 
@@ -88,7 +88,7 @@ wails3 package
 ## 项目结构
 
 ```
-Voidraft/
+voidraft/
 ├── frontend/              # Vue 3 前端应用
 │   ├── src/
 │   │   ├── views/editor/  # 编辑器核心视图
@@ -131,11 +131,11 @@ Voidraft/
 
 > 站在巨人的肩膀上，致敬开源精神
 
-Voidraft 的诞生离不开以下优秀的开源项目：
+voidraft 的诞生离不开以下优秀的开源项目：
 
 ### 特别感谢
 
-- **[Heynote](https://github.com/heyman/heynote/)** - Voidraft 是基于 Heynote 概念的功能增强版本
+- **[Heynote](https://github.com/heyman/heynote/)** - voidraft 是基于 Heynote 概念的功能增强版本
   - 继承了 Heynote 优雅的块状编辑理念
   - 在原有基础上增加了更多实用功能
   - 采用现代化技术栈重新构建
@@ -159,7 +159,7 @@ Voidraft 的诞生离不开以下优秀的开源项目：
 欢迎 Fork、Star 和贡献代码。
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/landaiqing/Voidraft.svg?style=social&label=Star)](https://github.com/yourusername/Voidraft)
-[![GitHub forks](https://img.shields.io/github/forks/landaiqing/Voidraft.svg?style=social&label=Fork)](https://github.com/yourusername/Voidraft)
+[![GitHub stars](https://img.shields.io/github/stars/landaiqing/voidraft.svg?style=social&label=Star)](https://github.com/yourusername/voidraft)
+[![GitHub forks](https://img.shields.io/github/forks/landaiqing/voidraft.svg?style=social&label=Fork)](https://github.com/yourusername/voidraft)
 
 *Made with ❤️ by landaiqing*

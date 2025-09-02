@@ -19,13 +19,14 @@ export const useSystemStore = defineStore('system', () => {
     // 状态
     const environment = ref<SystemEnvironment | null>(null);
     const isLoading = ref(false);
-
+    
+    // 窗口置顶状态管理
+    const isWindowOnTop = ref<boolean>(false);
 
     // 计算属性
     const isWindows = computed(() => environment.value?.OS === 'windows');
     const isMacOS = computed(() => environment.value?.OS === 'darwin');
     const isLinux = computed(() => environment.value?.OS === 'linux');
-
 
     // 获取标题栏高度
     const titleBarHeight = computed(() => {
@@ -49,10 +50,31 @@ export const useSystemStore = defineStore('system', () => {
         }
     };
 
+    // 设置窗口置顶状态
+    const setWindowOnTop = async (isPinned: boolean): Promise<void> => {
+        isWindowOnTop.value = isPinned;
+        try {
+            await runtime.Window.SetAlwaysOnTop(isPinned);
+        } catch (error) {
+            console.error('Failed to set window always on top:', error);
+        }
+    };
+
+    // 切换窗口置顶状态
+    const toggleWindowOnTop = async (): Promise<void> => {
+        await setWindowOnTop(!isWindowOnTop.value);
+    };
+
+    // 重置临时置顶状态（不调用系统API）
+    const resetWindowOnTop = (): void => {
+        isWindowOnTop.value = false;
+    };
+
     return {
         // 状态
         environment,
         isLoading,
+        isWindowOnTop,
 
         // 计算属性
         isWindows,
@@ -62,5 +84,14 @@ export const useSystemStore = defineStore('system', () => {
 
         // 方法
         initializeSystemInfo,
+        setWindowOnTop,
+        toggleWindowOnTop,
+        resetWindowOnTop,
     };
+}, {
+    persist: {
+        key: 'voidraft-system',
+        storage: localStorage,
+        pick: ['isWindowOnTop']
+    }
 }); 

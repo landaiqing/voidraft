@@ -1,5 +1,5 @@
 /**
- * VoidRaft - Website Script
+ * voidraft - Website Script
  */
 
 /**
@@ -233,14 +233,14 @@ class SEOManager {
     this.languageManager = languageManager;
     this.metaTexts = {
       en: {
-        description: 'VoidRaft is an elegant text snippet recording tool designed for developers. Features multi-language code blocks, syntax highlighting, code formatting, custom themes, and more.',
-        title: 'VoidRaft - An elegant text snippet recording tool designed for developers.',
-        ogTitle: 'VoidRaft - An elegant text snippet recording tool designed for developers'
+        description: 'voidraft is an elegant text snippet recording tool designed for developers. Features multi-language code blocks, syntax highlighting, code formatting, custom themes, and more.',
+        title: 'voidraft - An elegant text snippet recording tool designed for developers.',
+        ogTitle: 'voidraft - An elegant text snippet recording tool designed for developers'
       },
       zh: {
-        description: 'VoidRaft 是专为开发者打造的优雅文本片段记录工具。支持多语言代码块、语法高亮、代码格式化、自定义主题等功能。',
-        title: 'VoidRaft - 专为开发者打造的优雅文本片段记录工具',
-        ogTitle: 'VoidRaft - 专为开发者打造的优雅文本片段记录工具'
+        description: 'voidraft 是专为开发者打造的优雅文本片段记录工具。支持多语言代码块、语法高亮、代码格式化、自定义主题等功能。',
+        title: 'voidraft - 专为开发者打造的优雅文本片段记录工具',
+        ogTitle: 'voidraft - 专为开发者打造的优雅文本片段记录工具'
       }
     };
     this.init();
@@ -371,9 +371,9 @@ class UIEffects {
 }
 
 /**
- * VoidRaft主应用类
+ * voidraft主应用类
  */
-class VoidRaftApp {
+class voidraftApp {
   constructor() {
     this.themeManager = null;
     this.languageManager = null;
@@ -404,7 +404,7 @@ class VoidRaftApp {
    * 显示控制台品牌信息
    */
   showConsoleBranding() {
-    console.log('%c VoidRaft', 'color: #ff006e; font-size: 20px; font-family: "Space Mono", monospace;');
+    console.log('%c voidraft', 'color: #ff006e; font-size: 20px; font-family: "Space Mono", monospace;');
     console.log('%c An elegant text snippet recording tool designed for developers.', 'color: #073B4C; font-family: "Space Mono", monospace;');
   }
 
@@ -439,5 +439,5 @@ class VoidRaftApp {
 
 // 当DOM加载完成时初始化应用
 document.addEventListener('DOMContentLoaded', () => {
-  window.voidRaftApp = new VoidRaftApp();
+  window.voidRaftApp = new voidraftApp();
 });

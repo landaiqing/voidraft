@@ -3,13 +3,15 @@ import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
+import {useSystemStore} from './systemStore';
 
-const SCRATCH_DOCUMENT_ID = 1; // 默认草稿文档ID
 
 export const useDocumentStore = defineStore('document', () => {
+
+    const DEFAULT_DOCUMENT_ID = ref<number>(1); // 默认草稿文档ID
     // === 核心状态 ===
     const documents = ref<Record<number, Document>>({});
-    const recentDocumentIds = ref<number[]>([SCRATCH_DOCUMENT_ID]);
+    const recentDocumentIds = ref<number[]>([DEFAULT_DOCUMENT_ID.value]);
     const currentDocumentId = ref<number | null>(null);
     const currentDocument = ref<Document | null>(null);
 
@@ -159,7 +161,7 @@ export const useDocumentStore = defineStore('document', () => {
     const deleteDocument = async (docId: number): Promise<boolean> => {
         try {
             // 检查是否是默认文档（使用ID判断）
-            if (docId === SCRATCH_DOCUMENT_ID) {
+            if (docId === DEFAULT_DOCUMENT_ID.value) {
                 return false;
             }
 
@@ -221,6 +223,7 @@ export const useDocumentStore = defineStore('document', () => {
     };
 
     return {
+        DEFAULT_DOCUMENT_ID,
         // 状态
         documents,
         documentList,

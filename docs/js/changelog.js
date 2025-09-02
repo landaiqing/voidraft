@@ -1,5 +1,5 @@
 /**
- * VoidRaft - Changelog Script
+ * voidraft - Changelog Script
  * 从GitHub API获取发布信息，支持Gitea备用源
  */
 

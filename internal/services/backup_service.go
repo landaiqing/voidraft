@@ -263,7 +263,7 @@ func (s *BackupService) PushToRemote() error {
 	// 创建提交
 	_, err = w.Commit(fmt.Sprintf("Backup %s", time.Now().Format("2006-01-02 15:04:05")), &git.CommitOptions{
 		Author: &object.Signature{
-			Name:  "VoidRaft",
+			Name:  "voidraft",
 			Email: "backup@voidraft.app",
 			When:  time.Now(),
 		},

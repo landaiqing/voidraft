@@ -4,15 +4,15 @@
         <key>CFBundlePackageType</key>
         <string>APPL</string>
         <key>CFBundleName</key>
-        <string>Voidraft</string>
+        <string>voidraft</string>
         <key>CFBundleExecutable</key>
-        <string>Voidraft</string>
+        <string>voidraft</string>
         <key>CFBundleIdentifier</key>
         <string>landaiqing</string>
         <key>CFBundleVersion</key>
         <string>0.0.1.0</string>
         <key>CFBundleGetInfoString</key>
-        <string>Voidraft</string>
+        <string>voidraft</string>
         <key>CFBundleShortVersionString</key>
         <string>0.0.1.0</string>
         <key>CFBundleIconFile</key>
@@ -22,7 +22,7 @@
         <key>NSHighResolutionCapable</key>
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
-        <string>© 2025 Voidraft. All rights reserved.</string>
+        <string>© 2025 voidraft. All rights reserved.</string>
         <key>NSAppTransportSecurity</key>
         <dict>
             <key>NSAllowsLocalNetworking</key>

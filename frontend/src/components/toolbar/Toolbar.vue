@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import {useI18n} from 'vue-i18n';
-import {onMounted, onUnmounted, ref, watch, computed} from 'vue';
+import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import {useWindowStore} from '@/stores/windowStore';
+import {useSystemStore} from '@/stores/systemStore';
 import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
@@ -17,22 +18,32 @@ const editorStore = useEditorStore();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
 const windowStore = useWindowStore();
+const systemStore = useSystemStore();
 const {t} = useI18n();
 const router = useRouter();
 
 // 当前块是否支持格式化的响应式状态
 const canFormatCurrentBlock = ref(false);
 
-// 窗口置顶状态管理（仅当前窗口，不同步到配置文件）
-const isCurrentWindowOnTop = ref(false);
+// 窗口置顶状态 - 合并配置和临时状态
+const isCurrentWindowOnTop = computed(() => {
+  return configStore.config.general.alwaysOnTop || systemStore.isWindowOnTop;
+});
 
-const setWindowAlwaysOnTop = async (isTop: boolean) => {
-  await runtime.Window.SetAlwaysOnTop(isTop);
-};
-
+// 切换窗口置顶状态
 const toggleAlwaysOnTop = async () => {
-  isCurrentWindowOnTop.value = !isCurrentWindowOnTop.value;
-  await runtime.Window.SetAlwaysOnTop(isCurrentWindowOnTop.value);
+  const currentlyOnTop = isCurrentWindowOnTop.value;
+  
+  if (currentlyOnTop) {
+    // 如果当前是置顶状态，彻底关闭所有置顶
+    if (configStore.config.general.alwaysOnTop) {
+      await configStore.setAlwaysOnTop(false);
+    }
+    await systemStore.setWindowOnTop(false);
+  } else {
+    // 如果当前不是置顶状态，开启临时置顶
+    await systemStore.setWindowOnTop(true);
+  }
 };
 
 // 跳转到设置页面
@@ -59,11 +70,11 @@ const updateFormatButtonState = () => {
     // 获取活动块和语言信息
     const state = view.state;
     const activeBlock = getActiveNoteBlock(state as any);
-    
+
     // 检查块和语言格式化支持
     canFormatCurrentBlock.value = !!(
-      activeBlock && 
-      getLanguage(activeBlock.language.name as any)?.prettier
+        activeBlock &&
+        getLanguage(activeBlock.language.name as any)?.prettier
     );
   } catch (error) {
     console.warn('Error checking format capability:', error);
@@ -74,32 +85,32 @@ const updateFormatButtonState = () => {
 // 创建带300ms防抖的更新函数
 const debouncedUpdateFormatButton = (() => {
   let timeout: number | null = null;
-  
+
   return () => {
     if (timeout) clearTimeout(timeout);
     timeout = window.setTimeout(() => {
       updateFormatButtonState();
       timeout = null;
-    }, 300);
+    }, 1000);
   };
 })();
 
 // 编辑器事件管理
 const setupEditorListeners = (view: any) => {
   if (!view?.dom) return [];
-  
+
   const events = [
-    { type: 'click', handler: updateFormatButtonState },
-    { type: 'keyup', handler: debouncedUpdateFormatButton },
-    { type: 'focus', handler: updateFormatButtonState }
+    {type: 'click', handler: updateFormatButtonState},
+    {type: 'keyup', handler: debouncedUpdateFormatButton},
+    {type: 'focus', handler: updateFormatButtonState}
   ];
-  
+
   // 注册所有事件
   events.forEach(event => view.dom.addEventListener(event.type, event.handler));
-  
+
   // 返回清理函数数组
-  return events.map(event => 
-    () => view.dom.removeEventListener(event.type, event.handler)
+  return events.map(event =>
+      () => view.dom.removeEventListener(event.type, event.handler)
   );
 };
 
@@ -107,22 +118,22 @@ const setupEditorListeners = (view: any) => {
 let cleanupListeners: (() => void)[] = [];
 
 watch(
-  () => editorStore.editorView,
-  (newView) => {
-    // 清理旧监听器
-    cleanupListeners.forEach(cleanup => cleanup());
-    cleanupListeners = [];
-    
-    if (newView) {
-      // 初始更新状态
-      updateFormatButtonState();
-      // 设置新监听器
-      cleanupListeners = setupEditorListeners(newView);
-    } else {
-      canFormatCurrentBlock.value = false;
-    }
-  },
-  { immediate: true }
+    () => editorStore.editorView,
+    (newView) => {
+      // 清理旧监听器
+      cleanupListeners.forEach(cleanup => cleanup());
+      cleanupListeners = [];
+
+      if (newView) {
+        // 初始更新状态
+        updateFormatButtonState();
+        // 设置新监听器
+        cleanupListeners = setupEditorListeners(newView);
+      } else {
+        canFormatCurrentBlock.value = false;
+      }
+    },
+    {immediate: true}
 );
 
 // 组件生命周期
@@ -143,11 +154,27 @@ onUnmounted(() => {
 // 组件加载后初始化置顶状态
 watch(isLoaded, async (loaded) => {
   if (loaded) {
-    // 初始化时从配置文件读取置顶状态
-    isCurrentWindowOnTop.value = configStore.config.general.alwaysOnTop;
-    await setWindowAlwaysOnTop(isCurrentWindowOnTop.value);
+    // 应用合并后的置顶状态
+    const shouldBeOnTop = configStore.config.general.alwaysOnTop || systemStore.isWindowOnTop;
+    try {
+      await runtime.Window.SetAlwaysOnTop(shouldBeOnTop);
+    } catch (error) {
+      console.error('Failed to apply window pin state:', error);
+    }
   }
 });
+
+// 监听配置变化，同步窗口状态
+watch(
+  () => isCurrentWindowOnTop.value,
+  async (shouldBeOnTop) => {
+    try {
+      await runtime.Window.SetAlwaysOnTop(shouldBeOnTop);
+    } catch (error) {
+      console.error('Failed to sync window pin state:', error);
+    }
+  }
+);
 
 const handleUpdateButtonClick = async () => {
   if (updateStore.hasUpdate && !updateStore.isUpdating && !updateStore.updateSuccess) {
@@ -230,29 +257,33 @@ const updateButtonTitle = computed(() => {
           @click="handleUpdateButtonClick"
       >
         <!-- 检查更新中 -->
-        <svg v-if="updateStore.isChecking" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        <svg v-if="updateStore.isChecking" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+             fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="rotating">
           <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
         </svg>
-        
+
         <!-- 下载更新中 -->
-        <svg v-else-if="updateStore.isUpdating" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        <svg v-else-if="updateStore.isUpdating" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+             viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="rotating">
           <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
           <path d="M12 2a10 10 0 1 0 10 10"></path>
         </svg>
-        
+
         <!-- 更新成功，等待重启 -->
-        <svg v-else-if="updateStore.updateSuccess" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+        <svg v-else-if="updateStore.updateSuccess" xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+             viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pulsing">
           <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
           <line x1="12" y1="2" x2="12" y2="12"></line>
         </svg>
-        
+
         <!-- 有更新可用 -->
         <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
           <polyline points="7.5,10.5 12,15 16.5,10.5"/>
           <polyline points="12,15 12,3"/>
         </svg>
@@ -338,39 +369,39 @@ const updateButtonTitle = computed(() => {
       &.available {
         background-color: rgba(76, 175, 80, 0.1);
         animation: pulse 2s infinite;
-        
+
         svg {
           stroke: #4caf50;
         }
-        
+
         &:hover {
           background-color: rgba(76, 175, 80, 0.2);
           transform: scale(1.05);
         }
       }
-      
+
       /* 检查更新中状态 */
       &.checking {
         background-color: rgba(255, 193, 7, 0.1);
-        
+
         svg {
           stroke: #ffc107;
         }
       }
-      
+
       /* 更新下载中状态 */
       &.updating {
         background-color: rgba(33, 150, 243, 0.1);
-        
+
         svg {
           stroke: #2196f3;
         }
       }
-      
+
       /* 更新成功状态 */
       &.success {
         background-color: rgba(156, 39, 176, 0.1);
-        
+
         svg {
           stroke: #9c27b0;
         }
@@ -380,7 +411,7 @@ const updateButtonTitle = computed(() => {
       .rotating {
         animation: rotate 1.5s linear infinite;
       }
-      
+
       /* 脉冲动画 */
       .pulsing {
         animation: pulse-strong 1.2s ease-in-out infinite;
@@ -394,7 +425,7 @@ const updateButtonTitle = computed(() => {
           opacity: 0.7;
         }
       }
-      
+
       @keyframes pulse-strong {
         0%, 100% {
           transform: scale(1);
@@ -405,7 +436,7 @@ const updateButtonTitle = computed(() => {
           opacity: 0.8;
         }
       }
-      
+
       @keyframes rotate {
         0% {
           transform: rotate(0deg);

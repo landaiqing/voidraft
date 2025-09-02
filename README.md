@@ -1,10 +1,10 @@
-# <img src="./frontend/public/appicon.png" alt="VoidRaft Logo" width="32" height="32" style="vertical-align: middle;"> VoidRaft
+# <img src="./frontend/public/appicon.png" alt="voidraft Logo" width="32" height="32" style="vertical-align: middle;"> voidraft
 
 [中文](README_ZH.md) | **English**
 
 > *An elegant text snippet recording tool designed for developers.*
 
-VoidRaft is a modern developer-focused text editor that allows you to record, organize, and manage various text snippets anytime, anywhere. Whether it's temporary code snippets, API responses, meeting notes, or daily to-do lists, VoidRaft provides a smooth and elegant editing experience.
+voidraft is a modern developer-focused text editor that allows you to record, organize, and manage various text snippets anytime, anywhere. Whether it's temporary code snippets, API responses, meeting notes, or daily to-do lists, voidraft provides a smooth and elegant editing experience.
 
 ## Core Features
 
@@ -87,7 +87,7 @@ After building, the executable will be generated in the `bin` directory.
 ## Project Structure
 
 ```
-Voidraft/
+voidraft/
 ├── frontend/              # Vue 3 frontend application
 │   ├── src/
 │   │   ├── views/editor/  # Editor core views
@@ -129,11 +129,11 @@ Voidraft/
 
 > Standing on the shoulders of giants, paying tribute to the open source spirit
 
-The birth of VoidRaft is inseparable from the following excellent open source projects:
+The birth of voidraft is inseparable from the following excellent open source projects:
 
 ### Special Thanks
 
-- **[Heynote](https://github.com/heyman/heynote/)** - VoidRaft is a feature-enhanced version based on Heynote's concept
+- **[Heynote](https://github.com/heyman/heynote/)** - voidraft is a feature-enhanced version based on Heynote's concept
   - Inherits Heynote's elegant block editing philosophy
   - Adds more practical features on the original foundation
   - Rebuilt with modern technology stack
@@ -157,7 +157,7 @@ This project is open source under the [MIT License](LICENSE).
 Welcome to Fork, Star, and contribute code.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![GitHub stars](https://img.shields.io/github/stars/landaiqing/Voidraft.svg?style=social&label=Star)](https://github.com/yourusername/Voidraft)
-[![GitHub forks](https://img.shields.io/github/forks/landaiqing/Voidraft.svg?style=social&label=Fork)](https://github.com/yourusername/Voidraft)
+[![GitHub stars](https://img.shields.io/github/stars/landaiqing/voidraft.svg?style=social&label=Star)](https://github.com/yourusername/voidraft)
+[![GitHub forks](https://img.shields.io/github/forks/landaiqing/voidraft.svg?style=social&label=Fork)](https://github.com/yourusername/voidraft)
 
 *Made with ❤️ by landaiqing*
