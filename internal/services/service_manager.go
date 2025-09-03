@@ -116,8 +116,8 @@ func NewServiceManager() *ServiceManager {
 	}
 
 	// 设置窗口吸附配置变更回调
-	err = configService.SetWindowSnapConfigChangeCallback(func(enabled bool, threshold int) error {
-		return windowSnapService.OnWindowSnapConfigChanged(enabled, threshold)
+	err = configService.SetWindowSnapConfigChangeCallback(func(enabled bool) error {
+		return windowSnapService.OnWindowSnapConfigChanged(enabled)
 	})
 	if err != nil {
 		panic(err)

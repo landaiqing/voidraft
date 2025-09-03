@@ -64,7 +64,6 @@ const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     enableGlobalHotkey: 'general.enableGlobalHotkey',
     globalHotkey: 'general.globalHotkey',
     enableWindowSnap: 'general.enableWindowSnap',
-    snapThreshold: 'general.snapThreshold'
 } as const;
 
 const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
@@ -180,7 +179,6 @@ const DEFAULT_CONFIG: AppConfig = {
             key: 'X'
         },
         enableWindowSnap: true,
-        snapThreshold: 15
     },
     editing: {
         fontSize: CONFIG_LIMITS.fontSize.default,
@@ -527,7 +525,6 @@ export const useConfigStore = defineStore('config', () => {
         
         // 窗口吸附配置相关方法
         setEnableWindowSnap: async (value: boolean) => await updateGeneralConfig('enableWindowSnap', value),
-        setSnapThreshold: async (value: number) => await updateGeneralConfig('snapThreshold', value),
 
         // 更新配置相关方法
         setAutoUpdate: async (value: boolean) => await updateUpdatesConfig('autoUpdate', value),

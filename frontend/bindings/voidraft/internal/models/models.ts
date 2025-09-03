@@ -469,14 +469,9 @@ export class GeneralConfig {
 
     /**
      * 窗口吸附设置
-     * 是否启用窗口吸附功能
+     * 是否启用窗口吸附功能（阈值现在是自适应的）
      */
     "enableWindowSnap": boolean;
-
-    /**
-     * 吸附距离阈值(像素)
-     */
-    "snapThreshold": number;
 
     /**
      * 全局热键设置
@@ -506,9 +501,6 @@ export class GeneralConfig {
         if (!("enableWindowSnap" in $$source)) {
             this["enableWindowSnap"] = false;
         }
-        if (!("snapThreshold" in $$source)) {
-            this["snapThreshold"] = 0;
-        }
         if (!("enableGlobalHotkey" in $$source)) {
             this["enableGlobalHotkey"] = false;
         }
@@ -523,10 +515,10 @@ export class GeneralConfig {
      * Creates a new GeneralConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): GeneralConfig {
-        const $$createField7_0 = $$createType8;
+        const $$createField6_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("globalHotkey" in $$parsedSource) {
-            $$parsedSource["globalHotkey"] = $$createField7_0($$parsedSource["globalHotkey"]);
+            $$parsedSource["globalHotkey"] = $$createField6_0($$parsedSource["globalHotkey"]);
         }
         return new GeneralConfig($$parsedSource as Partial<GeneralConfig>);
     }

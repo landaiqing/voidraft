@@ -70,8 +70,7 @@ type GeneralConfig struct {
 	StartAtLogin     bool   `json:"startAtLogin"`     // 开机启动设置
 
 	// 窗口吸附设置
-	EnableWindowSnap bool `json:"enableWindowSnap"` // 是否启用窗口吸附功能
-	SnapThreshold    int  `json:"snapThreshold"`    // 吸附距离阈值(像素)
+	EnableWindowSnap bool `json:"enableWindowSnap"` // 是否启用窗口吸附功能（阈值现在是自适应的）
 
 	// 全局热键设置
 	EnableGlobalHotkey bool        `json:"enableGlobalHotkey"` // 是否启用全局热键
@@ -151,7 +150,6 @@ func NewDefaultAppConfig() *AppConfig {
 			EnableSystemTray:   true,
 			StartAtLogin:       false,
 			EnableWindowSnap:   true, // 默认启用窗口吸附
-			SnapThreshold:      15,   // 默认15像素的吸附阈值
 			EnableGlobalHotkey: false,
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,

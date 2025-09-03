@@ -1,13 +1,13 @@
 package services
 
 import (
-	"context"
 	"math"
 	"sync"
 	"time"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
@@ -20,33 +20,20 @@ type WindowSnapService struct {
 	mu            sync.RWMutex
 
 	// 吸附配置
-	snapThreshold int  // 吸附触发的阈值距离(像素)
-	snapEnabled   bool // 是否启用窗口吸附功能
+	snapEnabled bool // 是否启用窗口吸附功能
 
-	// 定时器控制
-	snapTicker *time.Ticker
-	ctx        context.Context
-	cancel     context.CancelFunc
+	// 自适应阈值参数
+	baseThresholdRatio float64 // 基础阈值比例
+	minThreshold       int     // 最小阈值(像素)
+	maxThreshold       int     // 最大阈值(像素)
 
-	// 性能优化相关
-	lastMainWindowPos models.WindowPosition // 缓存主窗口上次位置
-	changedWindows    map[int64]bool        // 记录哪些窗口发生了变化
-	skipFrames        int                   // 跳帧计数器，用于降低检测频率
+	// 位置缓存
+	lastMainWindowPos  models.WindowPosition // 缓存主窗口位置
+	lastMainWindowSize [2]int                // 缓存主窗口尺寸 [width, height]
 
-	// 监听的窗口列表
-	managedWindows map[int64]*SnapWindowInfo // documentID -> SnapWindowInfo
-}
-
-// SnapWindowInfo 吸附窗口信息
-type SnapWindowInfo struct {
-	Window     *application.WebviewWindow
-	DocumentID int64
-	Title      string
-	IsSnapped  bool                  // 是否处于吸附状态
-	SnapOffset models.SnapPosition   // 与主窗口的相对位置偏移
-	SnapEdge   models.SnapEdge       // 吸附的边缘类型
-	LastPos    models.WindowPosition // 上一次记录的窗口位置
-	MoveTime   time.Time             // 上次移动时间，用于判断移动速度
+	// 管理的窗口
+	managedWindows map[int64]*models.WindowInfo         // documentID -> WindowInfo
+	windowRefs     map[int64]*application.WebviewWindow // documentID -> Window引用
 }
 
 // NewWindowSnapService 创建新的窗口吸附服务实例
@@ -58,21 +45,20 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 	// 从配置获取窗口吸附设置
 	config, err := configService.GetConfig()
 	snapEnabled := true // 默认启用
-	snapThreshold := 15 // 默认阈值
 
 	if err == nil {
 		snapEnabled = config.General.EnableWindowSnap
-		snapThreshold = config.General.SnapThreshold
 	}
 
 	return &WindowSnapService{
-		logger:         logger,
-		configService:  configService,
-		snapThreshold:  snapThreshold,
-		snapEnabled:    snapEnabled,
-		managedWindows: make(map[int64]*SnapWindowInfo),
-		changedWindows: make(map[int64]bool),
-		skipFrames:     0,
+		logger:             logger,
+		configService:      configService,
+		snapEnabled:        snapEnabled,
+		baseThresholdRatio: 0.025, // 2.5%的主窗口宽度作为基础阈值
+		minThreshold:       8,     // 最小8像素（小屏幕保底）
+		maxThreshold:       40,    // 最大40像素（大屏幕上限）
+		managedWindows:     make(map[int64]*models.WindowInfo),
+		windowRefs:         make(map[int64]*application.WebviewWindow),
 	}
 }
 
@@ -81,11 +67,13 @@ func (wss *WindowSnapService) SetAppReferences(app *application.App, mainWindow 
 	wss.app = app
 	wss.mainWindow = mainWindow
 
-	// 初始化上下文，用于控制goroutine的生命周期
-	wss.ctx, wss.cancel = context.WithCancel(context.Background())
+	// 初始化主窗口位置缓存
+	wss.updateMainWindowCache()
 
-	// 启动窗口吸附监听器
-	wss.StartWindowSnapMonitor()
+	// 设置主窗口移动事件监听
+	if mainWindow != nil {
+		wss.setupMainWindowEvents()
+	}
 }
 
 // RegisterWindow 注册需要吸附管理的窗口
@@ -93,16 +81,24 @@ func (wss *WindowSnapService) RegisterWindow(documentID int64, window *applicati
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
-	wss.managedWindows[documentID] = &SnapWindowInfo{
-		Window:     window,
+	// 获取初始位置
+	x, y := window.Position()
+
+	windowInfo := &models.WindowInfo{
 		DocumentID: documentID,
 		Title:      title,
 		IsSnapped:  false,
 		SnapOffset: models.SnapPosition{X: 0, Y: 0},
 		SnapEdge:   models.SnapEdgeNone,
-		LastPos:    models.WindowPosition{X: 0, Y: 0},
+		LastPos:    models.WindowPosition{X: x, Y: y},
 		MoveTime:   time.Now(),
 	}
+
+	wss.managedWindows[documentID] = windowInfo
+	wss.windowRefs[documentID] = window
+
+	// 为窗口设置移动事件监听
+	wss.setupWindowEvents(window, windowInfo)
 }
 
 // UnregisterWindow 取消注册窗口
@@ -111,7 +107,7 @@ func (wss *WindowSnapService) UnregisterWindow(documentID int64) {
 	defer wss.mu.Unlock()
 
 	delete(wss.managedWindows, documentID)
-	delete(wss.changedWindows, documentID)
+	delete(wss.windowRefs, documentID)
 }
 
 // SetSnapEnabled 设置是否启用窗口吸附
@@ -133,196 +129,193 @@ func (wss *WindowSnapService) SetSnapEnabled(enabled bool) {
 				windowInfo.SnapEdge = models.SnapEdgeNone
 			}
 		}
-		// 停止定时器
-		if wss.snapTicker != nil {
-			wss.snapTicker.Stop()
-			wss.snapTicker = nil
-		}
-	} else if wss.snapTicker == nil && wss.app != nil {
-		// 重新启动定时器
-		wss.StartWindowSnapMonitor()
 	}
 }
 
-// SetSnapThreshold 设置窗口吸附阈值
-func (wss *WindowSnapService) SetSnapThreshold(threshold int) {
-	wss.mu.Lock()
-	defer wss.mu.Unlock()
-
-	if threshold <= 0 || wss.snapThreshold == threshold {
-		return
+// calculateAdaptiveThreshold 计算自适应吸附阈值
+func (wss *WindowSnapService) calculateAdaptiveThreshold() int {
+	// 基于主窗口宽度计算阈值
+	mainWidth := wss.lastMainWindowSize[0]
+	if mainWidth == 0 {
+		return wss.minThreshold // 默认最小值
 	}
 
-	wss.snapThreshold = threshold
+	// 计算基础阈值：主窗口宽度的2.5%
+	adaptiveThreshold := int(float64(mainWidth) * wss.baseThresholdRatio)
+
+	// 限制在最小和最大值之间
+	if adaptiveThreshold < wss.minThreshold {
+		return wss.minThreshold
+	}
+	if adaptiveThreshold > wss.maxThreshold {
+		return wss.maxThreshold
+	}
+
+	return adaptiveThreshold
+}
+
+// GetCurrentThreshold 获取当前自适应阈值（用于调试或显示）
+func (wss *WindowSnapService) GetCurrentThreshold() int {
+	wss.mu.RLock()
+	defer wss.mu.RUnlock()
+
+	return wss.calculateAdaptiveThreshold()
 }
 
 // OnWindowSnapConfigChanged 处理窗口吸附配置变更
-func (wss *WindowSnapService) OnWindowSnapConfigChanged(enabled bool, threshold int) error {
+func (wss *WindowSnapService) OnWindowSnapConfigChanged(enabled bool) error {
 	wss.SetSnapEnabled(enabled)
-	wss.SetSnapThreshold(threshold)
+	// 阈值现在是自适应的，无需手动设置
 	return nil
 }
 
-// StartWindowSnapMonitor 启动窗口吸附监听器
-func (wss *WindowSnapService) StartWindowSnapMonitor() {
-	// 如果定时器已存在，先停止它
-	if wss.snapTicker != nil {
-		wss.snapTicker.Stop()
-	}
-
-	// 只有在吸附功能启用时才启动监听器
-	if !wss.snapEnabled {
-		return
-	}
-
-	// 创建新的定时器，20fps 以优化性能
-	wss.snapTicker = time.NewTicker(50 * time.Millisecond)
-
-	// 启动goroutine持续监听窗口位置
-	go func() {
-		for {
-			select {
-			case <-wss.snapTicker.C:
-				wss.checkAndApplySnapping()
-			case <-wss.ctx.Done():
-				// 上下文取消时停止goroutine
-				return
-			}
-		}
-	}()
+// setupMainWindowEvents 设置主窗口事件监听
+func (wss *WindowSnapService) setupMainWindowEvents() {
+	// 监听主窗口移动事件
+	wss.mainWindow.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
+		wss.onMainWindowMoved()
+	})
 }
 
-// checkAndApplySnapping 检测并应用窗口吸附（性能优化版本）
-func (wss *WindowSnapService) checkAndApplySnapping() {
-	if !wss.snapEnabled {
+// setupWindowEvents 为子窗口设置事件监听
+func (wss *WindowSnapService) setupWindowEvents(window *application.WebviewWindow, windowInfo *models.WindowInfo) {
+	// 监听子窗口移动事件
+	window.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
+		wss.onChildWindowMoved(window, windowInfo)
+	})
+}
+
+// updateMainWindowCache 更新主窗口缓存
+func (wss *WindowSnapService) updateMainWindowCache() {
+	if wss.mainWindow == nil {
 		return
 	}
 
-	// 性能优化：每3帧执行一次完整检测，其他时间只处理变化的窗口
-	wss.skipFrames++
-	fullCheck := wss.skipFrames%3 == 0
+	x, y := wss.mainWindow.Position()
+	w, h := wss.mainWindow.Size()
+
+	wss.lastMainWindowPos = models.WindowPosition{X: x, Y: y}
+	wss.lastMainWindowSize = [2]int{w, h}
+}
+
+// onMainWindowMoved 主窗口移动事件处理
+func (wss *WindowSnapService) onMainWindowMoved() {
+	if !wss.snapEnabled {
+		return
+	}
 
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
-	// 检查主窗口是否存在且可见
-	if wss.mainWindow == nil || !wss.isMainWindowAvailable() {
-		// 主窗口不可用，解除所有吸附
-		for _, windowInfo := range wss.managedWindows {
-			if windowInfo.IsSnapped {
-				windowInfo.IsSnapped = false
-				windowInfo.SnapEdge = models.SnapEdgeNone
-			}
+	// 更新主窗口缓存
+	wss.updateMainWindowCache()
+
+	// 只更新已吸附窗口的位置，无需重新检测所有窗口
+	for _, windowInfo := range wss.managedWindows {
+		if windowInfo.IsSnapped {
+			wss.updateSnappedWindowPosition(windowInfo)
 		}
-		// 清空变化记录
-		wss.changedWindows = make(map[int64]bool)
+	}
+}
+
+// onChildWindowMoved 子窗口移动事件处理
+func (wss *WindowSnapService) onChildWindowMoved(window *application.WebviewWindow, windowInfo *models.WindowInfo) {
+	if !wss.snapEnabled {
 		return
 	}
 
-	mainPos, _ := wss.getWindowPosition(wss.mainWindow)
+	wss.mu.Lock()
+	defer wss.mu.Unlock()
 
-	// 检查主窗口是否移动了
-	mainWindowMoved := mainPos.X != wss.lastMainWindowPos.X || mainPos.Y != wss.lastMainWindowPos.Y
-	if mainWindowMoved {
-		wss.lastMainWindowPos = mainPos
-		// 主窗口移动了，标记所有吸附的窗口为变化
-		for documentID, windowInfo := range wss.managedWindows {
-			if windowInfo.IsSnapped {
-				wss.changedWindows[documentID] = true
-			}
-		}
+	// 获取当前位置
+	x, y := window.Position()
+	currentPos := models.WindowPosition{X: x, Y: y}
+
+	// 检查是否真的移动了（避免无效触发）
+	if currentPos.X == windowInfo.LastPos.X && currentPos.Y == windowInfo.LastPos.Y {
+		return
 	}
 
-	for documentID, windowInfo := range wss.managedWindows {
-		currentPos, _ := wss.getWindowPosition(windowInfo.Window)
+	// 保存上次移动时间用于防抖检测
+	lastMoveTime := windowInfo.MoveTime
+	windowInfo.MoveTime = time.Now()
 
-		// 检查窗口是否移动了
-		hasMoved := currentPos.X != windowInfo.LastPos.X || currentPos.Y != windowInfo.LastPos.Y
-		if hasMoved {
-			windowInfo.MoveTime = time.Now()
+	if windowInfo.IsSnapped {
+		// 已吸附窗口：检查是否被用户拖拽解除吸附
+		wss.handleSnappedWindow(window, windowInfo, currentPos)
+		// 对于已吸附窗口，总是更新为当前位置
+		windowInfo.LastPos = currentPos
+	} else {
+		// 未吸附窗口：检查是否应该吸附
+		isSnapped := wss.handleUnsnappedWindow(window, windowInfo, currentPos, lastMoveTime)
+		if !isSnapped {
+			// 如果没有吸附，更新为当前位置
 			windowInfo.LastPos = currentPos
-			wss.changedWindows[documentID] = true
 		}
-
-		// 性能优化：只处理变化的窗口或进行完整检查时
-		if !fullCheck && !wss.changedWindows[documentID] {
-			continue
-		}
-
-		if windowInfo.IsSnapped {
-			// 窗口已吸附，检查是否需要更新位置或解除吸附
-			wss.handleSnappedWindow(windowInfo, mainPos, currentPos)
-		} else {
-			// 窗口未吸附，检查是否应该吸附
-			wss.handleUnsnappedWindow(windowInfo)
-		}
-
-		// 处理完成后清除变化标记
-		delete(wss.changedWindows, documentID)
+		// 如果成功吸附，位置已在handleUnsnappedWindow中更新
 	}
 }
 
-// isMainWindowAvailable 检查主窗口是否可用
-func (wss *WindowSnapService) isMainWindowAvailable() bool {
-	if wss.mainWindow == nil {
-		return false
+// updateSnappedWindowPosition 更新已吸附窗口的位置
+func (wss *WindowSnapService) updateSnappedWindowPosition(windowInfo *models.WindowInfo) {
+	// 计算新的目标位置（基于主窗口新位置）
+	expectedX := wss.lastMainWindowPos.X + windowInfo.SnapOffset.X
+	expectedY := wss.lastMainWindowPos.Y + windowInfo.SnapOffset.Y
+
+	// 查找对应的window对象并移动
+	if window, exists := wss.windowRefs[windowInfo.DocumentID]; exists {
+		window.SetPosition(expectedX, expectedY)
 	}
 
-	// 检查主窗口是否可见和正常状态
-	return wss.mainWindow.IsVisible()
+	windowInfo.LastPos = models.WindowPosition{X: expectedX, Y: expectedY}
 }
 
-// handleSnappedWindow 处理已吸附的窗口
-func (wss *WindowSnapService) handleSnappedWindow(windowInfo *SnapWindowInfo, mainPos models.WindowPosition, currentPos models.WindowPosition) {
-	// 计算预期位置基于主窗口的新位置
-	expectedX := mainPos.X + windowInfo.SnapOffset.X
-	expectedY := mainPos.Y + windowInfo.SnapOffset.Y
+// handleSnappedWindow 处理已吸附窗口的移动
+func (wss *WindowSnapService) handleSnappedWindow(window *application.WebviewWindow, windowInfo *models.WindowInfo, currentPos models.WindowPosition) {
+	// 计算预期位置
+	expectedX := wss.lastMainWindowPos.X + windowInfo.SnapOffset.X
+	expectedY := wss.lastMainWindowPos.Y + windowInfo.SnapOffset.Y
 
-	// 计算当前位置与预期位置的距离
+	// 计算实际位置与预期位置的距离
 	distanceX := math.Abs(float64(currentPos.X - expectedX))
 	distanceY := math.Abs(float64(currentPos.Y - expectedY))
 	maxDistance := math.Max(distanceX, distanceY)
 
-	// 检测是否为用户主动拖拽：如果窗口移动幅度超过阈值且是最近移动的
-	userDragThreshold := float64(wss.snapThreshold)
-	isUserDrag := maxDistance > userDragThreshold && time.Since(windowInfo.MoveTime) < 100*time.Millisecond
+	// 用户拖拽检测：距离超过阈值且移动很快
+	userDragThreshold := float64(wss.calculateAdaptiveThreshold())
+	isUserDrag := maxDistance > userDragThreshold && time.Since(windowInfo.MoveTime) < 50*time.Millisecond
 
 	if isUserDrag {
-		// 用户主动拖拽，立即解除吸附
+		// 用户主动拖拽，解除吸附
 		windowInfo.IsSnapped = false
 		windowInfo.SnapEdge = models.SnapEdgeNone
-		return
-	}
-
-	// 对于主窗口移动导致的位置变化，立即跟随且不解除吸附
-	if maxDistance > 0 {
-		// 直接调整到预期位置，不使用平滑移动以提高响应速度
-		windowInfo.Window.SetPosition(expectedX, expectedY)
-		windowInfo.LastPos = models.WindowPosition{X: expectedX, Y: expectedY}
 	}
 }
 
-// handleUnsnappedWindow 处理未吸附的窗口
-func (wss *WindowSnapService) handleUnsnappedWindow(windowInfo *SnapWindowInfo) {
-	// 检查是否应该吸附到主窗口
-	should, snapEdge := wss.shouldSnapToMainWindow(windowInfo)
+// handleUnsnappedWindow 处理未吸附窗口的移动，返回是否成功吸附
+func (wss *WindowSnapService) handleUnsnappedWindow(window *application.WebviewWindow, windowInfo *models.WindowInfo, currentPos models.WindowPosition, lastMoveTime time.Time) bool {
+	// 检查是否应该吸附
+	should, snapEdge := wss.shouldSnapToMainWindow(window, windowInfo, currentPos, lastMoveTime)
 	if should {
-		// 获取主窗口位置用于计算偏移量
-		mainPos, _ := wss.getWindowPosition(wss.mainWindow)
-
 		// 设置吸附状态
 		windowInfo.IsSnapped = true
 		windowInfo.SnapEdge = snapEdge
 
-		// 执行即时吸附，产生明显的吸附效果
-		wss.snapWindowToMainWindow(windowInfo, snapEdge)
+		// 执行吸附移动
+		targetPos := wss.calculateSnapPosition(snapEdge, currentPos, window)
+		window.SetPosition(targetPos.X, targetPos.Y)
 
-		// 重新获取吸附后的位置来计算偏移量
-		newPos, _ := wss.getWindowPosition(windowInfo.Window)
-		windowInfo.SnapOffset.X = newPos.X - mainPos.X
-		windowInfo.SnapOffset.Y = newPos.Y - mainPos.Y
-		windowInfo.LastPos = newPos
+		// 计算并保存偏移量
+		windowInfo.SnapOffset.X = targetPos.X - wss.lastMainWindowPos.X
+		windowInfo.SnapOffset.Y = targetPos.Y - wss.lastMainWindowPos.Y
+
+		// 更新位置为吸附后的位置
+		windowInfo.LastPos = targetPos
+
+		return true
 	}
+
+	return false
 }
 
 // getWindowPosition 获取窗口的位置
@@ -331,269 +324,160 @@ func (wss *WindowSnapService) getWindowPosition(window *application.WebviewWindo
 	return models.WindowPosition{X: x, Y: y}, true
 }
 
-// shouldSnapToMainWindow 检查窗口是否应该吸附到主窗口（支持角落吸附）
-func (wss *WindowSnapService) shouldSnapToMainWindow(windowInfo *SnapWindowInfo) (bool, models.SnapEdge) {
-	// 降低防抖时间，提高吸附响应速度
-	if time.Since(windowInfo.MoveTime) < 50*time.Millisecond {
+// shouldSnapToMainWindow 优化版吸附检测
+func (wss *WindowSnapService) shouldSnapToMainWindow(window *application.WebviewWindow, windowInfo *models.WindowInfo, currentPos models.WindowPosition, lastMoveTime time.Time) (bool, models.SnapEdge) {
+	// 防抖：移动太快时不检测，
+	timeSinceLastMove := time.Since(lastMoveTime)
+	if timeSinceLastMove < 30*time.Millisecond && timeSinceLastMove > 0 {
 		return false, models.SnapEdgeNone
 	}
 
-	// 获取两个窗口的位置
-	mainPos, _ := wss.getWindowPosition(wss.mainWindow)
-	windowPos, _ := wss.getWindowPosition(windowInfo.Window)
+	// 使用缓存的主窗口位置和尺寸
+	if wss.lastMainWindowSize[0] == 0 || wss.lastMainWindowSize[1] == 0 {
+		// 主窗口缓存未初始化，立即更新
+		wss.updateMainWindowCache()
+	}
 
-	// 获取主窗口尺寸
-	mainWidth, mainHeight := wss.mainWindow.Size()
+	mainPos := wss.lastMainWindowPos
+	mainWidth := wss.lastMainWindowSize[0]
+	mainHeight := wss.lastMainWindowSize[1]
 
 	// 获取子窗口尺寸
-	windowWidth, windowHeight := windowInfo.Window.Size()
+	windowWidth, windowHeight := window.Size()
 
-	// 计算各个边缘的距离
-	threshold := float64(wss.snapThreshold)
-	cornerThreshold := threshold * 1.5 // 角落吸附需要更大的阈值
+	// 自适应阈值计算
+	threshold := float64(wss.calculateAdaptiveThreshold())
+	cornerThreshold := threshold * 1.5
 
-	// 主窗口的四个边界
-	mainLeft := mainPos.X
-	mainTop := mainPos.Y
-	mainRight := mainPos.X + mainWidth
-	mainBottom := mainPos.Y + mainHeight
+	// 计算边界
+	mainLeft, mainTop := mainPos.X, mainPos.Y
+	mainRight, mainBottom := mainPos.X+mainWidth, mainPos.Y+mainHeight
 
-	// 子窗口的四个边界
-	windowLeft := windowPos.X
-	windowTop := windowPos.Y
-	windowRight := windowPos.X + windowWidth
-	windowBottom := windowPos.Y + windowHeight
+	windowLeft, windowTop := currentPos.X, currentPos.Y
+	windowRight, windowBottom := currentPos.X+windowWidth, currentPos.Y+windowHeight
 
-	// 存储每个边缘的吸附信息
-	type snapCandidate struct {
+	// 简化的距离计算结构
+	type snapCheck struct {
 		edge     models.SnapEdge
 		distance float64
-		overlap  float64 // 重叠度，用于优先级判断
-		isCorner bool    // 是否为角落吸附
+		priority int // 1=角落, 2=边缘
 	}
 
-	var candidates []snapCandidate
+	var bestSnap *snapCheck
 
-	// ==== 检查角落吸附（优先级最高） ====
-
-	// 1. 右上角 (SnapEdgeTopRight)
-	distToTopRight := math.Sqrt(math.Pow(float64(mainRight-windowLeft), 2) + math.Pow(float64(mainTop-windowBottom), 2))
-	if distToTopRight <= cornerThreshold {
-		// 检查是否接近右上角区域
-		horizDist := math.Abs(float64(mainRight - windowLeft))
-		vertDist := math.Abs(float64(mainTop - windowBottom))
-		if horizDist <= cornerThreshold && vertDist <= cornerThreshold {
-			candidates = append(candidates, snapCandidate{models.SnapEdgeTopRight, distToTopRight, 100, true})
-		}
+	// 检查角落吸附（优先级1）
+	cornerChecks := []struct {
+		edge models.SnapEdge
+		dx   int
+		dy   int
+	}{
+		{models.SnapEdgeTopRight, mainRight - windowLeft, mainTop - windowBottom},
+		{models.SnapEdgeBottomRight, mainRight - windowLeft, mainBottom - windowTop},
+		{models.SnapEdgeBottomLeft, mainLeft - windowRight, mainBottom - windowTop},
+		{models.SnapEdgeTopLeft, mainLeft - windowRight, mainTop - windowBottom},
 	}
 
-	// 2. 右下角 (SnapEdgeBottomRight)
-	distToBottomRight := math.Sqrt(math.Pow(float64(mainRight-windowLeft), 2) + math.Pow(float64(mainBottom-windowTop), 2))
-	if distToBottomRight <= cornerThreshold {
-		horizDist := math.Abs(float64(mainRight - windowLeft))
-		vertDist := math.Abs(float64(mainBottom - windowTop))
-		if horizDist <= cornerThreshold && vertDist <= cornerThreshold {
-			candidates = append(candidates, snapCandidate{models.SnapEdgeBottomRight, distToBottomRight, 100, true})
-		}
-	}
-
-	// 3. 左下角 (SnapEdgeBottomLeft)
-	distToBottomLeft := math.Sqrt(math.Pow(float64(mainLeft-windowRight), 2) + math.Pow(float64(mainBottom-windowTop), 2))
-	if distToBottomLeft <= cornerThreshold {
-		horizDist := math.Abs(float64(mainLeft - windowRight))
-		vertDist := math.Abs(float64(mainBottom - windowTop))
-		if horizDist <= cornerThreshold && vertDist <= cornerThreshold {
-			candidates = append(candidates, snapCandidate{models.SnapEdgeBottomLeft, distToBottomLeft, 100, true})
-		}
-	}
-
-	// 4. 左上角 (SnapEdgeTopLeft)
-	distToTopLeft := math.Sqrt(math.Pow(float64(mainLeft-windowRight), 2) + math.Pow(float64(mainTop-windowBottom), 2))
-	if distToTopLeft <= cornerThreshold {
-		horizDist := math.Abs(float64(mainLeft - windowRight))
-		vertDist := math.Abs(float64(mainTop - windowBottom))
-		if horizDist <= cornerThreshold && vertDist <= cornerThreshold {
-			candidates = append(candidates, snapCandidate{models.SnapEdgeTopLeft, distToTopLeft, 100, true})
-		}
-	}
-
-	// ==== 检查边缘吸附（只在没有角落吸附时检查） ====
-	if len(candidates) == 0 {
-		// 1. 吸附到主窗口右侧
-		distToRight := math.Abs(float64(mainRight - windowLeft))
-		if distToRight <= threshold {
-			// 计算垂直重叠
-			overlapTop := math.Max(float64(mainTop), float64(windowTop))
-			overlapBottom := math.Min(float64(mainBottom), float64(windowBottom))
-			verticalOverlap := math.Max(0, overlapBottom-overlapTop)
-			candidates = append(candidates, snapCandidate{models.SnapEdgeRight, distToRight, verticalOverlap, false})
-		}
-
-		// 2. 吸附到主窗口左侧
-		distToLeft := math.Abs(float64(mainLeft - windowRight))
-		if distToLeft <= threshold {
-			// 计算垂直重叠
-			overlapTop := math.Max(float64(mainTop), float64(windowTop))
-			overlapBottom := math.Min(float64(mainBottom), float64(windowBottom))
-			verticalOverlap := math.Max(0, overlapBottom-overlapTop)
-			candidates = append(candidates, snapCandidate{models.SnapEdgeLeft, distToLeft, verticalOverlap, false})
-		}
-
-		// 3. 吸附到主窗口底部
-		distToBottom := math.Abs(float64(mainBottom - windowTop))
-		if distToBottom <= threshold {
-			// 计算水平重叠
-			overlapLeft := math.Max(float64(mainLeft), float64(windowLeft))
-			overlapRight := math.Min(float64(mainRight), float64(windowRight))
-			horizontalOverlap := math.Max(0, overlapRight-overlapLeft)
-			candidates = append(candidates, snapCandidate{models.SnapEdgeBottom, distToBottom, horizontalOverlap, false})
-		}
-
-		// 4. 吸附到主窗口顶部
-		distToTop := math.Abs(float64(mainTop - windowBottom))
-		if distToTop <= threshold {
-			// 计算水平重叠
-			overlapLeft := math.Max(float64(mainLeft), float64(windowLeft))
-			overlapRight := math.Min(float64(mainRight), float64(windowRight))
-			horizontalOverlap := math.Max(0, overlapRight-overlapLeft)
-			candidates = append(candidates, snapCandidate{models.SnapEdgeTop, distToTop, horizontalOverlap, false})
-		}
-	}
-
-	// 如果没有候选，不吸附
-	if len(candidates) == 0 {
-		return false, models.SnapEdgeNone
-	}
-
-	// 选择最佳吸附位置：角落吸附优先，其次考虑重叠度，最后考虑距离
-	bestCandidate := candidates[0]
-	for _, candidate := range candidates[1:] {
-		// 角落吸附优先级最高
-		if candidate.isCorner && !bestCandidate.isCorner {
-			bestCandidate = candidate
-		} else if bestCandidate.isCorner && !candidate.isCorner {
-			// 继续使用当前的角落吸附
-			continue
-		} else {
-			// 同类型的吸附，比较重叠度和距离
-			if math.Abs(candidate.overlap-bestCandidate.overlap) < 10 {
-				if candidate.distance < bestCandidate.distance {
-					bestCandidate = candidate
-				}
-			} else if candidate.overlap > bestCandidate.overlap {
-				// 重叠度更高的优先
-				bestCandidate = candidate
+	for _, check := range cornerChecks {
+		dist := math.Sqrt(float64(check.dx*check.dx + check.dy*check.dy))
+		if dist <= cornerThreshold {
+			if bestSnap == nil || dist < bestSnap.distance {
+				bestSnap = &snapCheck{check.edge, dist, 1}
 			}
 		}
 	}
 
-	return true, bestCandidate.edge
+	// 如果没有角落吸附，检查边缘吸附（优先级2）
+	if bestSnap == nil {
+		edgeChecks := []struct {
+			edge     models.SnapEdge
+			distance float64
+		}{
+			{models.SnapEdgeRight, math.Abs(float64(mainRight - windowLeft))},
+			{models.SnapEdgeLeft, math.Abs(float64(mainLeft - windowRight))},
+			{models.SnapEdgeBottom, math.Abs(float64(mainBottom - windowTop))},
+			{models.SnapEdgeTop, math.Abs(float64(mainTop - windowBottom))},
+		}
+
+		for _, check := range edgeChecks {
+			if check.distance <= threshold {
+				if bestSnap == nil || check.distance < bestSnap.distance {
+					bestSnap = &snapCheck{check.edge, check.distance, 2}
+				}
+			}
+		}
+	}
+
+	if bestSnap == nil {
+		return false, models.SnapEdgeNone
+	}
+
+	return true, bestSnap.edge
 }
 
-// snapWindowToMainWindow 将窗口精确吸附到主窗口边缘（支持角落吸附）
-func (wss *WindowSnapService) snapWindowToMainWindow(windowInfo *SnapWindowInfo, snapEdge models.SnapEdge) {
-	// 获取主窗口位置和尺寸
-	mainPos, _ := wss.getWindowPosition(wss.mainWindow)
-	mainWidth, mainHeight := wss.mainWindow.Size()
+// calculateSnapPosition 计算吸附目标位置
+func (wss *WindowSnapService) calculateSnapPosition(snapEdge models.SnapEdge, currentPos models.WindowPosition, window *application.WebviewWindow) models.WindowPosition {
+	// 使用缓存的主窗口信息
+	mainPos := wss.lastMainWindowPos
+	mainWidth := wss.lastMainWindowSize[0]
+	mainHeight := wss.lastMainWindowSize[1]
 
-	// 获取子窗口位置和尺寸
-	windowPos, _ := wss.getWindowPosition(windowInfo.Window)
-	windowWidth, windowHeight := windowInfo.Window.Size()
-
-	// 计算目标位置
-	var targetX, targetY int
+	// 获取子窗口尺寸
+	windowWidth, windowHeight := window.Size()
 
 	switch snapEdge {
 	case models.SnapEdgeRight:
-		// 吸附到主窗口右侧
-		targetX = mainPos.X + mainWidth
-		targetY = windowPos.Y // 保持当前 Y 位置
-		// 如果超出主窗口范围，调整到边界
-		if targetY < mainPos.Y {
-			targetY = mainPos.Y
-		} else if targetY+windowHeight > mainPos.Y+mainHeight {
-			targetY = mainPos.Y + mainHeight - windowHeight
+		return models.WindowPosition{
+			X: mainPos.X + mainWidth,
+			Y: currentPos.Y, // 保持当前Y位置
 		}
-
 	case models.SnapEdgeLeft:
-		// 吸附到主窗口左侧
-		targetX = mainPos.X - windowWidth
-		targetY = windowPos.Y // 保持当前 Y 位置
-		// 如果超出主窗口范围，调整到边界
-		if targetY < mainPos.Y {
-			targetY = mainPos.Y
-		} else if targetY+windowHeight > mainPos.Y+mainHeight {
-			targetY = mainPos.Y + mainHeight - windowHeight
+		return models.WindowPosition{
+			X: mainPos.X - windowWidth,
+			Y: currentPos.Y,
 		}
-
 	case models.SnapEdgeBottom:
-		// 吸附到主窗口底部
-		targetX = windowPos.X // 保持当前 X 位置
-		targetY = mainPos.Y + mainHeight
-		// 如果超出主窗口范围，调整到边界
-		if targetX < mainPos.X {
-			targetX = mainPos.X
-		} else if targetX+windowWidth > mainPos.X+mainWidth {
-			targetX = mainPos.X + mainWidth - windowWidth
+		return models.WindowPosition{
+			X: currentPos.X,
+			Y: mainPos.Y + mainHeight,
 		}
-
 	case models.SnapEdgeTop:
-		// 吸附到主窗口顶部
-		targetX = windowPos.X // 保持当前 X 位置
-		targetY = mainPos.Y - windowHeight
-		// 如果超出主窗口范围，调整到边界
-		if targetX < mainPos.X {
-			targetX = mainPos.X
-		} else if targetX+windowWidth > mainPos.X+mainWidth {
-			targetX = mainPos.X + mainWidth - windowWidth
+		return models.WindowPosition{
+			X: currentPos.X,
+			Y: mainPos.Y - windowHeight,
 		}
-
-	// ==== 角落吸附 ====
 	case models.SnapEdgeTopRight:
-		// 吸附到右上角
-		targetX = mainPos.X + mainWidth
-		targetY = mainPos.Y - windowHeight
-
+		return models.WindowPosition{
+			X: mainPos.X + mainWidth,
+			Y: mainPos.Y - windowHeight,
+		}
 	case models.SnapEdgeBottomRight:
-		// 吸附到右下角
-		targetX = mainPos.X + mainWidth
-		targetY = mainPos.Y + mainHeight
-
+		return models.WindowPosition{
+			X: mainPos.X + mainWidth,
+			Y: mainPos.Y + mainHeight,
+		}
 	case models.SnapEdgeBottomLeft:
-		// 吸附到左下角
-		targetX = mainPos.X - windowWidth
-		targetY = mainPos.Y + mainHeight
-
+		return models.WindowPosition{
+			X: mainPos.X - windowWidth,
+			Y: mainPos.Y + mainHeight,
+		}
 	case models.SnapEdgeTopLeft:
-		// 吸附到左上角
-		targetX = mainPos.X - windowWidth
-		targetY = mainPos.Y - windowHeight
-
-	default:
-		// 不应该到达这里
-		return
+		return models.WindowPosition{
+			X: mainPos.X - windowWidth,
+			Y: mainPos.Y - windowHeight,
+		}
 	}
 
-	// 直接移动到目标位置，不使用平滑过渡以产生明显的吸附效果
-	windowInfo.Window.SetPosition(targetX, targetY)
-
-	// 更新窗口信息
-	windowInfo.SnapEdge = snapEdge
-	windowInfo.LastPos = models.WindowPosition{X: targetX, Y: targetY}
+	return currentPos
 }
 
 // Cleanup 清理资源
 func (wss *WindowSnapService) Cleanup() {
-	// 如果有取消函数，调用它来停止所有goroutine
-	if wss.cancel != nil {
-		wss.cancel()
-	}
+	wss.mu.Lock()
+	defer wss.mu.Unlock()
 
-	// 停止定时器
-	if wss.snapTicker != nil {
-		wss.snapTicker.Stop()
-		wss.snapTicker = nil
-	}
+	// 清空管理的窗口
+	wss.managedWindows = make(map[int64]*models.WindowInfo)
+	wss.windowRefs = make(map[int64]*application.WebviewWindow)
 }
 
 // ServiceShutdown 实现服务关闭接口

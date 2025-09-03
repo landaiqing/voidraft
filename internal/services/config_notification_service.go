@@ -454,16 +454,16 @@ func CreateBackupConfigListener(name string, callback func(config *models.GitBac
 }
 
 // CreateWindowSnapConfigListener 创建窗口吸附配置监听器
-func CreateWindowSnapConfigListener(name string, callback func(enabled bool, threshold int) error) *ConfigListener {
+func CreateWindowSnapConfigListener(name string, callback func(enabled bool) error) *ConfigListener {
 	return &ConfigListener{
 		Name:       name,
 		ChangeType: ConfigChangeTypeWindowSnap,
 		Callback: func(changeType ConfigChangeType, oldConfig, newConfig *models.AppConfig) error {
 			if newConfig == nil {
 				defaultConfig := models.NewDefaultAppConfig()
-				return callback(defaultConfig.General.EnableWindowSnap, defaultConfig.General.SnapThreshold)
+				return callback(defaultConfig.General.EnableWindowSnap)
 			}
-			return callback(newConfig.General.EnableWindowSnap, newConfig.General.SnapThreshold)
+			return callback(newConfig.General.EnableWindowSnap)
 		},
 		DebounceDelay: 200 * time.Millisecond,
 		GetConfigFunc: func(k *koanf.Koanf) *models.AppConfig {

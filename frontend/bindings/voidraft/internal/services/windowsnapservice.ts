@@ -23,10 +23,18 @@ export function Cleanup(): Promise<void> & { cancel(): void } {
 }
 
 /**
+ * GetCurrentThreshold 获取当前自适应阈值（用于调试或显示）
+ */
+export function GetCurrentThreshold(): Promise<number> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3176419026) as any;
+    return $resultPromise;
+}
+
+/**
  * OnWindowSnapConfigChanged 处理窗口吸附配置变更
  */
-export function OnWindowSnapConfigChanged(enabled: boolean, threshold: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3794787039, enabled, threshold) as any;
+export function OnWindowSnapConfigChanged(enabled: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3794787039, enabled) as any;
     return $resultPromise;
 }
 
@@ -59,22 +67,6 @@ export function SetAppReferences(app: application$0.App | null, mainWindow: appl
  */
 export function SetSnapEnabled(enabled: boolean): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2280126835, enabled) as any;
-    return $resultPromise;
-}
-
-/**
- * SetSnapThreshold 设置窗口吸附阈值
- */
-export function SetSnapThreshold(threshold: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(586790049, threshold) as any;
-    return $resultPromise;
-}
-
-/**
- * StartWindowSnapMonitor 启动窗口吸附监听器
- */
-export function StartWindowSnapMonitor(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(84533508) as any;
     return $resultPromise;
 }
 

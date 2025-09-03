@@ -325,7 +325,7 @@ func (cs *ConfigService) SetBackupConfigChangeCallback(callback func(config *mod
 }
 
 // SetWindowSnapConfigChangeCallback 设置窗口吸附配置变更回调
-func (cs *ConfigService) SetWindowSnapConfigChangeCallback(callback func(enabled bool, threshold int) error) error {
+func (cs *ConfigService) SetWindowSnapConfigChangeCallback(callback func(enabled bool) error) error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
