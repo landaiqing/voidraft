@@ -8,6 +8,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -66,23 +67,20 @@ func (cm *ConfigMigrator) AutoMigrate(defaultConfig interface{}, currentConfig *
 	result := &MigrationResult{
 		MissingFields: missingFields,
 		Migrated:      len(missingFields) > 0,
-		Description:   fmt.Sprintf("Detected %d missing configuration fields", len(missingFields)),
+		Description:   fmt.Sprintf("Found %d missing fields", len(missingFields)),
 	}
 
-	// If no missing fields, return early
+	// No migration needed
 	if !result.Migrated {
-		cm.logger.Info("No missing configuration fields detected")
 		return result, nil
 	}
 
-	// Only create backup if we actually need to migrate (has missing fields)
-	if len(missingFields) > 0 {
-		if backupPath, err := cm.createBackup(); err != nil {
-			cm.logger.Error("Failed to create backup", "error", err)
-		} else {
-			result.BackupPath = backupPath
-		}
+	// Create backup before migration
+	backupPath, err := cm.createBackup()
+	if err != nil {
+		return result, fmt.Errorf("backup creation failed: %w", err)
 	}
+	result.BackupPath = backupPath
 
 	// Merge missing fields from default config
 	if err := cm.mergeDefaultFields(currentConfig, defaultKoanf, missingFields); err != nil {
@@ -94,19 +92,25 @@ func (cm *ConfigMigrator) AutoMigrate(defaultConfig interface{}, currentConfig *
 		return result, fmt.Errorf("failed to save updated config: %w", err)
 	}
 
-	cm.logger.Info("Configuration migration completed successfully", "migratedFields", len(missingFields))
+	// Clean up backup on success
+	if backupPath != "" {
+		if err := os.Remove(backupPath); err != nil {
+			cm.logger.Error("Failed to remove backup", "error", err)
+		}
+	}
+
 	return result, nil
 }
 
 // detectMissingFields detects missing configuration fields
 func (cm *ConfigMigrator) detectMissingFields(current, defaultConfig map[string]interface{}) []string {
-	var missingFields []string
-	cm.findMissingFieldsRecursive("", defaultConfig, current, &missingFields)
-	return missingFields
+	var missing []string
+	cm.findMissing("", defaultConfig, current, &missing)
+	return missing
 }
 
-// findMissingFieldsRecursive recursively finds missing fields
-func (cm *ConfigMigrator) findMissingFieldsRecursive(prefix string, defaultMap, currentMap map[string]interface{}, missing *[]string) {
+// findMissing recursively finds missing fields
+func (cm *ConfigMigrator) findMissing(prefix string, defaultMap, currentMap map[string]interface{}, missing *[]string) {
 	for key, defaultVal := range defaultMap {
 		fullKey := key
 		if prefix != "" {
@@ -115,36 +119,64 @@ func (cm *ConfigMigrator) findMissingFieldsRecursive(prefix string, defaultMap, 
 
 		currentVal, exists := currentMap[key]
 		if !exists {
-			// Field is completely missing
+			// Field completely missing - add it
 			*missing = append(*missing, fullKey)
-		} else {
-			// Check nested structures
-			if defaultNestedMap, ok := defaultVal.(map[string]interface{}); ok {
-				if currentNestedMap, ok := currentVal.(map[string]interface{}); ok {
-					cm.findMissingFieldsRecursive(fullKey, defaultNestedMap, currentNestedMap, missing)
-				} else {
-					// Current value is not a map but default is, structure mismatch
-					*missing = append(*missing, fullKey)
-				}
+		} else if defaultNestedMap, ok := defaultVal.(map[string]interface{}); ok {
+			if currentNestedMap, ok := currentVal.(map[string]interface{}); ok {
+				// Both are maps, recurse into them
+				cm.findMissing(fullKey, defaultNestedMap, currentNestedMap, missing)
 			}
+			// Type mismatch: user has different type, don't recurse
 		}
+		// For non-map default values, field exists, preserve user's value
 	}
 }
 
 // mergeDefaultFields merges default values for missing fields into current config
 func (cm *ConfigMigrator) mergeDefaultFields(current, defaultConfig *koanf.Koanf, missingFields []string) error {
+	actuallyMerged := 0
+
 	for _, field := range missingFields {
-		defaultValue := defaultConfig.Get(field)
-		if defaultValue != nil {
-			current.Set(field, defaultValue)
-			cm.logger.Debug("Merged missing field", "field", field, "value", defaultValue)
+		// Use Exists() for better semantic checking
+		if !current.Exists(field) && defaultConfig.Exists(field) {
+			// Check if setting this field would conflict with existing user values
+			if !cm.wouldCreateTypeConflict(current, field) {
+				if defaultValue := defaultConfig.Get(field); defaultValue != nil {
+					current.Set(field, defaultValue)
+					actuallyMerged++
+				}
+			}
 		}
 	}
 
-	// Update last modified timestamp
-	current.Set("metadata.lastUpdated", time.Now().Format(time.RFC3339))
+	// Update timestamp if we actually merged fields
+	if actuallyMerged > 0 {
+		current.Set("metadata.lastUpdated", time.Now().Format(time.RFC3339))
+	}
 
 	return nil
+}
+
+// wouldCreateTypeConflict checks if setting a field would overwrite existing user data
+func (cm *ConfigMigrator) wouldCreateTypeConflict(current *koanf.Koanf, fieldPath string) bool {
+	parts := strings.Split(fieldPath, ".")
+
+	// Check each parent path to see if user has a non-map value there
+	for i := 1; i < len(parts); i++ {
+		parentPath := strings.Join(parts[:i], ".")
+
+		// Use Exists() for better semantic checking
+		if current.Exists(parentPath) {
+			if parentValue := current.Get(parentPath); parentValue != nil {
+				// If parent exists and is not a map, setting this field would overwrite it
+				if _, isMap := parentValue.(map[string]interface{}); !isMap {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }
 
 // createBackup creates a backup of the configuration file
@@ -165,7 +197,6 @@ func (cm *ConfigMigrator) createBackup() (string, error) {
 		return "", fmt.Errorf("failed to create backup: %w", err)
 	}
 
-	cm.logger.Info("Configuration backup created", "path", backupPath)
 	return backupPath, nil
 }
 
