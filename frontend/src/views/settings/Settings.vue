@@ -19,6 +19,11 @@ const navItems = [
   { id: 'updates', icon: '🔄', route: '/settings/updates' }
 ];
 
+// 仅在开发环境添加测试页面导航
+if (import.meta.env.DEV) {
+  navItems.push({ id: 'test', icon: '🧪', route: '/settings/test' });
+}
+
 const activeNavItem = ref(route.path.split('/').pop() || 'general');
 
 // 处理导航点击
@@ -56,7 +61,7 @@ const goBackToEditor = async () => {
           @click="handleNavClick(item)"
         >
           <span class="nav-icon">{{ item.icon }}</span>
-          <span class="nav-text">{{ t(`settings.${item.id}`) }}</span>
+          <span class="nav-text">{{ item.id === 'test' ? 'Test' : t(`settings.${item.id}`) }}</span>
         </div>
       </div>
       <div class="settings-footer">

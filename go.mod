@@ -21,6 +21,7 @@ require (
 require (
 	code.gitea.io/sdk/gitea v0.21.0 // indirect
 	dario.cat/mergo v1.0.2 // indirect
+	git.sr.ht/~jackmordaunt/go-toast/v2 v2.0.3 // indirect
 	github.com/42wim/httpsig v1.2.3 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -77,6 +78,7 @@ require (
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	golang.org/x/crypto v0.41.0 // indirect
 	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
+	golang.org/x/image v0.24.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect

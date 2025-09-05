@@ -4,35 +4,46 @@ import (
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/services/badge"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
 
 // ServiceManager 服务管理器，负责协调各个服务
 type ServiceManager struct {
-	configService      *ConfigService
-	databaseService    *DatabaseService
-	documentService    *DocumentService
-	windowService      *WindowService
-	windowSnapService  *WindowSnapService
-	migrationService   *MigrationService
-	systemService      *SystemService
-	hotkeyService      *HotkeyService
-	dialogService      *DialogService
-	trayService        *TrayService
-	keyBindingService  *KeyBindingService
-	extensionService   *ExtensionService
-	startupService     *StartupService
-	selfUpdateService  *SelfUpdateService
-	translationService *TranslationService
-	themeService       *ThemeService
-	BackupService      *BackupService
-	logger             *log.LogService
+	configService       *ConfigService
+	databaseService     *DatabaseService
+	documentService     *DocumentService
+	windowService       *WindowService
+	windowSnapService   *WindowSnapService
+	migrationService    *MigrationService
+	systemService       *SystemService
+	hotkeyService       *HotkeyService
+	dialogService       *DialogService
+	trayService         *TrayService
+	keyBindingService   *KeyBindingService
+	extensionService    *ExtensionService
+	startupService      *StartupService
+	selfUpdateService   *SelfUpdateService
+	translationService  *TranslationService
+	themeService        *ThemeService
+	badgeService        *badge.BadgeService
+	notificationService *notifications.NotificationService
+	testService         *TestService // 测试服务（仅开发环境）
+	BackupService       *BackupService
+	logger              *log.LogService
 }
 
 // NewServiceManager 创建新的服务管理器实例
 func NewServiceManager() *ServiceManager {
 	// 初始化日志服务
 	logger := log.New()
+
+	// 初始化badge服务
+	badgeService := badge.New()
+
+	// 初始化通知服务
+	notificationService := notifications.New()
 
 	// 初始化配置服务
 	configService := NewConfigService(logger)
@@ -77,7 +88,7 @@ func NewServiceManager() *ServiceManager {
 	startupService := NewStartupService(configService, logger)
 
 	// 初始化自我更新服务
-	selfUpdateService, err := NewSelfUpdateService(configService, logger)
+	selfUpdateService, err := NewSelfUpdateService(configService, badgeService, notificationService, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -90,6 +101,9 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化备份服务
 	backupService := NewBackupService(configService, databaseService, logger)
+
+	// 初始化测试服务（开发环境使用）
+	testService := NewTestService(badgeService, notificationService, logger)
 
 	// 使用新的配置通知系统设置热键配置变更监听
 	err = configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
@@ -124,24 +138,27 @@ func NewServiceManager() *ServiceManager {
 	}
 
 	return &ServiceManager{
-		configService:      configService,
-		databaseService:    databaseService,
-		documentService:    documentService,
-		windowService:      windowService,
-		windowSnapService:  windowSnapService,
-		migrationService:   migrationService,
-		systemService:      systemService,
-		hotkeyService:      hotkeyService,
-		dialogService:      dialogService,
-		trayService:        trayService,
-		keyBindingService:  keyBindingService,
-		extensionService:   extensionService,
-		startupService:     startupService,
-		selfUpdateService:  selfUpdateService,
-		translationService: translationService,
-		themeService:       themeService,
-		BackupService:      backupService,
-		logger:             logger,
+		configService:       configService,
+		databaseService:     databaseService,
+		documentService:     documentService,
+		windowService:       windowService,
+		windowSnapService:   windowSnapService,
+		migrationService:    migrationService,
+		systemService:       systemService,
+		hotkeyService:       hotkeyService,
+		dialogService:       dialogService,
+		trayService:         trayService,
+		keyBindingService:   keyBindingService,
+		extensionService:    extensionService,
+		startupService:      startupService,
+		selfUpdateService:   selfUpdateService,
+		translationService:  translationService,
+		themeService:        themeService,
+		badgeService:        badgeService,
+		notificationService: notificationService,
+		testService:         testService,
+		BackupService:       backupService,
+		logger:              logger,
 	}
 }
 
@@ -164,6 +181,9 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.selfUpdateService),
 		application.NewService(sm.translationService),
 		application.NewService(sm.themeService),
+		application.NewService(sm.badgeService),
+		application.NewService(sm.notificationService),
+		application.NewService(sm.testService), // 注册测试服务
 		application.NewService(sm.BackupService),
 	}
 	return services
@@ -242,4 +262,14 @@ func (sm *ServiceManager) GetThemeService() *ThemeService {
 // GetWindowSnapService 获取窗口吸附服务实例
 func (sm *ServiceManager) GetWindowSnapService() *WindowSnapService {
 	return sm.windowSnapService
+}
+
+// GetBadgeService 获取badge服务实例
+func (sm *ServiceManager) GetBadgeService() *badge.BadgeService {
+	return sm.badgeService
+}
+
+// GetNotificationService 获取通知服务实例
+func (sm *ServiceManager) GetNotificationService() *notifications.NotificationService {
+	return sm.notificationService
 }

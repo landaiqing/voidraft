@@ -13,6 +13,7 @@ import * as MigrationService from "./migrationservice.js";
 import * as SelfUpdateService from "./selfupdateservice.js";
 import * as StartupService from "./startupservice.js";
 import * as SystemService from "./systemservice.js";
+import * as TestService from "./testservice.js";
 import * as ThemeService from "./themeservice.js";
 import * as TranslationService from "./translationservice.js";
 import * as TrayService from "./trayservice.js";
@@ -31,6 +32,7 @@ export {
     SelfUpdateService,
     StartupService,
     SystemService,
+    TestService,
     ThemeService,
     TranslationService,
     TrayService,

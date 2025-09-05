@@ -6,7 +6,7 @@ package services
 #cgo CFLAGS: -I../lib
 #cgo LDFLAGS: -luser32
 #include "../lib/hotkey_windows.c"
-#include "hotkey_windows.h"
+#include "../lib/hotkey_windows.h"
 */
 import "C"
 

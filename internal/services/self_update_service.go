@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/creativeprojects/go-selfupdate"
+	"github.com/wailsapp/wails/v3/pkg/services/badge"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 	"os"
 	"runtime"
 	"time"
@@ -26,16 +28,18 @@ type SelfUpdateResult struct {
 
 // SelfUpdateService 自我更新服务
 type SelfUpdateService struct {
-	logger        *log.LogService
-	configService *ConfigService
-	config        *models.AppConfig
+	logger              *log.LogService
+	configService       *ConfigService
+	badgeService        *badge.BadgeService                // 直接使用Wails原生badge服务
+	notificationService *notifications.NotificationService // 通知服务
+	config              *models.AppConfig
 
 	// 状态管理
 	isUpdating bool
 }
 
 // NewSelfUpdateService 创建自我更新服务实例
-func NewSelfUpdateService(configService *ConfigService, logger *log.LogService) (*SelfUpdateService, error) {
+func NewSelfUpdateService(configService *ConfigService, badgeService *badge.BadgeService, notificationService *notifications.NotificationService, logger *log.LogService) (*SelfUpdateService, error) {
 	// 获取配置
 	appConfig, err := configService.GetConfig()
 	if err != nil {
@@ -43,10 +47,12 @@ func NewSelfUpdateService(configService *ConfigService, logger *log.LogService) 
 	}
 
 	service := &SelfUpdateService{
-		logger:        logger,
-		configService: configService,
-		config:        appConfig,
-		isUpdating:    false,
+		logger:              logger,
+		configService:       configService,
+		badgeService:        badgeService,
+		notificationService: notificationService,
+		config:              appConfig,
+		isUpdating:          false,
 	}
 
 	return service, nil
@@ -63,6 +69,7 @@ func (s *SelfUpdateService) CheckForUpdates(ctx context.Context) (*SelfUpdateRes
 	// 首先尝试主要更新源
 	primaryResult, err := s.checkSourceForUpdates(ctx, s.config.Updates.PrimarySource)
 	if err == nil && primaryResult != nil {
+		s.handleUpdateBadge(primaryResult)
 		return primaryResult, nil
 	}
 
@@ -71,9 +78,12 @@ func (s *SelfUpdateService) CheckForUpdates(ctx context.Context) (*SelfUpdateRes
 	if backupErr != nil {
 		// 如果备用源也失败，返回主要源的错误信息
 		result.Error = fmt.Sprintf("Primary source error: %v; Backup source error: %v", err, backupErr)
+		// 确保在检查失败时也调用handleUpdateBadge来清除可能存在的badge
+		s.handleUpdateBadge(result)
 		return result, errors.New(result.Error)
 	}
 
+	s.handleUpdateBadge(backupResult)
 	return backupResult, nil
 }
 
@@ -314,6 +324,13 @@ func (s *SelfUpdateService) ApplyUpdate(ctx context.Context) (*SelfUpdateResult,
 		s.logger.Error("Failed to migrate config after update", "error", err)
 	}
 
+	// 更新成功，移除badge
+	if s.badgeService != nil {
+		if err := s.badgeService.RemoveBadge(); err != nil {
+			s.logger.Error("failed to remove update badge after successful update", "error", err)
+		}
+	}
+
 	return result, nil
 }
 
@@ -395,6 +412,13 @@ func (s *SelfUpdateService) updateFromSource(ctx context.Context, sourceType mod
 		s.logger.Error("Failed to update config version", "error", err)
 	}
 
+	// 更新成功，移除badge
+	if s.badgeService != nil {
+		if err := s.badgeService.RemoveBadge(); err != nil {
+			s.logger.Error("failed to remove update badge after successful update", "error", err)
+		}
+	}
+
 	return result, nil
 }
 
@@ -464,4 +488,64 @@ func (s *SelfUpdateService) cleanupBackup(backupPath string) error {
 		return fmt.Errorf("failed to remove backup file: %w", err)
 	}
 	return nil
+}
+
+// handleUpdateBadge 处理更新通知badge和通知
+func (s *SelfUpdateService) handleUpdateBadge(result *SelfUpdateResult) {
+	if result != nil && result.HasUpdate {
+		// 有更新时显示更新badge
+		if s.badgeService != nil {
+			if err := s.badgeService.SetBadge("●"); err != nil {
+				s.logger.Error("failed to set update badge", "error", err)
+			}
+		}
+
+		// 发送简单通知
+		s.sendUpdateNotification(result)
+	} else {
+		// 没有更新或出错时移除badge
+		if s.badgeService != nil {
+			if err := s.badgeService.RemoveBadge(); err != nil {
+				s.logger.Error("failed to remove update badge", "error", err)
+			}
+		}
+	}
+}
+
+// sendUpdateNotification 发送更新通知
+func (s *SelfUpdateService) sendUpdateNotification(result *SelfUpdateResult) {
+	if s.notificationService == nil {
+		return
+	}
+
+	// 检查通知授权（macOS需要）
+	authorized, err := s.notificationService.CheckNotificationAuthorization()
+	if err != nil {
+		s.logger.Error("Failed to check notification authorization", "error", err)
+		return
+	}
+
+	if !authorized {
+		authorized, err = s.notificationService.RequestNotificationAuthorization()
+		if err != nil || !authorized {
+			s.logger.Error("Failed to get notification authorization", "error", err)
+			return
+		}
+	}
+
+	// 构建简单通知内容
+	title := "Voidraft Update Available"
+	body := fmt.Sprintf("New version %s available (current: %s)", result.LatestVersion, result.CurrentVersion)
+
+	// 发送简单通知
+	err = s.notificationService.SendNotification(notifications.NotificationOptions{
+		ID:       "update_available",
+		Title:    title,
+		Subtitle: "New version available",
+		Body:     body,
+	})
+	if err != nil {
+		s.logger.Error("Failed to send notification", "error", err)
+		return
+	}
 }
