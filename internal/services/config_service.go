@@ -109,9 +109,6 @@ func (cs *ConfigService) initConfig() error {
 		return cs.createDefaultConfig()
 	}
 
-	// 检查并自动迁移配置
-	cs.checkConfigMigration()
-
 	// 配置文件存在，直接加载现有配置
 	cs.fileProvider = file.Provider(cs.settingsPath)
 	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
@@ -121,8 +118,8 @@ func (cs *ConfigService) initConfig() error {
 	return nil
 }
 
-// checkConfigMigration 检查配置迁移
-func (cs *ConfigService) checkConfigMigration() error {
+// MigrateConfig 执行配置迁移
+func (cs *ConfigService) MigrateConfig() error {
 	if cs.configMigrator == nil {
 		return nil
 	}

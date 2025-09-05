@@ -238,7 +238,7 @@ func TestConfigMigrator_NoOverwrite(t *testing.T) {
 	assert.Equal(t, "new section", k.String("newSection.value"), "Missing section should be added")
 }
 
-// TestConfigMigrator_TypeMismatch tests handling of type mismatches
+// TestConfigMigrator_TypeMismatch tests handling of type mismatches (config structure evolution)
 func TestConfigMigrator_TypeMismatch(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "config_migrator_type_test")
 	if err != nil {
@@ -290,13 +290,95 @@ func TestConfigMigrator_TypeMismatch(t *testing.T) {
 	result, err := migrator.AutoMigrate(defaultConfig, k)
 	assert.NoError(t, err)
 
-	// Should detect missing fields but refuse to merge them due to type conflicts
-	assert.True(t, result.Migrated, "Migration should be attempted")
-	assert.Greater(t, len(result.MissingFields), 0, "Should detect missing fields even with type mismatch")
+	// Should detect missing fields and merge them, overriding type conflicts for config evolution
+	assert.True(t, result.Migrated, "Migration should be performed")
+	assert.Greater(t, len(result.MissingFields), 0, "Should detect missing fields with type mismatch")
 
-	// Verify user's type-mismatched values are preserved (not overwritten)
-	assert.Equal(t, "simple_string", k.String("user.settings"), "User's string value should be preserved")
-	assert.Equal(t, int64(123), k.Int64("newSection"), "User's number value should be preserved")
+	// Verify that type-mismatched values are overwritten with new structure (config evolution)
+	// This is important for software upgrades where config structure changes
+	assert.NotEqual(t, "simple_string", k.String("user.settings"), "User's string should be overwritten with new structure")
+	assert.NotEqual(t, int64(123), k.Int64("newSection"), "User's number should be overwritten with new structure")
+
+	// Verify new structure is properly applied
+	assert.True(t, k.Bool("user.settings.autoSave"), "New settings structure should be applied")
+	assert.Equal(t, "en", k.String("user.settings.language"), "New settings structure should be applied")
+	assert.True(t, k.Bool("user.settings.newSetting"), "New settings structure should be applied")
+	assert.Equal(t, "value", k.String("user.settings.newSetting2"), "New settings structure should be applied")
+	assert.True(t, k.Bool("newSection.enabled"), "New section structure should be applied")
+	assert.Equal(t, "new section", k.String("newSection.value"), "New section structure should be applied")
+}
+
+// TestConfigMigrator_ConfigEvolution tests configuration structure evolution scenarios
+func TestConfigMigrator_ConfigEvolution(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "config_migrator_evolution_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Simulate old config format where "features" was a simple string
+	// but new version expects it to be an object
+	oldConfig := map[string]interface{}{
+		"app": map[string]interface{}{
+			"name":     "MyApp",
+			"version":  "1.0.0",
+			"features": "plugin1,plugin2", // Old: simple comma-separated string
+		},
+		"database": "sqlite://data.db", // Old: simple string
+	}
+
+	configPath := filepath.Join(tempDir, "config.json")
+	jsonData, _ := json.MarshalIndent(oldConfig, "", "  ")
+	os.WriteFile(configPath, jsonData, 0644)
+
+	logger := log.New()
+	migrator := NewConfigMigrator(logger, tempDir, "config", configPath)
+	k := koanf.New(".")
+	k.Load(file.Provider(configPath), jsonparser.Parser())
+
+	// New config format where "features" and "database" are objects
+	type NewConfig struct {
+		App struct {
+			Name     string `json:"name"`
+			Version  string `json:"version"`
+			Features struct {
+				Enabled []string `json:"enabled"`
+				Config  string   `json:"config"`
+			} `json:"features"`
+		} `json:"app"`
+		Database struct {
+			Type string `json:"type"`
+			URL  string `json:"url"`
+		} `json:"database"`
+	}
+
+	defaultConfig := NewConfig{}
+	defaultConfig.App.Name = "DefaultApp" // Will be preserved from user
+	defaultConfig.App.Version = "2.0.0"   // Will be preserved from user
+	defaultConfig.App.Features.Enabled = []string{"newFeature"}
+	defaultConfig.App.Features.Config = "default.conf"
+	defaultConfig.Database.Type = "postgresql"
+	defaultConfig.Database.URL = "postgres://localhost:5432/db"
+
+	// Run migration
+	result, err := migrator.AutoMigrate(defaultConfig, k)
+	assert.NoError(t, err)
+	assert.True(t, result.Migrated)
+
+	// User's non-conflicting values should be preserved
+	assert.Equal(t, "MyApp", k.String("app.name"), "User's app name should be preserved")
+	assert.Equal(t, "1.0.0", k.String("app.version"), "User's version should be preserved")
+
+	// Conflicting structure should be evolved (old string → new object)
+	assert.NotEqual(t, "plugin1,plugin2", k.String("app.features"), "Old features string should be replaced")
+	assert.Equal(t, []string{"newFeature"}, k.Strings("app.features.enabled"), "New features structure should be applied")
+	assert.Equal(t, "default.conf", k.String("app.features.config"), "New features structure should be applied")
+
+	assert.NotEqual(t, "sqlite://data.db", k.String("database"), "Old database string should be replaced")
+	assert.Equal(t, "postgresql", k.String("database.type"), "New database structure should be applied")
+	assert.Equal(t, "postgres://localhost:5432/db", k.String("database.url"), "New database structure should be applied")
+
+	t.Logf("Successfully evolved config structure, fields migrated: %d", len(result.MissingFields))
 }
 
 // TestConfigMigrator_ComplexNested tests complex nested structure migration

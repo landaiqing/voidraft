@@ -8,7 +8,6 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -54,7 +53,6 @@ func NewConfigMigrator(
 
 // AutoMigrate automatically detects and migrates missing configuration fields
 func (cm *ConfigMigrator) AutoMigrate(defaultConfig interface{}, currentConfig *koanf.Koanf) (*MigrationResult, error) {
-	// Load default config into temporary koanf instance
 	defaultKoanf := koanf.New(".")
 	if err := defaultKoanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
 		return nil, fmt.Errorf("failed to load default config: %w", err)
@@ -137,14 +135,12 @@ func (cm *ConfigMigrator) mergeDefaultFields(current, defaultConfig *koanf.Koanf
 	actuallyMerged := 0
 
 	for _, field := range missingFields {
-		// Use Exists() for better semantic checking
-		if !current.Exists(field) && defaultConfig.Exists(field) {
-			// Check if setting this field would conflict with existing user values
-			if !cm.wouldCreateTypeConflict(current, field) {
-				if defaultValue := defaultConfig.Get(field); defaultValue != nil {
-					current.Set(field, defaultValue)
-					actuallyMerged++
-				}
+		if defaultConfig.Exists(field) {
+			if defaultValue := defaultConfig.Get(field); defaultValue != nil {
+				// Always set the field, even if it causes type conflicts
+				// This allows configuration structure evolution during upgrades
+				current.Set(field, defaultValue)
+				actuallyMerged++
 			}
 		}
 	}
@@ -155,28 +151,6 @@ func (cm *ConfigMigrator) mergeDefaultFields(current, defaultConfig *koanf.Koanf
 	}
 
 	return nil
-}
-
-// wouldCreateTypeConflict checks if setting a field would overwrite existing user data
-func (cm *ConfigMigrator) wouldCreateTypeConflict(current *koanf.Koanf, fieldPath string) bool {
-	parts := strings.Split(fieldPath, ".")
-
-	// Check each parent path to see if user has a non-map value there
-	for i := 1; i < len(parts); i++ {
-		parentPath := strings.Join(parts[:i], ".")
-
-		// Use Exists() for better semantic checking
-		if current.Exists(parentPath) {
-			if parentValue := current.Get(parentPath); parentValue != nil {
-				// If parent exists and is not a map, setting this field would overwrite it
-				if _, isMap := parentValue.(map[string]interface{}); !isMap {
-					return true
-				}
-			}
-		}
-	}
-
-	return false
 }
 
 // createBackup creates a backup of the configuration file

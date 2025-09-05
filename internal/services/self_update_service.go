@@ -251,7 +251,6 @@ func (s *SelfUpdateService) ApplyUpdate(ctx context.Context) (*SelfUpdateResult,
 
 	// 检查是否有可用更新
 	if !primaryRelease.GreaterThan(s.config.Updates.Version) {
-		s.logger.Info("Current version is up to date, no need to apply update")
 		result.LatestVersion = primaryRelease.Version()
 		return result, nil
 	}
@@ -310,6 +309,11 @@ func (s *SelfUpdateService) ApplyUpdate(ctx context.Context) (*SelfUpdateResult,
 		s.logger.Error("Failed to update config version", "error", err)
 	}
 
+	// 执行配置迁移
+	if err := s.configService.MigrateConfig(); err != nil {
+		s.logger.Error("Failed to migrate config after update", "error", err)
+	}
+
 	return result, nil
 }
 
@@ -365,7 +369,6 @@ func (s *SelfUpdateService) updateFromSource(ctx context.Context, sourceType mod
 	}
 
 	// 尝试下载并应用更新，不设置超时
-	s.logger.Info("Downloading update...", "source", sourceType)
 	err = updater.UpdateTo(ctx, release, exe)
 
 	if err != nil {
