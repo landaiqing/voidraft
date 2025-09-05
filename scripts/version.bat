@@ -31,6 +31,19 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Sync remote tags
+echo [INFO] Syncing remote tags...
+echo [INFO] Deleting local tags...
+for /f "delims=" %%i in ('git tag -l') do git tag -d %%i >nul 2>&1
+
+echo [INFO] Fetching remote tags...
+git fetch origin --prune >nul 2>&1
+if errorlevel 1 (
+    echo [WARNING] Failed to fetch from remote, using local tags
+) else (
+    echo [INFO] Remote tags synced successfully
+)
+
 REM Get latest git tag
 git describe --abbrev=0 --tags > temp_tag.txt 2>nul
 if errorlevel 1 (

@@ -51,6 +51,14 @@ export function GetSettingsPath(): Promise<string> & { cancel(): void } {
 }
 
 /**
+ * MigrateConfig 执行配置迁移
+ */
+export function MigrateConfig(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(434292783) as any;
+    return $resultPromise;
+}
+
+/**
  * ResetConfig 强制重置所有配置为默认值
  */
 export function ResetConfig(): Promise<void> & { cancel(): void } {

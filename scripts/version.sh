@@ -19,6 +19,18 @@ else
         echo "[ERROR] Not in a git repository"
         exit 1
     else
+        # 同步远程标签
+        echo "[INFO] Syncing remote tags..."
+        echo "[INFO] Deleting local tags..."
+        git tag -l | xargs git tag -d &> /dev/null
+        
+        echo "[INFO] Fetching remote tags..."
+        if git fetch origin --prune &> /dev/null; then
+            echo "[INFO] Remote tags synced successfully"
+        else
+            echo "[WARNING] Failed to fetch from remote, using local tags"
+        fi
+        
         # 获取最新的git标签
         LATEST_TAG=$(git describe --abbrev=0 --tags 2>/dev/null)
         
