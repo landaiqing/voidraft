@@ -55,6 +55,7 @@
     "prettier": "^3.6.2",
     "remarkable": "^2.0.1",
     "sass": "^1.92.1",
+    "sql-formatter": "^15.6.9",
     "vue": "^3.5.21",
     "vue-i18n": "^11.1.12",
     "vue-pick-colors": "^1.8.0",

@@ -37,6 +37,7 @@ import cssPrettierPlugin from "prettier/plugins/postcss"
 import markdownPrettierPlugin from "prettier/plugins/markdown"
 import yamlPrettierPlugin from "prettier/plugins/yaml"
 import goPrettierPlugin from "@/utils/prettier/plugins/go/go"
+import sqlPrettierPlugin from "@/utils/prettier/plugins/sql/sql"
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -50,7 +51,8 @@ export class LanguageInfo {
         public prettier?: {
             parser: string;
             plugins: any[];
-        }) {}
+        }) {
+    }
 }
 
 /**
@@ -67,7 +69,10 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "html",
         plugins: [htmlPrettierPlugin]
     }),
-    new LanguageInfo("sql", "SQL", StandardSQL.language.parser),
+    new LanguageInfo("sql", "SQL", StandardSQL.language.parser, {
+        parser: "sql",
+        plugins: [sqlPrettierPlugin]
+    }),
     new LanguageInfo("md", "Markdown", markdownLanguage.parser, {
         parser: "markdown",
         plugins: [markdownPrettierPlugin]
@@ -89,7 +94,7 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [yamlPrettierPlugin]
     }),
     new LanguageInfo("toml", "TOML", StreamLanguage.define(toml).parser),
-    new LanguageInfo("go", "Go", StreamLanguage.define(go).parser,{
+    new LanguageInfo("go", "Go", StreamLanguage.define(go).parser, {
         parser: "go",
         plugins: [goPrettierPlugin]
     }),
