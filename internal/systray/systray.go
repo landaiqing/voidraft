@@ -11,10 +11,10 @@ import (
 func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
 	// 创建系统托盘
 	systray := app.SystemTray.New()
-
+	// 设置提示
+	systray.SetTooltip("voidraft")
 	// 设置标签
 	systray.SetLabel("voidraft")
-	systray.Label()
 	// 设置图标
 	iconBytes, _ := assets.ReadFile("appicon.png")
 	systray.SetIcon(iconBytes)
