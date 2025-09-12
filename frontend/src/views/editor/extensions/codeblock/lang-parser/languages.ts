@@ -40,6 +40,8 @@ import goPrettierPlugin from "@/utils/prettier/plugins/go/go"
 import sqlPrettierPlugin from "@/utils/prettier/plugins/sql/sql"
 import phpPrettierPlugin from "@/utils/prettier/plugins/php"
 import javaPrettierPlugin from "@/utils/prettier/plugins/java"
+import xmlPrettierPlugin from "@prettier/plugin-xml"
+import * as rustPrettierPlugin from "@/utils/prettier/plugins/rust";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -91,9 +93,15 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "css",
         plugins: [cssPrettierPlugin]
     }),
-    new LanguageInfo("xml", "XML", xmlLanguage.parser),
+    new LanguageInfo("xml", "XML", xmlLanguage.parser,{
+        parser: "xml",
+        plugins: [xmlPrettierPlugin]
+    }),
     new LanguageInfo("cpp", "C++", cppLanguage.parser),
-    new LanguageInfo("rs", "Rust", rustLanguage.parser),
+    new LanguageInfo("rs", "Rust", rustLanguage.parser,{
+        parser: "jinx-rust",
+        plugins: [rustPrettierPlugin]
+    }),
     new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser),
     new LanguageInfo("rb", "Ruby", StreamLanguage.define(ruby).parser),
     new LanguageInfo("sh", "Shell", StreamLanguage.define(shell).parser),
