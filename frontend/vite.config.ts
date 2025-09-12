@@ -2,6 +2,7 @@ import {defineConfig, loadEnv} from 'vite';
 import vue from '@vitejs/plugin-vue';
 import Components from 'unplugin-vue-components/vite';
 import * as path from 'path';
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 export default defineConfig(({mode}: { mode: string }): object => {
     const env: Record<string, string> = loadEnv(mode, process.cwd());
@@ -15,6 +16,7 @@ export default defineConfig(({mode}: { mode: string }): object => {
         },
         plugins: [
             vue(),
+            nodePolyfills(),
             Components({
                 dts: true,
                 dirs: ['src/components'],

@@ -1,60 +1,459 @@
-import { format } from 'sql-formatter';
+import { JSOX } from 'jsox';
+import nodeSqlParser from 'node-sql-parser';
+import {
+  format,
+  formatDialect,
+} from 'sql-formatter';
 import { detectDialect } from './detect.mjs';
+import { languages } from './languages.js';
 
-// Languages
-export const languages = [{
-    name: "SQL",
-    parsers: ["sql"],
-    extensions: [".sql"]
-}];
+const parser = new nodeSqlParser.Parser();
+
+const SQL_FORMATTER = 'sql-formatter';
+const NODE_SQL_PARSER = 'node-sql-parser';
 
 // Parsers
 export const parsers = {
     sql: {
-        parse: (text) => text,
-        astFormat: "sql-format",
-        locStart: (node) => 0,
-        locEnd: (node) => node.length
-    }
+    parse(text, options = {}) {
+      const { formatter, type, database } = options;
+      
+      return formatter === SQL_FORMATTER
+        ? text
+        : parser.astify(text, { type, database });
+    },
+    astFormat: 'sql',
+    locStart: () => -1,
+    locEnd: () => -1,
+  },
 };
 
 // Printers
 export const printers = {
-    "sql-format": {
-        print: (path) => {
-            const text = path.getValue();
-            
-            if (!text || typeof text !== 'string') {
-                return text;
-            }
+  sql: {
+    print(path, options = {}) {
+      const value = path.node;
+      const {
+        formatter = SQL_FORMATTER,
+        type,
+        database,
+        dialect,
+        language,
+        params,
+        paramTypes,
+        autoDetectDialect = true,
+        ...formatOptions
+      } = options;
 
-            try {
-                // 自动检测SQL方言
-                const dialect = detectDialect(text);
-                
-                // 格式化配置 - 使用固定的最佳实践配置
-                const formatOptions = {
-                    language: dialect,
-                    tabWidth: 2,
-                    useTabs: true,
-                    keywordCase: 'upper',
-                    dataTypeCase: 'upper', 
-                    functionCase: 'upper',
-                    identifierCase: 'preserve'
-                };
+      let formatted;
 
-                return format(text, formatOptions);
-            } catch (error) {
-                return text;
-            }
+      if (typeof value === 'string') {
+        // 准备sql-formatter选项
+        const sqlFormatterOptions = {
+          ...formatOptions,
+          params:
+            params == null
+              ? undefined
+              : JSOX.parse(params),
+          paramTypes:
+            paramTypes == null
+              ? undefined
+              : JSOX.parse(paramTypes),
+        };
+
+        let finalLanguage = language;
+        let finalDialect = dialect;
+        
+        if (autoDetectDialect && !language && !dialect) {
+          const detectedDialect = detectDialect(value);
+          finalLanguage = detectedDialect;
         }
-    }
+
+        // 使用适当的格式化方法
+        if (finalDialect != null) {
+          // 使用formatDialect方法
+          formatted = formatDialect(value, {
+            ...sqlFormatterOptions,
+            dialect: JSOX.parse(finalDialect),
+          });
+        } else {
+          // 使用format方法
+          formatted = format(value, {
+            ...sqlFormatterOptions,
+            language: finalLanguage,
+          });
+        }
+      } else {
+        // 使用node-sql-parser进行格式化
+        formatted = parser.sqlify(value, { type, database });
+      }
+
+      return formatted + '\n';
+    },
+  },
 };
 
+// 插件选项
+export const options = {
+  formatter: {
+    category: 'Config',
+    type: 'choice',
+    default: SQL_FORMATTER,
+    description: 'Choose which formatter to be used',
+    choices: [
+      {
+        value: SQL_FORMATTER,
+        description: 'use `sql-formatter` as formatter',
+      },
+      {
+        value: NODE_SQL_PARSER,
+        description: 'use `node-sql-parser` as formatter',
+      },
+    ],
+  },
+  autoDetectDialect: {
+    category: 'Config',
+    type: 'boolean',
+    default: true,
+    description: 'Automatically detect SQL dialect if language/dialect is not specified',
+  },
+  dialect: {
+    category: 'Config',
+    type: 'string',
+    description: 'SQL dialect for `sql-formatter` formatDialect()',
+  },
+  language: {
+    category: 'Config',
+    type: 'choice',
+    default: 'sql',
+    description: 'SQL dialect for `sql-formatter` format()',
+    choices: [
+      {
+        value: 'sql',
+        description: 'Standard SQL: https://en.wikipedia.org/wiki/SQL:2011',
+      },
+      {
+        value: 'bigquery',
+        description:
+          'Google Standard SQL (Bigquery): https://cloud.google.com/bigquery',
+      },
+      {
+        value: 'db2',
+        description: 'IBM DB2: https://www.ibm.com/products/db2',
+      },
+      {
+        value: 'db2i',
+        description:
+          'IBM DB2i (experimental): https://www.ibm.com/docs/en/i/7.5?topic=overview-db2-i',
+      },
+      {
+        value: 'hive',
+        description: 'Apache Hive: https://hive.apache.org',
+      },
+      {
+        value: 'mariadb',
+        description: 'MariaDB: https://mariadb.com',
+      },
+      {
+        value: 'mysql',
+        description: 'MySQL: https://www.mysql.com',
+      },
+      {
+        value: 'n1ql',
+        description:
+          'Couchbase N1QL: https://www.couchbase.com/products/n1ql',
+      },
+      {
+        value: 'plsql',
+        description:
+          'Oracle PL/SQL: https://www.oracle.com/database/technologies/appdev/plsql.html',
+      },
+      {
+        value: 'postgresql',
+        description: 'PostgreSQL: https://www.postgresql.org',
+      },
+      {
+        value: 'redshift',
+        description:
+          'Amazon Redshift: https://docs.aws.amazon.com/redshift/latest/dg/cm_chap_SQLCommandRef.html',
+      },
+      {
+        value: 'singlestoredb',
+        description:
+          'SingleStoreDB: https://docs.singlestore.com/db/v7.8/en/introduction/singlestore-documentation.html',
+      },
+      {
+        value: 'snowflake',
+        description: 'Snowflake: https://docs.snowflake.com',
+      },
+      {
+        value: 'spark',
+        description: 'Spark: https://spark.apache.org',
+      },
+      {
+        value: 'sqlite',
+        description: 'SQLite: https://www.sqlite.org',
+      },
+      {
+        value: 'transactsql',
+        description:
+          'SQL Server Transact-SQL: https://docs.microsoft.com/en-us/sql/sql-server/',
+      },
+      {
+        value: 'tsql',
+        description:
+          'SQL Server Transact-SQL: https://docs.microsoft.com/en-us/sql/sql-server/',
+      },
+      {
+        value: 'trino',
+        description: 'Trino: https://trino.io',
+      },
+    ],
+  },
+  keywordCase: {
+    category: 'Output',
+    type: 'choice',
+    default: 'preserve',
+    description:
+      'Converts reserved keywords to upper- or lowercase for `sql-formatter`',
+    choices: [
+      {
+        value: 'preserve',
+        description: 'preserves the original case of reserved keywords',
+      },
+      {
+        value: 'upper',
+        description: 'converts reserved keywords to uppercase',
+      },
+      {
+        value: 'lower',
+        description: 'converts reserved keywords to lowercase',
+      },
+    ],
+  },
+  dataTypeCase: {
+    category: 'Output',
+    type: 'choice',
+    default: 'preserve',
+    description:
+      'Converts data types to upper- or lowercase for `sql-formatter`',
+    choices: [
+      {
+        value: 'preserve',
+        description: 'preserves the original case of data types',
+      },
+      {
+        value: 'upper',
+        description: 'converts data types to uppercase',
+      },
+      {
+        value: 'lower',
+        description: 'converts data types to lowercase',
+      },
+    ],
+  },
+  functionCase: {
+    category: 'Output',
+    type: 'choice',
+    default: 'preserve',
+    description:
+      'Converts functions to upper- or lowercase for `sql-formatter`',
+    choices: [
+      {
+        value: 'preserve',
+        description: 'preserves the original case of functions',
+      },
+      {
+        value: 'upper',
+        description: 'converts functions to uppercase',
+      },
+      {
+        value: 'lower',
+        description: 'converts functions to lowercase',
+      },
+    ],
+  },
+  identifierCase: {
+    category: 'Output',
+    type: 'choice',
+    default: 'preserve',
+    description:
+      'Converts identifiers to upper- or lowercase for `sql-formatter`. Only unquoted identifiers are converted. (experimental)',
+    choices: [
+      {
+        value: 'preserve',
+        description: 'preserves the original case of identifiers',
+      },
+      {
+        value: 'upper',
+        description: 'converts identifiers to uppercase',
+      },
+      {
+        value: 'lower',
+        description: 'converts identifiers to lowercase',
+      },
+    ],
+  },
+  uppercase: {
+    category: 'Output',
+    type: 'boolean',
+    deprecated: '0.7.0',
+    description: 'Use `keywordCase` option instead',
+  },
+  indentStyle: {
+    category: 'Format',
+    type: 'choice',
+    default: 'standard',
+    description: `Switches between different indentation styles for \`sql-formatter\`.
 
-// Default export
-export default {
+    Caveats of using \`"tabularLeft"\` and \`"tabularRight"\`:
+
+    - \`tabWidth\` option is ignored. Indentation will always be 10 spaces, regardless of what is specified by \`tabWidth\``,
+    choices: [
+      {
+        value: 'standard',
+        description:
+          'indents code by the amount specified by `tabWidth` option',
+      },
+      {
+        value: 'tabularLeft',
+        description:
+          'indents in tabular style with 10 spaces, aligning keywords to left',
+      },
+      {
+        value: 'tabularRight',
+        description:
+          'indents in tabular style with 10 spaces, aligning keywords to right',
+      },
+    ],
+  },
+  logicalOperatorNewline: {
+    category: 'Format',
+    type: 'choice',
+    default: 'before',
+    description:
+      'Decides newline placement before or after logical operators (AND, OR, XOR)',
+    choices: [
+      {
+        value: 'before',
+        description: 'adds newline before the operator',
+      },
+      {
+        value: 'after',
+        description: 'adds newline after the operator',
+      },
+    ],
+  },
+  expressionWidth: {
+    category: 'Format',
+    type: 'int',
+    default: 50,
+    description:
+      'Determines maximum length of parenthesized expressions for `sql-formatter`',
+  },
+  linesBetweenQueries: {
+    category: 'Format',
+    type: 'int',
+    default: 1,
+    description:
+      'Decides how many empty lines to leave between SQL statements for `sql-formatter`',
+  },
+  denseOperators: {
+    category: 'Format',
+    type: 'boolean',
+    default: false,
+    description:
+      'Decides whitespace around operators for `sql-formatter`. Does not apply to logical operators (AND, OR, XOR).',
+  },
+  newlineBeforeSemicolon: {
+    category: 'Format',
+    type: 'boolean',
+    default: false,
+    description:
+      'Whether to place query separator (`;`) on a separate line for `sql-formatter`',
+  },
+  params: {
+    category: 'Format',
+    type: 'string',
+    description:
+      'Specifies `JSOX` **stringified** parameter values to fill in for placeholders inside SQL for `sql-formatter`. This option is designed to be used through API (though nothing really prevents usage from command line).',
+  },
+  paramTypes: {
+    category: 'Config',
+    type: 'string',
+    description:
+      'Specifies `JSOX` **stringified** parameter types to support when parsing SQL prepared statements for `sql-formatter`.',
+  },
+  type: {
+    category: 'Config',
+    type: 'choice',
+    default: 'table',
+    description: 'Check the SQL with Authority List for `node-sql-parser`',
+    choices: [
+      {
+        value: 'table',
+        description: '`table` mode',
+      },
+      {
+        value: 'column',
+        description: '`column` mode',
+      },
+    ],
+  },
+  database: {
+    category: 'Config',
+    type: 'choice',
+    default: 'mysql',
+    description: 'SQL dialect for `node-sql-parser`',
+    choices: [
+      {
+        value: 'bigquery',
+        description: 'BigQuery: https://cloud.google.com/bigquery',
+      },
+      {
+        value: 'db2',
+        description: 'IBM DB2: https://www.ibm.com/analytics/db2',
+      },
+      {
+        value: 'hive',
+        description: 'Hive: https://hive.apache.org',
+      },
+      {
+        value: 'mariadb',
+        description: 'MariaDB: https://mariadb.com',
+      },
+      {
+        value: 'mysql',
+        description: 'MySQL: https://www.mysql.com',
+      },
+      {
+        value: 'postgresql',
+        description: 'PostgreSQL: https://www.postgresql.org',
+      },
+      {
+        value: 'transactsql',
+        description:
+          'TransactSQL: https://docs.microsoft.com/en-us/sql/t-sql',
+      },
+      {
+        value: 'flinksql',
+        description:
+          'FlinkSQL: https://ci.apache.org/projects/flink/flink-docs-stable',
+      },
+      {
+        value: 'snowflake',
+        description: 'Snowflake (alpha): https://docs.snowflake.com',
+      },
+    ],
+  },
+};
+
+const SqlPlugin = {
     languages,
     parsers,
-    printers
+  printers,
+  options,
 };
+
+export { languages };
+export default SqlPlugin;
