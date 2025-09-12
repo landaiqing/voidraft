@@ -39,6 +39,7 @@ import yamlPrettierPlugin from "prettier/plugins/yaml"
 import goPrettierPlugin from "@/utils/prettier/plugins/go/go"
 import sqlPrettierPlugin from "@/utils/prettier/plugins/sql/sql"
 import phpPrettierPlugin from "@/utils/prettier/plugins/php"
+import javaPrettierPlugin from "@/utils/prettier/plugins/java"
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -78,7 +79,10 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "markdown",
         plugins: [markdownPrettierPlugin]
     }),
-    new LanguageInfo("java", "Java", javaLanguage.parser),
+    new LanguageInfo("java", "Java", javaLanguage.parser,{
+        parser: "java",
+        plugins: [javaPrettierPlugin]
+    }),
     new LanguageInfo("php", "PHP", phpLanguage.configure({top: "Program"}).parser, {
         parser: "php",
         plugins: [phpPrettierPlugin]

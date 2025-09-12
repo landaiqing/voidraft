@@ -49,6 +49,7 @@
     "colors-named-hex": "^1.0.2",
     "franc-min": "^6.2.0",
     "hsl-matcher": "^1.2.4",
+    "java-parser": "^3.0.1",
     "jsox": "^1.2.123",
     "lezer": "^0.13.5",
     "linguist-languages": "^9.0.0",
