@@ -142,7 +142,6 @@ func NewServiceManager() *ServiceManager {
 		databaseService:     databaseService,
 		documentService:     documentService,
 		windowService:       windowService,
-		windowSnapService:   windowSnapService,
 		migrationService:    migrationService,
 		systemService:       systemService,
 		hotkeyService:       hotkeyService,
@@ -169,7 +168,6 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
 		application.NewService(sm.windowService),
-		application.NewService(sm.windowSnapService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
 		application.NewService(sm.migrationService),
@@ -183,7 +181,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.themeService),
 		application.NewService(sm.badgeService),
 		application.NewService(sm.notificationService),
-		application.NewService(sm.testService), // 注册测试服务
+		application.NewService(sm.testService),
 		application.NewService(sm.BackupService),
 	}
 	return services
@@ -257,11 +255,6 @@ func (sm *ServiceManager) GetDocumentService() *DocumentService {
 // GetThemeService 获取主题服务实例
 func (sm *ServiceManager) GetThemeService() *ThemeService {
 	return sm.themeService
-}
-
-// GetWindowSnapService 获取窗口吸附服务实例
-func (sm *ServiceManager) GetWindowSnapService() *WindowSnapService {
-	return sm.windowSnapService
 }
 
 // GetBadgeService 获取badge服务实例

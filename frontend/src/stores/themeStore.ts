@@ -29,11 +29,11 @@ export const useThemeStore = defineStore('theme', () => {
   const initializeThemeColors = async () => {
     try {
       const themes = await ThemeService.GetDefaultThemes();
-      if (themes.dark) {
-        Object.assign(themeColors.darkTheme, themes.dark.colors);
+      if (themes[ThemeType.ThemeTypeDark]) {
+        Object.assign(themeColors.darkTheme, themes[ThemeType.ThemeTypeDark].colors);
       }
-      if (themes.light) {
-        Object.assign(themeColors.lightTheme, themes.light.colors);
+      if (themes[ThemeType.ThemeTypeLight]) {
+        Object.assign(themeColors.lightTheme, themes[ThemeType.ThemeTypeLight].colors);
       }
     } catch (error) {
       console.warn('Failed to load themes from database, using defaults:', error);

@@ -42,6 +42,7 @@ import phpPrettierPlugin from "@/utils/prettier/plugins/php"
 import javaPrettierPlugin from "@/utils/prettier/plugins/java"
 import xmlPrettierPlugin from "@prettier/plugin-xml"
 import * as rustPrettierPlugin from "@/utils/prettier/plugins/rust";
+import * as shellPrettierPlugin from "@/utils/prettier/plugins/shell";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -104,7 +105,10 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser),
     new LanguageInfo("rb", "Ruby", StreamLanguage.define(ruby).parser),
-    new LanguageInfo("sh", "Shell", StreamLanguage.define(shell).parser),
+    new LanguageInfo("sh", "Shell", StreamLanguage.define(shell).parser,{
+        parser: "sh",
+        plugins: [shellPrettierPlugin]
+    }),
     new LanguageInfo("yaml", "YAML", yamlLanguage.parser, {
         parser: "yaml",
         plugins: [yamlPrettierPlugin]
