@@ -43,7 +43,7 @@ export const {
 	stripTrailingHardline,
 } = doc.utils;
 
-// Fallback implementations for removed utils in prettier 3
+// Fallback implementations for removed common in prettier 3
 export const isConcat = (doc: any): boolean => Array.isArray(doc);
 export const getDocParts = (doc: any): any[] => Array.isArray(doc) ? doc : [doc];
 export const propagateBreaks = (doc: any): any => doc;

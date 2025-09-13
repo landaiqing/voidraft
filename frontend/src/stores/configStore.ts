@@ -15,7 +15,7 @@ import {
     AuthMethod
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
-import {ConfigUtils} from '@/utils/configUtils';
+import {ConfigUtils} from '@/common/utils/configUtils';
 import * as runtime from '@wailsio/runtime';
 // 国际化相关导入
 export type SupportedLocaleType = 'zh-CN' | 'en-US';

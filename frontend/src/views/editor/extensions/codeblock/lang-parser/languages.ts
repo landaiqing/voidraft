@@ -36,13 +36,14 @@ import htmlPrettierPlugin from "prettier/plugins/html"
 import cssPrettierPlugin from "prettier/plugins/postcss"
 import markdownPrettierPlugin from "prettier/plugins/markdown"
 import yamlPrettierPlugin from "prettier/plugins/yaml"
-import goPrettierPlugin from "@/utils/prettier/plugins/go/go"
-import sqlPrettierPlugin from "@/utils/prettier/plugins/sql/sql"
-import phpPrettierPlugin from "@/utils/prettier/plugins/php"
-import javaPrettierPlugin from "@/utils/prettier/plugins/java"
+import goPrettierPlugin from "@/common/prettier/plugins/go/go"
+import sqlPrettierPlugin from "@/common/prettier/plugins/sql/sql"
+import phpPrettierPlugin from "@/common/prettier/plugins/php"
+import javaPrettierPlugin from "@/common/prettier/plugins/java"
 import xmlPrettierPlugin from "@prettier/plugin-xml"
-import * as rustPrettierPlugin from "@/utils/prettier/plugins/rust";
-import * as shellPrettierPlugin from "@/utils/prettier/plugins/shell";
+import * as rustPrettierPlugin from "@/common/prettier/plugins/rust";
+import * as shellPrettierPlugin from "@/common/prettier/plugins/shell";
+import tomlPrettierPlugin from "prettier-plugin-toml";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -113,7 +114,10 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "yaml",
         plugins: [yamlPrettierPlugin]
     }),
-    new LanguageInfo("toml", "TOML", StreamLanguage.define(toml).parser),
+    new LanguageInfo("toml", "TOML", StreamLanguage.define(toml).parser,{
+        parser: "toml",
+        plugins: [tomlPrettierPlugin]
+    }),
     new LanguageInfo("go", "Go", StreamLanguage.define(go).parser, {
         parser: "go",
         plugins: [goPrettierPlugin]

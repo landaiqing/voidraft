@@ -1,4 +1,4 @@
-import { LanguageType } from '@/../bindings/voidraft/internal/models/models';
+import { LanguageType } from '../../../bindings/voidraft/internal/models/models';
 import type { SupportedLocaleType } from '@/stores/configStore';
 
 /**
