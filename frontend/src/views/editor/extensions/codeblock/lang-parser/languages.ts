@@ -36,7 +36,7 @@ import htmlPrettierPlugin from "prettier/plugins/html"
 import cssPrettierPlugin from "prettier/plugins/postcss"
 import markdownPrettierPlugin from "prettier/plugins/markdown"
 import yamlPrettierPlugin from "prettier/plugins/yaml"
-import goPrettierPlugin from "@/common/prettier/plugins/go/go"
+import goPrettierPlugin from "@/common/prettier/plugins/go/go.mjs"
 import sqlPrettierPlugin from "@/common/prettier/plugins/sql/sql"
 import phpPrettierPlugin from "@/common/prettier/plugins/php"
 import javaPrettierPlugin from "@/common/prettier/plugins/java"
@@ -44,6 +44,10 @@ import xmlPrettierPlugin from "@prettier/plugin-xml"
 import * as rustPrettierPlugin from "@/common/prettier/plugins/rust";
 import * as shellPrettierPlugin from "@/common/prettier/plugins/shell";
 import tomlPrettierPlugin from "prettier-plugin-toml";
+import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
+import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
+import powershellPrettierPlugin from "@/common/prettier/plugins/powershell";
+import scalaPrettierPlugin from "@/common/prettier/plugins/scala";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -119,10 +123,13 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [tomlPrettierPlugin]
     }),
     new LanguageInfo("go", "Go", StreamLanguage.define(go).parser, {
-        parser: "go",
+        parser: "go-format",
         plugins: [goPrettierPlugin]
     }),
-    new LanguageInfo("clj", "Clojure", StreamLanguage.define(clojure).parser),
+    new LanguageInfo("clj", "Clojure", StreamLanguage.define(clojure).parser,{
+        parser: "clojure",
+        plugins: [clojurePrettierPlugin]
+    }),
     new LanguageInfo("ex", "Elixir", elixir().language.parser),
     new LanguageInfo("erl", "Erlang", StreamLanguage.define(erlang).parser),
     new LanguageInfo("js", "JavaScript", javascriptLanguage.parser, {
@@ -135,10 +142,19 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("swift", "Swift", StreamLanguage.define(swift).parser),
     new LanguageInfo("kt", "Kotlin", StreamLanguage.define(kotlin).parser),
-    new LanguageInfo("groovy", "Groovy", StreamLanguage.define(groovy).parser),
-    new LanguageInfo("ps1", "PowerShell", StreamLanguage.define(powerShell).parser),
+    new LanguageInfo("groovy", "Groovy", StreamLanguage.define(groovy).parser,{
+        parser: "groovy",
+        plugins: [groovyPrettierPlugin]
+    }),
+    new LanguageInfo("ps1", "PowerShell", StreamLanguage.define(powerShell).parser,{
+        parser: "powershell",
+        plugins: [powershellPrettierPlugin]
+    }),
     new LanguageInfo("dart", "Dart", null), // 暂无解析器
-    new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser),
+    new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser,{
+        parser: "scala",
+        plugins: [scalaPrettierPlugin]
+    }),
 ];
 
 /**
