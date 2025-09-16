@@ -43,7 +43,7 @@ import javaPrettierPlugin from "@/common/prettier/plugins/java"
 import xmlPrettierPlugin from "@prettier/plugin-xml"
 import * as rustPrettierPlugin from "@/common/prettier/plugins/rust";
 import * as shellPrettierPlugin from "@/common/prettier/plugins/shell";
-import tomlPrettierPlugin from "prettier-plugin-toml";
+import tomlPrettierPlugin from "@/common/prettier/plugins/toml";
 import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
 import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
 import powershellPrettierPlugin from "@/common/prettier/plugins/powershell";

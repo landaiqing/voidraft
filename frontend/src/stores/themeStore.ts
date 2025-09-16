@@ -29,6 +29,10 @@ export const useThemeStore = defineStore('theme', () => {
   const initializeThemeColors = async () => {
     try {
       const themes = await ThemeService.GetDefaultThemes();
+      if (!themes) {
+          Object.assign(themeColors.darkTheme, defaultDarkColors);
+          Object.assign(themeColors.lightTheme, defaultLightColors);
+      }
       if (themes[ThemeType.ThemeTypeDark]) {
         Object.assign(themeColors.darkTheme, themes[ThemeType.ThemeTypeDark].colors);
       }

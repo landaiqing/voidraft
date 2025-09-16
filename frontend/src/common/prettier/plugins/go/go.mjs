@@ -79,22 +79,32 @@ const initGoRuntimeNode = async () => {
 
 // Browser Go runtime initialization
 const initGoRuntimeBrowser = async () => {
-    if (globalThis.Go) return;
-    
+    // 总是重新初始化，因为可能存在版本不兼容问题
     try {
-        // Load wasm_exec.js dynamically in browser
+        // 移除旧的 Go 运行时
+        delete globalThis.Go;
+        
+        // 动态导入本地的 wasm_exec.js 内容
+        const wasmExecResponse = await fetch('/wasm_exec.js');
+        if (!wasmExecResponse.ok) {
+            throw new Error(`Failed to fetch wasm_exec.js: ${wasmExecResponse.status}`);
+        }
+        
+        const wasmExecCode = await wasmExecResponse.text();
+        
+        // 在全局作用域中执行 wasm_exec.js 代码
         const script = document.createElement('script');
-        script.src = '/wasm_exec.js';
+        script.textContent = wasmExecCode;
         document.head.appendChild(script);
-
-        await new Promise((resolve, reject) => {
-            script.onload = resolve;
-            script.onerror = () => reject(new Error('Failed to load wasm_exec.js'));
-        });
+        
+        // 等待一小段时间确保脚本执行完成
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         if (!globalThis.Go) {
-            throw new Error('Go WASM runtime not available after loading wasm_exec.js');
+            throw new Error('Go WASM runtime not available after executing wasm_exec.js');
         }
+        
+        console.log('Go runtime initialized successfully');
     } catch (error) {
         console.error('Browser Go runtime initialization failed:', error);
         throw error;
@@ -108,37 +118,70 @@ const initialize = async () => {
     initializePromise = (async () => {
         let wasmBuffer;
         
+        console.log('Starting Go WASM initialization...');
+        
         // Environment-specific initialization
         if (isNode()) {
+            console.log('Initializing for Node.js environment');
             await initGoRuntimeNode();
             wasmBuffer = await loadWasmNode();
         } else if (isBrowser()) {
+            console.log('Initializing for Browser environment');
             await initGoRuntimeBrowser();
             wasmBuffer = await loadWasmBrowser();
         } else {
             throw new Error('Unsupported environment: neither Node.js nor Browser detected');
         }
 
+        console.log('Creating Go instance...');
         const go = new globalThis.Go();
-        const { instance } = await WebAssembly.instantiate(wasmBuffer, go.importObject);
-
-        // Run Go program (don't await as it's a long-running service)
-        go.run(instance).catch(err => {
-            console.error('Go WASM program exit error:', err);
-        });
+        
+        // 详细检查 importObject
+        console.log('Go import object keys:', Object.keys(go.importObject));
+        if (go.importObject.gojs) {
+            console.log('gojs import keys:', Object.keys(go.importObject.gojs));
+            console.log('scheduleTimeoutEvent type:', typeof go.importObject.gojs['runtime.scheduleTimeoutEvent']);
+        }
+        
+        console.log('Instantiating WebAssembly module...');
+        
+        try {
+            const { instance } = await WebAssembly.instantiate(wasmBuffer, go.importObject);
+            console.log('WebAssembly instantiation successful');
+            
+            console.log('Running Go program...');
+            // Run Go program (don't await as it's a long-running service)
+            go.run(instance).catch(err => {
+                console.error('Go WASM program exit error:', err);
+            });
+        } catch (instantiateError) {
+            console.error('WebAssembly instantiation failed:', instantiateError);
+            console.error('Error details:', {
+                message: instantiateError.message,
+                name: instantiateError.name,
+                stack: instantiateError.stack
+            });
+            throw instantiateError;
+        }
 
         // Wait for Go program to initialize and expose formatGo function
+        console.log('Waiting for formatGo function to be available...');
         let retries = 0;
-        const maxRetries = 10;
+        const maxRetries = 20; // 增加重试次数
 
         while (typeof globalThis.formatGo !== 'function' && retries < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 200)); // 增加等待时间
             retries++;
+            if (retries % 5 === 0) {
+                console.log(`Waiting for formatGo function... (${retries}/${maxRetries})`);
+            }
         }
 
         if (typeof globalThis.formatGo !== 'function') {
-            throw new Error('Go WASM module not properly initialized - formatGo function not available');
+            throw new Error('Go WASM module not properly initialized - formatGo function not available after 20 retries');
         }
+        
+        console.log('Go WASM initialization completed successfully');
     })();
 
     return initializePromise;
@@ -147,14 +190,14 @@ const initialize = async () => {
 export const languages = [
     {
         name: "Go",
-        parsers: ["go"],
+        parsers: ["go-format"],
         extensions: [".go"],
         vscodeLanguageIds: ["go"],
     },
 ];
 
 export const parsers = {
-    go: {
+    "go-format": {
         parse: (text) => text,
         astFormat: "go-format",
         locStart: (node) => 0,
@@ -164,22 +207,34 @@ export const parsers = {
 
 export const printers = {
     "go-format": {
-        print: async (path) => {
-            await initialize();
+        print: (path) => {
             const text = path.getValue();
 
             if (typeof globalThis.formatGo !== 'function') {
-                throw new Error('Go WASM module not properly initialized - formatGo function missing');
+                // 如果 formatGo 函数不可用，尝试初始化
+                initialize().then(() => {
+                    // 初始化完成后，formatGo 应该可用
+                }).catch(err => {
+                    console.error('Go WASM initialization failed:', err);
+                });
+                
+                // 如果还是不可用，返回原始文本
+                return text;
             }
 
             try {
                 return globalThis.formatGo(text);
             } catch (error) {
-                throw new Error(`Go formatting failed: ${error.message}`);
+                console.error('Go formatting failed:', error);
+                // 返回原始文本而不是抛出错误
+                return text;
             }
         },
     },
 };
+
+// Export initialize function for manual initialization
+export { initialize };
 
 // Default export for Prettier plugin compatibility
 export default {
