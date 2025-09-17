@@ -94,7 +94,7 @@ func (ts *ThemeService) initializeDefaultThemes() error {
 }
 
 // GetDefaultThemes 获取默认主题
-func (ts *ThemeService) GetDefaultThemes() (map[models.ThemeType]*models.Theme, error) {
+func (ts *ThemeService) GetDefaultThemes() (map[string]*models.Theme, error) {
 	query := `
 		SELECT id, name, type, colors, is_default, created_at, updated_at 
 		FROM themes 
@@ -109,7 +109,7 @@ func (ts *ThemeService) GetDefaultThemes() (map[models.ThemeType]*models.Theme, 
 	}
 	defer rows.Close()
 
-	themes := make(map[models.ThemeType]*models.Theme)
+	themes := make(map[string]*models.Theme)
 	for rows.Next() {
 		theme := &models.Theme{}
 		err := rows.Scan(
@@ -124,7 +124,7 @@ func (ts *ThemeService) GetDefaultThemes() (map[models.ThemeType]*models.Theme, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan theme: %w", err)
 		}
-		themes[theme.Type] = theme
+		themes[string(theme.Type)] = theme
 	}
 
 	if err := rows.Err(); err != nil {
