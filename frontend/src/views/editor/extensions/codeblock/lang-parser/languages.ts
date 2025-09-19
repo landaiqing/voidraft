@@ -48,6 +48,7 @@ import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
 import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
 import scalaPrettierPlugin from "@/common/prettier/plugins/scala";
 import clangPrettierPlugin from "@/common/prettier/plugins/clang";
+import pythonPrettierPlugin from "@/common/prettier/plugins/python";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -74,7 +75,10 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "json",
         plugins: [babelPrettierPlugin, prettierPluginEstree]
     }),
-    new LanguageInfo("py", "Python", pythonLanguage.parser),
+    new LanguageInfo("py", "Python", pythonLanguage.parser,{
+        parser: "python",
+        plugins: [pythonPrettierPlugin]
+    }),
     new LanguageInfo("html", "HTML", htmlLanguage.parser, {
         parser: "html",
         plugins: [htmlPrettierPlugin]
