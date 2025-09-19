@@ -6,17 +6,14 @@ import { EditorState } from '@codemirror/state';
 import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
 import { Block as BlockNode, BlockDelimiter, BlockContent, BlockLanguage, Document } from './lang-parser/parser.terms.js';
 import {
-    CodeBlock,
     SupportedLanguage,
-    SUPPORTED_LANGUAGES,
     DELIMITER_REGEX,
     DELIMITER_PREFIX,
     DELIMITER_SUFFIX,
     AUTO_DETECT_SUFFIX,
-    ParseOptions,
-    LanguageDetectionResult,
     Block
 } from './types';
+import { LANGUAGES } from './lang-parser/languages';
 
 /**
  * 从语法树解析代码块
@@ -397,7 +394,7 @@ export function parseDelimiter(delimiterText: string): { language: SupportedLang
     const languageName = match[1];
     const isAuto = match[2] === AUTO_DETECT_SUFFIX;
 
-    const validLanguage = SUPPORTED_LANGUAGES.includes(languageName as SupportedLanguage)
+    const validLanguage = LANGUAGES.some(lang => lang.token === languageName)
         ? languageName as SupportedLanguage
         : 'text';
 

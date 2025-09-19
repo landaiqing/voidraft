@@ -2,7 +2,8 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useEditorStore } from '@/stores/editorStore';
-import { SUPPORTED_LANGUAGES, type SupportedLanguage } from '@/views/editor/extensions/codeblock/types';
+import { type SupportedLanguage } from '@/views/editor/extensions/codeblock/types';
+import { LANGUAGES, getAllSupportedLanguages } from '@/views/editor/extensions/codeblock/lang-parser/languages';
 import { getActiveNoteBlock } from '@/views/editor/extensions/codeblock/state';
 import { changeCurrentBlockLanguage } from '@/views/editor/extensions/codeblock/commands';
 
@@ -14,73 +15,37 @@ const showLanguageMenu = ref(false);
 const searchQuery = ref('');
 const searchInputRef = ref<HTMLInputElement>();
 
-// 语言别名映射
-const LANGUAGE_ALIASES: Record<SupportedLanguage, string> = {
-  auto: 'auto',
-  text: 'txt',
-  json: 'JSON',
-  py: 'python',
-  html: 'HTML',
-  sql: 'SQL',
-  md: 'markdown',
-  java: 'Java',
-  php: 'PHP',
-  css: 'CSS',
-  xml: 'XML',
-  cpp: 'c++',
-  rs: 'rust',
-  cs: 'c#',
-  rb: 'ruby',
-  sh: 'shell',
-  yaml: 'yml',
-  toml: 'TOML',
-  go: 'Go',
-  clj: 'clojure',
-  ex: 'elixir',
-  erl: 'erlang',
-  js: 'javascript',
-  ts: 'typescript',
-  swift: 'Swift',
-  kt: 'kotlin',
-  groovy: 'Groovy',
-  ps1: 'powershell',
-  dart: 'Dart',
-  scala: 'Scala'
-};
+// 支持的语言列表
+const supportedLanguages = getAllSupportedLanguages();
 
-// 语言显示名称映射
-const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
-  auto: 'Auto',
-  text: 'Plain Text',
-  json: 'JSON',
-  py: 'Python',
-  html: 'HTML',
-  sql: 'SQL',
-  md: 'Markdown',
-  java: 'Java',
-  php: 'PHP',
-  css: 'CSS',
-  xml: 'XML',
-  cpp: 'C++',
-  rs: 'Rust',
-  cs: 'C#',
-  rb: 'Ruby',
-  sh: 'Shell',
-  yaml: 'YAML',
-  toml: 'TOML',
-  go: 'Go',
-  clj: 'Clojure',
-  ex: 'Elixir',
-  erl: 'Erlang',
-  js: 'JavaScript',
-  ts: 'TypeScript',
-  swift: 'Swift',
-  kt: 'Kotlin',
-  groovy: 'Groovy',
-  ps1: 'PowerShell',
-  dart: 'Dart',
-  scala: 'Scala'
-};
+// 动态生成语言显示名称映射
+const languageNames = computed(() => {
+  const names: Record<string, string> = {
+    auto: 'Auto',
+    text: 'Plain Text'
+  };
+  
+  LANGUAGES.forEach(lang => {
+    names[lang.token] = lang.name;
+  });
+  
+  return names;
+});
+
+// 动态生成语言别名映射
+const languageAliases = computed(() => {
+  const aliases: Record<string, string> = {
+    auto: 'auto',
+    text: 'txt'
+  };
+  
+  LANGUAGES.forEach(lang => {
+    // 使用语言名称的小写作为别名
+    aliases[lang.token] = lang.name.toLowerCase();
+  });
+  
+  return aliases;
+});
 
 // 当前活动块的语言信息
 const currentBlockLanguage = ref<{ name: SupportedLanguage; auto: boolean }>({
@@ -197,13 +162,13 @@ watch(
 // 过滤后的语言列表
 const filteredLanguages = computed(() => {
   if (!searchQuery.value) {
-    return SUPPORTED_LANGUAGES;
+    return supportedLanguages;
   }
   
   const query = searchQuery.value.toLowerCase();
-  return SUPPORTED_LANGUAGES.filter(langId => {
-    const name = LANGUAGE_NAMES[langId];
-    const alias = LANGUAGE_ALIASES[langId];
+  return supportedLanguages.filter(langId => {
+    const name = languageNames.value[langId];
+    const alias = languageAliases.value[langId];
     return langId.toLowerCase().includes(query) ||
            (name && name.toLowerCase().includes(query)) ||
            (alias && alias.toLowerCase().includes(query));
@@ -380,7 +345,7 @@ const scrollToCurrentLanguage = () => {
           :data-language="language"
           @click="selectLanguage(language)"
         >
-          <span class="language-name">{{ LANGUAGE_NAMES[language] || language }}</span>
+          <span class="language-name">{{ languageNames[language] || language }}</span>
           <span class="language-alias">{{ language }}</span>
         </div>
         

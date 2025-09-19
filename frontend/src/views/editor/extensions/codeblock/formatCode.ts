@@ -38,12 +38,16 @@ export const formatBlockContent = (view) => {
     const performFormat = async () => {
         let formattedContent
         try {
-            // 格式化代码
-            const formatted = await prettier.format(content, {
+            // 构建格式化配置
+            const formatOptions = {
                 parser: language.prettier!.parser,
                 plugins: language.prettier!.plugins,
                 tabWidth: tabSize,
-            })
+                ...language.prettier!.options,
+            }
+            
+            // 格式化代码
+            const formatted = await prettier.format(content, formatOptions)
             
             // 计算新光标位置
             const cursorOffset = cursorAtEdge 

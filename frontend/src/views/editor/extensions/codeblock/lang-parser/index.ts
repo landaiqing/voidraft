@@ -16,7 +16,6 @@ export {
   LANGUAGES,
   languageMapping,
   getLanguage,
-  getLanguageTokens
 } from './languages';
 
 // 嵌套解析器

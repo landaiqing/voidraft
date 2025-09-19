@@ -1,7 +1,5 @@
 importScripts("guesslang.min.js")
 
-const LANGUAGES = ["json", "py", "html", "sql", "md", "java", "php", "css", "xml", "cpp", "rs", "cs", "rb", "sh", "yaml", "toml", "go", "clj", "ex", "erl", "js", "ts", "swift", "kt", "groovy", "ps1", "dart", "scala"]
-
 const guessLang = new self.GuessLang()
 
 function sendResult(language, confidence, idx) {
@@ -27,20 +25,13 @@ onmessage = (event) => {
 
     guessLang.runModel(content).then((result) => {
         if (result.length > 0) {
-            const lang = result[0]
-            if (LANGUAGES.includes(lang.languageId) && lang.confidence > 0.15) {
-                sendResult(lang.languageId, lang.confidence, idx)
+            // 返回置信度最高的结果
+            const bestResult = result[0]
+            if (bestResult.confidence > 0.15) {
+                sendResult(bestResult.languageId, bestResult.confidence, idx)
                 return
             }
         }
-
-        for (let lang of result) {
-            if (LANGUAGES.includes(lang.languageId) && lang.confidence > 0.5) {
-                sendResult(lang.languageId, lang.confidence, idx)
-                return
-            }
-        }
-
         sendResult("text", 0.0, idx)
     }).catch(() => {
         sendResult("text", 0.0, idx)

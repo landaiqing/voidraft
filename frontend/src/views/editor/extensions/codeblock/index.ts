@@ -22,8 +22,8 @@ import {getBlockSelectExtensions} from './selectAll';
 import {getCopyPasteExtensions} from './copyPaste';
 import {moveLineDown, moveLineUp} from './moveLines';
 import {getCodeBlockLanguageExtension} from './lang-parser';
-import {createLanguageDetection} from './language-detection';
-import {EditorOptions, SupportedLanguage} from './types';
+import {createLanguageDetection} from './lang-detect';
+import {SupportedLanguage} from './types';
 
 /**
  * 代码块扩展配置选项
@@ -127,7 +127,6 @@ export {
     type Block,
     type SupportedLanguage,
     type CreateBlockOptions,
-    SUPPORTED_LANGUAGES
 } from './types';
 
 // 状态管理
@@ -187,10 +186,8 @@ export {
 export {
     getCodeBlockLanguageExtension,
     getLanguage,
-    getLanguageTokens,
     languageMapping,
     LanguageInfo,
-    LANGUAGES as PARSER_LANGUAGES
 } from './lang-parser';
 
 // 语言检测
@@ -200,7 +197,7 @@ export {
     detectLanguages,
     levenshteinDistance,
     type LanguageDetectionResult
-} from './language-detection';
+} from './lang-detect';
 
 // 行号相关
 export {getBlockLineFromPos, blockLineNumbers};

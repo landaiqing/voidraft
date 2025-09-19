@@ -61,18 +61,24 @@ const DEFAULT_CONFIG = {
 };
 
 /**
- * 支持的语言列表
+ * 创建检测ID到语言token的映射
  */
-const SUPPORTED_LANGUAGES = new Set([
-    "json", "py", "html", "sql", "md", "java", "php", "css", "xml", 
-    "cpp", "rs", "cs", "rb", "sh", "yaml", "toml", "go", "clj", 
-    "ex", "erl", "js", "ts", "swift", "kt", "groovy", "ps1", "dart", "scala"
-]);
+function createDetectionMap(): Map<string, SupportedLanguage> {
+    const map = new Map<string, SupportedLanguage>();
+    LANGUAGES.forEach(lang => {
+        if (lang.detectIds) {
+            lang.detectIds.forEach(detectId => {
+                map.set(detectId, lang.token);
+            });
+        }
+    });
+    return map;
+}
 
 /**
- * 语言标记映射表
+ * 检测ID到语言token的映射表
  */
-const LANGUAGE_MAP = new Map(LANGUAGES.map(lang => [lang.token, lang.token]));
+const DETECTION_MAP = createDetectionMap();
 
 // ===== 工具函数 =====
 
@@ -253,14 +259,16 @@ export function createLanguageDetection(config: LanguageDetectionConfig = {}): V
                 try {
                     const result = await worker.detectLanguage(content);
                     
-                    if (result.confidence >= finalConfig.confidenceThreshold &&
-                        result.language !== block.language.name &&
-                        SUPPORTED_LANGUAGES.has(result.language) &&
-                        LANGUAGE_MAP.has(result.language)) {
+                    // 使用检测映射表将检测结果转换为我们支持的语言
+                    const mappedLanguage = DETECTION_MAP.get(result.language);
+                    
+                    if (mappedLanguage &&
+                        result.confidence >= finalConfig.confidenceThreshold &&
+                        mappedLanguage !== block.language.name) {
                         
                         // 只有在用户没有撤销操作时才更改语言
                         if (redoDepth(state) === 0) {
-                            changeLanguageTo(state, this.view.dispatch, block, result.language, true);
+                            changeLanguageTo(state, this.view.dispatch, block, mappedLanguage, true);
                         }
                     }
 

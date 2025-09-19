@@ -5,7 +5,7 @@
 
 import { EditorSelection, SelectionRange } from "@codemirror/state";
 import { blockState } from "./state";
-import { SUPPORTED_LANGUAGES } from "./types";
+import { LANGUAGES } from "./lang-parser/languages";
 
 interface LineBlock {
   from: number;
@@ -14,7 +14,7 @@ interface LineBlock {
 }
 
 // 创建语言标记的正则表达式
-const languageTokensMatcher = SUPPORTED_LANGUAGES.join("|");
+const languageTokensMatcher = LANGUAGES.map(lang => lang.token).join("|");
 const tokenRegEx = new RegExp(`^∞∞∞(${languageTokensMatcher})(-a)?$`, "g");
 
 /**

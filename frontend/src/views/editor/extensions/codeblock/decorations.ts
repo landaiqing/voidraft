@@ -158,7 +158,6 @@ const blockLayer = layer({
       markers.push(new RectangleMarker(
         idx++ % 2 == 0 ? "block-even" : "block-odd",
         0,
-        // 参考 Heynote 的精确计算方式
         fromCoordsTop - (view.documentTop - view.documentPadding.top) - 1 - 6,
         null, // 宽度在 CSS 中设置为 100%
         (toCoordsBottom - fromCoordsTop) + 15,

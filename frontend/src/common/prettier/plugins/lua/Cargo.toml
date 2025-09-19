@@ -1,0 +1,25 @@
+[package]
+name = "lua_fmt"
+
+authors.workspace     = true
+description.workspace = true
+edition.workspace     = true
+homepage.workspace    = true
+keywords.workspace    = true
+license.workspace     = true
+repository.workspace  = true
+version.workspace     = true
+
+    [package.metadata.wasm-pack.profile.release]
+    wasm-opt = ["-Os"]
+
+
+[dependencies]
+serde              = { workspace = true, features = ["derive"] }
+serde-wasm-bindgen = { workspace = true }
+serde_json         = { workspace = true, features = ["preserve_order"] }
+stylua             = { workspace = true, features = ["lua52", "lua53", "lua54"] }
+wasm-bindgen       = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "rlib"]

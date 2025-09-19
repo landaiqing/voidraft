@@ -6,35 +6,13 @@
 import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { Command } from "@codemirror/view";
-import { SUPPORTED_LANGUAGES } from "./types";
+import { LANGUAGES } from "./lang-parser/languages";
 
 /**
  * 构建块分隔符正则表达式
  */
-const languageTokensMatcher = SUPPORTED_LANGUAGES.join("|");
+const languageTokensMatcher = LANGUAGES.map(lang => lang.token).join("|");
 const blockSeparatorRegex = new RegExp(`\\n∞∞∞(${languageTokensMatcher})(-a)?\\n`, "g");
-
-/**
- * 降级复制方法 - 使用传统的 document.execCommand
- */
-function fallbackCopyToClipboard(text: string): boolean {
-  try {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-999999px';
-    textArea.style.top = '-999999px';
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    const result = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    return result;
-  } catch (err) {
-    console.error('The downgrade replication method also failed:', err);
-    return false;
-  }
-}
 
 /**
  * 获取被复制的范围和内容
@@ -118,15 +96,9 @@ const copyCut = (view: EditorView, cut: boolean): boolean => {
   let { text, ranges } = copiedRange(view.state);
   // 将块分隔符替换为双换行符
   text = text.replaceAll(blockSeparatorRegex, "\n\n");
-  
-  // 使用现代剪贴板 API
+
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).catch(err => {
-      fallbackCopyToClipboard(text);
-    });
-  } else {
-    // 降级到传统方法
-    fallbackCopyToClipboard(text);
+    navigator.clipboard.writeText(text);
   }
 
   if (cut && !view.state.readOnly) {
