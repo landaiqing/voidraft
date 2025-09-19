@@ -49,6 +49,7 @@ import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
 import scalaPrettierPlugin from "@/common/prettier/plugins/scala";
 import clangPrettierPlugin from "@/common/prettier/plugins/clang";
 import pythonPrettierPlugin from "@/common/prettier/plugins/python";
+import dartPrettierPlugin from "@/common/prettier/plugins/dart";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -154,7 +155,10 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [groovyPrettierPlugin]
     }),
     new LanguageInfo("ps1", "PowerShell", StreamLanguage.define(powerShell).parser),
-    new LanguageInfo("dart", "Dart", null), // 暂无解析器
+    new LanguageInfo("dart", "Dart", null,{
+        parser: "dart",
+        plugins: [dartPrettierPlugin]
+    }),
     new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser,{
         parser: "scala",
         plugins: [scalaPrettierPlugin]
