@@ -47,6 +47,7 @@ import tomlPrettierPlugin from "@/common/prettier/plugins/toml";
 import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
 import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
 import scalaPrettierPlugin from "@/common/prettier/plugins/scala";
+import clangPrettierPlugin from "@/common/prettier/plugins/clang";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -102,7 +103,10 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "xml",
         plugins: [xmlPrettierPlugin]
     }),
-    new LanguageInfo("cpp", "C++", cppLanguage.parser),
+    new LanguageInfo("cpp", "C++", cppLanguage.parser,{
+        parser: "clang",
+        plugins: [clangPrettierPlugin]
+    }),
     new LanguageInfo("rs", "Rust", rustLanguage.parser,{
         parser: "jinx-rust",
         plugins: [rustPrettierPlugin]
