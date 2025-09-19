@@ -4,8 +4,8 @@
 // functionality for the Prettier plugin. This package exposes the formatGo function
 // to JavaScript, enabling web-based Go code formatting using Go's built-in format package.
 //
-// The module is designed to be compiled to WebAssembly and loaded in Node.js
-// environments as part of the go-prettier-format plugin.
+// The module is designed to be compiled to WebAssembly using native Go (GOOS=js GOARCH=wasm)
+// and loaded in browser environments as part of the Go Prettier plugin.
 package main
 
 import (

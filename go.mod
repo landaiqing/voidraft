@@ -1,6 +1,6 @@
 module voidraft
 
-go 1.24.4
+go 1.25
 
 require (
 	github.com/creativeprojects/go-selfupdate v1.5.0
