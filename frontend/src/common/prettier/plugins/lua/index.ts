@@ -33,33 +33,38 @@ const luaParser: Parser<string> = {
     locEnd: (node: string) => node.length,
 };
 
-// Initialize StyLua WASM module
+// Lazy initialize StyLua WASM module
 let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 function initStyLua(): Promise<void> {
-    if (initPromise) {
-        return initPromise;
+    if (isInitialized) {
+        return Promise.resolve();
     }
     
-    initPromise = (async () => {
-        if (!isInitialized) {
-            await luaInit();
-            isInitialized = true;
-        }
-    })();
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                await luaInit();
+                isInitialized = true;
+            } catch (error) {
+                console.warn('Failed to initialize StyLua WASM module:', error);
+                initPromise = null;
+                throw error;
+            }
+        })();
+    }
     
     return initPromise;
 }
 
 // Printer configuration
 const luaPrinter: Printer<string> = {
-    print: (path, options) => {
+    // @ts-expect-error -- Support async printer like shell plugin
+    async print(path, options) {
         try {
-            if (!isInitialized) {
-                console.warn('StyLua WASM module not initialized, returning original text');
-                return (path as any).getValue ? (path as any).getValue() : path.node;
-            }
+            // Wait for initialization to complete
+            await initStyLua();
             
             const text = (path as any).getValue ? (path as any).getValue() : path.node;
             const config = getStyLuaConfig(options);
@@ -166,11 +171,6 @@ const luaPlugin: Plugin = {
     },
     options,
 };
-
-// Initialize WASM module when plugin loads
-initStyLua().catch(error => {
-    console.warn('Failed to initialize StyLua WASM module:', error);
-});
 
 export default luaPlugin;
 export { languages };

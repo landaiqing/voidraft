@@ -20,19 +20,30 @@ const webParser: Parser<string> = {
     locEnd: (text: string) => text.length,
 };
 
-// Initialize web_fmt WASM module
+// Lazy initialize web_fmt WASM module
 let processorInstance: any = null;
+let initPromise: Promise<any> | null = null;
 
 const getProcessorInstance = async () => {
-    if (!processorInstance) {
-        try {
-            await webInit();
-            processorInstance = { initialized: true };
-        } catch (error) {
-            console.warn('Failed to initialize web_fmt WASM module:', error);
-            processorInstance = null;
-        }
+    if (!processorInstance && !initPromise) {
+        initPromise = (async () => {
+            try {
+                await webInit();
+                processorInstance = { initialized: true };
+                return processorInstance;
+            } catch (error) {
+                console.warn('Failed to initialize web_fmt WASM module:', error);
+                processorInstance = null;
+                initPromise = null;
+                throw error;
+            }
+        })();
     }
+    
+    if (initPromise) {
+        return await initPromise;
+    }
+    
     return processorInstance;
 };
 

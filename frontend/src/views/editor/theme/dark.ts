@@ -188,6 +188,32 @@ export function createDarkTheme(colors = defaultDarkColors) {
       background: colors.backgroundSecondary,
       borderTop: `1px solid ${colors.borderColor}`,
     },
+      '.code-blocks-math-result': {
+          paddingLeft: "12px",
+          position: "relative",
+      },
+      ".code-blocks-math-result .inner": {
+          background: "#0e1217",
+          color: "#a0e7c7",
+          padding: '0px 4px',
+          borderRadius: '2px',
+          boxShadow: '0 0 3px rgba(0,0,0, 0.3)',
+          cursor: 'pointer',
+          whiteSpace: "nowrap",
+      },
+      '.code-blocks-math-result-copied': {
+          position: "absolute",
+          top: "0px",
+          left: "0px",
+          marginLeft: "calc(100% + 10px)",
+          width: "60px",
+          transition: "opacity 500ms",
+          transitionDelay: "1000ms",
+          color: "rgba(220,240,230, 1.0)",
+      },
+      '.code-blocks-math-result-copied.fade-out': {
+          opacity: 0,
+      },
 
     // 代码块开始标记
     '.code-block-start': {

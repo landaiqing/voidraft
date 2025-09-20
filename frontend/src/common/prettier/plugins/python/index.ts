@@ -33,33 +33,38 @@ const pythonParser: Parser<string> = {
     locEnd: (node: string) => node.length,
 };
 
-// Initialize Ruff WASM module
+// Lazy initialize Ruff WASM module
 let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 function initRuff(): Promise<void> {
-    if (initPromise) {
-        return initPromise;
+    if (isInitialized) {
+        return Promise.resolve();
     }
     
-    initPromise = (async () => {
-        if (!isInitialized) {
-            await ruffInit();
-            isInitialized = true;
-        }
-    })();
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                await ruffInit();
+                isInitialized = true;
+            } catch (error) {
+                console.warn('Failed to initialize Ruff WASM module:', error);
+                initPromise = null;
+                throw error;
+            }
+        })();
+    }
     
     return initPromise;
 }
 
 // Printer configuration
 const pythonPrinter: Printer<string> = {
-    print: (path, options) => {
+    // @ts-expect-error -- Support async printer like shell plugin
+    async print(path, options) {
         try {
-            if (!isInitialized) {
-                console.warn('Ruff WASM module not initialized, returning original text');
-                return (path as any).getValue ? (path as any).getValue() : path.node;
-            }
+            // Wait for initialization to complete
+            await initRuff();
             
             const text = (path as any).getValue ? (path as any).getValue() : path.node;
             const config = getRuffConfig(options);
@@ -134,11 +139,6 @@ const pythonPlugin: Plugin = {
     },
     options,
 };
-
-// Initialize WASM module when plugin loads
-initRuff().catch(error => {
-    console.warn('Failed to initialize Ruff WASM module:', error);
-});
 
 export default pythonPlugin;
 export { languages };

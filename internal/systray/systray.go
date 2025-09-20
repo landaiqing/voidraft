@@ -5,6 +5,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"voidraft/internal/events"
 	"voidraft/internal/services"
+	"voidraft/internal/version"
 )
 
 // SetupSystemTray 设置系统托盘及其功能
@@ -12,7 +13,7 @@ func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow
 	// 创建系统托盘
 	systray := app.SystemTray.New()
 	// 设置提示
-	systray.SetTooltip("voidraft")
+	systray.SetTooltip("voidraft\nversion: " + version.Version)
 	// 设置标签
 	systray.SetLabel("voidraft")
 	// 设置图标

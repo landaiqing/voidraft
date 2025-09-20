@@ -33,33 +33,38 @@ const dartParser: Parser<string> = {
     locEnd: (node: string) => node.length,
 };
 
-// Initialize Dart WASM module
+// Lazy initialize Dart WASM module
 let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 function initDart(): Promise<void> {
-    if (initPromise) {
-        return initPromise;
+    if (isInitialized) {
+        return Promise.resolve();
     }
     
-    initPromise = (async () => {
-        if (!isInitialized) {
-            await dartInit();
-            isInitialized = true;
-        }
-    })();
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                await dartInit();
+                isInitialized = true;
+            } catch (error) {
+                console.warn('Failed to initialize Dart WASM module:', error);
+                initPromise = null;
+                throw error;
+            }
+        })();
+    }
     
     return initPromise;
 }
 
 // Printer configuration
 const dartPrinter: Printer<string> = {
-    print: (path, options) => {
+    // @ts-expect-error -- Support async printer like shell plugin
+    async print(path, options) {
         try {
-            if (!isInitialized) {
-                console.warn('Dart WASM module not initialized, returning original text');
-                return (path as any).getValue ? (path as any).getValue() : path.node;
-            }
+            // Wait for initialization to complete
+            await initDart();
             
             const text = (path as any).getValue ? (path as any).getValue() : path.node;
             const config = getDartConfig(options);
@@ -120,11 +125,6 @@ const dartPlugin: Plugin = {
     },
     options,
 };
-
-// Initialize WASM module when plugin loads
-initDart().catch(error => {
-    console.warn('Failed to initialize Dart WASM module:', error);
-});
 
 export default dartPlugin;
 export { languages };

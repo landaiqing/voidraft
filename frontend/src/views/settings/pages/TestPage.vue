@@ -152,7 +152,7 @@ import * as TestService from '@/../bindings/voidraft/internal/services/testservi
 import SettingSection from '../components/SettingSection.vue'
 import SettingItem from '../components/SettingItem.vue'
 import { format } from 'prettier'
-import goPrettierPlugin from '@/common/prettier/plugins/go/go.mjs'
+import goPrettierPlugin from '@/common/prettier/plugins/go'
 
 // Badge测试状态
 const badgeText = ref('')
@@ -349,7 +349,7 @@ const initializeGoWasm = async () => {
     addFormatDetail('开始手动初始化 Go WASM')
     
     // 直接调用插件的初始化函数
-    const { initialize } = await import('@/common/prettier/plugins/go/go.mjs')
+    const { initialize } = await import('@/common/prettier/plugins/go')
     
     addFormatDetail('调用插件初始化函数...')
     await initialize()

@@ -32,33 +32,38 @@ const sqlParser: Parser<string> = {
     locEnd: (node: string) => node.length,
 };
 
-// Initialize SQL Format WASM module
+// Lazy initialize SQL Format WASM module
 let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 function initSqlFmt(): Promise<void> {
-    if (initPromise) {
-        return initPromise;
+    if (isInitialized) {
+        return Promise.resolve();
     }
     
-    initPromise = (async () => {
-        if (!isInitialized) {
-            await sqlFmtInit();
-            isInitialized = true;
-        }
-    })();
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                await sqlFmtInit();
+                isInitialized = true;
+            } catch (error) {
+                console.warn('Failed to initialize SQL Format WASM module:', error);
+                initPromise = null;
+                throw error;
+            }
+        })();
+    }
     
     return initPromise;
 }
 
 // Printer configuration
 const sqlPrinter: Printer<string> = {
-    print: (path, options) => {
+    // @ts-expect-error -- Support async printer like shell plugin
+    async print(path, options) {
         try {
-            if (!isInitialized) {
-                console.warn('SQL Format WASM module not initialized, returning original text');
-                return (path as any).getValue ? (path as any).getValue() : path.node;
-            }
+            // Wait for initialization to complete
+            await initSqlFmt();
             
             const text = (path as any).getValue ? (path as any).getValue() : path.node;
             const config = getSqlFmtConfig(options);
@@ -128,11 +133,6 @@ const sqlPlugin: Plugin = {
     },
     options,
 };
-
-// Initialize the WASM module
-initSqlFmt().catch(error => {
-    console.error('Failed to initialize SQL Format WASM module:', error);
-});
 
 export default sqlPlugin;
 export { languages };

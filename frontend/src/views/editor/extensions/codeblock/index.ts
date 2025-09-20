@@ -24,6 +24,7 @@ import {moveLineDown, moveLineUp} from './moveLines';
 import {getCodeBlockLanguageExtension} from './lang-parser';
 import {createLanguageDetection} from './lang-detect';
 import {SupportedLanguage} from './types';
+import {getMathBlockExtensions} from './mathBlock';
 
 /**
  * 代码块扩展配置选项
@@ -117,6 +118,9 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         // 复制粘贴功能
         ...getCopyPasteExtensions(),
 
+        // 数学块功能
+        ...getMathBlockExtensions(),
+
     ];
 }
 
@@ -149,7 +153,7 @@ export {
 export * from './commands';
 
 // 格式化功能
-export { formatBlockContent } from './formatCode';
+export {formatBlockContent} from './formatCode';
 
 // 选择功能
 export {
@@ -201,6 +205,11 @@ export {
 
 // 行号相关
 export {getBlockLineFromPos, blockLineNumbers};
+
+// 数学块功能
+export {
+    getMathBlockExtensions
+} from './mathBlock';
 
 /**
  * 默认导出

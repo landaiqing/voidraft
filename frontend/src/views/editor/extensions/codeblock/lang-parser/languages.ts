@@ -38,19 +38,16 @@ import htmlPrettierPlugin from "prettier/plugins/html"
 import cssPrettierPlugin from "prettier/plugins/postcss"
 import markdownPrettierPlugin from "prettier/plugins/markdown"
 import yamlPrettierPlugin from "prettier/plugins/yaml"
-import goPrettierPlugin from "@/common/prettier/plugins/go/go.mjs"
+import goPrettierPlugin from "@/common/prettier/plugins/go"
 import sqlPrettierPlugin from "@/common/prettier/plugins/sql"
 import phpPrettierPlugin from "@/common/prettier/plugins/php"
 import javaPrettierPlugin from "@/common/prettier/plugins/java"
 import xmlPrettierPlugin from "@prettier/plugin-xml"
-import * as rustPrettierPlugin from "@/common/prettier/plugins/rust";
 import * as shellPrettierPlugin from "@/common/prettier/plugins/shell";
-import * as dockerfilePrettierPlugin from "@/common/prettier/plugins/shell";
-// import rustPrettierPlugin from "@/common/prettier/plugins/rust_fmt";
+import rustPrettierPlugin from "@/common/prettier/plugins/rust";
 import tomlPrettierPlugin from "@/common/prettier/plugins/toml";
 import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
 import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
-import scalaPrettierPlugin from "@/common/prettier/plugins/scala";
 import clangPrettierPlugin from "@/common/prettier/plugins/clang";
 import pythonPrettierPlugin from "@/common/prettier/plugins/python";
 import dartPrettierPlugin from "@/common/prettier/plugins/dart";
@@ -147,7 +144,7 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [tomlPrettierPlugin]
     }),
     new LanguageInfo("go", "Go", StreamLanguage.define(go).parser, ["go"], {
-        parser: "go-format",
+        parser: "go",
         plugins: [goPrettierPlugin]
     }),
     new LanguageInfo("clj", "Clojure", StreamLanguage.define(clojure).parser, ["clj"], {
@@ -175,18 +172,16 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "dart",
         plugins: [dartPrettierPlugin]
     }),
-    new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser, ["scala"], {
-        parser: "scala",
-        plugins: [scalaPrettierPlugin]
-    }),
+    new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser, ["scala"]),
     new LanguageInfo("dockerfile", "Dockerfile", StreamLanguage.define(dockerFile).parser, ["dockerfile"], {
         parser: "dockerfile",
-        plugins: [dockerfilePrettierPlugin]
+        plugins: [shellPrettierPlugin]
     }),
     new LanguageInfo("lua", "Lua", StreamLanguage.define(lua).parser, ["lua"], {
         parser: "lua",
         plugins: [luaPrettierPlugin]
     }),
+    new LanguageInfo("math", "Math", null, ["math"]),
 ];
 
 /**

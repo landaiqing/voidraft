@@ -56,6 +56,7 @@ export type SupportedLanguage =
     | 'scala'
     | 'dockerfile'
     | 'lua'
+    | 'math'
 
 /**
  * 创建块的选项

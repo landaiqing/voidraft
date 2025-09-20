@@ -107,33 +107,38 @@ const clangParser: Parser<string> = {
     locEnd: (node: string) => node.length,
 };
 
-// Initialize clang-format WASM module
+// Lazy initialize clang-format WASM module
 let initPromise: Promise<void> | null = null;
 let isInitialized = false;
 
 function initClangFormat(): Promise<void> {
-    if (initPromise) {
-        return initPromise;
+    if (isInitialized) {
+        return Promise.resolve();
     }
     
-    initPromise = (async () => {
-        if (!isInitialized) {
-            await clangFormatInit();
-            isInitialized = true;
-        }
-    })();
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                await clangFormatInit();
+                isInitialized = true;
+            } catch (error) {
+                console.warn('Failed to initialize clang-format WASM module:', error);
+                initPromise = null;
+                throw error;
+            }
+        })();
+    }
     
     return initPromise;
 }
 
 // Printer configuration
 const clangPrinter: Printer<string> = {
-    print: (path, options) => {
+    // @ts-expect-error -- Support async printer like shell plugin
+    async print(path, options) {
         try {
-            if (!isInitialized) {
-                console.warn('clang-format WASM module not initialized, returning original text');
-                return (path as any).getValue ? (path as any).getValue() : path.node;
-            }
+            // Wait for initialization to complete
+            await initClangFormat();
             
             const text = (path as any).getValue ? (path as any).getValue() : path.node;
             const style = getClangStyle(options);
@@ -204,11 +209,6 @@ const clangPlugin: Plugin = {
     },
     ...options,
 };
-
-// Initialize WASM module when plugin loads
-initClangFormat().catch(error => {
-    console.warn('Failed to initialize clang-format WASM module:', error);
-});
 
 export default clangPlugin;
 export { languages };
