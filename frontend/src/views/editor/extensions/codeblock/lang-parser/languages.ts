@@ -39,7 +39,7 @@ import cssPrettierPlugin from "prettier/plugins/postcss"
 import markdownPrettierPlugin from "prettier/plugins/markdown"
 import yamlPrettierPlugin from "prettier/plugins/yaml"
 import goPrettierPlugin from "@/common/prettier/plugins/go/go.mjs"
-import sqlPrettierPlugin from "@/common/prettier/plugins/sql/sql"
+import sqlPrettierPlugin from "@/common/prettier/plugins/sql"
 import phpPrettierPlugin from "@/common/prettier/plugins/php"
 import javaPrettierPlugin from "@/common/prettier/plugins/java"
 import xmlPrettierPlugin from "@prettier/plugin-xml"
@@ -115,14 +115,23 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [xmlPrettierPlugin]
     }),
     new LanguageInfo("cpp", "C++", cppLanguage.parser, ["cpp", "c"], {
-        parser: "clang",
-        plugins: [clangPrettierPlugin]
+        parser: "clang-format",
+        plugins: [clangPrettierPlugin],
+        options: {
+            filename: "index.cpp"
+        }
     }),
     new LanguageInfo("rs", "Rust", rustLanguage.parser, ["rs"], {
         parser: "jinx-rust",
         plugins: [rustPrettierPlugin]
     }),
-    new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser, ["cs"]),
+    new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser, ["cs"],{
+        parser: "clang-format",
+        plugins: [clangPrettierPlugin],
+        options: {
+            filename: "index.cs"
+        }
+    }),
     new LanguageInfo("rb", "Ruby", StreamLanguage.define(ruby).parser, ["rb"]),
     new LanguageInfo("sh", "Shell", StreamLanguage.define(shell).parser, ["sh", "bat"], {
         parser: "sh",

@@ -4,8 +4,3 @@ crates_dir=$(pwd)
 cd ../..
 wasm-pack build --target=web --scope=wasm-fmt crates/lua_fmt
 
-cd $crates_dir
-
-cp -R ./extra/. ./pkg/
-
-./scripts/package.mjs ./pkg/package.json

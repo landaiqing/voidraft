@@ -1,23 +1,31 @@
 /**
- * Prettier Plugin for C/C++ formatting using clang-format WebAssembly
+ * Prettier Plugin for C/C++/C#/Java/Protobuf formatting using clang-format WebAssembly
  * 
- * This plugin provides support for formatting C/C++ files using the clang-format WASM implementation.
- * It supports various C/C++ file extensions and common clang-format styles.
+ * This plugin provides support for formatting multiple languages using the clang-format WASM implementation.
+ * Supported languages:
+ * - C / C++
+ * - Objective-C / Objective-C++
+ * - C#
+ * - Java
+ * - Protocol Buffer (Protobuf)
+ * 
+ * It supports various file extensions and common clang-format styles.
  */
 import type { Plugin, Parser, Printer } from 'prettier';
 
 // Import the clang-format WASM module
 import clangFormatInit, { format } from './clang-format-vite.js';
 
-const parserName = 'clang';
+const parserName = 'clang-format';
 
 // Language configuration
 const languages = [
     {
         name: 'C',
         aliases: ['c'],
-        parsers: [parserName],
+        parsers: ['c'],
         extensions: ['.c', '.h'],
+        filenames: ['*.c', '*.h'],
         aceMode: 'c_cpp',
         tmScope: 'source.c',
         linguistLanguageId: 50,
@@ -26,8 +34,9 @@ const languages = [
     {
         name: 'C++',
         aliases: ['cpp', 'cxx', 'cc'],
-        parsers: [parserName],
+        parsers: ['cpp'],
         extensions: ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.hh', '.C', '.H'],
+        filenames: ['*.cpp', '*.cxx', '*.cc', '*.hpp', '*.hxx', '*.hh', '*.C', '*.H'],
         aceMode: 'c_cpp',
         tmScope: 'source.cpp',
         linguistLanguageId: 43,
@@ -36,12 +45,57 @@ const languages = [
     {
         name: 'Objective-C',
         aliases: ['objc', 'objectivec'],
-        parsers: [parserName],
-        extensions: ['.m', '.mm'],
+        parsers: ['objective-c'],
+        extensions: ['.m'],
+        filenames: ['*.m'],
         aceMode: 'objectivec',
         tmScope: 'source.objc',
         linguistLanguageId: 259,
         vscodeLanguageIds: ['objective-c']
+    },
+    {
+        name: 'Objective-C++',
+        aliases: ['objcpp', 'objectivecpp'],
+        parsers: ['objective-cpp'],
+        extensions: ['.mm'],
+        filenames: ['*.mm'],
+        aceMode: 'objectivec',
+        tmScope: 'source.objcpp',
+        linguistLanguageId: 260,
+        vscodeLanguageIds: ['objective-cpp']
+    },
+    {
+        name: 'C#',
+        aliases: ['csharp', 'cs'],
+        parsers: ['cs'],
+        extensions: ['.cs'],
+        filenames: ['*.cs'],
+        aceMode: 'csharp',
+        tmScope: 'source.cs',
+        linguistLanguageId: 42,
+        vscodeLanguageIds: ['csharp']
+    },
+    {
+        name: 'Java',
+        aliases: ['java'],
+        parsers: ['java'],
+        extensions: ['.java'],
+        filenames: ['*.java'],
+        aceMode: 'java',
+        tmScope: 'source.java',
+        linguistLanguageId: 181,
+        vscodeLanguageIds: ['java']
+    },
+    {
+        name: 'Protocol Buffer',
+        aliases: ['protobuf', 'proto'],
+        parsers: ['proto'],
+        extensions: ['.proto'],
+        filenames: ['*.proto'],
+        aceMode: 'protobuf',
+        tmScope: 'source.proto',
+        linguistLanguageId: 297,
+        vscodeLanguageIds: ['proto']
     }
 ];
 
@@ -85,7 +139,7 @@ const clangPrinter: Printer<string> = {
             const style = getClangStyle(options);
             
             // Format using clang-format (synchronous call)
-            const formatted = format(text, undefined, style);
+            const formatted = format(text, options.filename, style);
             
             return formatted.trim();
         } catch (error) {
@@ -129,6 +183,13 @@ const options = {
             { value: 'Microsoft', description: "Microsoft's style guide" },
             { value: 'GNU', description: 'GNU coding standards' }
         ]
+    },
+    filename: {
+        // since: '0.1.0',
+        category: 'Config',
+        type: 'string',
+        default: undefined,
+        description: 'Custom filename to use for web_fmt processing (affects language detection)',
     }
 };
 
@@ -141,7 +202,7 @@ const clangPlugin: Plugin = {
     printers: {
         [parserName]: clangPrinter,
     },
-    options,
+    ...options,
 };
 
 // Initialize WASM module when plugin loads

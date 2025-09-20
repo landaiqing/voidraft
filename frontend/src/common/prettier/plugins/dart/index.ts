@@ -62,11 +62,10 @@ const dartPrinter: Printer<string> = {
             }
             
             const text = (path as any).getValue ? (path as any).getValue() : path.node;
-            const filename = getDartFilename(options.filepath);
             const config = getDartConfig(options);
             
             // Format using dart_fmt (synchronous call)
-            const formatted = format(text, filename, config);
+            const formatted = format(text, undefined, config);
             
             return formatted.trim();
         } catch (error) {
@@ -77,21 +76,6 @@ const dartPrinter: Printer<string> = {
     },
 };
 
-// Helper function to get appropriate filename for dart_fmt
-function getDartFilename(filepath?: string): string {
-    if (!filepath) {
-        return 'stdin.dart';
-    }
-    
-    const filename = filepath.split(/[/\\]/).pop() || 'main.dart';
-    
-    // Ensure .dart extension
-    if (!filename.endsWith('.dart')) {
-        return 'main.dart';
-    }
-    
-    return filename;
-}
 
 // Helper function to create Dart config from Prettier options
 function getDartConfig(options: any): any {
