@@ -25,14 +25,5 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Build successful!"
-echo "WASM file size: $(du -h go-format.wasm | cut -f1)"
-
-# Copy to public directory for browser access
-if [ -d "../../../../../public" ]; then
-    cp go-format.wasm ../../../../../public/go-format.wasm
-    echo "Copied to public directory"
-    rm go-format.wasm
-    echo "Cleaned up local WASM file"
-fi
 
 echo "Go Prettier Plugin WASM (TinyGo) is ready!"

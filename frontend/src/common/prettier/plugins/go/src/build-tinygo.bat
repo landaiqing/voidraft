@@ -28,15 +28,4 @@ if errorlevel 1 (
 
 echo Build successful!
 
-rem Show file size (Windows version)
-for %%A in (go.wasm) do echo WASM file size: %%~zA bytes
-
-rem Copy to public directory for browser access
-if exist "..\..\..\..\..\public" (
-    copy go.wasm ..\..\..\..\..\public\go.wasm > nul
-    echo Copied to public directory
-    del go.wasm
-    echo Cleaned up local WASM file
-)
-
 echo Go Prettier Plugin WASM (TinyGo) is ready!

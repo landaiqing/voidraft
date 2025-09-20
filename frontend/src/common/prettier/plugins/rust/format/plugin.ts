@@ -253,7 +253,7 @@ export const plugin: Plugin<Node> = {
 		{
 			name: "Rust",
 			aliases: ["rs"],
-			parsers: ["jinx-rust"],
+			parsers: ["rust"],
 			extensions: [".rs", ".rs.in"],
 			linguistLanguageId: 327,
 			vscodeLanguageIds: ["rust"],
@@ -264,8 +264,8 @@ export const plugin: Plugin<Node> = {
 		},
 	],
 	parsers: {
-		"jinx-rust": {
-			astFormat: "jinx-rust",
+		"rust": {
+			astFormat: "rust",
 			locStart: start,
 			locEnd: end,
 			parse(code: string, options: ParserOptions<Node> & Partial<CustomOptions>) {
@@ -294,7 +294,7 @@ export const plugin: Plugin<Node> = {
 		},
 	},
 	printers: {
-		"jinx-rust": {
+		"rust": {
 			preprocess: (node: Node) => (node as Program).loc?.src || node,
 			print(path, options, print, args) {
 				if (path.stack.length === 1) {

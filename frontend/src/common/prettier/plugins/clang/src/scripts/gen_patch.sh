@@ -24,4 +24,3 @@ git diff \
 
 rm -rf $tmp_dir
 
-

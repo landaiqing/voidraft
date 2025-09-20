@@ -1,5 +1,5 @@
 [package]
-name = "lua_fmt"
+name = "lua"
 
 authors.workspace     = true
 description.workspace = true

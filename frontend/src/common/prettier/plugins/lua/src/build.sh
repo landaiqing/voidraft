@@ -1,6 +1,5 @@
-cd $(dirname $0)/..
-crates_dir=$(pwd)
+cd $(dirname $0)
+project_dir=$(pwd)
 
-cd ../..
-wasm-pack build --target=web --scope=wasm-fmt crates/lua_fmt
+wasm-pack build --target=web --scope=wasm-fmt .
 

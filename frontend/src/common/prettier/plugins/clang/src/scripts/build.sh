@@ -38,7 +38,5 @@ cp ./build/_deps/llvm_project-src/clang/tools/clang-format/clang-format-diff.py 
 
 ls -lh ./pkg
 
-./scripts/package.mjs ./package.json
-
 # make sure repo is clean
 # git diff --exit-code

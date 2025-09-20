@@ -46,6 +46,7 @@ import xmlPrettierPlugin from "@prettier/plugin-xml"
 import * as rustPrettierPlugin from "@/common/prettier/plugins/rust";
 import * as shellPrettierPlugin from "@/common/prettier/plugins/shell";
 import * as dockerfilePrettierPlugin from "@/common/prettier/plugins/shell";
+// import rustPrettierPlugin from "@/common/prettier/plugins/rust_fmt";
 import tomlPrettierPlugin from "@/common/prettier/plugins/toml";
 import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
 import groovyPrettierPlugin from "@/common/prettier/plugins/groovy";
@@ -122,7 +123,7 @@ export const LANGUAGES: LanguageInfo[] = [
         }
     }),
     new LanguageInfo("rs", "Rust", rustLanguage.parser, ["rs"], {
-        parser: "jinx-rust",
+        parser: "rust",
         plugins: [rustPrettierPlugin]
     }),
     new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser, ["cs"],{

@@ -27,7 +27,7 @@ function initialize() {
     const go = new TinyGo();
 
     // Load WASM file from browser
-    const response = await fetch('/go-format.wasm');
+    const response = await fetch('./go-format.wasm');
     if (!response.ok) {
       throw new Error(`Failed to load WASM file: ${response.status} ${response.statusText}`);
     }

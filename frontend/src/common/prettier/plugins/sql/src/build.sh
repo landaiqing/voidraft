@@ -1,3 +1,3 @@
-cd $(dirname $0)/..
+cd $(dirname $0)
 wasm-pack build --target=web --scope=wasm-fmt
 
