@@ -63,12 +63,12 @@ function findCheckboxes(view: EditorView) {
             const matchPos = from + match.index
             const matchEnd = matchPos + match[0].length
             
-            // 检查前后是否有合适的空格或行首
-            const beforeChar = matchPos > 0 ? doc.sliceString(matchPos - 1, matchPos) : ""
+            // 检查前面是否有 "- " 模式
+            const beforeTwoChars = matchPos >= 2 ? doc.sliceString(matchPos - 2, matchPos) : ""
             const afterChar = matchEnd < doc.length ? doc.sliceString(matchEnd, matchEnd + 1) : ""
             
-            // 只在行首或空格后，且后面跟空格或行尾时才渲染
-            if ((beforeChar === "" || beforeChar === " " || beforeChar === "\t" || beforeChar === "\n") &&
+            // 只有当前面是 "- " 且后面跟空格或行尾时才渲染
+            if (beforeTwoChars === "- " &&
                 (afterChar === "" || afterChar === " " || afterChar === "\t" || afterChar === "\n")) {
                 
                 const isChecked = match[1].toLowerCase() === "x"
@@ -76,7 +76,8 @@ function findCheckboxes(view: EditorView) {
                     widget: new CheckboxWidget(isChecked),
                     inclusive: false,
                 })
-                widgets.push(deco.range(matchPos, matchEnd))
+                // 替换整个 "- [ ]" 或 "- [x]" 模式，包括前面的 "- "
+                widgets.push(deco.range(matchPos - 2, matchEnd))
             }
         }
     }
@@ -90,22 +91,29 @@ function findCheckboxes(view: EditorView) {
 function toggleCheckbox(view: EditorView, pos: number) {
     const doc = view.state.doc
     
-    // 查找当前位置附近的复选框模式
-    for (let offset = -3; offset <= 0; offset++) {
+    // 查找当前位置附近的复选框模式（需要前面有 "- "）
+    for (let offset = -5; offset <= 0; offset++) {
         const checkPos = pos + offset
-        if (checkPos >= 0 && checkPos + 3 <= doc.length) {
+        if (checkPos >= 2 && checkPos + 3 <= doc.length) {
+            // 检查是否有 "- " 前缀
+            const prefix = doc.sliceString(checkPos - 2, checkPos)
             const text = doc.sliceString(checkPos, checkPos + 3).toLowerCase()
-            let change
             
-            if (text === "[x]") {
-                change = { from: checkPos, to: checkPos + 3, insert: "[ ]" }
-            } else if (text === "[ ]") {
-                change = { from: checkPos, to: checkPos + 3, insert: "[x]" }
-            }
-            
-            if (change) {
-                view.dispatch({ changes: change })
-                return true
+            if (prefix === "- ") {
+                let change
+                
+                if (text === "[x]") {
+                    // 替换整个 "- [x]" 为 "- [ ]"
+                    change = { from: checkPos - 2, to: checkPos + 3, insert: "- [ ]" }
+                } else if (text === "[ ]") {
+                    // 替换整个 "- [ ]" 为 "- [x]"
+                    change = { from: checkPos - 2, to: checkPos + 3, insert: "- [x]" }
+                }
+                
+                if (change) {
+                    view.dispatch({ changes: change })
+                    return true
+                }
             }
         }
     }
