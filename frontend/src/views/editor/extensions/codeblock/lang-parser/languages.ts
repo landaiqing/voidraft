@@ -174,7 +174,7 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser, ["scala"]),
     new LanguageInfo("dockerfile", "Dockerfile", StreamLanguage.define(dockerFile).parser, ["dockerfile"], {
-        parser: "dockerfile",
+        parser: "sh",
         plugins: [shellPrettierPlugin]
     }),
     new LanguageInfo("lua", "Lua", StreamLanguage.define(lua).parser, ["lua"], {
