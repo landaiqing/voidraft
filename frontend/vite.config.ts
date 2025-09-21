@@ -52,16 +52,6 @@ export default defineConfig(({mode}: { mode: string }): object => {
                     entryFileNames: 'js/[name]-[hash].js',
                     assetFileNames: '[ext]/[name]-[hash].[ext]',
                     compact: true,
-                    manualChunks(id: string) {
-                        // Prettier
-                        if (id.includes('prettier')) {
-                            return 'prettier';
-                        }
-                        // Vendor
-                        if (id.includes("node_modules")) {
-                            return 'vendor';
-                        }
-                    }
                 },
             }
         }
