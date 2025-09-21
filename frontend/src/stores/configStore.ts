@@ -64,6 +64,7 @@ const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     enableGlobalHotkey: 'general.enableGlobalHotkey',
     globalHotkey: 'general.globalHotkey',
     enableWindowSnap: 'general.enableWindowSnap',
+    enableLoadingAnimation: 'general.enableLoadingAnimation',
 } as const;
 
 const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
@@ -179,6 +180,7 @@ const DEFAULT_CONFIG: AppConfig = {
             key: 'X'
         },
         enableWindowSnap: true,
+        enableLoadingAnimation: true,
     },
     editing: {
         fontSize: CONFIG_LIMITS.fontSize.default,
@@ -525,6 +527,9 @@ export const useConfigStore = defineStore('config', () => {
         
         // 窗口吸附配置相关方法
         setEnableWindowSnap: async (value: boolean) => await updateGeneralConfig('enableWindowSnap', value),
+
+        // 加载动画配置相关方法
+        setEnableLoadingAnimation: async (value: boolean) => await updateGeneralConfig('enableLoadingAnimation', value),
 
         // 更新配置相关方法
         setAutoUpdate: async (value: boolean) => await updateUpdatesConfig('autoUpdate', value),

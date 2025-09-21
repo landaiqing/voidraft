@@ -75,6 +75,9 @@ type GeneralConfig struct {
 	// 全局热键设置
 	EnableGlobalHotkey bool        `json:"enableGlobalHotkey"` // 是否启用全局热键
 	GlobalHotkey       HotkeyCombo `json:"globalHotkey"`       // 全局热键组合
+
+	// 界面设置
+	EnableLoadingAnimation bool `json:"enableLoadingAnimation"` // 是否启用加载动画
 }
 
 // HotkeyCombo 热键组合定义
@@ -145,12 +148,13 @@ func NewDefaultAppConfig() *AppConfig {
 
 	return &AppConfig{
 		General: GeneralConfig{
-			AlwaysOnTop:        false,
-			DataPath:           dataDir,
-			EnableSystemTray:   true,
-			StartAtLogin:       false,
-			EnableWindowSnap:   true, // 默认启用窗口吸附
-			EnableGlobalHotkey: false,
+			AlwaysOnTop:            false,
+			DataPath:               dataDir,
+			EnableSystemTray:       true,
+			StartAtLogin:           false,
+			EnableWindowSnap:       true, // 默认启用窗口吸附
+			EnableGlobalHotkey:     false,
+			EnableLoadingAnimation: true, // 默认启用加载动画
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,
 				Shift: false,

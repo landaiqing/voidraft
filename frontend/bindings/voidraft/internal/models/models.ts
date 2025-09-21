@@ -484,6 +484,12 @@ export class GeneralConfig {
      */
     "globalHotkey": HotkeyCombo;
 
+    /**
+     * 界面设置
+     * 是否启用加载动画
+     */
+    "enableLoadingAnimation": boolean;
+
     /** Creates a new GeneralConfig instance. */
     constructor($$source: Partial<GeneralConfig> = {}) {
         if (!("alwaysOnTop" in $$source)) {
@@ -506,6 +512,9 @@ export class GeneralConfig {
         }
         if (!("globalHotkey" in $$source)) {
             this["globalHotkey"] = (new HotkeyCombo());
+        }
+        if (!("enableLoadingAnimation" in $$source)) {
+            this["enableLoadingAnimation"] = false;
         }
 
         Object.assign(this, $$source);

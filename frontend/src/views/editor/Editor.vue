@@ -47,7 +47,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="editor-container">
-    <LoadingScreen v-if="editorStore.isLoading" text="VOIDRAFT" />
+    <LoadingScreen v-if="editorStore.isLoading && configStore.config.general?.enableLoadingAnimation" text="VOIDRAFT" />
     <div ref="editorElement" class="editor"></div>
     <Toolbar/>
   </div>

@@ -165,6 +165,12 @@ const enableWindowSnap = computed({
   set: (value: boolean) => configStore.setEnableWindowSnap(value)
 });
 
+// 计算属性 - 启用加载动画
+const enableLoadingAnimation = computed({
+  get: () => configStore.config.general.enableLoadingAnimation,
+  set: (value: boolean) => configStore.setEnableLoadingAnimation(value)
+});
+
 // 计算属性 - 开机启动
 const startAtLogin = computed({
   get: () => configStore.config.general.startAtLogin,
@@ -342,6 +348,9 @@ onUnmounted(() => {
       </SettingItem>
       <SettingItem :title="t('settings.enableWindowSnap')">
         <ToggleSwitch v-model="enableWindowSnap"/>
+      </SettingItem>
+      <SettingItem :title="t('settings.enableLoadingAnimation')">
+        <ToggleSwitch v-model="enableLoadingAnimation"/>
       </SettingItem>
     </SettingSection>
 
