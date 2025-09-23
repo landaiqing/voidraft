@@ -110,7 +110,7 @@ const options = {
         since: '0.0.1',
         category: 'Format' as const,
         type: 'boolean' as const,
-        default: false,
+        default: true,
         description: 'When set, changes reserved keywords to ALL CAPS'
     },
     sqlLinesBetweenQueries: {

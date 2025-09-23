@@ -16,7 +16,18 @@ export default defineConfig(({mode}: { mode: string }): object => {
         },
         plugins: [
             vue(),
-            nodePolyfills(),
+            nodePolyfills({
+                include: [],
+                exclude: [],
+                // Whether to polyfill specific globals.
+                globals: {
+                    Buffer: true, // can also be 'build', 'dev', or false
+                    global: true,
+                    process: true,
+                },
+                // Whether to polyfill `node:` protocol imports.
+                protocolImports: true,
+            }),
             Components({
                 dts: true,
                 dirs: ['src/components'],
@@ -40,18 +51,10 @@ export default defineConfig(({mode}: { mode: string }): object => {
             watch: null,
             reportCompressedSize: false, // 跳过压缩大小报告
             rollupOptions: {
-                maxParallelFileOps: 2,
-                treeshake: {
-                    moduleSideEffects: false,
-                    propertyReadSideEffects: false,
-                    tryCatchDeoptimization: false
-                },
                 output: {
-                    format: 'es',
                     chunkFileNames: 'js/[name]-[hash].js',
                     entryFileNames: 'js/[name]-[hash].js',
                     assetFileNames: '[ext]/[name]-[hash].[ext]',
-                    compact: true,
                 },
             }
         }

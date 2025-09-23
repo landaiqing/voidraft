@@ -1,471 +1,207 @@
-import type { Parser, ParserOptions, Plugin, Printer } from 'prettier'
-import {
-    type File,
-    LangVariant,
-    type Node,
-    type ParseError,
-    type ShOptions,
-    type ShPrintOptions,
-    getProcessor,
-} from 'sh-syntax'
+/**
+ * Prettier Plugin for Shell formatting using shfmt WebAssembly
+ * 
+ * This plugin provides support for formatting Shell files using the shfmt WASM implementation.
+ */
+import type { Plugin, Parser, Printer } from 'prettier';
 
-import { languages } from './languages'
+// Import the shell WASM module
+import shfmtInit, { format, type Config } from './shfmt_vite.js';
 
-// 创建处理器实例
-let processorInstance: any = null
+const parserName = 'sh';
 
-const getProcessorInstance = async () => {
-    if (!processorInstance) {
-        try {
-            // @ts-ignore
-            const initWasm = await import('sh-syntax/main.wasm?init')
-            processorInstance = getProcessor(initWasm.default)
-        } catch {
-            processorInstance = getProcessor(() =>
-                fetch(new URL('sh-syntax/main.wasm', import.meta.url))
-            )
-        }
+// Language configuration
+const languages = [
+    {
+        name: 'Shell',
+        aliases: ['sh', 'bash', 'shell'],
+        parsers: [parserName],
+        extensions: ['.sh', '.bash', '.zsh', '.fish', '.ksh'],
+        aceMode: 'sh',
+        tmScope: 'source.shell',
+        linguistLanguageId: 302,
+        vscodeLanguageIds: ['shellscript']
     }
-    return processorInstance
-}
+];
 
-export interface DockerfilePrintOptions extends ParserOptions<string> {
-    indent?: number
-    spaceRedirects?: boolean
-}
-
-export interface ShParserOptions
-    extends Partial<ParserOptions<Node>>,
-        ShOptions {
-    filepath?: string
-}
-
-export type { ShPrintOptions }
-
-export interface ShPrinterOptions extends ShPrintOptions {
-    filepath?: string
-    tabWidth: number
-}
-
-export class ShSyntaxParseError<
-    E extends Error = ParseError | SyntaxError,
-> extends SyntaxError {
-    declare cause: E
-
-    declare loc: { start: { column: number; line: number } } | undefined
-
-    constructor(err: E) {
-        const error = err as ParseError | SyntaxError
-        super(('Text' in error && error.Text) || error.message)
-        this.cause = err
-        // `error instanceof ParseError` won't not work because the error is thrown wrapped by `synckit`
-        if ('Pos' in error && error.Pos != null && typeof error.Pos === 'object') {
-            this.loc = { start: { column: error.Pos.Col, line: error.Pos.Line } }
-        }
-    }
-}
-
-function hasPragma(text: string) {
-    /**
-     * We don't want to parse every file twice but Prettier's interface isn't
-     * conducive to caching/memoizing an upstream Parser, so we're going with some
-     * minor Regex hackery.
-     *
-     * Only read empty lines, comments, and shebangs at the start of the file. We
-     * do not support Bash's pseudo-block comments.
-     */
-
-        // No, we don't support unofficial block comments.
-    const commentLineRegex = /^\s*(#(?<comment>.*))?$/gm
-    let lastIndex = -1
-
-    /**
-     * Only read leading comments, skip shebangs, and check for the pragma. We
-     * don't want to have to parse every file twice.
-     */
-    for (;;) {
-        const match = commentLineRegex.exec(text)
-
-        // Found "real" content, EoF, or stuck in a loop.
-        if (match == null || match.index !== lastIndex + 1) {
-            return false
-        }
-
-        lastIndex = commentLineRegex.lastIndex
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- incorrect typing
-        const comment = match.groups?.comment?.trim()
-
-        // Empty lines and shebangs have no captures
-        if (comment == null) {
-            continue
-        }
-
-        if (comment.startsWith('@prettier') || comment.startsWith('@format')) {
-            return true
-        }
-    }
-}
-
-const dockerfileParser: Parser<string> = {
-    astFormat: 'dockerfile',
-    hasPragma,
-    parse: text => text,
+// Parser configuration
+const shParser: Parser<string> = {
+    astFormat: parserName,
+    parse: (text: string) => text,
     locStart: () => 0,
-    locEnd: node => node.length,
-}
+    locEnd: (node: string) => node.length,
+};
 
-let formatDockerfileContents_:
-    | any
-    | undefined
+// Lazy initialize shfmt WASM module
+let initPromise: Promise<void> | null = null;
+let isInitialized = false;
 
-const getFormatDockerfileContents = async () => {
-    if (!formatDockerfileContents_) {
-        try {
-            // @ts-ignore - 忽略模块解析错误
-            const dockerfmt = await import('@reteps/dockerfmt')
-            formatDockerfileContents_ = dockerfmt.formatDockerfileContents
-        } catch (error) {
-            console.warn('Failed to load @reteps/dockerfmt:', error)
-            formatDockerfileContents_ = null
-        }
+function initShfmt(): Promise<void> {
+    if (isInitialized) {
+        return Promise.resolve();
     }
-    return formatDockerfileContents_
+    
+    if (!initPromise) {
+        initPromise = (async () => {
+            try {
+                await shfmtInit();
+                isInitialized = true;
+            } catch (error) {
+                console.warn('Failed to initialize shfmt WASM module:', error);
+                initPromise = null;
+                throw error;
+            }
+        })();
+    }
+    
+    return initPromise;
 }
 
-const dockerPrinter: Printer<string> = {
-    // @ts-expect-error -- https://github.com/prettier/prettier/issues/15080#issuecomment-1630987744
-    async print(
-        path,
-        {
-            filepath,
-
-            // parser options
-            keepComments = true,
-            variant,
-            stopAt,
-            recoverErrors,
-
-            // printer options
-            useTabs,
-            tabWidth,
-            indent = useTabs ? 0 : (tabWidth ?? 2),
-            binaryNextLine = true,
-            switchCaseIndent = true,
-            spaceRedirects,
-            // eslint-disable-next-line sonarjs/deprecation
-            keepPadding,
-            minify,
-            singleLine,
-            functionNextLine,
-        }: ShPrintOptions,
-    ) {
-        const formatDockerfileContents = await getFormatDockerfileContents()
+// Printer configuration
+const shPrinter: Printer<string> = {
+    // @ts-expect-error -- Support async printer like shell plugin
+    async print(path, options) {
         try {
-            if (formatDockerfileContents) {
-                return await formatDockerfileContents(path.node, {
-                    indent,
-                    spaceRedirects: spaceRedirects ?? false,
-                    trailingNewline: true,
-                })
-            }
-            throw new Error('dockerfmt not available')
-        } catch {
-            /*
-             * `dockerfmt` is buggy now and could throw unexpectedly, so we fallback to
-             * the `sh` printer automatically in this case.
-             *
-             * @see {https://github.com/reteps/dockerfmt/issues/21}
-             * @see {https://github.com/reteps/dockerfmt/issues/25}
-             */
-            const processor = await getProcessorInstance()
-            return processor(path.node, {
-                print: true,
-                filepath,
-                keepComments,
-                variant,
-                stopAt,
-                recoverErrors,
-                useTabs,
-                tabWidth,
-                indent,
-                binaryNextLine,
-                switchCaseIndent,
-                spaceRedirects: spaceRedirects ?? true,
-                keepPadding,
-                minify,
-                singleLine,
-                functionNextLine,
-            })
+            // Wait for initialization to complete
+            await initShfmt();
+            
+            const text = (path as any).getValue ? (path as any).getValue() : path.node;
+            const config = getShfmtConfig(options);
+            
+            // Format using shfmt (synchronous call)
+            const formatted = format(text, config);
+            
+            return formatted.trim();
+        } catch (error) {
+            console.warn('Shell formatting failed:', error);
+            // Return original text if formatting fails
+            return (path as any).getValue ? (path as any).getValue() : path.node;
         }
     },
+};
+
+// Helper function to create shfmt config from Prettier options
+function getShfmtConfig(options: any): Config {
+    const config: Config = {};
+    
+    // Map Prettier options to shfmt config
+    if (options.useTabs !== undefined) {
+        config.useTabs = options.useTabs;
+    }
+    
+    if (options.tabWidth !== undefined) {
+        config.tabWidth = options.tabWidth;
+    }
+    
+    if (options.printWidth !== undefined) {
+        config.printWidth = options.printWidth;
+    }
+    
+    // Shell-specific options
+    if (options.shVariant !== undefined) {
+        config.variant = options.shVariant;
+    }
+    
+    if (options.shKeepComments !== undefined) {
+        config.keepComments = options.shKeepComments;
+    }
+    
+    if (options.shBinaryNextLine !== undefined) {
+        config.binaryNextLine = options.shBinaryNextLine;
+    }
+    
+    if (options.shSwitchCaseIndent !== undefined) {
+        config.switchCaseIndent = options.shSwitchCaseIndent;
+    }
+    
+    if (options.shSpaceRedirects !== undefined) {
+        config.spaceRedirects = options.shSpaceRedirects;
+    }
+    
+    if (options.shKeepPadding !== undefined) {
+        config.keepPadding = options.shKeepPadding;
+    }
+    
+    if (options.shFunctionNextLine !== undefined) {
+        config.functionNextLine = options.shFunctionNextLine;
+    }
+    
+    return config;
 }
 
-const shParser: Parser<Node> = {
-    astFormat: 'sh',
-    hasPragma,
-    locStart: node => node.Pos.Offset,
-    locEnd: node => node.End.Offset,
-    async parse(
-        text,
-        {
-            filepath = '',
-            keepComments = true,
-            /**
-             * The following `@link` doesn't work as expected, see
-             * {@link https://github.com/microsoft/tsdoc/issues/9}
-             */
-            /** TODO: support {@link LangVariant.LangAuto} */ // eslint-disable-line sonarjs/todo-tag
-            variant,
-            stopAt,
-            recoverErrors,
-        }: ShParserOptions,
-    ) {
-        const processor = await getProcessorInstance()
-        return processor(text, {
-            filepath,
-            keepComments,
-            variant,
-            stopAt,
-            recoverErrors,
-        })
-    },
-}
-
-const shPrinter: Printer<Node | string> = {
-    // @ts-expect-error -- https://github.com/prettier/prettier/issues/15080#issuecomment-1630987744
-    async print(
-        path,
-        {
-            originalText,
-            filepath,
-
-            // parser options
-            keepComments = true,
-            variant,
-            stopAt,
-            recoverErrors,
-
-            // printer options
-            useTabs,
-            tabWidth,
-            indent = useTabs ? 0 : tabWidth,
-            binaryNextLine = true,
-            switchCaseIndent = true,
-            spaceRedirects = true,
-            // eslint-disable-next-line sonarjs/deprecation
-            keepPadding,
-            minify,
-            singleLine,
-            functionNextLine,
-        }: ShPrintOptions,
-    ) {
-        const processor = await getProcessorInstance()
-        return processor(path.node as File, {
-            originalText,
-            filepath,
-            keepComments,
-            variant,
-            stopAt,
-            recoverErrors,
-            useTabs,
-            tabWidth,
-            indent,
-            binaryNextLine,
-            switchCaseIndent,
-            spaceRedirects,
-            keepPadding,
-            minify,
-            singleLine,
-            functionNextLine,
-        })
-    },
-}
-
-export const parsers = {
-    dockerfile: dockerfileParser,
-    sh: shParser,
-}
-
-export const printers = {
-    dockerfile: dockerPrinter,
-    sh: shPrinter,
-}
-
-export const options: Plugin['options'] = {
-    keepComments: {
-        // since: '0.1.0',
-        category: 'Output',
-        type: 'boolean',
-        default: true,
-        description:
-            'KeepComments makes the parser parse comments and attach them to nodes, as opposed to discarding them.',
-    },
-    variant: {
-        // since: '0.1.0',
-        category: 'Config',
-        type: 'choice',
+// Plugin options
+const options = {
+    shVariant: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'choice' as const,
+        default: 'bash',
+        description: 'Shell variant to use for formatting',
         choices: [
-            {
-                value: LangVariant.LangBash,
-                description: [
-                    'LangBash corresponds to the GNU Bash language, as described in its manual at https://www.gnu.org/software/bash/manual/bash.html.',
-                    '',
-                    'We currently follow Bash version 5.2.',
-                    '',
-                    'Its string representation is "bash".',
-                ].join('\n'),
-            },
-            {
-                value: LangVariant.LangPOSIX,
-                description: [
-                    'LangPOSIX corresponds to the POSIX Shell language, as described at https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html.',
-                    '',
-                    'Its string representation is "posix" or "sh".',
-                ].join('\n'),
-            },
-            {
-                value: LangVariant.LangMirBSDKorn,
-                description: [
-                    'LangMirBSDKorn corresponds to the MirBSD Korn Shell, also known as mksh, as described at http://www.mirbsd.org/htman/i386/man1/mksh.htm.',
-                    'Note that it shares some features with Bash, due to the shared ancestry that is ksh.',
-                    '',
-                    'We currently follow mksh version 59.',
-                    '',
-                    'Its string representation is "mksh".',
-                ].join('\n'),
-            },
-            {
-                value: LangVariant.LangBats,
-                description: [
-                    'LangBats corresponds to the Bash Automated Testing System language, as described at https://github.com/bats-core/bats-core.',
-                    "Note that it's just a small extension of the Bash language.",
-                    '',
-                    'Its string representation is "bats".',
-                ].join('\n'),
-            },
-            {
-                value: LangVariant.LangAuto,
-                description: [
-                    "LangAuto corresponds to automatic language detection, commonly used by end-user applications like shfmt, which can guess a file's language variant given its filename or shebang.",
-                    '',
-                    'At this time, [Variant] does not support LangAuto.',
-                ].join('\n'),
-            },
-        ],
-        description:
-            'Variant changes the shell language variant that the parser will accept.',
+            { value: 'bash', description: 'Bash shell' },
+            { value: 'posix', description: 'POSIX shell' },
+            { value: 'mksh', description: 'MirBSD Korn shell' },
+            { value: 'bats', description: 'Bats testing framework' }
+        ]
     },
-    stopAt: {
-        // since: '0.1.0',
-        category: 'Config',
-        type: 'path',
-        description: [
-            'StopAt configures the lexer to stop at an arbitrary word, treating it as if it were the end of the input. It can contain any characters except whitespace, and cannot be over four bytes in size.',
-            'This can be useful to embed shell code within another language, as one can use a special word to mark the delimiters between the two.',
-            'As a word, it will only apply when following whitespace or a separating token. For example, StopAt("$$") will act on the inputs "foo $$" and "foo;$$", but not on "foo \'$$\'".',
-            'The match is done by prefix, so the example above will also act on "foo $$bar".',
-        ].join('\n'),
-    },
-    recoverErrors: {
-        // since: '0.17.0',
-        category: 'Config',
-        type: 'path',
-        description: [
-            'RecoverErrors allows the parser to skip up to a maximum number of errors in the given input on a best-effort basis.',
-            'This can be useful to tab-complete an interactive shell prompt, or when providing diagnostics on slightly incomplete shell source.',
-            '',
-            'Currently, this only helps with mandatory tokens from the shell grammar which are not present in the input. They result in position fields or nodes whose position report [Pos.IsRecovered] as true.',
-            '',
-            'For example, given the input `(foo |`, the result will contain two recovered positions; first, the pipe requires a statement to follow, and as [Stmt.Pos] reports, the entire node is recovered.',
-            'Second, the subshell needs to be closed, so [Subshell.Rparen] is recovered.',
-        ].join('\n'),
-    },
-    indent: {
-        // since: '0.1.0',
-        category: 'Format',
-        type: 'int',
-        description:
-            'Indent sets the number of spaces used for indentation. If set to 0, tabs will be used instead.',
-    },
-    binaryNextLine: {
-        // since: '0.1.0',
-        category: 'Output',
-        type: 'boolean',
+    shKeepComments: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'boolean' as const,
         default: true,
-        description:
-            'BinaryNextLine will make binary operators appear on the next line when a binary command, such as a pipe, spans multiple lines. A backslash will be used.',
+        description: 'Keep comments in formatted output'
     },
-    switchCaseIndent: {
-        // since: '0.1.0',
-        category: 'Format',
-        type: 'boolean',
+    shBinaryNextLine: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'boolean' as const,
         default: true,
-        description:
-            'SwitchCaseIndent will make switch cases be indented. As such, switch case bodies will be two levels deeper than the switch itself.',
+        description: 'Place binary operators on next line'
     },
-    spaceRedirects: {
-        // since: '0.1.0',
-        category: 'Format',
-        type: 'boolean',
+    shSwitchCaseIndent: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'boolean' as const,
         default: true,
-        description:
-            "SpaceRedirects will put a space after most redirection operators. The exceptions are '>&', '<&', '>(', and '<('.",
+        description: 'Indent switch case statements'
     },
-    keepPadding: {
-        // since: '0.1.0',
-        category: 'Format',
-        type: 'boolean',
+    shSpaceRedirects: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'boolean' as const,
+        default: true,
+        description: 'Add spaces around redirects'
+    },
+    shKeepPadding: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'boolean' as const,
         default: false,
-        description: [
-            'KeepPadding will keep most nodes and tokens in the same column that they were in the original source.',
-            'This allows the user to decide how to align and pad their code with spaces.',
-            '',
-            'Note that this feature is best-effort and will only keep the alignment stable, so it may need some human help the first time it is run.',
-        ].join('\n'),
-        deprecated: [
-            'This formatting option is flawed and buggy, and often does not result in what the user wants when the code gets complex enough.',
-            'The next major version, v4, will remove this feature entirely.',
-            'See: https://github.com/mvdan/sh/issues/658',
-        ].join('\n'),
+        description: 'Keep padding in column alignment'
     },
-    minify: {
-        // since: '0.1.0',
-        category: 'Output',
-        type: 'boolean',
+    shFunctionNextLine: {
+        since: '0.0.1',
+        category: 'Format' as const,
+        type: 'boolean' as const,
         default: false,
-        description: [
-            'Minify will print programs in a way to save the most bytes possible.',
-            'For example, indentation and comments are skipped, and extra whitespace is avoided when possible.',
-        ].join('\n'),
-    },
-    singleLine: {
-        // since: '0.17.0',
-        category: 'Format',
-        type: 'boolean',
-        default: false,
-        description: [
-            'SingleLine will attempt to print programs in one line. For example, lists of commands or nested blocks do not use newlines in this mode.',
-            'Note that some newlines must still appear, such as those following comments or around here-documents.',
-            '',
-            "Print's trailing newline when given a [*File] is not affected by this option.",
-        ].join('\n'),
-    },
-    functionNextLine: {
-        // since: '0.1.0',
-        category: 'Format',
-        type: 'boolean',
-        default: false,
-        description:
-            "FunctionNextLine will place a function's opening braces on the next line.",
-    },
-}
+        description: 'Place function opening brace on next line'
+    }
+};
 
-const shellPlugin: Plugin = {
+// Plugin definition
+const shPlugin: Plugin = {
     languages,
-    parsers,
-    printers,
+    parsers: {
+        [parserName]: shParser,
+    },
+    printers: {
+        [parserName]: shPrinter,
+    },
     options,
-}
+};
 
-export default shellPlugin
-export { languages }
+// Export plugin without auto-initialization
+export default shPlugin;
+export { languages, initShfmt as initialize };
+export const parsers = shPlugin.parsers;
+export const printers = shPlugin.printers;

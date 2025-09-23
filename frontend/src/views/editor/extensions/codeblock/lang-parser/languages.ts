@@ -43,7 +43,8 @@ import sqlPrettierPlugin from "@/common/prettier/plugins/sql"
 import phpPrettierPlugin from "@/common/prettier/plugins/php"
 import javaPrettierPlugin from "@/common/prettier/plugins/java"
 import xmlPrettierPlugin from "@prettier/plugin-xml"
-import * as shellPrettierPlugin from "@/common/prettier/plugins/shell";
+import shellPrettierPlugin from "@/common/prettier/plugins/shell";
+import dockerfilePrettierPlugin from "@/common/prettier/plugins/docker";
 import rustPrettierPlugin from "@/common/prettier/plugins/rust";
 import tomlPrettierPlugin from "@/common/prettier/plugins/toml";
 import clojurePrettierPlugin from "@cospaia/prettier-plugin-clojure";
@@ -174,8 +175,8 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("scala", "Scala", StreamLanguage.define(scala).parser, ["scala"]),
     new LanguageInfo("dockerfile", "Dockerfile", StreamLanguage.define(dockerFile).parser, ["dockerfile"], {
-        parser: "sh",
-        plugins: [shellPrettierPlugin]
+        parser: "dockerfile",
+        plugins: [dockerfilePrettierPlugin]
     }),
     new LanguageInfo("lua", "Lua", StreamLanguage.define(lua).parser, ["lua"], {
         parser: "lua",
