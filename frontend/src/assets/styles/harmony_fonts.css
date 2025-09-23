@@ -1,0 +1,134 @@
+/* HarmonyOS 字体定义 */
+
+/* HarmonyOS Regular */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Regular.woff2') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS Light */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Light.woff2') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS Medium */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Medium.woff2') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS Semibold */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Semibold.woff2') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS Bold */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Bold.woff2') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS Black */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Black.woff2') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS Thin */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_Sans/HarmonyOS_Sans_Thin.woff2') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC 简体中文字体 */
+
+/* HarmonyOS SC Regular */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Regular.woff2') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC Light */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Light.woff2') format('truetype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC Medium */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Medium.woff2') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC Semibold */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Semibold.woff2') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC Bold */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Bold.woff2') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC Black */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Black.woff2') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* HarmonyOS SC Thin */
+@font-face {
+  font-family: 'HarmonyOS';
+  src: url('../fonts/HarmonyOS/HarmonyOS_SansSC/HarmonyOS_SansSC_Thin.woff2') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 字体加载优化 */
+.font-loading {
+  font-family: system-ui, -apple-system, sans-serif;
+}

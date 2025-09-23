@@ -18,7 +18,7 @@ onMounted(async () => {
 });
 
 // 字体选择选项
-const fontFamilyOptions = computed(() => configStore.localizedFontOptions);
+const fontFamilyOptions = computed(() => configStore.fontOptions);
 const currentFontFamily = computed(() => configStore.config.editing.fontFamily);
 
 // 字体选择
@@ -32,15 +32,15 @@ const handleFontFamilyChange = async (event: Event) => {
 
 // 字体粗细选项
 const fontWeightOptions = [
-  { value: '100', label: t('settings.fontWeights.100') },
-  { value: '200', label: t('settings.fontWeights.200') },
-  { value: '300', label: t('settings.fontWeights.300') },
-  { value: 'normal', label: t('settings.fontWeights.normal') },
-  { value: '500', label: t('settings.fontWeights.500') },
-  { value: '600', label: t('settings.fontWeights.600') },
-  { value: 'bold', label: t('settings.fontWeights.bold') },
-  { value: '800', label: t('settings.fontWeights.800') },
-  { value: '900', label: t('settings.fontWeights.900') }
+  { value: '100', label: '100' },
+  { value: '200', label: '200' },
+  { value: '300', label: '300' },
+  { value: '400', label: '400' },
+  { value: '500', label: '500' },
+  { value: '600', label: '600' },
+  { value: 'bold', label: '700' },
+  { value: '800', label: '800' },
+  { value: '900', label: '900' }
 ];
 
 // 字体粗细选择
@@ -114,8 +114,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
   <div class="settings-page">
     <SettingSection :title="t('settings.fontSettings')">
       <SettingItem 
-        :title="t('settings.fontFamily')" 
-        :description="t('settings.fontFamilyDescription')"
+        :title="t('settings.fontFamily')"
       >
         <select 
           class="font-family-select" 
@@ -133,8 +132,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
       </SettingItem>
 
       <SettingItem 
-        :title="t('settings.fontSize')" 
-        :description="t('settings.fontSizeDescription')"
+        :title="t('settings.fontSize')"
       >
         <div class="number-control">
           <button @click="decreaseFontSize" class="control-button">-</button>
@@ -144,8 +142,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
       </SettingItem>
 
       <SettingItem 
-        :title="t('settings.fontWeight')" 
-        :description="t('settings.fontWeightDescription')"
+        :title="t('settings.fontWeight')"
       >
         <select 
           class="font-weight-select" 
@@ -163,8 +160,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
       </SettingItem>
 
       <SettingItem 
-        :title="t('settings.lineHeight')" 
-        :description="t('settings.lineHeightDescription')"
+        :title="t('settings.lineHeight')"
       >
         <div class="number-control">
           <button @click="decreaseLineHeight" class="control-button">-</button>
@@ -389,4 +385,4 @@ const handleAutoSaveDelayChange = async (event: Event) => {
     transform: none;
   }
 }
-</style> 
+</style>

@@ -10,146 +10,24 @@ import {
     SystemThemeType,
     TabType,
     UpdatesConfig,
-    UpdateSourceType,
     GitBackupConfig,
     AuthMethod
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/common/utils/configUtils';
+import {FONT_OPTIONS} from '@/common/constant/fonts';
+import {SupportedLocaleType, SUPPORTED_LOCALES} from '@/common/constant/locales';
+import {
+    NumberConfigKey,
+    GENERAL_CONFIG_KEY_MAP,
+    EDITING_CONFIG_KEY_MAP,
+    APPEARANCE_CONFIG_KEY_MAP,
+    UPDATES_CONFIG_KEY_MAP,
+    BACKUP_CONFIG_KEY_MAP,
+    CONFIG_LIMITS,
+    DEFAULT_CONFIG
+} from '@/common/constant/config';
 import * as runtime from '@wailsio/runtime';
-// 国际化相关导入
-export type SupportedLocaleType = 'zh-CN' | 'en-US';
-
-// 支持的语言列表
-export const SUPPORTED_LOCALES = [
-    {
-        code: 'zh-CN' as SupportedLocaleType,
-        name: '简体中文'
-    },
-    {
-        code: 'en-US' as SupportedLocaleType,
-        name: 'English'
-    }
-] as const;
-
-// 配置键映射和限制的类型定义
-type GeneralConfigKeyMap = {
-    readonly [K in keyof GeneralConfig]: string;
-};
-
-type EditingConfigKeyMap = {
-    readonly [K in keyof EditingConfig]: string;
-};
-
-type AppearanceConfigKeyMap = {
-    readonly [K in keyof AppearanceConfig]: string;
-};
-
-type UpdatesConfigKeyMap = {
-    readonly [K in keyof UpdatesConfig]: string;
-};
-
-type BackupConfigKeyMap = {
-    readonly [K in keyof GitBackupConfig]: string;
-};
-
-type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
-
-// 配置键映射
-const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
-    alwaysOnTop: 'general.alwaysOnTop',
-    dataPath: 'general.dataPath',
-    enableSystemTray: 'general.enableSystemTray',
-    startAtLogin: 'general.startAtLogin',
-    enableGlobalHotkey: 'general.enableGlobalHotkey',
-    globalHotkey: 'general.globalHotkey',
-    enableWindowSnap: 'general.enableWindowSnap',
-    enableLoadingAnimation: 'general.enableLoadingAnimation',
-} as const;
-
-const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
-    fontSize: 'editing.fontSize',
-    fontFamily: 'editing.fontFamily',
-    fontWeight: 'editing.fontWeight',
-    lineHeight: 'editing.lineHeight',
-    enableTabIndent: 'editing.enableTabIndent',
-    tabSize: 'editing.tabSize',
-    tabType: 'editing.tabType',
-    autoSaveDelay: 'editing.autoSaveDelay'
-} as const;
-
-const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
-    language: 'appearance.language',
-    systemTheme: 'appearance.systemTheme'
-} as const;
-
-const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
-    version: 'updates.version',
-    autoUpdate: 'updates.autoUpdate',
-    primarySource: 'updates.primarySource',
-    backupSource: 'updates.backupSource',
-    backupBeforeUpdate: 'updates.backupBeforeUpdate',
-    updateTimeout: 'updates.updateTimeout',
-    github: 'updates.github',
-    gitea: 'updates.gitea'
-} as const;
-
-const BACKUP_CONFIG_KEY_MAP: BackupConfigKeyMap = {
-    enabled: 'backup.enabled',
-    repo_url: 'backup.repo_url',
-    auth_method: 'backup.auth_method',
-    username: 'backup.username',
-    password: 'backup.password',
-    token: 'backup.token',
-    ssh_key_path: 'backup.ssh_key_path',
-    ssh_key_passphrase: 'backup.ssh_key_passphrase',
-    backup_interval: 'backup.backup_interval',
-    auto_backup: 'backup.auto_backup',
-
-} as const;
-
-// 配置限制
-const CONFIG_LIMITS = {
-    fontSize: {min: 12, max: 28, default: 13},
-    tabSize: {min: 2, max: 8, default: 4},
-    lineHeight: {min: 1.0, max: 3.0, default: 1.5},
-    tabType: {values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces}
-} as const;
-
-// 创建获取翻译的函数
-export const createFontOptions = (t: (key: string) => string) => [
-    {
-        label: t('settings.fontFamilies.harmonyOS'),
-        value: '"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif'
-    },
-    {
-        label: t('settings.fontFamilies.microsoftYahei'),
-        value: '"Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif'
-    },
-    {
-        label: t('settings.fontFamilies.pingfang'),
-        value: '"PingFang SC", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif'
-    },
-    {
-        label: t('settings.fontFamilies.jetbrainsMono'),
-        value: '"JetBrains Mono", "Fira Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
-    },
-    {
-        label: t('settings.fontFamilies.firaCode'),
-        value: '"Fira Code", "JetBrains Mono", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
-    },
-    {
-        label: t('settings.fontFamilies.sourceCodePro'),
-        value: '"Source Code Pro", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
-    },
-    {
-        label: t('settings.fontFamilies.cascadiaCode'),
-        value: '"Cascadia Code", "SF Mono", Monaco, Consolas, "Ubuntu Mono", monospace'
-    }
-];
-
-// 常用字体选项
-export const FONT_OPTIONS = createFontOptions((key) => key);
 
 // 获取浏览器的默认语言
 const getBrowserLanguage = (): SupportedLocaleType => {
@@ -164,74 +42,6 @@ const getBrowserLanguage = (): SupportedLocaleType => {
     return supportedLang?.code || 'zh-CN';
 };
 
-// 默认配置
-const DEFAULT_CONFIG: AppConfig = {
-    general: {
-        alwaysOnTop: false,
-        dataPath: '',
-        enableSystemTray: true,
-        startAtLogin: false,
-        enableGlobalHotkey: false,
-        globalHotkey: {
-            ctrl: false,
-            shift: false,
-            alt: true,
-            win: false,
-            key: 'X'
-        },
-        enableWindowSnap: true,
-        enableLoadingAnimation: true,
-    },
-    editing: {
-        fontSize: CONFIG_LIMITS.fontSize.default,
-        fontFamily: FONT_OPTIONS[0].value,
-        fontWeight: 'normal',
-        lineHeight: CONFIG_LIMITS.lineHeight.default,
-        enableTabIndent: true,
-        tabSize: CONFIG_LIMITS.tabSize.default,
-        tabType: CONFIG_LIMITS.tabType.default,
-        autoSaveDelay: 5000
-    },
-            appearance: {
-            language: LanguageType.LangZhCN,
-            systemTheme: SystemThemeType.SystemThemeAuto
-        },
-    updates: {
-        version: "1.0.0",
-        autoUpdate: true,
-        primarySource: UpdateSourceType.UpdateSourceGithub,
-        backupSource: UpdateSourceType.UpdateSourceGitea,
-        backupBeforeUpdate: true,
-        updateTimeout: 30,
-        github: {
-            owner: "landaiqing",
-            repo: "voidraft",
-        },
-        gitea: {
-            baseURL: "https://git.landaiqing.cn",
-            owner: "landaiqing",
-            repo: "voidraft",
-        }
-    },
-    backup: {
-        enabled: false,
-        repo_url: "",
-        auth_method: AuthMethod.UserPass,
-        username: "",
-        password: "",
-        token: "",
-        ssh_key_path: "",
-        ssh_key_passphrase: "",
-        backup_interval: 60,
-        auto_backup: true,
-    },
-    metadata: {
-        version: '1.0.0',
-        lastUpdated: new Date().toString(),
-    }
-};
-
-
 export const useConfigStore = defineStore('config', () => {
     const {locale, t} = useI18n();
 
@@ -242,8 +52,8 @@ export const useConfigStore = defineStore('config', () => {
         configLoaded: false
     });
     
-    // 初始化FONT_OPTIONS国际化版本
-    const localizedFontOptions = computed(() => createFontOptions(t));
+    // Font options (no longer localized)
+    const fontOptions = computed(() => FONT_OPTIONS);
 
     // 计算属性 - 使用工厂函数简化
     const createLimitComputed = (key: NumberConfigKey) => computed(() => CONFIG_LIMITS[key]);
@@ -365,10 +175,6 @@ export const useConfigStore = defineStore('config', () => {
         };
     };
 
-    // 通用布尔值切换器
-    const createGeneralToggler = <T extends keyof GeneralConfig>(key: T) =>
-        async () => await updateGeneralConfig(key, !state.config.general[key] as GeneralConfig[T]);
-
     const createEditingToggler = <T extends keyof EditingConfig>(key: T) =>
         async () => await updateEditingConfig(key, !state.config.editing[key] as EditingConfig[T]);
 
@@ -461,7 +267,7 @@ export const useConfigStore = defineStore('config', () => {
         config: computed(() => state.config),
         configLoaded: computed(() => state.configLoaded),
         isLoading: computed(() => state.isLoading),
-        localizedFontOptions,
+        fontOptions,
         
         // 限制常量
         ...limits,

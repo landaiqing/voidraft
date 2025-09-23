@@ -166,7 +166,7 @@ func NewDefaultAppConfig() *AppConfig {
 		Editing: EditingConfig{
 			// 字体设置
 			FontSize:   13,
-			FontFamily: `"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
+			FontFamily: `"HarmonyOS SC", "HarmonyOS", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
 			FontWeight: "normal",
 			LineHeight: 1.5,
 			// Tab设置

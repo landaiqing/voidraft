@@ -370,6 +370,12 @@ onUnmounted(() => {
   <div class="document-selector">
     <!-- 选择器按钮 -->
     <button class="doc-btn" @click="toggleMenu">
+      <span class="doc-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+          <polyline points="14,2 14,8 20,8"></polyline>
+        </svg>
+      </span>
       <span class="doc-name">{{ currentDocName }}</span>
       <span class="arrow" :class="{ open: showMenu }">▲</span>
     </button>
@@ -517,6 +523,11 @@ onUnmounted(() => {
     &:hover {
       background-color: var(--border-color);
       opacity: 0.8;
+    }
+
+    .doc-icon {
+      display: flex;
+      align-items: center;
     }
 
     .doc-name {

@@ -3,7 +3,6 @@ import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
-import {useSystemStore} from './systemStore';
 
 
 export const useDocumentStore = defineStore('document', () => {

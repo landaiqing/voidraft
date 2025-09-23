@@ -145,14 +145,10 @@ export default {
     resetDefault: '恢复默认',
     resetToDefaultPath: '恢复为默认路径',
     fontSize: '字体大小',
-    fontSizeDescription: '编辑器字体大小',
     fontSettings: '字体设置',
     fontFamily: '字体',
-    fontFamilyDescription: '选择编辑器字体',
     fontWeight: '字体粗细',
-    fontWeightDescription: '设置字体的粗细程度',
     lineHeight: '行高',
-    lineHeightDescription: '设置文本行之间的间距',
     tabSettings: 'Tab 设置',
     tabSize: 'Tab 大小',
     tabType: 'Tab 类型',
@@ -190,17 +186,7 @@ export default {
       configuration: '配置',
       resetToDefault: '重置为默认配置',
     },
-    fontWeights: {
-      '100': '极细 (100)',
-      '200': '超细 (200)',
-      '300': '细 (300)',
-      'normal': '正常 (400)',
-      '500': '中等 (500)',
-      '600': '半粗 (600)',
-      'bold': '粗体 (700)',
-      '800': '超粗 (800)',
-      '900': '极粗 (900)'
-    },
+
     customThemeColors: '自定义主题颜色',
     resetToDefault: '重置为默认',
     colorValue: '颜色值',
@@ -235,15 +221,7 @@ export default {
       searchMatch: '搜索匹配',
       matchingBracket: '匹配括号'
     },
-    fontFamilies: {
-      harmonyOS: '鸿蒙字体',
-      microsoftYahei: '微软雅黑',
-      pingfang: '苹方字体',
-      jetbrainsMono: 'JetBrains Mono',
-      firaCode: 'Fira Code',
-      sourceCodePro: 'Source Code Pro',
-      cascadiaCode: 'Cascadia Code'
-    },
+
     hotkeyPreview: '预览：',
     none: '无',
     backup: {

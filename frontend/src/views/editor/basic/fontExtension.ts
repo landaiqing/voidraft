@@ -14,10 +14,10 @@ export const fontCompartment = new Compartment();
 
 // 默认字体配置
 export const DEFAULT_FONT_CONFIG: FontConfig = {
-  fontFamily: '"HarmonyOS Sans SC", "HarmonyOS Sans", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif',
-  fontSize: 14,
+  fontFamily: 'HarmonyOS',
+  fontSize: 13,
   lineHeight: 1.5,
-  fontWeight: 'normal'
+  fontWeight: '400'
 };
 
 // 从后端配置创建字体配置
