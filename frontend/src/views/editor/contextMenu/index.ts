@@ -15,7 +15,6 @@ import {
   deleteBlock, formatCurrentBlock, 
   addNewBlockAfterCurrent, addNewBlockAfterLast, addNewBlockBeforeCurrent
 } from "../extensions/codeblock/commands";
-import { commandRegistry } from "@/views/editor/keymap";
 import i18n from "@/i18n";
 import {useSystemStore} from "@/stores/systemStore";
 
