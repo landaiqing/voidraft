@@ -27,7 +27,7 @@ export const emptyBlockSelected = StateField.define<number | null>({
       // 如果选择改变，重置状态
       return null;
     } else {
-      for (let e of tr.effects) {
+      for (const e of tr.effects) {
         if (e.is(setEmptyBlockSelected)) {
           // 切换状态为 true
           return e.value;
@@ -164,8 +164,8 @@ export const blockAwareSelection = EditorState.transactionFilter.of((tr: any) =>
 
       // 如果选择在一个块内，确保不超出块边界
       if (fromBlock) {
-        let newFrom = Math.max(range.from, fromBlock.content.from);
-        let newTo = Math.min(range.to, fromBlock.content.to);
+        const newFrom = Math.max(range.from, fromBlock.content.from);
+        const newTo = Math.min(range.to, fromBlock.content.to);
         
         if (newFrom !== range.from || newTo !== range.to) {
           needsCorrection = true;

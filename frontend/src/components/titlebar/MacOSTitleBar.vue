@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import * as runtime from '@wailsio/runtime';
 import { useDocumentStore } from '@/stores/documentStore';
@@ -64,7 +64,7 @@ const minimizeWindow = async () => {
   try {
     await runtime.Window.Minimise();
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
 };
 
@@ -73,7 +73,7 @@ const toggleMaximize = async () => {
     await runtime.Window.ToggleMaximise();
     await checkMaximizedState();
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
 };
 
@@ -81,7 +81,7 @@ const closeWindow = async () => {
   try {
     await runtime.Window.Close();
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
 };
 
@@ -89,7 +89,7 @@ const checkMaximizedState = async () => {
   try {
     isMaximized.value = await runtime.Window.IsMaximised();
   } catch (error) {
-    console.error(error)
+    console.error(error);
   }
 };
 

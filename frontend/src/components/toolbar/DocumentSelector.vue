@@ -196,7 +196,7 @@ const saveEdit = async () => {
     try {
       await documentStore.updateDocumentMetadata(editingId.value, trimmedTitle);
       await documentStore.updateDocuments();
-    } catch (error) {
+    } catch (_error) {
       return;
     }
   }
@@ -292,7 +292,7 @@ const formatTime = (dateString: string | null) => {
       minute: '2-digit',
       hour12: false
     });
-  } catch (error) {
+  } catch (_error) {
     return t('toolbar.timeError');
   }
 };

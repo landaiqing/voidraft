@@ -1,7 +1,7 @@
-import _fs from 'node:fs'
+import _fs from 'node:fs';
 
 declare global {
   namespace globalThis {
-    var fs: typeof _fs
+      let fs: typeof _fs;
   }
 }

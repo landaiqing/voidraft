@@ -42,7 +42,7 @@ const withSilentErrorHandling = async <T>(
 ): Promise<T | undefined> => {
   try {
     return await operation();
-  } catch (error) {
+  } catch (_error) {
     // 静默处理错误，不输出到控制台
     return fallback;
   }

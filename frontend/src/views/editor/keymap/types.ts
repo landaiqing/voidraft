@@ -1,4 +1,4 @@
-import {Command} from '@codemirror/view'
+import {Command} from '@codemirror/view';
 
 /**
  * CodeMirror快捷键绑定格式

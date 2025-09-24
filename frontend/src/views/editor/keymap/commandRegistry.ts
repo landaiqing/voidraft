@@ -1,4 +1,4 @@
-import {KeyBindingCommand} from '@/../bindings/voidraft/internal/models/models'
+import {KeyBindingCommand} from '@/../bindings/voidraft/internal/models/models';
 import {
     hideSearchVisibilityCommand,
     searchReplaceAll,
@@ -7,7 +7,7 @@ import {
     searchToggleRegex,
     searchToggleWholeWord,
     showSearchVisibilityCommand
-} from '../extensions/vscodeSearch/commands'
+} from '../extensions/vscodeSearch/commands';
 import {
     addNewBlockAfterCurrent,
     addNewBlockAfterLast,
@@ -20,13 +20,13 @@ import {
     moveCurrentBlockUp,
     selectNextBlock,
     selectPreviousBlock
-} from '../extensions/codeblock/commands'
-import {selectAll} from '../extensions/codeblock/selectAll'
-import {deleteLineCommand} from '../extensions/codeblock/deleteLine'
-import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines'
-import {transposeChars} from '../extensions/codeblock'
-import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste'
-import {textHighlightToggleCommand} from '../extensions/textHighlight/textHighlightExtension'
+} from '../extensions/codeblock/commands';
+import {selectAll} from '../extensions/codeblock/selectAll';
+import {deleteLineCommand} from '../extensions/codeblock/deleteLine';
+import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines';
+import {transposeChars} from '../extensions/codeblock';
+import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste';
+import {textHighlightToggleCommand} from '../extensions/textHighlight/textHighlightExtension';
 import {
     copyLineDown,
     copyLineUp,
@@ -52,15 +52,15 @@ import {
     toggleComment,
     undo,
     undoSelection
-} from '@codemirror/commands'
-import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language'
-import i18n from '@/i18n'
+} from '@codemirror/commands';
+import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language';
+import i18n from '@/i18n';
 
 // 默认编辑器选项
 const defaultEditorOptions = {
     defaultBlockToken: 'text',
     defaultBlockAutoDetect: true,
-}
+};
 
 /**
  * 前端命令注册表
@@ -291,7 +291,7 @@ export const commandRegistry = {
         handler: textHighlightToggleCommand,
         descriptionKey: 'keybindings.commands.textHighlightToggle'
     },
-} as const
+} as const;
 
 /**
  * 获取命令处理函数
@@ -299,8 +299,8 @@ export const commandRegistry = {
  * @returns 对应的处理函数，如果不存在则返回 undefined
  */
 export const getCommandHandler = (command: KeyBindingCommand) => {
-    return commandRegistry[command]?.handler
-}
+    return commandRegistry[command]?.handler;
+};
 
 /**
  * 获取命令描述
@@ -308,9 +308,9 @@ export const getCommandHandler = (command: KeyBindingCommand) => {
  * @returns 对应的描述，如果不存在则返回 undefined
  */
 export const getCommandDescription = (command: KeyBindingCommand) => {
-    const descriptionKey = commandRegistry[command]?.descriptionKey
-    return descriptionKey ? i18n.global.t(descriptionKey) : undefined
-}
+    const descriptionKey = commandRegistry[command]?.descriptionKey;
+    return descriptionKey ? i18n.global.t(descriptionKey) : undefined;
+};
 
 /**
  * 检查命令是否已注册
@@ -318,13 +318,13 @@ export const getCommandDescription = (command: KeyBindingCommand) => {
  * @returns 是否已注册
  */
 export const isCommandRegistered = (command: KeyBindingCommand): boolean => {
-    return command in commandRegistry
-}
+    return command in commandRegistry;
+};
 
 /**
  * 获取所有已注册的命令
  * @returns 已注册的命令列表
  */
 export const getRegisteredCommands = (): KeyBindingCommand[] => {
-    return Object.keys(commandRegistry) as KeyBindingCommand[]
-} 
+    return Object.keys(commandRegistry) as KeyBindingCommand[];
+}; 

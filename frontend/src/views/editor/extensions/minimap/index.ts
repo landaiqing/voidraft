@@ -218,7 +218,7 @@ const minimapClass = ViewPlugin.fromClass(
           /* Small leading buffer */
           drawContext.offsetX += 2;
 
-          for (let gutter of gutters) {
+          for (const gutter of gutters) {
             drawLineGutter(gutter, drawContext, i + 1);
             drawContext.offsetX += GUTTER_WIDTH;
           }

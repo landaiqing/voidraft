@@ -49,8 +49,8 @@ export const CodeBlockLanguage = LRLanguage.define({
  * 创建代码块语言支持
  */
 export function codeBlockLang() {
-  let wrap = configureNesting();
-  let lang = CodeBlockLanguage.configure({ dialect: "", wrap: wrap });
+  const wrap = configureNesting();
+  const lang = CodeBlockLanguage.configure({ dialect: "", wrap: wrap });
   
   return [
     new LanguageSupport(lang, [json().support]),

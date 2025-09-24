@@ -153,7 +153,7 @@ export const useTranslationStore = defineStore('translation', () => {
                     defaultTargetLang.value = validatedLang;
                 }
             }
-        } catch (err) {
+        } catch (_err) {
             error.value = 'no available translators';
         }
     };

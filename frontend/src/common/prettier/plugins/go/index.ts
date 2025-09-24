@@ -60,7 +60,7 @@ function initGofmt(): Promise<void> {
 // Printer configuration
 const goPrinter: Printer<string> = {
     // @ts-expect-error -- Support async printer like shell plugin
-    async print(path, options) {
+    async print(path, _options) {
         try {
             // Wait for initialization to complete
             await initGofmt();

@@ -1,33 +1,32 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue'
-import {useI18n} from 'vue-i18n'
-import {useEditorStore} from '@/stores/editorStore'
-import {useExtensionStore} from '@/stores/extensionStore'
-import {ExtensionService} from '@/../bindings/voidraft/internal/services'
-import {ExtensionID} from '@/../bindings/voidraft/internal/models/models'
-import {getExtensionManager} from '@/views/editor/manager'
+import {computed, ref} from 'vue';
+import {useI18n} from 'vue-i18n';
+import {useEditorStore} from '@/stores/editorStore';
+import {useExtensionStore} from '@/stores/extensionStore';
+import {ExtensionService} from '@/../bindings/voidraft/internal/services';
+import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import {
   getAllExtensionIds,
   getExtensionDefaultConfig,
   getExtensionDescription,
   getExtensionDisplayName,
   hasExtensionConfig
-} from '@/views/editor/manager/factories'
-import SettingSection from '../components/SettingSection.vue'
-import SettingItem from '../components/SettingItem.vue'
-import ToggleSwitch from '../components/ToggleSwitch.vue'
+} from '@/views/editor/manager/factories';
+import SettingSection from '../components/SettingSection.vue';
+import SettingItem from '../components/SettingItem.vue';
+import ToggleSwitch from '../components/ToggleSwitch.vue';
 
-const {t} = useI18n()
-const editorStore = useEditorStore()
-const extensionStore = useExtensionStore()
+const {t} = useI18n();
+const editorStore = useEditorStore();
+const extensionStore = useExtensionStore();
 
 // 展开状态管理
-const expandedExtensions = ref<Set<ExtensionID>>(new Set())
+const expandedExtensions = ref<Set<ExtensionID>>(new Set());
 
 // 获取所有可用的扩展
 const availableExtensions = computed(() => {
   return getAllExtensionIds().map(id => {
-    const extension = extensionStore.extensions.find(ext => ext.id === id)
+    const extension = extensionStore.extensions.find(ext => ext.id === id);
     return {
       id,
       displayName: getExtensionDisplayName(id),
@@ -37,68 +36,68 @@ const availableExtensions = computed(() => {
       hasConfig: hasExtensionConfig(id),
       config: extension?.config || {},
       defaultConfig: getExtensionDefaultConfig(id)
-    }
-  })
-})
+    };
+  });
+});
 
 // 切换展开状态
 const toggleExpanded = (extensionId: ExtensionID) => {
   if (expandedExtensions.value.has(extensionId)) {
-    expandedExtensions.value.delete(extensionId)
+    expandedExtensions.value.delete(extensionId);
   } else {
-    expandedExtensions.value.add(extensionId)
+    expandedExtensions.value.add(extensionId);
   }
-}
+};
 
 // 更新扩展状态
 const updateExtension = async (extensionId: ExtensionID, enabled: boolean) => {
   try {
-    await editorStore.updateExtension(extensionId, enabled)
+    await editorStore.updateExtension(extensionId, enabled);
   } catch (error) {
-    console.error('Failed to update extension:', error)
+    console.error('Failed to update extension:', error);
   }
-}
+};
 
 // 更新扩展配置
 const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string, value: any) => {
   try {
     // 获取当前扩展状态
-    const extension = extensionStore.extensions.find(ext => ext.id === extensionId)
-    if (!extension) return
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
+    if (!extension) return;
 
     // 更新配置
-    const updatedConfig = {...extension.config, [configKey]: value}
+    const updatedConfig = {...extension.config, [configKey]: value};
 
-    console.log(`[ExtensionsPage] 更新扩展 ${extensionId} 配置, ${configKey}=${value}`)
+    console.log(`[ExtensionsPage] 更新扩展 ${extensionId} 配置, ${configKey}=${value}`);
     
     // 使用editorStore的updateExtension方法更新，确保应用到所有编辑器实例
-    await editorStore.updateExtension(extensionId, extension.enabled, updatedConfig)
+    await editorStore.updateExtension(extensionId, extension.enabled, updatedConfig);
 
   } catch (error) {
-    console.error('Failed to update extension config:', error)
+    console.error('Failed to update extension config:', error);
   }
-}
+};
 
 // 重置扩展到默认配置
 const resetExtension = async (extensionId: ExtensionID) => {
   try {
     // 重置到默认配置（后端）
-    await ExtensionService.ResetExtensionToDefault(extensionId)
+    await ExtensionService.ResetExtensionToDefault(extensionId);
 
     // 重新加载扩展状态以获取最新配置
-    await extensionStore.loadExtensions()
+    await extensionStore.loadExtensions();
 
     // 获取重置后的状态，立即应用到所有编辑器视图
-    const extension = extensionStore.extensions.find(ext => ext.id === extensionId)
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
     if (extension) {
       // 通过editorStore更新，确保所有视图都能同步
-      await editorStore.updateExtension(extensionId, extension.enabled, extension.config)
-      console.log(`[ExtensionsPage] 重置扩展 ${extensionId} 配置，同步应用到所有编辑器实例`)
+      await editorStore.updateExtension(extensionId, extension.enabled, extension.config);
+      console.log(`[ExtensionsPage] 重置扩展 ${extensionId} 配置，同步应用到所有编辑器实例`);
     }
   } catch (error) {
-    console.error('Failed to reset extension:', error)
+    console.error('Failed to reset extension:', error);
   }
-}
+};
 
 // 配置项类型定义
 type ConfigItemType = 'toggle' | 'number' | 'text' | 'select'
@@ -131,25 +130,25 @@ const extensionConfigMeta: Partial<Record<ExtensionID, Record<string, ConfigItem
       ]
     }
   }
-}
+};
 
 // 获取配置项类型
 const getConfigItemType = (extensionId: ExtensionID, configKey: string, defaultValue: any): string => {
-  const meta = extensionConfigMeta[extensionId]?.[configKey]
+  const meta = extensionConfigMeta[extensionId]?.[configKey];
   if (meta?.type) {
-    return meta.type
+    return meta.type;
   }
 
   // 根据默认值类型自动推断
-  if (typeof defaultValue === 'boolean') return 'toggle'
-  if (typeof defaultValue === 'number') return 'number'
-  return 'text'
-}
+  if (typeof defaultValue === 'boolean') return 'toggle';
+  if (typeof defaultValue === 'number') return 'number';
+  return 'text';
+};
 
 // 获取选择框的选项列表
 const getSelectOptions = (extensionId: ExtensionID, configKey: string): SelectOption[] => {
-  return extensionConfigMeta[extensionId]?.[configKey]?.options || []
-}
+  return extensionConfigMeta[extensionId]?.[configKey]?.options || [];
+};
 </script>
 
 <template>

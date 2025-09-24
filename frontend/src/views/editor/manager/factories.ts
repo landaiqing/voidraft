@@ -1,34 +1,34 @@
-import {ExtensionFactory, ExtensionManager} from './ExtensionManager'
-import {ExtensionID} from '@/../bindings/voidraft/internal/models/models'
-import i18n from '@/i18n'
+import {ExtensionFactory, ExtensionManager} from './ExtensionManager';
+import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
+import i18n from '@/i18n';
 
 // 导入现有扩展的创建函数
-import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension'
-import {createTextHighlighter} from '../extensions/textHighlight/textHighlightExtension'
+import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension';
+import {createTextHighlighter} from '../extensions/textHighlight/textHighlightExtension';
 
-import {color} from '../extensions/colorSelector'
-import {hyperLink} from '../extensions/hyperlink'
-import {minimap} from '../extensions/minimap'
-import {vscodeSearch} from '../extensions/vscodeSearch'
-import {createCheckboxExtension} from '../extensions/checkbox'
-import {createTranslatorExtension} from '../extensions/translator'
+import {color} from '../extensions/colorSelector';
+import {hyperLink} from '../extensions/hyperlink';
+import {minimap} from '../extensions/minimap';
+import {vscodeSearch} from '../extensions/vscodeSearch';
+import {createCheckboxExtension} from '../extensions/checkbox';
+import {createTranslatorExtension} from '../extensions/translator';
 
-import {foldingOnIndent} from '../extensions/fold/foldExtension'
+import {foldingOnIndent} from '../extensions/fold/foldExtension';
 
 /**
  * 彩虹括号扩展工厂
  */
 export const rainbowBracketsFactory: ExtensionFactory = {
-    create(config: any) {
-        return rainbowBracketsExtension()
+    create(_config: any) {
+        return rainbowBracketsExtension();
     },
     getDefaultConfig() {
-        return {}
+        return {};
     },
     validateConfig(config: any) {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 /**
  * 文本高亮扩展工厂
@@ -38,20 +38,20 @@ export const textHighlightFactory: ExtensionFactory = {
         return createTextHighlighter({
             backgroundColor: config.backgroundColor || '#FFD700',
             opacity: config.opacity || 0.3
-        })
+        });
     },
     getDefaultConfig() {
         return {
             backgroundColor: '#FFD700', // 金黄色
             opacity: 0.3 // 透明度
-        }
+        };
     },
     validateConfig(config: any) {
         return typeof config === 'object' &&
             (!config.backgroundColor || typeof config.backgroundColor === 'string') &&
-            (!config.opacity || (typeof config.opacity === 'number' && config.opacity >= 0 && config.opacity <= 1))
+            (!config.opacity || (typeof config.opacity === 'number' && config.opacity >= 0 && config.opacity <= 1));
     }
-}
+};
 
 /**
  * 小地图扩展工厂
@@ -62,95 +62,95 @@ export const minimapFactory: ExtensionFactory = {
             displayText: config.displayText || 'characters',
             showOverlay: config.showOverlay || 'always',
             autohide: config.autohide || false
-        }
-        return minimap(options)
+        };
+        return minimap(options);
     },
     getDefaultConfig() {
         return {
             displayText: 'characters',
             showOverlay: 'always',
             autohide: false
-        }
+        };
     },
     validateConfig(config: any) {
         return typeof config === 'object' &&
             (!config.displayText || typeof config.displayText === 'string') &&
             (!config.showOverlay || typeof config.showOverlay === 'string') &&
-            (!config.autohide || typeof config.autohide === 'boolean')
+            (!config.autohide || typeof config.autohide === 'boolean');
     }
-}
+};
 
 /**
  * 超链接扩展工厂
  */
 export const hyperlinkFactory: ExtensionFactory = {
-    create(config: any) {
-        return hyperLink
+    create(_config: any) {
+        return hyperLink;
     },
     getDefaultConfig() {
-        return {}
+        return {};
     },
     validateConfig(config: any) {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 /**
  * 颜色选择器扩展工厂
  */
 export const colorSelectorFactory: ExtensionFactory = {
-    create(config: any) {
-        return color
+    create(_config: any) {
+        return color;
     },
     getDefaultConfig() {
-        return {}
+        return {};
     },
     validateConfig(config: any) {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 /**
  * 搜索扩展工厂
  */
 export const searchFactory: ExtensionFactory = {
-    create(config: any) {
-        return vscodeSearch
+    create(_config: any) {
+        return vscodeSearch;
     },
     getDefaultConfig() {
-        return {}
+        return {};
     },
     validateConfig(config: any) {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 export const foldFactory: ExtensionFactory = {
-    create(config: any) {
+    create(_config: any) {
         return foldingOnIndent;
     },
     getDefaultConfig(): any {
-        return {}
+        return {};
     },
     validateConfig(config: any): boolean {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 /**
  * 选择框扩展工厂
  */
 export const checkboxFactory: ExtensionFactory = {
-    create(config: any) {
-        return createCheckboxExtension()
+    create(_config: any) {
+        return createCheckboxExtension();
     },
     getDefaultConfig() {
-        return {}
+        return {};
     },
     validateConfig(config: any) {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 /**
  * 翻译扩展工厂
@@ -161,19 +161,19 @@ export const translatorFactory: ExtensionFactory = {
             defaultTranslator: config.defaultTranslator || 'bing',
             minSelectionLength: config.minSelectionLength || 2,
             maxTranslationLength: config.maxTranslationLength || 5000,
-        })
+        });
     },
     getDefaultConfig() {
         return {
             defaultTranslator: 'bing',
             minSelectionLength: 2,
             maxTranslationLength: 5000,
-        }
+        };
     },
     validateConfig(config: any) {
-        return typeof config === 'object'
+        return typeof config === 'object';
     }
-}
+};
 
 /**
  * 所有扩展的统一配置
@@ -232,7 +232,7 @@ const EXTENSION_CONFIGS = {
         displayNameKey: 'extensions.checkbox.name',
         descriptionKey: 'extensions.checkbox.description'
     }
-}
+};
 
 /**
  * 注册所有扩展工厂到管理器
@@ -240,8 +240,8 @@ const EXTENSION_CONFIGS = {
  */
 export function registerAllExtensions(manager: ExtensionManager): void {
     Object.entries(EXTENSION_CONFIGS).forEach(([id, config]) => {
-        manager.registerExtension(id as ExtensionID, config.factory)
-    })
+        manager.registerExtension(id as ExtensionID, config.factory);
+    });
 }
 
 /**
@@ -250,8 +250,8 @@ export function registerAllExtensions(manager: ExtensionManager): void {
  * @returns 显示名称
  */
 export function getExtensionDisplayName(id: ExtensionID): string {
-    const config = EXTENSION_CONFIGS[id as ExtensionID]
-    return config?.displayNameKey ? i18n.global.t(config.displayNameKey) : id
+    const config = EXTENSION_CONFIGS[id as ExtensionID];
+    return config?.displayNameKey ? i18n.global.t(config.displayNameKey) : id;
 }
 
 /**
@@ -260,8 +260,8 @@ export function getExtensionDisplayName(id: ExtensionID): string {
  * @returns 描述
  */
 export function getExtensionDescription(id: ExtensionID): string {
-    const config = EXTENSION_CONFIGS[id as ExtensionID]
-    return config?.descriptionKey ? i18n.global.t(config.descriptionKey) : ''
+    const config = EXTENSION_CONFIGS[id as ExtensionID];
+    return config?.descriptionKey ? i18n.global.t(config.descriptionKey) : '';
 }
 
 /**
@@ -270,7 +270,7 @@ export function getExtensionDescription(id: ExtensionID): string {
  * @returns 扩展工厂实例
  */
 export function getExtensionFactory(id: ExtensionID): ExtensionFactory | undefined {
-    return EXTENSION_CONFIGS[id as ExtensionID]?.factory
+    return EXTENSION_CONFIGS[id as ExtensionID]?.factory;
 }
 
 /**
@@ -279,8 +279,8 @@ export function getExtensionFactory(id: ExtensionID): ExtensionFactory | undefin
  * @returns 默认配置对象
  */
 export function getExtensionDefaultConfig(id: ExtensionID): any {
-    const factory = getExtensionFactory(id)
-    return factory?.getDefaultConfig() || {}
+    const factory = getExtensionFactory(id);
+    return factory?.getDefaultConfig() || {};
 }
 
 /**
@@ -289,8 +289,8 @@ export function getExtensionDefaultConfig(id: ExtensionID): any {
  * @returns 是否有配置项
  */
 export function hasExtensionConfig(id: ExtensionID): boolean {
-    const defaultConfig = getExtensionDefaultConfig(id)
-    return Object.keys(defaultConfig).length > 0
+    const defaultConfig = getExtensionDefaultConfig(id);
+    return Object.keys(defaultConfig).length > 0;
 }
 
 /**
@@ -298,5 +298,5 @@ export function hasExtensionConfig(id: ExtensionID): boolean {
  * @returns 扩展ID数组
  */
 export function getAllExtensionIds(): ExtensionID[] {
-    return Object.keys(EXTENSION_CONFIGS) as ExtensionID[]
+    return Object.keys(EXTENSION_CONFIGS) as ExtensionID[];
 } 

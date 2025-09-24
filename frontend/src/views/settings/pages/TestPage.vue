@@ -87,52 +87,52 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import * as TestService from '@/../bindings/voidraft/internal/services/testservice'
-import SettingSection from '../components/SettingSection.vue'
-import SettingItem from '../components/SettingItem.vue'
+import { ref } from 'vue';
+import * as TestService from '@/../bindings/voidraft/internal/services/testservice';
+import SettingSection from '../components/SettingSection.vue';
+import SettingItem from '../components/SettingItem.vue';
 
 // Badge测试状态
-const badgeText = ref('')
-const badgeStatus = ref<{ type: string; message: string } | null>(null)
+const badgeText = ref('');
+const badgeStatus = ref<{ type: string; message: string } | null>(null);
 
 // 通知测试状态
-const notificationTitle = ref('')
-const notificationSubtitle = ref('')
-const notificationBody = ref('')
-const notificationStatus = ref<{ type: string; message: string } | null>(null)
+const notificationTitle = ref('');
+const notificationSubtitle = ref('');
+const notificationBody = ref('');
+const notificationStatus = ref<{ type: string; message: string } | null>(null);
 
 // 清除状态
-const clearStatus = ref<{ type: string; message: string } | null>(null)
+const clearStatus = ref<{ type: string; message: string } | null>(null);
 
 // 显示状态消息的辅助函数
 const showStatus = (statusRef: any, type: 'success' | 'error', message: string) => {
-  statusRef.value = { type, message }
+  statusRef.value = { type, message };
   setTimeout(() => {
-    statusRef.value = null
-  }, 5000)
-}
+    statusRef.value = null;
+  }, 5000);
+};
 
 // 测试Badge功能
 const testBadge = async () => {
   try {
-    await TestService.TestBadge(badgeText.value)
-    showStatus(badgeStatus, 'success', `Badge ${badgeText.value ? 'set to: ' + badgeText.value : 'cleared'} successfully`)
+    await TestService.TestBadge(badgeText.value);
+    showStatus(badgeStatus, 'success', `Badge ${badgeText.value ? 'set to: ' + badgeText.value : 'cleared'} successfully`);
   } catch (error: any) {
-    showStatus(badgeStatus, 'error', `Failed to set badge: ${error.message || error}`)
+    showStatus(badgeStatus, 'error', `Failed to set badge: ${error.message || error}`);
   }
-}
+};
 
 // 清除Badge
 const clearBadge = async () => {
   try {
-    await TestService.TestBadge('')
-    badgeText.value = ''
-    showStatus(badgeStatus, 'success', 'Badge cleared successfully')
+    await TestService.TestBadge('');
+    badgeText.value = '';
+    showStatus(badgeStatus, 'success', 'Badge cleared successfully');
   } catch (error: any) {
-    showStatus(badgeStatus, 'error', `Failed to clear badge: ${error.message || error}`)
+    showStatus(badgeStatus, 'error', `Failed to clear badge: ${error.message || error}`);
   }
-}
+};
 
 // 测试通知功能
 const testNotification = async () => {
@@ -141,37 +141,37 @@ const testNotification = async () => {
       notificationTitle.value,
       notificationSubtitle.value,
       notificationBody.value
-    )
-    showStatus(notificationStatus, 'success', 'Notification sent successfully')
+    );
+    showStatus(notificationStatus, 'success', 'Notification sent successfully');
   } catch (error: any) {
-    showStatus(notificationStatus, 'error', `Failed to send notification: ${error.message || error}`)
+    showStatus(notificationStatus, 'error', `Failed to send notification: ${error.message || error}`);
   }
-}
+};
 
 // 测试更新通知
 const testUpdateNotification = async () => {
   try {
-    await TestService.TestUpdateNotification()
-    showStatus(notificationStatus, 'success', 'Update notification sent successfully (badge + notification)')
+    await TestService.TestUpdateNotification();
+    showStatus(notificationStatus, 'success', 'Update notification sent successfully (badge + notification)');
   } catch (error: any) {
-    showStatus(notificationStatus, 'error', `Failed to send update notification: ${error.message || error}`)
+    showStatus(notificationStatus, 'error', `Failed to send update notification: ${error.message || error}`);
   }
-}
+};
 
 // 清除所有测试状态
 const clearAll = async () => {
   try {
-    await TestService.ClearAll()
+    await TestService.ClearAll();
     // 清空表单
-    badgeText.value = ''
-    notificationTitle.value = ''
-    notificationSubtitle.value = ''
-    notificationBody.value = ''
-    showStatus(clearStatus, 'success', 'All test states cleared successfully')
+    badgeText.value = '';
+    notificationTitle.value = '';
+    notificationSubtitle.value = '';
+    notificationBody.value = '';
+    showStatus(clearStatus, 'success', 'All test states cleared successfully');
   } catch (error: any) {
-    showStatus(clearStatus, 'error', `Failed to clear test states: ${error.message || error}`)
+    showStatus(clearStatus, 'error', `Failed to clear test states: ${error.message || error}`);
   }
-}
+};
 </script>
 
 <style scoped lang="scss">

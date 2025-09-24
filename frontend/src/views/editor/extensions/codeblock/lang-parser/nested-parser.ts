@@ -13,11 +13,11 @@ import { languageMapping } from "./languages";
  */
 export function configureNesting() {
   return parseMixed((node, input) => {
-    let id = node.type.id;
+    const id = node.type.id;
     
     if (id === BlockContent) {
       // 获取父节点中的语言标记
-      let blockLang = node.node.parent?.firstChild?.getChildren(BlockLanguage)[0];
+      const blockLang = node.node.parent?.firstChild?.getChildren(BlockLanguage)[0];
       let langName = blockLang ? input.read(blockLang.from, blockLang.to) : null;
       
       // 如果 BlockContent 为空，不返回解析器

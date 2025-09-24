@@ -33,7 +33,7 @@ const removeHighlight = StateEffect.define<{from: number, to: number}>({
 // 配置facet
 const highlightConfigFacet = Facet.define<TextHighlightConfig, Required<TextHighlightConfig>>({
   combine: (configs) => {
-    let result = { ...DEFAULT_CONFIG };
+    const result = { ...DEFAULT_CONFIG };
     for (const config of configs) {
       if (config.backgroundColor !== undefined) {
         result.backgroundColor = config.backgroundColor;

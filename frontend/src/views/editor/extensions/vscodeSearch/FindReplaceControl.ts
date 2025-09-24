@@ -1,4 +1,4 @@
-import { findNext, findPrevious, getSearchQuery, RegExpCursor, replaceAll, replaceNext, SearchCursor, SearchQuery, setSearchQuery } from "@codemirror/search";
+import { getSearchQuery, RegExpCursor, SearchCursor, SearchQuery, setSearchQuery } from "@codemirror/search";
 import { CharCategory, EditorState, findClusterBreak, Text } from "@codemirror/state";
 import { SearchVisibilityEffect } from "./state";
 import { EditorView } from "@codemirror/view";
@@ -9,7 +9,7 @@ type Match = { from: number, to: number };
 export class CustomSearchPanel {
     dom!: HTMLElement;
     searchField!: HTMLInputElement;
-    replaceField!: HTMLInputElement
+    replaceField!: HTMLInputElement;
     matchCountField!: HTMLElement;
     currentMatch!: number;
     matches!: Match[];
@@ -34,7 +34,7 @@ export class CustomSearchPanel {
         "close": '<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M8 8.707l3.646 3.647.708-.707L8.707 8l3.647-3.646-.707-.708L8 7.293 4.354 3.646l-.707.708L7.293 8l-3.646 3.646.707.708L8 8.707z"/></svg>',
         "replace": '<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M3.221 3.739l2.261 2.269L7.7 3.784l-.7-.7-1.012 1.007-.008-1.6a.523.523 0 0 1 .5-.526H8V1H6.48A1.482 1.482 0 0 0 5 2.489V4.1L3.927 3.033l-.706.706zm6.67 1.794h.01c.183.311.451.467.806.467.393 0 .706-.168.94-.503.236-.335.353-.78.353-1.333 0-.511-.1-.913-.301-1.207-.201-.295-.488-.442-.86-.442-.405 0-.718.194-.938.581h-.01V1H9v4.919h.89v-.386zm-.015-1.061v-.34c0-.248.058-.448.175-.601a.54.54 0 0 1 .445-.23.49.49 0 0 1 .436.233c.104.154.155.368.155.643 0 .33-.056.587-.169.768a.524.524 0 0 1-.47.27.495.495 0 0 1-.411-.211.853.853 0 0 1-.16-.532zM9 12.769c-.256.154-.625.231-1.108.231-.563 0-1.02-.178-1.369-.533-.349-.355-.523-.813-.523-1.374 0-.648.186-1.158.56-1.53.374-.376.875-.563 1.5-.563.433 0 .746.06.94.179v.998a1.26 1.26 0 0 0-.792-.276c-.325 0-.583.1-.774.298-.19.196-.283.468-.283.816 0 .338.09.603.272.797.182.191.431.287.749.287.282 0 .558-.092.828-.276v.946zM4 7L3 8v6l1 1h7l1-1V8l-1-1H4zm0 1h7v6H4V8z"/></svg>',
         "replaceAll": '<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor"><path fill-rule="evenodd" clip-rule="evenodd" d="M11.6 2.677c.147-.31.356-.465.626-.465.248 0 .44.118.573.353.134.236.201.557.201.966 0 .443-.078.798-.235 1.067-.156.268-.365.402-.627.402-.237 0-.416-.125-.537-.374h-.008v.31H11V1h.593v1.677h.008zm-.016 1.1a.78.78 0 0 0 .107.426c.071.113.163.169.274.169.136 0 .24-.072.314-.216.075-.145.113-.35.113-.615 0-.22-.035-.39-.104-.514-.067-.124-.164-.187-.29-.187-.12 0-.219.062-.297.185a.886.886 0 0 0-.117.48v.272zM4.12 7.695L2 5.568l.662-.662 1.006 1v-1.51A1.39 1.39 0 0 1 5.055 3H7.4v.905H5.055a.49.49 0 0 0-.468.493l.007 1.5.949-.944.656.656-2.08 2.085zM9.356 4.93H10V3.22C10 2.408 9.685 2 9.056 2c-.135 0-.285.024-.45.073a1.444 1.444 0 0 0-.388.167v.665c.237-.203.487-.304.75-.304.261 0 .392.156.392.469l-.6.103c-.506.086-.76.406-.76.961 0 .263.061.473.183.631A.61.61 0 0 0 8.69 5c.29 0 .509-.16.657-.48h.009v.41zm.004-1.355v.193a.75.75 0 0 1-.12.436.368.368 0 0 1-.313.17.276.276 0 0 1-.22-.095.38.38 0 0 1-.08-.248c0-.222.11-.351.332-.389l.4-.067zM7 12.93h-.644v-.41h-.009c-.148.32-.367.48-.657.48a.61.61 0 0 1-.507-.235c-.122-.158-.183-.368-.183-.63 0-.556.254-.876.76-.962l.6-.103c0-.313-.13-.47-.392-.47-.263 0-.513.102-.75.305v-.665c.095-.063.224-.119.388-.167.165-.049.315-.073.45-.073.63 0 .944.407.944 1.22v1.71zm-.64-1.162v-.193l-.4.068c-.222.037-.333.166-.333.388 0 .1.027.183.08.248a.276.276 0 0 0 .22.095.368.368 0 0 0 .312-.17c.08-.116.12-.26.12-.436zM9.262 13c.321 0 .568-.058.738-.173v-.71a.9.9 0 0 1-.552.207.619.619 0 0 1-.5-.215c-.12-.145-.181-.345-.181-.598 0-.26.063-.464.189-.612a.644.644 0 0 1 .516-.223c.194 0 .37.069.528.207v-.749c-.129-.09-.338-.134-.626-.134-.417 0-.751.14-1.001.422-.249.28-.373.662-.373 1.148 0 .42.116.764.349 1.03.232.267.537.4.913.4zM2 9l1-1h9l1 1v5l-1 1H3l-1-1V9zm1 0v5h9V9H3zm3-2l1-1h7l1 1v5l-1 1V7H6z"/></svg>',
-    }
+    };
 
     constructor(readonly view: EditorView) {
         try {
@@ -63,7 +63,7 @@ export class CustomSearchPanel {
             
         }
         catch (err) {
-            console.warn(`ERROR: ${err}`)
+            console.warn(`ERROR: ${err}`);
         }
     }
 
@@ -84,24 +84,24 @@ export class CustomSearchPanel {
     }
 
     private charBefore(str: string, index: number) {
-        return str.slice(findClusterBreak(str, index, false), index)
+        return str.slice(findClusterBreak(str, index, false), index);
     }
 
     private charAfter(str: string, index: number) {
-        return str.slice(index, findClusterBreak(str, index))
+        return str.slice(index, findClusterBreak(str, index));
     }
 
     private stringWordTest(doc: Text, categorizer: (ch: string) => CharCategory) {
         return (from: number, to: number, buf: string, bufPos: number) => {
             if (bufPos > from || bufPos + buf.length < to) {
-                bufPos = Math.max(0, from - 2)
-                buf = doc.sliceString(bufPos, Math.min(doc.length, to + 2))
+                bufPos = Math.max(0, from - 2);
+                buf = doc.sliceString(bufPos, Math.min(doc.length, to + 2));
             }
             return (categorizer(this.charBefore(buf, from - bufPos)) != CharCategory.Word ||
                 categorizer(this.charAfter(buf, from - bufPos)) != CharCategory.Word) &&
                 (categorizer(this.charAfter(buf, to - bufPos)) != CharCategory.Word ||
-                    categorizer(this.charBefore(buf, to - bufPos)) != CharCategory.Word)
-        }
+                    categorizer(this.charBefore(buf, to - bufPos)) != CharCategory.Word);
+        };
     }
 
     private regexpWordTest(categorizer: (ch: string) => CharCategory) {
@@ -110,7 +110,7 @@ export class CustomSearchPanel {
             (categorizer(this.charBefore(match.input, match.index)) != CharCategory.Word ||
                 categorizer(this.charAfter(match.input, match.index)) != CharCategory.Word) &&
             (categorizer(this.charAfter(match.input, match.index + match[0].length)) != CharCategory.Word ||
-                categorizer(this.charBefore(match.input, match.index + match[0].length)) != CharCategory.Word)
+                categorizer(this.charBefore(match.input, match.index + match[0].length)) != CharCategory.Word);
     }
 
 
@@ -123,11 +123,11 @@ export class CustomSearchPanel {
      */
     findMatchesAndSelectClosest(state: EditorState): void {
         const cursorPos = state.selection.main.head;
-        let query = getSearchQuery(state);
+        const query = getSearchQuery(state);
 
         if (query.regexp) {
             try {
-            this.regexCursor = new RegExpCursor(state.doc, query.search)
+            this.regexCursor = new RegExpCursor(state.doc, query.search);
             this.searchCursor = undefined;
             } catch (error) {
                 // 如果正则表达式无效，清空匹配结果并显示错误状态
@@ -143,10 +143,10 @@ export class CustomSearchPanel {
             }
         }
         else {
-            let cursor = new SearchCursor(state.doc, query.search);
+            const cursor = new SearchCursor(state.doc, query.search);
             if (cursor !== this.searchCursor) {
                 this.searchCursor = cursor;
-                this.regexCursor = undefined
+                this.regexCursor = undefined;
             }
         }
 
@@ -168,7 +168,7 @@ export class CustomSearchPanel {
         }
         else if (this.regexCursor) {
             try {
-            const matchWord = this.regexpWordTest(state.charCategorizer(state.selection.main.head))
+            const matchWord = this.regexpWordTest(state.charCategorizer(state.selection.main.head));
 
             while (!this.regexCursor.done) {
                 this.regexCursor.next();
@@ -228,13 +228,13 @@ export class CustomSearchPanel {
             caseSensitive: this.matchCase,
             regexp: this.useRegex,
             wholeWord: this.matchWord,
-        })
+        });
 
-        let query = getSearchQuery(this.view.state)
+        const query = getSearchQuery(this.view.state);
         if (!newQuery.eq(query)) {
             this.view.dispatch({
                 effects: setSearchQuery.of(newQuery)
-            })
+            });
             }
         } catch (error) {
             // 如果创建SearchQuery时出错（通常是无效的正则表达式），记录错误但不中断程序
@@ -243,7 +243,7 @@ export class CustomSearchPanel {
     }
 
     private svgIcon(name: keyof CustomSearchPanel['codicon']): HTMLDivElement {
-        let div = crelt("div", {},
+        const div = crelt("div", {},
         ) as HTMLDivElement;
 
         div.innerHTML = this.codicon[name];
@@ -251,14 +251,14 @@ export class CustomSearchPanel {
     }
 
     public toggleReplace() {
-        this.replaceVisibile = !this.replaceVisibile
+        this.replaceVisibile = !this.replaceVisibile;
         const replaceBar = this.dom.querySelector(".replace-bar") as HTMLElement;
         const replaceButtons = this.dom.querySelector(".replace-buttons") as HTMLElement;
         const toggleIcon = this.dom.querySelector(".toggle-replace") as HTMLElement;
         if (replaceBar && toggleIcon && replaceButtons) {
             replaceBar.style.display = this.replaceVisibile ? "flex" : "none";
             replaceButtons.style.display = this.replaceVisibile ? "flex" : "none";
-            toggleIcon.innerHTML = this.svgIcon(this.replaceVisibile ? "downChevron" : "rightChevron").innerHTML
+            toggleIcon.innerHTML = this.svgIcon(this.replaceVisibile ? "downChevron" : "rightChevron").innerHTML;
         }
     }
 
@@ -273,7 +273,7 @@ export class CustomSearchPanel {
         this.matchCase = !this.matchCase;
         const toggleIcon = this.dom.querySelector(".case-sensitive-toggle") as HTMLElement;
         if (toggleIcon) {
-            toggleIcon.classList.toggle("active")
+            toggleIcon.classList.toggle("active");
         }
         this.commit();
         // 重新搜索以应用新的匹配规则
@@ -286,7 +286,7 @@ export class CustomSearchPanel {
         this.matchWord = !this.matchWord;
         const toggleIcon = this.dom.querySelector(".whole-word-toggle") as HTMLElement;
         if (toggleIcon) {
-            toggleIcon.classList.toggle("active")
+            toggleIcon.classList.toggle("active");
         }
         this.commit();
         // 重新搜索以应用新的匹配规则
@@ -299,7 +299,7 @@ export class CustomSearchPanel {
         this.useRegex = !this.useRegex;
         const toggleIcon = this.dom.querySelector(".regex-toggle") as HTMLElement;
         if (toggleIcon) {
-            toggleIcon.classList.toggle("active")
+            toggleIcon.classList.toggle("active");
         }
         this.commit();
         // 重新搜索以应用新的匹配规则
@@ -341,11 +341,11 @@ export class CustomSearchPanel {
     }
 
     public findReplaceMatch() {
-        let query = getSearchQuery(this.view.state)
+        const query = getSearchQuery(this.view.state);
         if (query.replace) {
-            this.replace()
+            this.replace();
         } else {
-            this.matchNext()
+            this.matchNext();
         }
     }
 
@@ -398,7 +398,7 @@ export class CustomSearchPanel {
 
     private buildUI(): void {
 
-        let query = getSearchQuery(this.view.state)
+        const query = getSearchQuery(this.view.state);
 
         this.searchField = crelt("input", {
             value: query?.search ?? "",
@@ -420,14 +420,14 @@ export class CustomSearchPanel {
         }) as HTMLInputElement;
 
 
-        let caseField = this.svgIcon("matchCase");
+        const caseField = this.svgIcon("matchCase");
         caseField.className = "case-sensitive-toggle";
         caseField.title = "Match Case (Alt+C)";
         caseField.addEventListener("click", () => {
             this.toggleCase();
         });
 
-        let wordField = this.svgIcon("wholeWord");
+        const wordField = this.svgIcon("wholeWord");
         wordField.className = "whole-word-toggle";
         wordField.title = "Match Whole Word (Alt+W)";
         wordField.addEventListener("click", () => {
@@ -435,50 +435,50 @@ export class CustomSearchPanel {
         });
 
 
-        let reField = this.svgIcon("regex");
+        const reField = this.svgIcon("regex");
         reField.className = "regex-toggle";
         reField.title = "Use Regular Expression (Alt+R)";
         reField.addEventListener("click", () => {
             this.toggleRegex();
         });
 
-        let toggleReplaceIcon = this.svgIcon(this.replaceVisibile ? "downChevron" : "rightChevron");
+        const toggleReplaceIcon = this.svgIcon(this.replaceVisibile ? "downChevron" : "rightChevron");
         toggleReplaceIcon.className = "toggle-replace";
         toggleReplaceIcon.addEventListener("click", () => {
             this.toggleReplace();
         });
 
-        this.matchCountField = crelt("span", { class: "match-count" }, "0 of 0")
+        this.matchCountField = crelt("span", { class: "match-count" }, "0 of 0");
 
-        let prevMatchButton = this.svgIcon("prevMatch");
+        const prevMatchButton = this.svgIcon("prevMatch");
         prevMatchButton.className = "prev-match";
         prevMatchButton.title = "Previous Match (Shift+Enter)";
         prevMatchButton.addEventListener("click", () => {
             this.matchPrevious();
         });
 
-        let nextMatchButton = this.svgIcon("nextMatch");
+        const nextMatchButton = this.svgIcon("nextMatch");
         nextMatchButton.className = "next-match";
         nextMatchButton.title = "Next Match (Enter)";
         nextMatchButton.addEventListener("click", () => {
             this.matchNext();
         });
 
-        let closeButton = this.svgIcon("close");
+        const closeButton = this.svgIcon("close");
         closeButton.className = "close";
-        closeButton.title = "Close (Escape)"
+        closeButton.title = "Close (Escape)";
         closeButton.addEventListener("click", () => {
             this.close();
         });
 
-        let replaceButton = this.svgIcon("replace");
+        const replaceButton = this.svgIcon("replace");
         replaceButton.className = "replace-button";
         replaceButton.title = "Replace (Enter)";
         replaceButton.addEventListener("click", () => {
             this.replace();
         });
 
-        let replaceAllButton = this.svgIcon("replaceAll");
+        const replaceAllButton = this.svgIcon("replaceAll");
         replaceAllButton.className = "replace-button";
         replaceAllButton.title = "Replace All (Ctrl+Alt+Enter)";
         replaceAllButton.addEventListener("click", () => {
@@ -534,7 +534,7 @@ export class CustomSearchPanel {
             this.replaceField
         );
 
-        replaceBar.style.display = this.replaceVisibile ? "flex" : "none"
+        replaceBar.style.display = this.replaceVisibile ? "flex" : "none";
 
         const inputSection = crelt("div", { class: "input-section" },
             searchBar,
@@ -545,7 +545,7 @@ export class CustomSearchPanel {
             prevMatchButton,
             nextMatchButton,
             closeButton
-        )
+        );
 
         const searchButtons = crelt("div", { class: "button-group" },
             this.matchCountField,
@@ -557,9 +557,9 @@ export class CustomSearchPanel {
         },
             replaceButton,
             replaceAllButton
-        )
+        );
 
-        replaceButtons.style.display = this.replaceVisibile ? "flex" : "none"
+        replaceButtons.style.display = this.replaceVisibile ? "flex" : "none";
 
         const actionSection = crelt("div", { class: "actions-section" },
             searchButtons,
@@ -599,14 +599,14 @@ export class CustomSearchPanel {
     }
 
     mount() {
-        this.searchField.select()
+        this.searchField.select();
     }
 
     destroy?(): void {
         throw new Error("Method not implemented.");
     }
 
-    get pos() { return 80 }
+    get pos() { return 80; }
 }
 
 

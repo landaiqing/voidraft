@@ -1,5 +1,5 @@
 /* tslint:disable */
-/* eslint-disable */
+ 
 export function format(input: string, filename: string, config?: Config): string;
 
 interface LayoutConfig {

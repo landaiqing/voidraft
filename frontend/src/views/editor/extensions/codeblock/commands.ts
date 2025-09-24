@@ -193,8 +193,8 @@ function setSel(state: any, selection: EditorSelection) {
 }
 
 function extendSel(state: any, dispatch: any, how: (range: any) => any) {
-    let selection = updateSel(state.selection, range => {
-        let head = how(range);
+    const selection = updateSel(state.selection, range => {
+        const head = how(range);
         return EditorSelection.range(range.anchor, head.head, head.goalColumn, head.bidiLevel || undefined);
     });
     if (selection.eq(state.selection)) return false;
@@ -203,7 +203,7 @@ function extendSel(state: any, dispatch: any, how: (range: any) => any) {
 }
 
 function moveSel(state: any, dispatch: any, how: (range: any) => any) {
-    let selection = updateSel(state.selection, how);
+    const selection = updateSel(state.selection, how);
     if (selection.eq(state.selection)) return false;
     dispatch(setSel(state, selection));
     return true;
@@ -268,7 +268,7 @@ export function selectPreviousBlock({ state, dispatch }: any) {
 /**
  * 删除块
  */
-export const deleteBlock = (options: EditorOptions): Command => ({ state, dispatch }) => {
+export const deleteBlock = (_options: EditorOptions): Command => ({ state, dispatch }) => {
     if (state.readOnly) return false;
     
     const block = getActiveNoteBlock(state);
@@ -380,4 +380,4 @@ function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
  */
 export const formatCurrentBlock: Command = (view) => {
     return formatBlockContent(view);
-} 
+}; 

@@ -14,7 +14,7 @@ export const transposeChars = ({ state, dispatch }: { state: any; dispatch: any 
     return false;
   }
   
-  let changes = state.changeByRange((range: any) => {
+  const changes = state.changeByRange((range: any) => {
     // 防止在代码块的开始或结束位置进行字符转置，因为这会破坏块语法
     const block = getNoteBlockFromPos(state, range.from);
     if (block && (range.from === block.content.from || range.from === block.content.to)) {
@@ -25,10 +25,10 @@ export const transposeChars = ({ state, dispatch }: { state: any; dispatch: any 
       return { range };
     }
     
-    let pos = range.from;
-    let line = state.doc.lineAt(pos);
-    let from = pos == line.from ? pos - 1 : findClusterBreak(line.text, pos - line.from, false) + line.from;
-    let to = pos == line.to ? pos + 1 : findClusterBreak(line.text, pos - line.from, true) + line.from;
+    const pos = range.from;
+    const line = state.doc.lineAt(pos);
+    const from = pos == line.from ? pos - 1 : findClusterBreak(line.text, pos - line.from, false) + line.from;
+    const to = pos == line.to ? pos + 1 : findClusterBreak(line.text, pos - line.from, true) + line.from;
     
     return { 
       changes: { 

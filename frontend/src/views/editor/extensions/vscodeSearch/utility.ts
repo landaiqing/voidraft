@@ -1,6 +1,6 @@
 export function simulateBackspace(input: HTMLInputElement, direction: "backward" | "forward" = "backward") {
     let start = input.selectionStart ?? 0;
-    let end = input.selectionEnd ?? 0;
+    const end = input.selectionEnd ?? 0;
 
     // Do nothing if at boundaries
     if (direction === "backward" && start === 0 && end === 0) return;

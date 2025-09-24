@@ -21,7 +21,7 @@ onMounted(async () => {
 });
 onUnmounted(() => {
   backupStore.clearError();
-})
+});
 
 // 认证方式选项
 const authMethodOptions = computed(() => [

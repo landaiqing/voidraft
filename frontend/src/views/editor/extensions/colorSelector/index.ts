@@ -240,7 +240,7 @@ export const colorView = (showPicker: boolean = true) =>
                     const comma = (target.dataset.colorraw || '').indexOf(',') > 4;
                     let converted = target.value;
                     if (data.colorType === ColorType.rgb) {
-                        let funName = colorraw?.match(/^(rgba?)/) ? colorraw?.match(/^(rgba?)/)![0] : undefined;
+                        const funName = colorraw?.match(/^(rgba?)/) ? colorraw?.match(/^(rgba?)/)![0] : undefined;
                         if (comma) {
                             converted = rgb
                                 ? `${funName}(${rgb.r}, ${rgb.g}, ${rgb.b}${data.alpha ? ', ' + data.alpha.trim() : ''})`

@@ -1,5 +1,5 @@
 /* tslint:disable */
-/* eslint-disable */
+ 
 export function format_json(src: string, config?: JsonConfig): string;
 export function format_markup(src: string, filename: string, config?: MarkupConfig): string;
 export function format_script(src: string, filename: string, config?: ScriptConfig): string;

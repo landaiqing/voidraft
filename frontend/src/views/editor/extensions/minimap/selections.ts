@@ -144,7 +144,7 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
   }
 
   public drawLine(ctx: DrawContext, lineNumber: number) {
-    let {
+    const {
       context,
       lineHeight,
       charWidth,

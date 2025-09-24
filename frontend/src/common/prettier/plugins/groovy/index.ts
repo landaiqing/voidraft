@@ -39,7 +39,7 @@ const groovyPrinter: Printer<string> = {
             return groovyBeautify(path.node, {
                 width: options.printWidth || 80,
             }).trim();
-        } catch (error) {
+        } catch (_error) {
             return path.node;
         }
     },

@@ -288,11 +288,6 @@ const updateSystemTheme = async (event: Event) => {
 // 控制颜色选择器显示状态
 const showPickerMap = ref<Record<string, boolean>>({});
 
-// 切换颜色选择器显示状态
-const toggleColorPicker = (colorKey: string) => {
-  showPickerMap.value[colorKey] = !showPickerMap.value[colorKey];
-};
-
 // 颜色变更处理
 const handleColorChange = (colorKey: string, value: string) => {
   updateColor(colorKey, value);

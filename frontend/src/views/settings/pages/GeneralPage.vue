@@ -62,7 +62,7 @@ const startPolling = () => {
         const delay = status === MigrationStatus.MigrationStatusCompleted ? 3000 : 5000;
         hideProgressTimer = setTimeout(hideProgress, delay);
       }
-    } catch (error) {
+    } catch (_error) {
       stopPolling();
 
       // 使用常量简化错误处理

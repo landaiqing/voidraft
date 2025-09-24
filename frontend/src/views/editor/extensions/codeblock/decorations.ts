@@ -19,7 +19,7 @@ class NoteBlockStart extends WidgetType {
   }
 
   toDOM() {
-    let wrap = document.createElement("div");
+    const wrap = document.createElement("div");
     wrap.className = "code-block-start" + (this.isFirst ? " first" : "");
     return wrap;
   }
@@ -37,8 +37,8 @@ const noteBlockWidget = () => {
     const builder = new RangeSetBuilder<Decoration>();
 
     state.field(blockState).forEach((block: any) => {
-      let delimiter = block.delimiter;
-      let deco = Decoration.replace({
+      const delimiter = block.delimiter;
+      const deco = Decoration.replace({
         widget: new NoteBlockStart(delimiter.from === 0),
         inclusive: true,
         block: true,
@@ -80,7 +80,7 @@ const noteBlockWidget = () => {
  * 原子范围，防止在分隔符内编辑
  */
 function atomicRanges(view: EditorView) {
-  let builder = new RangeSetBuilder();
+  const builder = new RangeSetBuilder();
   view.state.field(blockState).forEach((block: any) => {
     builder.add(
       block.delimiter.from,
@@ -167,7 +167,7 @@ const blockLayer = layer({
     return markers;
   },
 
-  update(update: any, dom: any) {
+  update(update: any, _dom: any) {
     return update.docChanged || update.viewportChanged;
   },
 

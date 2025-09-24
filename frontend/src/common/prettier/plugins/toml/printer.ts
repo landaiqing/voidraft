@@ -23,7 +23,6 @@ import type {
   TomlDocument, 
   TomlExpression,
   TomlKeyVal,
-  TomlComment,
   TomlContext
 } from './types';
 
@@ -221,11 +220,11 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
       } else {
         return this.visit(actualValueNode);
       }
-    } catch (error) {
+    } catch (_error) {
       // 如果getSingle失败，尝试直接处理children
       if (ctx.children) {
         // 处理不同类型的值
-        for (const [childKey, childNodes] of Object.entries(ctx.children)) {
+        for (const [_childKey, childNodes] of Object.entries(ctx.children)) {
           if (Array.isArray(childNodes) && childNodes.length > 0) {
             const firstChild = childNodes[0];
             
@@ -385,14 +384,14 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
   /**
    * Visit newline (should not be called)
    */
-  nl(ctx: any): never {
+  nl(_ctx: any): never {
     throw new Error('Should not get here!');
   }
 
   /**
    * Visit comment newline (no-op)
    */
-  commentNewline(ctx: any): void {
+  commentNewline(_ctx: any): void {
     // No operation needed
   }
 }
@@ -407,7 +406,7 @@ const beautifierVisitor = new TomlBeautifierVisitor();
  * @param print - Print function (unused in this implementation)
  * @returns Formatted document
  */
-export function print(path: AstPath<TomlCstNode>, options?: any, print?: any): Doc {
+export function print(path: AstPath<TomlCstNode>, _options?: any, _print?: any): Doc {
   const cst = path.node as TomlDocument;
   return beautifierVisitor.visit(cst);
 }

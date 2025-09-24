@@ -9,14 +9,14 @@ const isSearchActive = () : boolean => {
         return document.activeElement.classList.contains('find-input');
     }
     return false;
-}
+};
 
 const isReplaceActive = () : boolean => {
     if (document.activeElement){
         return document.activeElement.classList.contains('replace-input');
     }
     return false;
-}
+};
 
 export const selectAllCommand: Command = (view) => {
     if (isSearchActive() || isReplaceActive()) {
@@ -26,7 +26,7 @@ export const selectAllCommand: Command = (view) => {
     else {
         view.dispatch({
             selection: { anchor: 0, head: view.state.doc.length }
-        })
+        });
         return true;
     }
 };
@@ -37,7 +37,7 @@ export const deleteCharacterBackwards: Command = (view) => {
         return true;
     }
     else {
-        deleteCharBackward(view)
+        deleteCharBackward(view);
         return true;
     }
 };
@@ -48,7 +48,7 @@ export const deleteCharacterFowards: Command = (view) => {
         return true;
     }
     else {
-        deleteCharForward(view)
+        deleteCharForward(view);
         return true;
     }
 };
@@ -72,7 +72,7 @@ export const showSearchVisibilityCommand: Command = (view) => {
 
 export const searchMoveCursorLeft: Command = (view) => {
     if (isSearchActive() || isReplaceActive()) {
-        const input = document.activeElement as HTMLInputElement
+        const input = document.activeElement as HTMLInputElement;
         const pos = input.selectionStart ?? 0;
         if (pos > 0) {
             input.selectionStart = input.selectionEnd = pos - 1;
@@ -80,14 +80,14 @@ export const searchMoveCursorLeft: Command = (view) => {
         return true;
     }
     else {
-        cursorCharLeft(view)
+        cursorCharLeft(view);
         return true;
     }
-}
+};
 
 export const searchMoveCursorRight: Command = (view) => {
     if (isSearchActive() || isReplaceActive()) {
-        const input = document.activeElement as HTMLInputElement
+        const input = document.activeElement as HTMLInputElement;
         const pos = input.selectionStart ?? 0;
         if (pos < input.value.length) {
             input.selectionStart = input.selectionEnd = pos + 1;
@@ -95,10 +95,10 @@ export const searchMoveCursorRight: Command = (view) => {
         return true;
     }
     else {
-        cursorCharRight(view)
+        cursorCharRight(view);
         return true;
     }
-}
+};
 
 export const hideSearchVisibilityCommand: Command = (view) => {
     view.dispatch({
@@ -108,64 +108,64 @@ export const hideSearchVisibilityCommand: Command = (view) => {
 };
 
 export const searchToggleCase: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.toggleCaseInsensitive();
     return true;
-}
+};
 
 export const searchToggleWholeWord: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.toggleWholeWord();
     return true;
-}
+};
 
 export const searchToggleRegex: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.toggleRegex();
     return true;
-}
+};
 
 export const searchShowReplace: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.showReplace();
     return true;
-}
+};
 
 export const searchFindReplaceMatch: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.findReplaceMatch();
     return true;
-}
+};
 
 export const searchFindPrevious: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.findPrevious();
     return true;
-}
+};
 
 export const searchReplaceAll: Command = (view) => {
-    const plugin = view.plugin(VSCodeSearch)
+    const plugin = view.plugin(VSCodeSearch);
 
     if (!plugin) return false;
 
     plugin.replaceAll();
     return true;
-}
+};

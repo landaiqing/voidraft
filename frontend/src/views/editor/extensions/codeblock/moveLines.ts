@@ -21,11 +21,11 @@ const tokenRegEx = new RegExp(`^∞∞∞(${languageTokensMatcher})(-a)?$`, "g")
  * 获取选中的行块
  */
 function selectedLineBlocks(state: any): LineBlock[] {
-  let blocks: LineBlock[] = [];
+  const blocks: LineBlock[] = [];
   let upto = -1;
   
-  for (let range of state.selection.ranges) {
-    let startLine = state.doc.lineAt(range.from);
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(range.from);
     let endLine = state.doc.lineAt(range.to);
     
     if (!range.empty && range.to == endLine.from) {
@@ -33,7 +33,7 @@ function selectedLineBlocks(state: any): LineBlock[] {
     }
     
     if (upto >= startLine.number) {
-      let prev = blocks[blocks.length - 1];
+      const prev = blocks[blocks.length - 1];
       prev.to = endLine.to;
       prev.ranges.push(range);
     } else {
@@ -57,15 +57,15 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
     return false;
   }
   
-  let changes: any[] = [];
-  let ranges: SelectionRange[] = [];
+  const changes: any[] = [];
+  const ranges: SelectionRange[] = [];
   
-  for (let block of selectedLineBlocks(state)) {
+  for (const block of selectedLineBlocks(state)) {
     if (forward ? block.to == state.doc.length : block.from == 0) {
       continue;
     }
     
-    let nextLine = state.doc.lineAt(forward ? block.to + 1 : block.from - 1);
+    const nextLine = state.doc.lineAt(forward ? block.to + 1 : block.from - 1);
     let previousLine;
     
     if (!forward ? block.to == state.doc.length : block.from == 0) {
@@ -76,8 +76,8 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
     
     // 如果整个选择是一个被分隔符包围的块，我们需要在分隔符之间添加额外的换行符
     // 以避免创建两个只有单个换行符的分隔符，这会导致语法解析器无法解析
-    let nextLineIsSeparator = nextLine.text.match(tokenRegEx);
-    let blockSurroundedBySeparators = previousLine !== null && 
+    const nextLineIsSeparator = nextLine.text.match(tokenRegEx);
+    const blockSurroundedBySeparators = previousLine !== null && 
       previousLine.text.match(tokenRegEx) && nextLineIsSeparator;
     
     let size = nextLine.length + 1;
@@ -96,7 +96,7 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
         );
       }
       
-      for (let r of block.ranges) {
+      for (const r of block.ranges) {
         ranges.push(EditorSelection.range(
           Math.min(state.doc.length, r.anchor + size), 
           Math.min(state.doc.length, r.head + size)
@@ -108,7 +108,7 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
           { from: nextLine.from, to: block.from }, 
           { from: block.to, insert: state.lineBreak + nextLine.text + state.lineBreak }
         );
-        for (let r of block.ranges) {
+        for (const r of block.ranges) {
           ranges.push(EditorSelection.range(r.anchor - size, r.head - size));
         }
       } else {
@@ -116,7 +116,7 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
           { from: nextLine.from, to: block.from }, 
           { from: block.to, insert: state.lineBreak + nextLine.text }
         );
-        for (let r of block.ranges) {
+        for (const r of block.ranges) {
           ranges.push(EditorSelection.range(r.anchor - size, r.head - size));
         }
       }
@@ -143,7 +143,7 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
 export const moveLineUp = ({ state, dispatch }: { state: any; dispatch: any }): boolean => {
   // 防止移动行到第一个块分隔符之前
   if (state.selection.ranges.some((range: SelectionRange) => {
-    let startLine = state.doc.lineAt(range.from);
+    const startLine = state.doc.lineAt(range.from);
     return startLine.from <= state.field(blockState)[0].content.from;
   })) {
     return true;

@@ -1,5 +1,5 @@
 /* tslint:disable */
-/* eslint-disable */
+ 
 export const memory: WebAssembly.Memory;
 export const format_json: (a: number, b: number, c: number, d: number) => void;
 export const format_markup: (a: number, b: number, c: number, d: number, e: number, f: number) => void;

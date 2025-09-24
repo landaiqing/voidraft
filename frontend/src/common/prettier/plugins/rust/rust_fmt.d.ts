@@ -1,5 +1,5 @@
 /* tslint:disable */
-/* eslint-disable */
+ 
 export function format(input: string, config?: Config | null): string;
 
 export interface Config {

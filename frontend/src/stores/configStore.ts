@@ -43,7 +43,7 @@ const getBrowserLanguage = (): SupportedLocaleType => {
 };
 
 export const useConfigStore = defineStore('config', () => {
-    const {locale, t} = useI18n();
+    const {locale} = useI18n();
 
     // 响应式状态
     const state = reactive({
@@ -193,7 +193,7 @@ export const useConfigStore = defineStore('config', () => {
         state.isLoading = true;
         try {
 
-            await ConfigService.ResetConfig()
+            await ConfigService.ResetConfig();
             const appConfig = await ConfigService.GetConfig();
             if (appConfig) {
                 state.config = JSON.parse(JSON.stringify(appConfig)) as AppConfig;
@@ -230,7 +230,7 @@ export const useConfigStore = defineStore('config', () => {
             // 同步前端语言设置
             const frontendLocale = ConfigUtils.backendLanguageToFrontend(state.config.appearance.language);
             locale.value = frontendLocale as any;
-        } catch (error) {
+        } catch (_error) {
             const browserLang = getBrowserLanguage();
             locale.value = browserLang as any;
         }

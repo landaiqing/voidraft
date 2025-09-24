@@ -92,14 +92,6 @@ function formatKeyBinding(keyBinding: string): string {
     .replace(/-/g, " + ");
 }
 
-/**
- * 从命令注册表获取命令处理程序和翻译键
- * @param command 命令ID
- * @returns 命令处理程序和翻译键
- */
-function getCommandInfo(command: KeyBindingCommand): { handler: (view: EditorView) => boolean, descriptionKey: string } | undefined {
-  return commandRegistry[command];
-}
 
 /**
  * 创建编辑菜单项

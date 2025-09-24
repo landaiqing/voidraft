@@ -78,7 +78,7 @@ _69: () => {
 _70: () => {
         return typeof process != "undefined" &&
                Object.prototype.toString.call(process) == "[object process]" &&
-               process.platform == "win32"
+               process.platform == "win32";
       },
 _85: s => JSON.stringify(s),
 _86: s => printToConsole(s),
@@ -126,7 +126,7 @@ _157: Function.prototype.call.bind(DataView.prototype.setFloat32),
 _158: Function.prototype.call.bind(DataView.prototype.getFloat64),
 _159: Function.prototype.call.bind(DataView.prototype.setFloat64),
 _165: x0 => format = x0,
-_166: f => finalizeWrapper(f, function(x0,x1,x2) { return dartInstance.exports._166(f,arguments.length,x0,x1,x2) }),
+_166: f => finalizeWrapper(f, function(x0,x1,x2) { return dartInstance.exports._166(f,arguments.length,x0,x1,x2); }),
 _184: (c) =>
               queueMicrotask(() => dartInstance.exports.$invokeCallback(c)),
 _187: (s, m) => {
@@ -337,14 +337,14 @@ _272: (x0,x1) => x0.lastIndex = x1
     });
 
     return dartInstance;
-}
+};
 
 // Call the main function for the instantiated module
 // `moduleInstance` is the instantiated dart2wasm module
 // `args` are any arguments that should be passed into the main function.
 export const invoke = (moduleInstance, ...args) => {
   moduleInstance.exports.$invokeMain(args);
-}
+};
 
 
 export let format;

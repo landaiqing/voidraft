@@ -58,7 +58,7 @@ type ModifierNode = JavaNonTerminal & {
         annotation?: AnnotationCstNode[];
     };
 };
-type IsTuple<T> = T extends [] ? true : T extends [infer First, ...infer Remain] ? IsTuple<Remain> : false;
+type IsTuple<T> = T extends [] ? true : T extends [infer _First, ...infer Remain] ? IsTuple<Remain> : false;
 type IndexProperties<T extends {
     length: number;
 }> = IsTuple<T> extends true ? Exclude<Partial<T>["length"], T["length"]> : number;

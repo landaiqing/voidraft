@@ -24,4 +24,4 @@ function drawLineGutter(gutter: Record<Line, Color>, ctx: DrawContext, lineNumbe
 }
 
 
-export { GUTTER_WIDTH, drawLineGutter }
+export { GUTTER_WIDTH, drawLineGutter };

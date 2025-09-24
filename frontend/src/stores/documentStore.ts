@@ -133,7 +133,7 @@ export const useDocumentStore = defineStore('document', () => {
     };
 
     // 更新文档元数据
-    const updateDocumentMetadata = async (docId: number, title: string, newPath?: string): Promise<boolean> => {
+    const updateDocumentMetadata = async (docId: number, title: string): Promise<boolean> => {
         try {
             await DocumentService.UpdateDocumentTitle(docId, title);
 

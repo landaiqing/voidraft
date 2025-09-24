@@ -1,4 +1,4 @@
-import {createRouter, createWebHashHistory, createWebHistory, RouteRecordRaw} from 'vue-router';
+import {createRouter, createWebHashHistory, RouteRecordRaw} from 'vue-router';
 import Editor from '@/views/editor/Editor.vue';
 import Settings from '@/views/settings/Settings.vue';
 import GeneralPage from '@/views/settings/pages/GeneralPage.vue';

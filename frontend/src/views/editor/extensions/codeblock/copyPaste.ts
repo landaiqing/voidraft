@@ -18,10 +18,10 @@ const blockSeparatorRegex = new RegExp(`\\n∞∞∞(${languageTokensMatcher})(-
  * 获取被复制的范围和内容
  */
 function copiedRange(state: EditorState) {
-  let content: string[] = [];
-  let ranges: any[] = [];
+  const content: string[] = [];
+  const ranges: any[] = [];
   
-  for (let range of state.selection.ranges) {
+  for (const range of state.selection.ranges) {
     if (!range.empty) {
       content.push(state.sliceDoc(range.from, range.to));
       ranges.push(range);
@@ -31,7 +31,7 @@ function copiedRange(state: EditorState) {
   if (ranges.length === 0) {
     // 如果所有范围都是空的，我们想要复制每个选择的整行（唯一的）
     const copiedLines: number[] = [];
-    for (let range of state.selection.ranges) {
+    for (const range of state.selection.ranges) {
       if (range.empty) {
         const line = state.doc.lineAt(range.head);
         const lineContent = state.sliceDoc(line.from, line.to);
@@ -55,7 +55,7 @@ function copiedRange(state: EditorState) {
  */
 export const codeBlockCopyCut = EditorView.domEventHandlers({
   copy(event, view) {
-    let { text, ranges } = copiedRange(view.state);
+    let { text } = copiedRange(view.state);
     // 将块分隔符替换为双换行符
     text = text.replaceAll(blockSeparatorRegex, "\n\n");
     

@@ -46,7 +46,7 @@ export type Options = {
 const Config = Facet.define<MinimapConfig | null, Required<Options>>({
   combine: (c) => {
     const configs: Array<Options> = [];
-    for (let config of c) {
+    for (const config of c) {
       if (!config) {
         continue;
       }

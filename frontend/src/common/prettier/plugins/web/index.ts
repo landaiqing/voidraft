@@ -4,7 +4,7 @@
  * This plugin provides support for formatting multiple web languages using the web_fmt WASM implementation.
  * web_fmt is a comprehensive formatter for web development supporting HTML, CSS, JavaScript, and JSON.
  */
-import type { Plugin, Parser, Printer, ParserOptions } from 'prettier';
+import type { Plugin, Parser, Printer } from 'prettier';
 
 // Import the web_fmt WASM module
 import webInit, { format } from './web_fmt_vite.js';

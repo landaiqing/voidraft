@@ -43,7 +43,7 @@ export const useSystemStore = defineStore('system', () => {
 
         try {
             environment.value = await runtime.System.Environment();
-        } catch (err) {
+        } catch (_err) {
             environment.value = null;
         } finally {
             isLoading.value = false;

@@ -160,7 +160,7 @@ const sharedTheme: Theme = {
         alignItems: "center",
         gap: "2px",
     },
-}
+};
 
 const lightTheme: Theme = {
     ".find-replace-container": {
@@ -254,7 +254,7 @@ const prependThemeSelector = (theme: Theme, selector: string): Theme => {
     });
 
     return updatedTheme;
-}
+};
 
 export const searchBaseTheme = EditorView.baseTheme({
     ...sharedTheme,

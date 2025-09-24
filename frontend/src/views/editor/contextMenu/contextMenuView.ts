@@ -19,7 +19,7 @@ declare global {
 let menuElement: HTMLElement | null = null;
 let clickOutsideHandler: ((e: MouseEvent) => void) | null = null;
 // 子菜单缓存池
-let submenuPool: Map<string, HTMLElement> = new Map();
+const submenuPool: Map<string, HTMLElement> = new Map();
 
 /**
  * 获取或创建菜单DOM元素

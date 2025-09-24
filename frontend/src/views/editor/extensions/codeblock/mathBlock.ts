@@ -63,13 +63,13 @@ class MathResult extends WidgetType {
  * 数学装饰函数
  */
 function mathDeco(view: any): any {
-    let mathParsers = new WeakMap();
-    let builder = new RangeSetBuilder();
+    const mathParsers = new WeakMap();
+    const builder = new RangeSetBuilder();
     
-    for (let { from, to } of view.visibleRanges) {
+    for (const { from, to } of view.visibleRanges) {
         for (let pos = from; pos <= to;) {
-            let line = view.state.doc.lineAt(pos);
-            var block = getNoteBlockFromPos(view.state, pos);
+            const line = view.state.doc.lineAt(pos);
+            const block = getNoteBlockFromPos(view.state, pos);
 
             if (block && block.language.name === "math") {
                 // get math.js parser and cache it for this block
@@ -97,7 +97,7 @@ function mathDeco(view: any): any {
 
                 // if we got a result from math.js, add the result decoration
                 if (result !== undefined) {
-                    let format = parser?.get("format");
+                    const format = parser?.get("format");
 
                     let resultWidget: MathResult | undefined;
                     if (typeof(result) === "string") {

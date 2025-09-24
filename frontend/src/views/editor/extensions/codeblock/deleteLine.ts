@@ -24,11 +24,11 @@ function updateSel(sel: EditorSelection, by: (range: SelectionRange) => Selectio
  * 获取选中的行块
  */
 function selectedLineBlocks(state: any): LineBlock[] {
-  let blocks: LineBlock[] = [];
+  const blocks: LineBlock[] = [];
   let upto = -1;
   
-  for (let range of state.selection.ranges) {
-    let startLine = state.doc.lineAt(range.from);
+  for (const range of state.selection.ranges) {
+    const startLine = state.doc.lineAt(range.from);
     let endLine = state.doc.lineAt(range.to);
     
     if (!range.empty && range.to == endLine.from) {
@@ -36,7 +36,7 @@ function selectedLineBlocks(state: any): LineBlock[] {
     }
     
     if (upto >= startLine.number) {
-      let prev = blocks[blocks.length - 1];
+      const prev = blocks[blocks.length - 1];
       prev.to = endLine.to;
       prev.ranges.push(range);
     } else {

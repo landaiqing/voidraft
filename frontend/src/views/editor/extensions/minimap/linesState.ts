@@ -21,8 +21,8 @@ function computeLinesState(state: EditorState): Lines {
 
   while (!lineCursor.done) {
     const lineText = lineCursor.value;
-    let from = textOffset;
-    let to = from + lineText.length;
+    const from = textOffset;
+    const to = from + lineText.length;
 
     // Iterate through folded ranges until we're at or past the current line
     while (foldedRangeCursor.value && foldedRangeCursor.to < from) {
@@ -34,8 +34,8 @@ function computeLinesState(state: EditorState): Lines {
     const lineEndsInFold = to > foldFrom && to <= foldTo;
 
     if (lineStartInFold) {
-      let lastLine = lines.pop() ?? [];
-      let lastRange = lastLine.pop();
+      const lastLine = lines.pop() ?? [];
+      const lastRange = lastLine.pop();
 
       // If the last range is folded, we extend the folded range
       if (lastRange && lastRange.folded) {

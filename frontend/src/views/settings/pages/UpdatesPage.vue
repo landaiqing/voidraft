@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import {useI18n} from 'vue-i18n';
-import {computed, onMounted, ref} from 'vue';
+import {computed} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import SettingSection from '../components/SettingSection.vue';

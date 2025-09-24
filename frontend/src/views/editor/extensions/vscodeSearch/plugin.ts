@@ -20,8 +20,8 @@ export class SearchPlugin {
         }
         this.prevQuery = currentQuery;
 
-        for (let tr of update.transactions) {
-          for (let e of tr.effects) {
+        for (const tr of update.transactions) {
+          for (const e of tr.effects) {
             if (e.is(SearchVisibilityEffect)) {
               this.searchControl.setVisibility(e.value);
             }
@@ -55,19 +55,19 @@ export class SearchPlugin {
     }
 
     findNext() {
-        this.searchControl.matchNext()
+        this.searchControl.matchNext();
     }
 
     replace() {
-        this.searchControl.replace()
+        this.searchControl.replace();
     }
 
     replaceAll() {
-        this.searchControl.replaceAll()
+        this.searchControl.replaceAll();
     }
 
     findPrevious() {
-        this.searchControl.matchPrevious()
+        this.searchControl.matchPrevious();
     }
 }
 
@@ -77,4 +77,4 @@ export const vscodeSearch = [
     search({}),
     VSCodeSearch,
     searchBaseTheme
-]
+];
