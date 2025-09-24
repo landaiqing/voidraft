@@ -7,7 +7,7 @@ import (
 	"strings"
 	"syscall/js"
 
-	"github.com/reteps/dockerfmt/lib"
+	"docker_fmt/lib"
 )
 
 func Format(this js.Value, args []js.Value) any {
