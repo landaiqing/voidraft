@@ -57,6 +57,14 @@ export type SupportedLanguage =
     | 'dockerfile'
     | 'lua'
     | 'math'
+    | 'vue'
+    | 'lezer'
+    | 'liquid'
+    | 'wast'
+    | 'sass'
+    | 'less'
+    | 'angular'
+    | 'svelte'
 
 /**
  * 创建块的选项

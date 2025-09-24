@@ -15,6 +15,14 @@ import {cppLanguage} from "@codemirror/lang-cpp";
 import {xmlLanguage} from "@codemirror/lang-xml";
 import {rustLanguage} from "@codemirror/lang-rust";
 import {yamlLanguage} from "@codemirror/lang-yaml";
+import {vueLanguage} from "@codemirror/lang-vue";
+import {lezerLanguage} from "@codemirror/lang-lezer";
+import {liquidLanguage} from "@codemirror/lang-liquid";
+import {wastLanguage} from "@codemirror/lang-wast";
+import {sassLanguage} from "@codemirror/lang-sass";
+import {lessLanguage} from "@codemirror/lang-less";
+import {angularLanguage} from "@codemirror/lang-angular";
+import { svelteLanguage } from "@replit/codemirror-lang-svelte";
 
 import {StreamLanguage} from "@codemirror/language";
 import {ruby} from "@codemirror/legacy-modes/mode/ruby";
@@ -53,6 +61,7 @@ import clangPrettierPlugin from "@/common/prettier/plugins/clang";
 import pythonPrettierPlugin from "@/common/prettier/plugins/python";
 import dartPrettierPlugin from "@/common/prettier/plugins/dart";
 import luaPrettierPlugin from "@/common/prettier/plugins/lua";
+import webPrettierPlugin from "@/common/prettier/plugins/web";
 import * as prettierPluginEstree from "prettier/plugins/estree";
 
 /**
@@ -73,7 +82,7 @@ export class LanguageInfo {
 }
 
 /**
- * 支持的语言列表（与 Worker 中的 LANGUAGES 对应）
+ * 支持的语言列表
  */
 export const LANGUAGES: LanguageInfo[] = [
     new LanguageInfo("text", "Plain Text", null),
@@ -88,6 +97,13 @@ export const LANGUAGES: LanguageInfo[] = [
     new LanguageInfo("html", "HTML", htmlLanguage.parser, ["html"], {
         parser: "html",
         plugins: [htmlPrettierPlugin]
+    }),
+    new LanguageInfo("vue", "Vue", vueLanguage.parser, ["vue"], {
+        parser: "web-fmt",
+        plugins: [webPrettierPlugin],
+        options: {
+            filename: "index.vue"
+        }
     }),
     new LanguageInfo("sql", "SQL", StandardSQL.language.parser, ["sql"], {
         parser: "sql",
@@ -124,7 +140,7 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "rust",
         plugins: [rustPrettierPlugin]
     }),
-    new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser, ["cs"],{
+    new LanguageInfo("cs", "C#", StreamLanguage.define(csharp).parser, ["cs"], {
         parser: "clang-format",
         plugins: [clangPrettierPlugin],
         options: {
@@ -183,6 +199,32 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [luaPrettierPlugin]
     }),
     new LanguageInfo("math", "Math", null, ["math"]),
+    new LanguageInfo("lezer", "Lezer", lezerLanguage.parser, ["lezer"]),
+    new LanguageInfo("liquid", "Liquid", liquidLanguage.parser, ["liquid"]),
+    new LanguageInfo("wast", "WebAssembly", wastLanguage.parser, ["wast"]),
+    new LanguageInfo("sass", "Sass", sassLanguage.parser, ["sass"], {
+        parser: "web-fmt",
+        plugins: [webPrettierPlugin],
+        options: {
+            filename: "index.sass"
+        }
+    }),
+    new LanguageInfo("less", "Less", lessLanguage.parser, ["less"], {
+        parser: "web-fmt",
+        plugins: [webPrettierPlugin],
+        options: {
+            filename: "index.less"
+        }
+    }),
+    new LanguageInfo("angular", "Angular", angularLanguage.parser, ["angular"]),
+    new LanguageInfo("svelte", "Svelte", svelteLanguage.parser, ["svelte"], {
+        parser: "web-fmt",
+        plugins: [webPrettierPlugin],
+        options: {
+            filename: "index.svelte"
+        }
+    }),
+
 ];
 
 /**
