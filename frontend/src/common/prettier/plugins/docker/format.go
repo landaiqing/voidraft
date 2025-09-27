@@ -43,7 +43,10 @@ func Format(this js.Value, args []js.Value) any {
 		SpaceRedirects:  spaceRedirects,
 	}
 
-	result := lib.FormatFileLines(originalLines, c)
+	result, err := lib.FormatFileLines(originalLines, c)
+	if err != nil {
+		return []any{true, err.Error()}
+	}
 
 	return []any{false, result}
 }

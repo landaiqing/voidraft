@@ -121,11 +121,11 @@ func FormatOnBuild(n *ExtendedNode, c *Config) string {
 	return n.OriginalMultiline
 }
 
-func FormatFileLines(fileLines []string, c *Config) string {
+func FormatFileLines(fileLines []string, c *Config) (string, error) {
 	result, err := parser.Parse(strings.NewReader(strings.Join(fileLines, "")))
 	if err != nil {
 		log.Printf("%s\n", strings.Join(fileLines, ""))
-		log.Fatalf("Error parsing file: %v", err)
+		return "", fmt.Errorf("Error parsing file: %v", err)
 	}
 
 	parseState := &ParseState{
@@ -148,7 +148,7 @@ func FormatFileLines(fileLines []string, c *Config) string {
 	if c.TrailingNewline {
 		parseState.Output += "\n"
 	}
-	return parseState.Output
+	return parseState.Output, nil
 }
 
 func BuildExtendedNode(n *parser.Node, fileLines []string) *ExtendedNode {
@@ -572,9 +572,12 @@ func getCmd(n *ExtendedNode, shouldSplitNode bool) []string {
 		if shouldSplitNode {
 			parts, err := shlex.Split(rawValue)
 			if err != nil {
-				log.Fatalf("Error splitting: %s\n", node.Node.Value)
+				// Fallback: if splitting fails, use raw value as a single token to avoid exiting
+				log.Printf("Error splitting: %s: %v\n", node.Node.Value, err)
+				cmd = append(cmd, rawValue)
+			} else {
+				cmd = append(cmd, parts...)
 			}
-			cmd = append(cmd, parts...)
 		} else {
 			cmd = append(cmd, rawValue)
 		}
@@ -587,7 +590,11 @@ func shouldRunInShell(node string) bool {
 	// https://docs.docker.com/reference/dockerfile/#entrypoint
 	parts, err := shlex.Split(node)
 	if err != nil {
-		log.Fatalf("Error splitting: %s\n", node)
+		// If we cannot reliably split, heuristically decide based on common shell operators
+		if strings.Contains(node, "&&") || strings.Contains(node, ";") || strings.Contains(node, "||") {
+			return true
+		}
+		return false
 	}
 
 	needsShell := false
@@ -785,8 +792,8 @@ func formatBash(s string, c *Config) string {
 	r := strings.NewReader(s)
 	f, err := syntax.NewParser(syntax.KeepComments(true)).Parse(r, "")
 	if err != nil {
-		fmt.Printf("Error parsing: %s\n", s)
-		panic(err)
+		// On parse failure, return original input to avoid crashing the WASM runtime
+		return s
 	}
 	buf := new(bytes.Buffer)
 	syntax.NewPrinter(
