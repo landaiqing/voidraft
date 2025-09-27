@@ -16,6 +16,8 @@ declare module 'vue' {
     MemoryMonitor: typeof import('./src/components/monitor/MemoryMonitor.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    TabContainer: typeof import('./src/components/tabs/TabContainer.vue')['default']
+    TabItem: typeof import('./src/components/tabs/TabItem.vue')['default']
     Toolbar: typeof import('./src/components/toolbar/Toolbar.vue')['default']
     WindowsTitleBar: typeof import('./src/components/titlebar/WindowsTitleBar.vue')['default']
     WindowTitleBar: typeof import('./src/components/titlebar/WindowTitleBar.vue')['default']
