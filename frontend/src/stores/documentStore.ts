@@ -150,12 +150,12 @@ export const useDocumentStore = defineStore('document', () => {
             const doc = documents.value[docId];
             if (doc) {
                 doc.title = title;
-                doc.updatedAt = new Date();
+                doc.updatedAt = new Date().toISOString();
             }
 
             if (currentDocument.value?.id === docId) {
                 currentDocument.value.title = title;
-                currentDocument.value.updatedAt = new Date();
+                currentDocument.value.updatedAt = new Date().toISOString();
             }
 
             return true;

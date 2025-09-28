@@ -141,15 +141,14 @@ func (ds *DocumentService) GetDocumentByID(id int64) (*models.Document, error) {
 	}
 
 	doc := &models.Document{}
-	var createdAt, updatedAt string
 	var isDeleted, isLocked int
 
 	err := ds.databaseService.db.QueryRow(sqlGetDocumentByID, id).Scan(
 		&doc.ID,
 		&doc.Title,
 		&doc.Content,
-		&createdAt,
-		&updatedAt,
+		&doc.CreatedAt,
+		&doc.UpdatedAt,
 		&isDeleted,
 		&isLocked,
 	)
@@ -159,14 +158,6 @@ func (ds *DocumentService) GetDocumentByID(id int64) (*models.Document, error) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get document by ID: %w", err)
-	}
-
-	// 转换时间字段
-	if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
-		doc.CreatedAt = t
-	}
-	if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
-		doc.UpdatedAt = t
 	}
 
 	// 转换布尔字段
@@ -190,15 +181,15 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 	doc := &models.Document{
 		Title:     title,
 		Content:   "∞∞∞text-a\n",
-		CreatedAt: now,
-		UpdatedAt: now,
+		CreatedAt: now.String(),
+		UpdatedAt: now.String(),
 		IsDeleted: false,
 		IsLocked:  false,
 	}
 
 	// 执行插入操作
 	result, err := ds.databaseService.db.Exec(sqlInsertDocument,
-		doc.Title, doc.Content, doc.CreatedAt.Format("2006-01-02 15:04:05"), doc.UpdatedAt.Format("2006-01-02 15:04:05"))
+		doc.Title, doc.Content, doc.CreatedAt, doc.UpdatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create document: %w", err)
 	}
@@ -380,27 +371,18 @@ func (ds *DocumentService) ListAllDocumentsMeta() ([]*models.Document, error) {
 	var documents []*models.Document
 	for rows.Next() {
 		doc := &models.Document{IsDeleted: false}
-		var createdAt, updatedAt string
 		var isLocked int
 
 		err := rows.Scan(
 			&doc.ID,
 			&doc.Title,
-			&createdAt,
-			&updatedAt,
+			&doc.CreatedAt,
+			&doc.UpdatedAt,
 			&isLocked,
 		)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan document row: %w", err)
-		}
-
-		// 转换时间字段
-		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
-			doc.CreatedAt = t
-		}
-		if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
-			doc.UpdatedAt = t
 		}
 
 		doc.IsLocked = isLocked == 1
@@ -432,27 +414,18 @@ func (ds *DocumentService) ListDeletedDocumentsMeta() ([]*models.Document, error
 	var documents []*models.Document
 	for rows.Next() {
 		doc := &models.Document{IsDeleted: true}
-		var createdAt, updatedAt string
 		var isLocked int
 
 		err := rows.Scan(
 			&doc.ID,
 			&doc.Title,
-			&createdAt,
-			&updatedAt,
+			&doc.CreatedAt,
+			&doc.UpdatedAt,
 			&isLocked,
 		)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan document row: %w", err)
-		}
-
-		// 转换时间字段
-		if t, err := time.Parse("2006-01-02 15:04:05", createdAt); err == nil {
-			doc.CreatedAt = t
-		}
-		if t, err := time.Parse("2006-01-02 15:04:05", updatedAt); err == nil {
-			doc.UpdatedAt = t
 		}
 
 		doc.IsLocked = isLocked == 1

@@ -5,10 +5,6 @@
 // @ts-ignore: Unused imports
 import {Create as $Create} from "@wailsio/runtime";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as time$0 from "../../../time/models.js";
-
 /**
  * AppConfig 应用配置 - 按照前端设置页面分类组织
  */
@@ -196,8 +192,8 @@ export class Document {
     "id": number;
     "title": string;
     "content": string;
-    "createdAt": time$0.Time;
-    "updatedAt": time$0.Time;
+    "createdAt": string;
+    "updatedAt": string;
     "is_deleted": boolean;
 
     /**
@@ -217,10 +213,10 @@ export class Document {
             this["content"] = "";
         }
         if (!("createdAt" in $$source)) {
-            this["createdAt"] = null;
+            this["createdAt"] = "";
         }
         if (!("updatedAt" in $$source)) {
-            this["updatedAt"] = null;
+            this["updatedAt"] = "";
         }
         if (!("is_deleted" in $$source)) {
             this["is_deleted"] = false;
@@ -1143,8 +1139,8 @@ export class Theme {
     "type": ThemeType;
     "colors": ThemeColorConfig;
     "isDefault": boolean;
-    "createdAt": time$0.Time;
-    "updatedAt": time$0.Time;
+    "createdAt": string;
+    "updatedAt": string;
 
     /** Creates a new Theme instance. */
     constructor($$source: Partial<Theme> = {}) {
@@ -1164,10 +1160,10 @@ export class Theme {
             this["isDefault"] = false;
         }
         if (!("createdAt" in $$source)) {
-            this["createdAt"] = null;
+            this["createdAt"] = "";
         }
         if (!("updatedAt" in $$source)) {
-            this["updatedAt"] = null;
+            this["updatedAt"] = "";
         }
 
         Object.assign(this, $$source);

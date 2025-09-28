@@ -472,7 +472,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
     border-radius: 3px;
     margin-bottom: 4px;
     width: 260px;
-    max-height: 320px;
+    //max-height: 320px;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     overflow: hidden;

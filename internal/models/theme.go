@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
-	"time"
 )
 
 // ThemeType 主题类型枚举
@@ -58,8 +57,8 @@ type Theme struct {
 	Type      ThemeType        `db:"type" json:"type"`
 	Colors    ThemeColorConfig `db:"colors" json:"colors"`
 	IsDefault bool             `db:"is_default" json:"isDefault"`
-	CreatedAt time.Time        `db:"created_at" json:"createdAt"`
-	UpdatedAt time.Time        `db:"updated_at" json:"updatedAt"`
+	CreatedAt string           `db:"created_at" json:"createdAt"`
+	UpdatedAt string           `db:"updated_at" json:"updatedAt"`
 }
 
 // Value 实现 driver.Valuer 接口，用于将 ThemeColorConfig 存储到数据库

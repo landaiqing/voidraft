@@ -67,8 +67,8 @@ func (ts *ThemeService) initializeDefaultThemes() error {
 		Type:      models.ThemeTypeDark,
 		Colors:    *models.NewDefaultDarkTheme(),
 		IsDefault: true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().String(),
+		UpdatedAt: time.Now().String(),
 	}
 
 	// 创建默认浅色主题
@@ -77,8 +77,8 @@ func (ts *ThemeService) initializeDefaultThemes() error {
 		Type:      models.ThemeTypeLight,
 		Colors:    *models.NewDefaultLightTheme(),
 		IsDefault: true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		CreatedAt: time.Now().String(),
+		UpdatedAt: time.Now().String(),
 	}
 
 	// 插入默认主题
