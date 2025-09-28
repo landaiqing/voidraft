@@ -10,16 +10,18 @@
 - 📊 缓存统计信息
 - ⏰ TTL 过期支持
 - 🎯 简洁易用的 API
+- 🔐 多种哈希算法支持
+- 🏗️ 模块化设计，易于扩展
 
 ## 基础用法
 
 ### 创建缓存
 
 ```typescript
-import { LRUCache, CacheManager, createCacheItem } from '@/common/cache';
+import { LruCache, CacheManager, createCacheItem } from '@/common/cache';
 
 // 直接创建缓存
-const cache = new LRUCache({
+const cache = new LruCache({
   maxSize: 100,
   ttl: 5 * 60 * 1000, // 5 分钟
   onEvict: (item) => console.log('Evicted:', item)
@@ -76,14 +78,26 @@ const item: MyItem = {
 cache.set('resource1', item);
 ```
 
+### 哈希工具使用
+
+```typescript
+import { createHash, generateCacheKey } from '@/common/cache';
+
+// 生成简单哈希
+const hash = createHash('some content');
+
+// 生成缓存键
+const key = generateCacheKey('user', userId, 'profile');
+```
+
 ## API 参考
 
-### LRUCache
+### LruCache
 
-- `get(id)` - 获取缓存项
-- `set(id, item)` - 设置缓存项
-- `remove(id)` - 移除缓存项
-- `has(id)` - 检查是否存在
+- `get(id)` - 获取缓存项（O(1)）
+- `set(id, item)` - 设置缓存项（O(1)）
+- `remove(id)` - 移除缓存项（O(1)）
+- `has(id)` - 检查是否存在（O(1)）
 - `clear()` - 清空缓存
 - `size()` - 获取缓存大小
 - `getStats()` - 获取统计信息
@@ -96,11 +110,10 @@ cache.set('resource1', item);
 - `removeCache(name)` - 删除缓存
 - `clearAll()` - 清空所有缓存
 - `getAllStats()` - 获取所有统计信息
+- `cleanupAll()` - 清理所有缓存的过期项
 
 ## 工具函数
 
 - `generateCacheKey(...parts)` - 生成缓存键
+- `createHash(content)` - 创建内容哈希
 - `createCacheItem(id, data)` - 创建缓存项
-- `createContentHash(content)` - 创建内容哈希
-- `debounce(func, wait)` - 防抖函数
-- `throttle(func, limit)` - 节流函数

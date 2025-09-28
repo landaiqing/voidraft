@@ -1,19 +1,21 @@
 export type {
-  CacheItem,
-  DisposableCacheItem,
-  CacheConfig,
-  CacheStats
-} from './types';
-export { LRUCache } from './lru-cache';
-export { CacheManager, globalCacheManager } from './cache-manager';
-
-export {
+  CacheItem, 
+  DisposableCacheItem, 
+  CacheConfig, 
+  CacheStats, 
+  CacheStrategy,
+  DoublyLinkedNode 
+} from './interfaces';
+export { LruCache } from './lruCache';
+export { CacheManager, globalCacheManager } from './manager';
+export { DoublyLinkedList } from './doublyLinkedList';
+export { 
+  createHash,
   generateCacheKey,
-  createCacheItem,
-  calculateHitRate,
-  formatCacheSize,
+  createCacheItem, 
+  calculateHitRate, 
+  formatCacheSize, 
   isExpired,
-  createContentHash,
   debounce,
   throttle
 } from './utils';

@@ -4,45 +4,27 @@ import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
 
-
 export const useDocumentStore = defineStore('document', () => {
-
     const DEFAULT_DOCUMENT_ID = ref<number>(1); // 默认草稿文档ID
+    
     // === 核心状态 ===
     const documents = ref<Record<number, Document>>({});
-    const recentDocumentIds = ref<number[]>([DEFAULT_DOCUMENT_ID.value]);
     const currentDocumentId = ref<number | null>(null);
     const currentDocument = ref<Document | null>(null);
 
     // === UI状态 ===
     const showDocumentSelector = ref(false);
+    const selectorError = ref<{ docId: number; message: string } | null>(null);
     const isLoading = ref(false);
 
     // === 计算属性 ===
     const documentList = computed(() =>
         Object.values(documents.value).sort((a, b) => {
-            const aIndex = recentDocumentIds.value.indexOf(a.id);
-            const bIndex = recentDocumentIds.value.indexOf(b.id);
-
-            // 按最近使用排序
-            if (aIndex !== -1 && bIndex !== -1) {
-                return aIndex - bIndex;
-            }
-            if (aIndex !== -1) return -1;
-            if (bIndex !== -1) return 1;
-
-            // 然后按更新时间排序
             return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
         })
     );
 
     // === 私有方法 ===
-    const addRecentDocument = (docId: number) => {
-        const recent = recentDocumentIds.value.filter(id => id !== docId);
-        recent.unshift(docId);
-        recentDocumentIds.value = recent.slice(0, 100); // 保留最近100个
-    };
-
     const setDocuments = (docs: Document[]) => {
         documents.value = {};
         docs.forEach(doc => {
@@ -50,7 +32,35 @@ export const useDocumentStore = defineStore('document', () => {
         });
     };
 
-    // === 公共API ===
+    // === 错误处理 ===
+    const setError = (docId: number, message: string) => {
+        selectorError.value = { docId, message };
+    };
+
+    const clearError = () => {
+        selectorError.value = null;
+    };
+
+    // === UI控制方法 ===
+    const openDocumentSelector = () => {
+        showDocumentSelector.value = true;
+        clearError();
+    };
+
+    const closeDocumentSelector = () => {
+        showDocumentSelector.value = false;
+        clearError();
+    };
+
+    const toggleDocumentSelector = () => {
+        if (showDocumentSelector.value) {
+            closeDocumentSelector();
+        } else {
+            openDocumentSelector();
+        }
+    };
+
+    // === 文档操作方法 ===
 
     // 在新窗口中打开文档
     const openDocumentInNewWindow = async (docId: number): Promise<boolean> => {
@@ -63,22 +73,57 @@ export const useDocumentStore = defineStore('document', () => {
         }
     };
 
+    // 创建新文档
+    const createNewDocument = async (title: string): Promise<Document | null> => {
+        try {
+            const doc = await DocumentService.CreateDocument(title);
+            if (doc) {
+                documents.value[doc.id] = doc;
+                return doc;
+            }
+            return null;
+        } catch (error) {
+            console.error('Failed to create document:', error);
+            return null;
+        }
+    };
+
+    // 保存新文档
+    const saveNewDocument = async (title: string, content: string): Promise<Document | null> => {
+        try {
+            const doc = await DocumentService.CreateDocument(title);
+            if (doc) {
+                await DocumentService.UpdateDocumentContent(doc.id, content);
+                doc.content = content;
+                documents.value[doc.id] = doc;
+                return doc;
+            }
+            return null;
+        } catch (error) {
+            console.error('Failed to save new document:', error);
+            return null;
+        }
+    };
+
     // 更新文档列表
     const updateDocuments = async () => {
         try {
+            isLoading.value = true;
             const docs = await DocumentService.ListAllDocumentsMeta();
             if (docs) {
                 setDocuments(docs.filter((doc): doc is Document => doc !== null));
             }
         } catch (error) {
             console.error('Failed to update documents:', error);
+        } finally {
+            isLoading.value = false;
         }
     };
 
     // 打开文档
     const openDocument = async (docId: number): Promise<boolean> => {
         try {
-            closeDialog();
+            closeDocumentSelector();
 
             // 获取完整文档数据
             const doc = await DocumentService.GetDocumentByID(docId);
@@ -88,46 +133,10 @@ export const useDocumentStore = defineStore('document', () => {
 
             currentDocumentId.value = docId;
             currentDocument.value = doc;
-            addRecentDocument(docId);
 
             return true;
         } catch (error) {
             console.error('Failed to open document:', error);
-            return false;
-        }
-    };
-
-    // 创建新文档
-    const createNewDocument = async (title: string): Promise<Document | null> => {
-        try {
-            const newDoc = await DocumentService.CreateDocument(title);
-            if (!newDoc) {
-                throw new Error('Failed to create document');
-            }
-
-            // 更新文档列表
-            documents.value[newDoc.id] = newDoc;
-
-            return newDoc;
-        } catch (error) {
-            console.error('Failed to create document:', error);
-            return null;
-        }
-    };
-
-    // 保存新文档
-    const saveNewDocument = async (title: string, content: string): Promise<boolean> => {
-        try {
-            const newDoc = await createNewDocument(title);
-            if (!newDoc) return false;
-
-            // 更新内容
-            await DocumentService.UpdateDocumentContent(newDoc.id, content);
-            newDoc.content = content;
-
-            return true;
-        } catch (error) {
-            console.error('Failed to save new document:', error);
             return false;
         }
     };
@@ -168,7 +177,6 @@ export const useDocumentStore = defineStore('document', () => {
 
             // 更新本地状态
             delete documents.value[docId];
-            recentDocumentIds.value = recentDocumentIds.value.filter(id => id !== docId);
 
             // 如果删除的是当前文档，切换到第一个可用文档
             if (currentDocumentId.value === docId) {
@@ -186,16 +194,6 @@ export const useDocumentStore = defineStore('document', () => {
             console.error('Failed to delete document:', error);
             return false;
         }
-    };
-
-    // === UI控制 ===
-    const openDocumentSelector = () => {
-        closeDialog();
-        showDocumentSelector.value = true;
-    };
-
-    const closeDialog = () => {
-        showDocumentSelector.value = false;
     };
 
     // === 初始化 ===
@@ -226,10 +224,10 @@ export const useDocumentStore = defineStore('document', () => {
         // 状态
         documents,
         documentList,
-        recentDocumentIds,
         currentDocumentId,
         currentDocument,
         showDocumentSelector,
+        selectorError,
         isLoading,
 
         // 方法
@@ -241,13 +239,16 @@ export const useDocumentStore = defineStore('document', () => {
         updateDocumentMetadata,
         deleteDocument,
         openDocumentSelector,
-        closeDialog,
+        closeDocumentSelector,
+        toggleDocumentSelector,
+        setError,
+        clearError,
         initialize,
     };
 }, {
     persist: {
         key: 'voidraft-document',
         storage: localStorage,
-        pick: ['currentDocumentId']
+        pick: ['currentDocumentId', 'documents']
     }
 });

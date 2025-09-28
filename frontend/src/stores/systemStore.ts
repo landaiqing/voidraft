@@ -1,5 +1,7 @@
 import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
+import {GetSystemInfo} from '@/../bindings/voidraft/internal/services/systemservice';
+import type {SystemInfo} from '@/../bindings/voidraft/internal/services/models';
 import * as runtime from '@wailsio/runtime';
 
 export interface SystemEnvironment {
@@ -19,7 +21,7 @@ export const useSystemStore = defineStore('system', () => {
     // 状态
     const environment = ref<SystemEnvironment | null>(null);
     const isLoading = ref(false);
-    
+
     // 窗口置顶状态管理
     const isWindowOnTop = ref<boolean>(false);
 
@@ -42,7 +44,24 @@ export const useSystemStore = defineStore('system', () => {
         isLoading.value = true;
 
         try {
-            environment.value = await runtime.System.Environment();
+            const systemInfo: SystemInfo | null = await GetSystemInfo();
+
+            if (systemInfo) {
+                environment.value = {
+                    OS: systemInfo.os,
+                    Arch: systemInfo.arch,
+                    Debug: systemInfo.debug,
+                    OSInfo: {
+                        Name: systemInfo.osInfo?.name || '',
+                        Branding: systemInfo.osInfo?.branding || '',
+                        Version: systemInfo.osInfo?.version || '',
+                        ID: systemInfo.osInfo?.id || '',
+                    },
+                    PlatformInfo: systemInfo.platformInfo || {},
+                };
+            } else {
+                environment.value = null;
+            }
         } catch (_err) {
             environment.value = null;
         } finally {
@@ -94,4 +113,4 @@ export const useSystemStore = defineStore('system', () => {
         storage: localStorage,
         pick: ['isWindowOnTop']
     }
-}); 
+});

@@ -1,5 +1,5 @@
 import {defineStore} from 'pinia';
-import {nextTick, ref, watch} from 'vue';
+import {computed, nextTick, ref, watch} from 'vue';
 import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
@@ -15,10 +15,15 @@ import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/b
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
-import {createDynamicExtensions, getExtensionManager, setExtensionManagerView, removeExtensionManagerView} from '@/views/editor/manager';
+import {
+    createDynamicExtensions,
+    getExtensionManager,
+    removeExtensionManagerView,
+    setExtensionManagerView
+} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
 import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
-import {AsyncOperationManager} from '@/common/async-operation';
+import {AsyncOperationManager} from '@/common/async';
 
 export interface DocumentStats {
     lines: number;
@@ -41,7 +46,7 @@ export const useEditorStore = defineStore('editor', () => {
         characters: 0,
         selectedCharacters: 0
     });
-    
+
     // 编辑器加载状态
     const isLoading = ref(false);
 
@@ -58,7 +63,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 创建编辑器实例
     const createEditorInstance = async (
-        content: string, 
+        content: string,
         signal: AbortSignal,
         documentId: number
     ): Promise<EditorView> => {
@@ -163,8 +168,8 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 获取或创建编辑器
     const getOrCreateEditor = async (
-        documentId: number, 
-        content: string, 
+        documentId: number,
+        content: string,
         signal: AbortSignal
     ): Promise<EditorView> => {
         // 检查缓存
@@ -180,7 +185,7 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 创建新的编辑器实例
         const view = await createEditorInstance(content, signal, documentId);
-        
+
         // 最终检查操作是否被取消
         if (signal.aborted) {
             // 如果操作已取消，清理创建的实例
@@ -209,11 +214,11 @@ export const useEditorStore = defineStore('editor', () => {
             const container = editorCacheStore.getContainer();
             if (container) {
                 container.innerHTML = '';
-                
+
                 // 将目标编辑器DOM添加到容器
                 container.appendChild(instance.view.dom);
             }
-            
+
             currentEditor.value = instance.view;
 
             // 设置扩展管理器视图
@@ -227,10 +232,10 @@ export const useEditorStore = defineStore('editor', () => {
                     selection: {anchor: docLength, head: docLength},
                     scrollIntoView: true
                 });
-                
+
                 // 滚动到文档底部
                 instance.view.focus();
-                
+
                 // 使用缓存的语法树确保方法
                 editorCacheStore.ensureSyntaxTreeCached(instance.view, documentId);
             });
@@ -242,18 +247,18 @@ export const useEditorStore = defineStore('editor', () => {
     // 保存编辑器内容
     const saveEditorContent = async (documentId: number): Promise<boolean> => {
         const instance = editorCacheStore.getEditor(documentId);
-        if (!instance || !instance.isDirty) return true;
+        if (!instance || !instance.state.isDirty) return true;
 
         try {
             const content = instance.view.state.doc.toString();
-            const lastModified = instance.lastModified;
-            
+            const lastModified = instance.state.lastModified;
+
             await DocumentService.UpdateDocumentContent(documentId, content);
 
             // 检查在保存期间内容是否又被修改了
-            if (instance.lastModified === lastModified) {
+            if (instance.state.lastModified === lastModified) {
                 editorCacheStore.updateEditorContent(documentId, content);
-            // isDirty 已在 updateEditorContent 中设置为 false
+                // isDirty 已在 updateEditorContent 中设置为 false
             }
             // 如果内容在保存期间被修改了，保持 isDirty 状态
 
@@ -310,7 +315,7 @@ export const useEditorStore = defineStore('editor', () => {
                         const currentDocId = documentStore.currentDocumentId;
                         if (currentDocId && currentDocId !== documentId) {
                             await saveEditorContent(currentDocId);
-                            
+
                             // 检查操作是否被取消
                             if (signal.aborted) {
                                 throw new Error('Operation cancelled');
@@ -328,7 +333,7 @@ export const useEditorStore = defineStore('editor', () => {
 
                     // 更新内容
                     const instance = editorCacheStore.getEditor(documentId);
-                    if (instance && instance.content !== content) {
+                    if (instance && instance.state.content !== content) {
                         // 确保编辑器视图有效
                         if (view && view.state && view.dispatch) {
                             view.dispatch({
@@ -396,7 +401,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 应用字体设置
     const applyFontSettings = () => {
-        editorCacheStore.getAllEditors().forEach(instance => {
+        editorCacheStore.allEditors.forEach(instance => {
             updateFontConfig(instance.view, {
                 fontFamily: configStore.config.editing.fontFamily,
                 fontSize: configStore.config.editing.fontSize,
@@ -408,7 +413,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 应用主题设置
     const applyThemeSettings = () => {
-        editorCacheStore.getAllEditors().forEach(instance => {
+        editorCacheStore.allEditors.forEach(instance => {
             updateEditorTheme(instance.view,
                 themeStore.currentTheme || SystemThemeType.SystemThemeAuto
             );
@@ -417,7 +422,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 应用Tab设置
     const applyTabSettings = () => {
-        editorCacheStore.getAllEditors().forEach(instance => {
+        editorCacheStore.allEditors.forEach(instance => {
             updateTabConfig(
                 instance.view,
                 configStore.config.editing.tabSize,
@@ -431,7 +436,7 @@ export const useEditorStore = defineStore('editor', () => {
     const applyKeymapSettings = async () => {
         // 确保所有编辑器实例的快捷键都更新
         await Promise.all(
-            editorCacheStore.getAllEditors().map(instance =>
+            editorCacheStore.allEditors.map(instance =>
                 updateKeymapExtension(instance.view)
             )
         );
@@ -441,10 +446,10 @@ export const useEditorStore = defineStore('editor', () => {
     const clearAllEditors = () => {
         // 取消所有挂起的操作
         operationManager.cancelAllOperations();
-        
+
         // 清理所有编辑器
         editorCacheStore.clearAll();
-        
+
         // 清除当前编辑器引用
         currentEditor.value = null;
     };
@@ -474,6 +479,34 @@ export const useEditorStore = defineStore('editor', () => {
         await applyKeymapSettings();
     };
 
+    // === 配置监听相关的 computed 属性 ===
+    
+    // 字体相关配置的 computed 属性
+    const fontSettings = computed(() => ({
+        fontSize: configStore.config.editing.fontSize,
+        fontFamily: configStore.config.editing.fontFamily,
+        lineHeight: configStore.config.editing.lineHeight,
+        fontWeight: configStore.config.editing.fontWeight
+    }));
+
+    // Tab相关配置的 computed 属性
+    const tabSettings = computed(() => ({
+        tabSize: configStore.config.editing.tabSize,
+        enableTabIndent: configStore.config.editing.enableTabIndent,
+        tabType: configStore.config.editing.tabType
+    }));
+
+    // === 配置监听器 ===
+    
+    // 监听字体配置变化
+    watch(fontSettings, applyFontSettings, { deep: true });
+    
+    // 监听Tab配置变化
+    watch(tabSettings, applyTabSettings, { deep: true });
+    
+    // 监听主题变化
+    watch(() => themeStore.currentTheme, applyThemeSettings);
+
     // 监听文档切换
     watch(() => documentStore.currentDocument, (newDoc) => {
         if (newDoc && editorCacheStore.getContainer()) {
@@ -483,16 +516,6 @@ export const useEditorStore = defineStore('editor', () => {
             });
         }
     });
-
-    // 监听配置变化
-    watch(() => configStore.config.editing.fontSize, applyFontSettings);
-    watch(() => configStore.config.editing.fontFamily, applyFontSettings);
-    watch(() => configStore.config.editing.lineHeight, applyFontSettings);
-    watch(() => configStore.config.editing.fontWeight, applyFontSettings);
-    watch(() => configStore.config.editing.tabSize, applyTabSettings);
-    watch(() => configStore.config.editing.enableTabIndent, applyTabSettings);
-    watch(() => configStore.config.editing.tabType, applyTabSettings);
-    watch(() => themeStore.currentTheme, applyThemeSettings);
 
     return {
         // 状态

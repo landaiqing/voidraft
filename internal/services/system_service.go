@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"runtime"
 
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
 // SystemService 系统监控服务
 type SystemService struct {
 	logger *log.LogService
+	app    *application.App
 }
 
 // MemoryStats 内存统计信息
@@ -28,11 +30,33 @@ type MemoryStats struct {
 	NumGoroutine int `json:"numGoroutine"`
 }
 
+// SystemInfo 系统信息
+type SystemInfo struct {
+	OS           string                 `json:"os"`
+	Arch         string                 `json:"arch"`
+	Debug        bool                   `json:"debug"`
+	OSInfo       *OSInfo                `json:"osInfo"`
+	PlatformInfo map[string]interface{} `json:"platformInfo"`
+}
+
+// OSInfo 操作系统信息
+type OSInfo struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Version  string `json:"version"`
+	Branding string `json:"branding"`
+}
+
 // NewSystemService 创建新的系统服务实例
 func NewSystemService(logger *log.LogService) *SystemService {
 	return &SystemService{
 		logger: logger,
 	}
+}
+
+// SetAppReferences 设置应用引用
+func (ss *SystemService) SetAppReferences(app *application.App) {
+	ss.app = app
 }
 
 // GetMemoryStats 获取当前内存统计信息
@@ -48,6 +72,34 @@ func (ss *SystemService) GetMemoryStats() MemoryStats {
 		PauseTotalNs: m.PauseTotalNs,
 		NumGoroutine: runtime.NumGoroutine(),
 	}
+}
+
+// GetSystemInfo 获取系统环境信息
+func (ss *SystemService) GetSystemInfo() (*SystemInfo, error) {
+	if ss.app == nil {
+		return nil, fmt.Errorf("app reference not set")
+	}
+
+	envInfo := ss.app.Env.Info()
+
+	systemInfo := &SystemInfo{
+		OS:           envInfo.OS,
+		Arch:         envInfo.Arch,
+		Debug:        envInfo.Debug,
+		PlatformInfo: envInfo.PlatformInfo,
+	}
+
+	// 转换OSInfo
+	if envInfo.OSInfo != nil {
+		systemInfo.OSInfo = &OSInfo{
+			ID:       envInfo.OSInfo.ID,
+			Name:     envInfo.OSInfo.Name,
+			Version:  envInfo.OSInfo.Version,
+			Branding: envInfo.OSInfo.Branding,
+		}
+	}
+
+	return systemInfo, nil
 }
 
 // FormatBytes 格式化字节数为人类可读的格式

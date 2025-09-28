@@ -64,7 +64,6 @@ func main() {
 			},
 		},
 	})
-
 	// Create a new window with the necessary options.
 	// 'Title' is the title of the window.
 	// 'Mac' options tailor the window when running on macOS.
@@ -91,6 +90,10 @@ func main() {
 	})
 	mainWindow.Center()
 	window = mainWindow
+
+	// 获取系统服务并设置应用引用
+	systemService := serviceManager.GetSystemService()
+	systemService.SetAppReferences(app)
 
 	// 获取托盘服务并设置应用引用
 	trayService := serviceManager.GetTrayService()

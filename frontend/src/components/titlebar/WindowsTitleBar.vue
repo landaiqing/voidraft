@@ -4,7 +4,11 @@
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
       </div>
-      <div class="titlebar-title">{{ titleText }}</div>
+<!--      <div class="titlebar-title">{{ titleText }}</div>-->
+      <!-- 标签页容器区域 -->
+      <div class="titlebar-tabs" style="--wails-draggable:no-drag">
+        <TabContainer />
+      </div>
     </div>
 
     <div class="titlebar-controls" style="--wails-draggable:no-drag" @contextmenu.prevent>
@@ -40,6 +44,7 @@ import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import * as runtime from '@wailsio/runtime';
 import {useDocumentStore} from '@/stores/documentStore';
+import TabContainer from '@/components/tabs/TabContainer.vue';
 
 const {t} = useI18n();
 const isMaximized = ref(false);
@@ -118,6 +123,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 400;
   cursor: default;
+  min-width: 0; /* 允许内容收缩 */
 
   -webkit-context-menu: none;
   -moz-context-menu: none;
@@ -127,6 +133,7 @@ onMounted(async () => {
 .titlebar-content .titlebar-icon {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
 
   img {
     width: 100%;
@@ -135,9 +142,14 @@ onMounted(async () => {
   }
 }
 
-.titlebar-title {
-  font-size: 12px;
-  color: var(--toolbar-text);
+.titlebar-tabs {
+  flex: 1;
+  height: 100%;
+  align-items: center;
+  overflow: hidden;
+  margin-left: 8px;
+  min-width: 0;
+  //margin-right: 8px;
 }
 
 .titlebar-controls {

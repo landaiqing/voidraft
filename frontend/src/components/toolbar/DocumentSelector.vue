@@ -1,45 +1,47 @@
 <script setup lang="ts">
-import {computed, nextTick, onMounted, onUnmounted, ref} from 'vue';
-import {useDocumentStore} from '@/stores/documentStore';
-import {useI18n} from 'vue-i18n';
-import type {Document} from '@/../bindings/voidraft/internal/models/models';
-import {useWindowStore} from "@/stores/windowStore";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useDocumentStore } from '@/stores/documentStore';
+import { useWindowStore } from '@/stores/windowStore';
+import { useI18n } from 'vue-i18n';
+import type { Document } from '@/../bindings/voidraft/internal/models/models';
 
 const documentStore = useDocumentStore();
 const windowStore = useWindowStore();
-const {t} = useI18n();
+const { t } = useI18n();
 
 // 组件状态
-const showMenu = ref(false);
 const inputValue = ref('');
 const inputRef = ref<HTMLInputElement>();
 const editingId = ref<number | null>(null);
 const editingTitle = ref('');
 const editInputRef = ref<HTMLInputElement>();
 const deleteConfirmId = ref<number | null>(null);
-// 添加错误提示状态
-const alreadyOpenDocId = ref<number | null>(null);
-const errorMessageTimer = ref<number | null>(null);
 
-// 过滤后的文档列表 + 创建选项
+// 常量
+const MAX_TITLE_LENGTH = 50;
+
+// 计算属性
+const currentDocName = computed(() => {
+  if (!documentStore.currentDocument) return t('toolbar.selectDocument');
+  const title = documentStore.currentDocument.title;
+  return title.length > 12 ? title.substring(0, 12) + '...' : title;
+});
+
 const filteredItems = computed(() => {
   const docs = documentStore.documentList;
   const query = inputValue.value.trim();
 
-  if (!query) {
-    return docs;
-  }
+  if (!query) return docs;
 
-  // 过滤匹配的文档
   const filtered = docs.filter(doc =>
-      doc.title.toLowerCase().includes(query.toLowerCase())
+    doc.title.toLowerCase().includes(query.toLowerCase())
   );
 
   // 如果输入的不是已存在文档的完整标题，添加创建选项
   const exactMatch = docs.some(doc => doc.title.toLowerCase() === query.toLowerCase());
   if (!exactMatch && query.length > 0) {
     return [
-      {id: -1, title: t('toolbar.createDocument') + ` "${query}"`, isCreateOption: true} as any,
+      { id: -1, title: t('toolbar.createDocument') + ` "${query}"`, isCreateOption: true } as any,
       ...filtered
     ];
   }
@@ -47,164 +49,125 @@ const filteredItems = computed(() => {
   return filtered;
 });
 
-// 当前文档显示名称
-const currentDocName = computed(() => {
-  if (!documentStore.currentDocument) return t('toolbar.selectDocument');
-  const title = documentStore.currentDocument.title;
-  return title.length > 12 ? title.substring(0, 12) + '...' : title;
-});
-
-// 打开菜单
-const openMenu = async () => {
-  showMenu.value = true;
-  await documentStore.updateDocuments();
-  nextTick(() => {
-    inputRef.value?.focus();
-  });
-};
-
-// 关闭菜单
-const closeMenu = () => {
-  showMenu.value = false;
-  inputValue.value = '';
-  editingId.value = null;
-  editingTitle.value = '';
-  deleteConfirmId.value = null;
-  
-  // 清除错误状态和定时器
-  clearErrorMessage();
-};
-
-// 清除错误提示和定时器
-const clearErrorMessage = () => {
-  if (errorMessageTimer.value) {
-    clearTimeout(errorMessageTimer.value);
-    errorMessageTimer.value = null;
-  }
-  alreadyOpenDocId.value = null;
-};
-
-// 切换菜单
-const toggleMenu = () => {
-  if (showMenu.value) {
-    closeMenu();
-  } else {
-    openMenu();
-  }
-};
-
-// 选择文档或创建文档
-const selectItem = async (item: any) => {
-  if (item.isCreateOption) {
-    // 创建新文档
-    await createDoc(inputValue.value.trim());
-  } else {
-    // 选择现有文档
-    await selectDoc(item);
-  }
-};
-
-// 选择文档
-const selectDoc = async (doc: Document) => {
-  try {
-    // 如果选择的就是当前文档，直接关闭菜单
-    if (documentStore.currentDocument?.id === doc.id) {
-      closeMenu();
-      return;
-    }
-
-    const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
-    if (hasOpen) {
-      // 设置错误状态并启动定时器
-      alreadyOpenDocId.value = doc.id;
-      
-      // 清除之前的定时器（如果存在）
-      if (errorMessageTimer.value) {
-        clearTimeout(errorMessageTimer.value);
-      }
-      
-      // 设置新的定时器，3秒后清除错误信息
-      errorMessageTimer.value = window.setTimeout(() => {
-        alreadyOpenDocId.value = null;
-        errorMessageTimer.value = null;
-      }, 3000);
-      return;
-    }
-    const success = await documentStore.openDocument(doc.id);
-    if (success) {
-      closeMenu();
-    }
-  } catch (error) {
-    console.error('Failed to switch documents:', error);
-  }
-};
-
-// 文档名称长度限制
-const MAX_TITLE_LENGTH = 50;
-
-// 验证文档名称
+// 工具函数
 const validateTitle = (title: string): string | null => {
-  if (!title.trim()) {
-    return t('toolbar.documentNameRequired');
-  }
+  if (!title.trim()) return t('toolbar.documentNameRequired');
   if (title.trim().length > MAX_TITLE_LENGTH) {
-    return t('toolbar.documentNameTooLong', {max: MAX_TITLE_LENGTH});
+    return t('toolbar.documentNameTooLong', { max: MAX_TITLE_LENGTH });
   }
   return null;
 };
 
-// 创建文档
-const createDoc = async (title: string) => {
-  const trimmedTitle = title.trim();
-  const error = validateTitle(trimmedTitle);
-  if (error) {
+const formatTime = (dateString: string | null) => {
+  if (!dateString) return t('toolbar.unknownTime');
+
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return t('toolbar.invalidDate');
+
+    const locale = t('locale') === 'zh-CN' ? 'zh-CN' : 'en-US';
+    return date.toLocaleString(locale, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+  } catch {
+    return t('toolbar.timeError');
+  }
+};
+
+// 核心操作
+const openMenu = async () => {
+  documentStore.openDocumentSelector();
+  await documentStore.updateDocuments();
+  await nextTick();
+  inputRef.value?.focus();
+};
+
+const closeMenu = () => {
+  documentStore.closeDocumentSelector();
+  inputValue.value = '';
+  editingId.value = null;
+  editingTitle.value = '';
+  deleteConfirmId.value = null;
+};
+
+const selectDoc = async (doc: Document) => {
+  // 如果选择的就是当前文档，直接关闭菜单
+  if (documentStore.currentDocument?.id === doc.id) {
+    closeMenu();
     return;
   }
 
+  const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
+  if (hasOpen) {
+    documentStore.setError(doc.id, t('toolbar.alreadyOpenInNewWindow'));
+    return;
+  }
+
+  const success = await documentStore.openDocument(doc.id);
+  if (success) closeMenu();
+};
+
+const createDoc = async (title: string) => {
+  const trimmedTitle = title.trim();
+  const error = validateTitle(trimmedTitle);
+  if (error) return;
+
   try {
     const newDoc = await documentStore.createNewDocument(trimmedTitle);
-    if (newDoc) {
-      await selectDoc(newDoc);
-    }
+    if (newDoc) await selectDoc(newDoc);
   } catch (error) {
     console.error('Failed to create document:', error);
   }
 };
 
-// 开始重命名
+const selectItem = async (item: any) => {
+  if (item.isCreateOption) {
+    await createDoc(inputValue.value.trim());
+  } else {
+    await selectDoc(item);
+  }
+};
+
+// 编辑操作
 const startRename = (doc: Document, event: Event) => {
   event.stopPropagation();
   editingId.value = doc.id;
   editingTitle.value = doc.title;
-  deleteConfirmId.value = null; // 清除删除确认状态
+  deleteConfirmId.value = null;
   nextTick(() => {
     editInputRef.value?.focus();
     editInputRef.value?.select();
   });
 };
 
-// 保存编辑
 const saveEdit = async () => {
-  if (editingId.value && editingTitle.value.trim()) {
-    const trimmedTitle = editingTitle.value.trim();
-    const error = validateTitle(trimmedTitle);
-    if (error) {
-
-      return;
-    }
-
-    try {
-      await documentStore.updateDocumentMetadata(editingId.value, trimmedTitle);
-      await documentStore.updateDocuments();
-    } catch (_error) {
-      return;
-    }
+  if (!editingId.value || !editingTitle.value.trim()) {
+    editingId.value = null;
+    editingTitle.value = '';
+    return;
   }
-  editingId.value = null;
-  editingTitle.value = '';
+
+  const trimmedTitle = editingTitle.value.trim();
+  const error = validateTitle(trimmedTitle);
+  if (error) return;
+
+  try {
+    await documentStore.updateDocumentMetadata(editingId.value, trimmedTitle);
+    await documentStore.updateDocuments();
+  } catch (error) {
+    console.error('Failed to update document:', error);
+  } finally {
+    editingId.value = null;
+    editingTitle.value = '';
+  }
 };
 
-// 在新窗口打开文档
+// 其他操作
 const openInNewWindow = async (doc: Document, event: Event) => {
   event.stopPropagation();
   try {
@@ -214,56 +177,32 @@ const openInNewWindow = async (doc: Document, event: Event) => {
   }
 };
 
-// 处理删除
 const handleDelete = async (doc: Document, event: Event) => {
   event.stopPropagation();
 
   if (deleteConfirmId.value === doc.id) {
     // 确认删除前检查文档是否在其他窗口打开
-    try {
-      const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
-      if (hasOpen) {
-        // 设置错误状态并启动定时器
-        alreadyOpenDocId.value = doc.id;
-        
-        // 清除之前的定时器（如果存在）
-        if (errorMessageTimer.value) {
-          clearTimeout(errorMessageTimer.value);
-        }
-        
-        // 设置新的定时器，3秒后清除错误信息
-        errorMessageTimer.value = window.setTimeout(() => {
-          alreadyOpenDocId.value = null;
-          errorMessageTimer.value = null;
-        }, 3000);
-        
-        // 取消删除确认状态
-        deleteConfirmId.value = null;
-        return;
-      }
-      
-      const deleteSuccess = await documentStore.deleteDocument(doc.id);
+    const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
+    if (hasOpen) {
+      documentStore.setError(doc.id, t('toolbar.alreadyOpenInNewWindow'));
+      deleteConfirmId.value = null;
+      return;
+    }
 
-      if (!deleteSuccess) {
-        return;
-      }
-      
+    const deleteSuccess = await documentStore.deleteDocument(doc.id);
+    if (deleteSuccess) {
       await documentStore.updateDocuments();
       // 如果删除的是当前文档，切换到第一个文档
       if (documentStore.currentDocument?.id === doc.id && documentStore.documentList.length > 0) {
         const firstDoc = documentStore.documentList[0];
-        if (firstDoc) {
-          await selectDoc(firstDoc);
-        }
+        if (firstDoc) await selectDoc(firstDoc);
       }
-    } catch (error) {
-      console.error('deleted failed:', error);
     }
     deleteConfirmId.value = null;
   } else {
     // 进入确认状态
     deleteConfirmId.value = doc.id;
-    editingId.value = null; // 清除编辑状态
+    editingId.value = null;
 
     // 3秒后自动取消确认状态
     setTimeout(() => {
@@ -274,32 +213,18 @@ const handleDelete = async (doc: Document, event: Event) => {
   }
 };
 
-// 格式化时间
-const formatTime = (dateString: string | null) => {
-  if (!dateString) return t('toolbar.unknownTime');
-
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return t('toolbar.invalidDate');
-
-    // 根据当前语言显示时间格式
-    const locale = t('locale') === 'zh-CN' ? 'zh-CN' : 'en-US';
-    return date.toLocaleString(locale, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  } catch (_error) {
-    return t('toolbar.timeError');
+// 键盘事件处理
+const createKeyHandler = (handlers: Record<string, () => void>) => (event: KeyboardEvent) => {
+  const handler = handlers[event.key];
+  if (handler) {
+    event.preventDefault();
+    event.stopPropagation();
+    handler();
   }
 };
 
-// 键盘事件
-const handleKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Escape') {
+const handleGlobalKeydown = createKeyHandler({
+  Escape: () => {
     if (editingId.value) {
       editingId.value = null;
       editingTitle.value = '';
@@ -309,38 +234,25 @@ const handleKeydown = (event: KeyboardEvent) => {
       closeMenu();
     }
   }
-};
+});
 
-// 输入框键盘事件
-const handleInputKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter') {
-    event.preventDefault();
+const handleInputKeydown = createKeyHandler({
+  Enter: () => {
     const query = inputValue.value.trim();
-    if (query) {
-      // 如果有匹配的项目，选择第一个
-      if (filteredItems.value.length > 0) {
-        selectItem(filteredItems.value[0]);
-      }
+    if (query && filteredItems.value.length > 0) {
+      selectItem(filteredItems.value[0]);
     }
-  } else if (event.key === 'Escape') {
-    event.preventDefault();
-    closeMenu();
-  }
-  event.stopPropagation();
-};
+  },
+  Escape: closeMenu
+});
 
-// 编辑键盘事件
-const handleEditKeydown = (event: KeyboardEvent) => {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    saveEdit();
-  } else if (event.key === 'Escape') {
-    event.preventDefault();
+const handleEditKeydown = createKeyHandler({
+  Enter: saveEdit,
+  Escape: () => {
     editingId.value = null;
     editingTitle.value = '';
   }
-  event.stopPropagation();
-};
+});
 
 // 点击外部关闭
 const handleClickOutside = (event: Event) => {
@@ -353,15 +265,18 @@ const handleClickOutside = (event: Event) => {
 // 生命周期
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
-  document.addEventListener('keydown', handleKeydown);
+  document.addEventListener('keydown', handleGlobalKeydown);
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
-  document.removeEventListener('keydown', handleKeydown);
-  // 清理定时器
-  if (errorMessageTimer.value) {
-    clearTimeout(errorMessageTimer.value);
+  document.removeEventListener('keydown', handleGlobalKeydown);
+});
+
+// 监听菜单状态变化
+watch(() => documentStore.showDocumentSelector, (isOpen) => {
+  if (isOpen) {
+    openMenu();
   }
 });
 </script>
@@ -369,7 +284,7 @@ onUnmounted(() => {
 <template>
   <div class="document-selector">
     <!-- 选择器按钮 -->
-    <button class="doc-btn" @click="toggleMenu">
+    <button class="doc-btn" @click="documentStore.toggleDocumentSelector">
       <span class="doc-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
@@ -377,21 +292,21 @@ onUnmounted(() => {
         </svg>
       </span>
       <span class="doc-name">{{ currentDocName }}</span>
-      <span class="arrow" :class="{ open: showMenu }">▲</span>
+      <span class="arrow" :class="{ open: documentStore.showDocumentSelector }">▲</span>
     </button>
 
     <!-- 菜单 -->
-    <div v-if="showMenu" class="doc-menu">
+    <div v-if="documentStore.showDocumentSelector" class="doc-menu">
       <!-- 输入框 -->
       <div class="input-box">
         <input
-            ref="inputRef"
-            v-model="inputValue"
-            type="text"
-            class="main-input"
-            :placeholder="t('toolbar.searchOrCreateDocument')"
-            :maxlength="MAX_TITLE_LENGTH"
-            @keydown="handleInputKeydown"
+          ref="inputRef"
+          v-model="inputValue"
+          type="text"
+          class="main-input"
+          :placeholder="t('toolbar.searchOrCreateDocument')"
+          :maxlength="MAX_TITLE_LENGTH"
+          @keydown="handleInputKeydown"
         />
         <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24"
              fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -403,14 +318,14 @@ onUnmounted(() => {
       <!-- 项目列表 -->
       <div class="item-list">
         <div
-            v-for="item in filteredItems"
-            :key="item.id"
-            class="list-item"
-            :class="{
+          v-for="item in filteredItems"
+          :key="item.id"
+          class="list-item"
+          :class="{
             'active': !item.isCreateOption && documentStore.currentDocument?.id === item.id,
             'create-item': item.isCreateOption
           }"
-            @click="selectItem(item)"
+          @click="selectItem(item)"
         >
           <!-- 创建选项 -->
           <div v-if="item.isCreateOption" class="create-option">
@@ -428,23 +343,23 @@ onUnmounted(() => {
             <div v-if="editingId !== item.id" class="doc-info">
               <div class="doc-title">{{ item.title }}</div>
               <!-- 根据状态显示错误信息或时间 -->
-              <div v-if="alreadyOpenDocId === item.id" class="doc-error">
-                {{ t('toolbar.alreadyOpenInNewWindow') }}
-              </div>
+               <div v-if="documentStore.selectorError?.docId === item.id" class="doc-error">
+                 {{ documentStore.selectorError?.message }}
+               </div>
               <div v-else class="doc-date">{{ formatTime(item.updatedAt) }}</div>
             </div>
 
             <!-- 编辑状态 -->
             <div v-else class="doc-edit">
               <input
-                  :ref="el => editInputRef = el as HTMLInputElement"
-                  v-model="editingTitle"
-                  type="text"
-                  class="edit-input"
-                  :maxlength="MAX_TITLE_LENGTH"
-                  @keydown="handleEditKeydown"
-                  @blur="saveEdit"
-                  @click.stop
+                :ref="el => editInputRef = el as HTMLInputElement"
+                v-model="editingTitle"
+                type="text"
+                class="edit-input"
+                :maxlength="MAX_TITLE_LENGTH"
+                @keydown="handleEditKeydown"
+                @blur="saveEdit"
+                @click.stop
               />
             </div>
 
@@ -452,17 +367,17 @@ onUnmounted(() => {
             <div v-if="editingId !== item.id" class="doc-actions">
               <!-- 只有非当前文档才显示在新窗口打开按钮 -->
               <button
-                  v-if="documentStore.currentDocument?.id !== item.id"
-                  class="action-btn"
-                  @click="openInNewWindow(item, $event)"
-                  :title="t('toolbar.openInNewWindow')"
+                v-if="documentStore.currentDocument?.id !== item.id"
+                class="action-btn"
+                @click="openInNewWindow(item, $event)"
+                :title="t('toolbar.openInNewWindow')"
               >
                 <svg width="12" height="12" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"
                      fill="currentColor">
                   <path
-                      d="M172.8 1017.6c-89.6 0-166.4-70.4-166.4-166.4V441.6c0-89.6 70.4-166.4 166.4-166.4h416c89.6 0 166.4 70.4 166.4 166.4v416c0 89.6-70.4 166.4-166.4 166.4l-416-6.4z m0-659.2c-51.2 0-89.6 38.4-89.6 89.6v416c0 51.2 38.4 89.6 89.6 89.6h416c51.2 0 89.6-38.4 89.6-89.6V441.6c0-51.2-38.4-89.6-89.6-89.6H172.8z"></path>
+                    d="M172.8 1017.6c-89.6 0-166.4-70.4-166.4-166.4V441.6c0-89.6 70.4-166.4 166.4-166.4h416c89.6 0 166.4 70.4 166.4 166.4v416c0 89.6-70.4 166.4-166.4 166.4l-416-6.4z m0-659.2c-51.2 0-89.6 38.4-89.6 89.6v416c0 51.2 38.4 89.6 89.6 89.6h416c51.2 0 89.6-38.4 89.6-89.6V441.6c0-51.2-38.4-89.6-89.6-89.6H172.8z"></path>
                   <path
-                      d="M851.2 19.2H435.2C339.2 19.2 268.8 96 268.8 185.6v25.6h70.4v-25.6c0-51.2 38.4-89.6 89.6-89.6h409.6c51.2 0 89.6 38.4 89.6 89.6v409.6c0 51.2-38.4 89.6-89.6 89.6h-38.4V768h51.2c96 0 166.4-76.8 166.4-166.4V185.6c0-96-76.8-166.4-166.4-166.4z"></path>
+                    d="M851.2 19.2H435.2C339.2 19.2 268.8 96 268.8 185.6v25.6h70.4v-25.6c0-51.2 38.4-89.6 89.6-89.6h409.6c51.2 0 89.6 38.4 89.6 89.6v409.6c0 51.2-38.4 89.6-89.6 89.6h-38.4V768h51.2c96 0 166.4-76.8 166.4-166.4V185.6c0-96-76.8-166.4-166.4-166.4z"></path>
                 </svg>
               </button>
               <button class="action-btn" @click="startRename(item, $event)" :title="t('toolbar.rename')">
@@ -472,11 +387,11 @@ onUnmounted(() => {
                 </svg>
               </button>
               <button
-                  v-if="documentStore.documentList.length > 1 && item.id !== 1"
-                  class="action-btn delete-btn"
-                  :class="{ 'delete-confirm': deleteConfirmId === item.id }"
-                  @click="handleDelete(item, $event)"
-                  :title="deleteConfirmId === item.id ? t('toolbar.confirmDelete') : t('toolbar.delete')"
+                v-if="documentStore.documentList.length > 1 && item.id !== 1"
+                class="action-btn delete-btn"
+                :class="{ 'delete-confirm': deleteConfirmId === item.id }"
+                @click="handleDelete(item, $event)"
+                :title="deleteConfirmId === item.id ? t('toolbar.confirmDelete') : t('toolbar.delete')"
               >
                 <svg v-if="deleteConfirmId !== item.id" xmlns="http://www.w3.org/2000/svg" width="12" height="12"
                      viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -709,37 +624,25 @@ onUnmounted(() => {
               display: flex;
               align-items: center;
               justify-content: center;
-              min-width: 20px;
-              min-height: 20px;
-
-              svg {
-                width: 12px;
-                height: 12px;
-              }
 
               &:hover {
-                background-color: var(--border-color);
-                color: var(--text-primary);
+                background-color: var(--bg-hover);
+                color: var(--text-secondary);
               }
 
-              &.delete-btn:hover {
-                color: var(--text-danger);
-              }
-
-              &.delete-confirm {
-                background-color: var(--text-danger);
-                color: white;
-
-                .confirm-text {
-                  font-size: 10px;
-                  padding: 0 4px;
-                  font-weight: normal;
+              &.delete-btn {
+                &:hover {
+                  color: var(--text-danger);
                 }
 
-                &:hover {
+                &.delete-confirm {
                   background-color: var(--text-danger);
-                  color: white !important; // 确保确认状态下文字始终为白色
-                  opacity: 0.8;
+                  color: white;
+
+                  .confirm-text {
+                    font-size: 9px;
+                    font-weight: 500;
+                  }
                 }
               }
             }
@@ -752,44 +655,19 @@ onUnmounted(() => {
       }
 
       .empty, .loading {
-        padding: 12px 8px;
+        padding: 16px 8px;
         text-align: center;
         font-size: 11px;
         color: var(--text-muted);
       }
     }
   }
-
-  // 自定义滚动条
-  .item-list {
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--border-color);
-      border-radius: 2px;
-
-      &:hover {
-        background-color: var(--text-muted);
-      }
-    }
-  }
 }
 
 @keyframes fadeInOut {
-  0% {
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { opacity: 0; }
 }
 </style>

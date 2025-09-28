@@ -12,6 +12,10 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -35,6 +39,26 @@ export function GetMemoryStats(): Promise<$models.MemoryStats> & { cancel(): voi
 }
 
 /**
+ * GetSystemInfo 获取系统环境信息
+ */
+export function GetSystemInfo(): Promise<$models.SystemInfo | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2629436820) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType2($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * SetAppReferences 设置应用引用
+ */
+export function SetAppReferences(app: application$0.App | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3873053414, app) as any;
+    return $resultPromise;
+}
+
+/**
  * TriggerGC 手动触发垃圾回收
  */
 export function TriggerGC(): Promise<void> & { cancel(): void } {
@@ -44,3 +68,5 @@ export function TriggerGC(): Promise<void> & { cancel(): void } {
 
 // Private type creation functions
 const $$createType0 = $models.MemoryStats.createFrom;
+const $$createType1 = $models.SystemInfo.createFrom;
+const $$createType2 = $Create.Nullable($$createType1);

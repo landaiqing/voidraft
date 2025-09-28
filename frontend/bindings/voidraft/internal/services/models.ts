@@ -120,6 +120,42 @@ export enum MigrationStatus {
 };
 
 /**
+ * OSInfo 操作系统信息
+ */
+export class OSInfo {
+    "id": string;
+    "name": string;
+    "version": string;
+    "branding": string;
+
+    /** Creates a new OSInfo instance. */
+    constructor($$source: Partial<OSInfo> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("version" in $$source)) {
+            this["version"] = "";
+        }
+        if (!("branding" in $$source)) {
+            this["branding"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new OSInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): OSInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new OSInfo($$parsedSource as Partial<OSInfo>);
+    }
+}
+
+/**
  * SelfUpdateResult 自我更新结果
  */
 export class SelfUpdateResult {
@@ -203,6 +239,54 @@ export class SelfUpdateResult {
 }
 
 /**
+ * SystemInfo 系统信息
+ */
+export class SystemInfo {
+    "os": string;
+    "arch": string;
+    "debug": boolean;
+    "osInfo": OSInfo | null;
+    "platformInfo": { [_: string]: any };
+
+    /** Creates a new SystemInfo instance. */
+    constructor($$source: Partial<SystemInfo> = {}) {
+        if (!("os" in $$source)) {
+            this["os"] = "";
+        }
+        if (!("arch" in $$source)) {
+            this["arch"] = "";
+        }
+        if (!("debug" in $$source)) {
+            this["debug"] = false;
+        }
+        if (!("osInfo" in $$source)) {
+            this["osInfo"] = null;
+        }
+        if (!("platformInfo" in $$source)) {
+            this["platformInfo"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SystemInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SystemInfo {
+        const $$createField3_0 = $$createType1;
+        const $$createField4_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("osInfo" in $$parsedSource) {
+            $$parsedSource["osInfo"] = $$createField3_0($$parsedSource["osInfo"]);
+        }
+        if ("platformInfo" in $$parsedSource) {
+            $$parsedSource["platformInfo"] = $$createField4_0($$parsedSource["platformInfo"]);
+        }
+        return new SystemInfo($$parsedSource as Partial<SystemInfo>);
+    }
+}
+
+/**
  * WindowInfo 窗口信息（简化版）
  */
 export class WindowInfo {
@@ -229,7 +313,7 @@ export class WindowInfo {
      * Creates a new WindowInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): WindowInfo {
-        const $$createField0_0 = $$createType1;
+        const $$createField0_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("Window" in $$parsedSource) {
             $$parsedSource["Window"] = $$createField0_0($$parsedSource["Window"]);
@@ -259,5 +343,8 @@ export class WindowSnapService {
 }
 
 // Private type creation functions
-const $$createType0 = application$0.WebviewWindow.createFrom;
+const $$createType0 = OSInfo.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = application$0.WebviewWindow.createFrom;
+const $$createType4 = $Create.Nullable($$createType3);

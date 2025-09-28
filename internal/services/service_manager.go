@@ -266,3 +266,8 @@ func (sm *ServiceManager) GetBadgeService() *badge.BadgeService {
 func (sm *ServiceManager) GetNotificationService() *notifications.NotificationService {
 	return sm.notificationService
 }
+
+// GetSystemService 获取系统服务实例
+func (sm *ServiceManager) GetSystemService() *SystemService {
+	return sm.systemService
+}
