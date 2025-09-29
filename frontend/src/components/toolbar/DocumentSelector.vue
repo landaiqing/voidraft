@@ -82,7 +82,7 @@ const formatTime = (dateString: string | null) => {
 // 核心操作
 const openMenu = async () => {
   documentStore.openDocumentSelector();
-  await documentStore.updateDocuments();
+  await documentStore.getDocumentMetaList();
   await nextTick();
   inputRef.value?.focus();
 };
@@ -158,7 +158,7 @@ const saveEdit = async () => {
 
   try {
     await documentStore.updateDocumentMetadata(editingId.value, trimmedTitle);
-    await documentStore.updateDocuments();
+    await documentStore.getDocumentMetaList();
   } catch (error) {
     console.error('Failed to update document:', error);
   } finally {
@@ -191,7 +191,7 @@ const handleDelete = async (doc: Document, event: Event) => {
 
     const deleteSuccess = await documentStore.deleteDocument(doc.id);
     if (deleteSuccess) {
-      await documentStore.updateDocuments();
+      await documentStore.getDocumentMetaList();
       // 如果删除的是当前文档，切换到第一个文档
       if (documentStore.currentDocument?.id === doc.id && documentStore.documentList.length > 0) {
         const firstDoc = documentStore.documentList[0];

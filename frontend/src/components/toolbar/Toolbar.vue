@@ -1,42 +1,45 @@
 <script setup lang="ts">
 import {useI18n} from 'vue-i18n';
-import {computed, onMounted, onUnmounted, ref, watch} from 'vue';
+import {computed, onMounted, onUnmounted, ref, watch, shallowRef, readonly, toRefs, effectScope, onScopeDispose} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import {useWindowStore} from '@/stores/windowStore';
 import {useSystemStore} from '@/stores/systemStore';
-import * as runtime from '@wailsio/runtime';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
 import DocumentSelector from './DocumentSelector.vue';
 import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/languages';
 import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode';
+import {createDebounce} from '@/common/utils/debounce';
 
-const editorStore = useEditorStore();
-const configStore = useConfigStore();
-const updateStore = useUpdateStore();
-const windowStore = useWindowStore();
-const systemStore = useSystemStore();
+const editorStore = readonly(useEditorStore());
+const configStore = readonly(useConfigStore());
+const updateStore = readonly(useUpdateStore());
+const windowStore = readonly(useWindowStore());
+const systemStore = readonly(useSystemStore());
 const {t} = useI18n();
 const router = useRouter();
 
-// 当前块是否支持格式化的响应式状态
 const canFormatCurrentBlock = ref(false);
+const isLoaded = shallowRef(false);
 
-// 窗口置顶状态 - 合并配置和临时状态
+const { documentStats } = toRefs(editorStore);
+const { config } = toRefs(configStore);
+
+// 窗口置顶状态
 const isCurrentWindowOnTop = computed(() => {
-  return configStore.config.general.alwaysOnTop || systemStore.isWindowOnTop;
+  return config.value.general.alwaysOnTop || systemStore.isWindowOnTop;
 });
 
 // 切换窗口置顶状态
 const toggleAlwaysOnTop = async () => {
   const currentlyOnTop = isCurrentWindowOnTop.value;
-  
+
   if (currentlyOnTop) {
     // 如果当前是置顶状态，彻底关闭所有置顶
-    if (configStore.config.general.alwaysOnTop) {
+    if (config.value.general.alwaysOnTop) {
       await configStore.setAlwaysOnTop(false);
     }
     await systemStore.setWindowOnTop(false);
@@ -57,9 +60,8 @@ const formatCurrentBlock = () => {
   formatBlockContent(editorStore.editorView);
 };
 
-// 格式化按钮状态更新
+// 格式化按钮状态更新 - 使用更高效的检查逻辑
 const updateFormatButtonState = () => {
-  // 安全检查
   const view = editorStore.editorView;
   if (!view) {
     canFormatCurrentBlock.value = false;
@@ -67,156 +69,158 @@ const updateFormatButtonState = () => {
   }
 
   try {
-    // 获取活动块和语言信息
     const state = view.state;
     const activeBlock = getActiveNoteBlock(state as any);
+    
+    // 提前返回，减少不必要的计算
+    if (!activeBlock) {
+      canFormatCurrentBlock.value = false;
+      return;
+    }
 
-    // 检查块和语言格式化支持
-    canFormatCurrentBlock.value = !!(
-        activeBlock &&
-        getLanguage(activeBlock.language.name as any)?.prettier
-    );
+    const language = getLanguage(activeBlock.language.name as any);
+    canFormatCurrentBlock.value = Boolean(language?.prettier);
   } catch (error) {
     console.warn('Error checking format capability:', error);
     canFormatCurrentBlock.value = false;
   }
 };
 
-// 创建带300ms防抖的更新函数
-const debouncedUpdateFormatButton = (() => {
-  let timeout: number | null = null;
+// 创建带1s防抖的更新函数
+const { debouncedFn: debouncedUpdateFormat, cancel: cancelDebounce } = createDebounce(
+  updateFormatButtonState,
+  { delay: 1000 }
+);
 
-  return () => {
-    if (timeout) clearTimeout(timeout);
-    timeout = window.setTimeout(() => {
-      updateFormatButtonState();
-      timeout = null;
-    }, 1000);
-  };
-})();
+// 使用 effectScope 管理编辑器事件监听器
+const editorScope = effectScope();
+let cleanupListeners: (() => void)[] = [];
 
-// 编辑器事件管理
+// 优化的事件监听器管理
 const setupEditorListeners = (view: any) => {
   if (!view?.dom) return [];
 
-  const events = [
-    {type: 'click', handler: updateFormatButtonState},
-    {type: 'keyup', handler: debouncedUpdateFormatButton},
-    {type: 'focus', handler: updateFormatButtonState}
-  ];
+  // 使用对象缓存事件处理器，避免重复创建
+  const eventHandlers = {
+    click: updateFormatButtonState,
+    keyup: debouncedUpdateFormat,
+    focus: updateFormatButtonState
+  } as const;
 
-  // 注册所有事件
-  events.forEach(event => view.dom.addEventListener(event.type, event.handler));
+  const events = Object.entries(eventHandlers).map(([type, handler]) => ({
+    type,
+    handler,
+    cleanup: () => view.dom.removeEventListener(type, handler)
+  }));
 
-  // 返回清理函数数组
-  return events.map(event =>
-      () => view.dom.removeEventListener(event.type, event.handler)
-  );
+  // 批量注册事件
+  events.forEach(event => view.dom.addEventListener(event.type, event.handler, { passive: true }));
+
+  return events.map(event => event.cleanup);
 };
 
 // 监听编辑器视图变化
-let cleanupListeners: (() => void)[] = [];
-
 watch(
     () => editorStore.editorView,
     (newView) => {
-      // 清理旧监听器
-      cleanupListeners.forEach(cleanup => cleanup());
-      cleanupListeners = [];
+      // 在 scope 中管理副作用
+      editorScope.run(() => {
+        // 清理旧监听器
+        cleanupListeners.forEach(cleanup => cleanup());
+        cleanupListeners = [];
 
-      if (newView) {
-        // 初始更新状态
-        updateFormatButtonState();
-        // 设置新监听器
-        cleanupListeners = setupEditorListeners(newView);
-      } else {
-        canFormatCurrentBlock.value = false;
-      }
+        if (newView) {
+          // 初始更新状态
+          updateFormatButtonState();
+          // 设置新监听器
+          cleanupListeners = setupEditorListeners(newView);
+        } else {
+          canFormatCurrentBlock.value = false;
+        }
+      });
     },
-    {immediate: true}
+    { immediate: true, flush: 'post' }
 );
 
 // 组件生命周期
-const isLoaded = ref(false);
-
-onMounted(() => {
+onMounted(async () => {
   isLoaded.value = true;
   // 首次更新格式化状态
   updateFormatButtonState();
+  await systemStore.setWindowOnTop(isCurrentWindowOnTop.value);
+});
+
+// 使用 onScopeDispose 确保 scope 清理
+onScopeDispose(() => {
+  cleanupListeners.forEach(cleanup => cleanup());
+  cleanupListeners = [];
+  cancelDebounce();
 });
 
 onUnmounted(() => {
-  // 清理所有事件监听器
-  cleanupListeners.forEach(cleanup => cleanup());
-  cleanupListeners = [];
+  // 停止 effect scope
+  editorScope.stop();
+  // 清理防抖函数
+  cancelDebounce();
 });
 
-// 组件加载后初始化置顶状态
-watch(isLoaded, async (loaded) => {
-  if (loaded) {
-    // 应用合并后的置顶状态
-    const shouldBeOnTop = configStore.config.general.alwaysOnTop || systemStore.isWindowOnTop;
-    try {
-      await runtime.Window.SetAlwaysOnTop(shouldBeOnTop);
-    } catch (error) {
-      console.error('Failed to apply window pin state:', error);
-    }
-  }
-});
-
-// 监听配置变化，同步窗口状态
-watch(
-  () => isCurrentWindowOnTop.value,
-  async (shouldBeOnTop) => {
-    try {
-      await runtime.Window.SetAlwaysOnTop(shouldBeOnTop);
-    } catch (error) {
-      console.error('Failed to sync window pin state:', error);
-    }
-  }
-);
-
+// 更新按钮处理
 const handleUpdateButtonClick = async () => {
-  if (updateStore.hasUpdate && !updateStore.isUpdating && !updateStore.updateSuccess) {
-    // 开始下载更新
+  const { hasUpdate, isUpdating, updateSuccess } = updateStore;
+  
+  if (hasUpdate && !isUpdating && !updateSuccess) {
     await updateStore.applyUpdate();
-  } else if (updateStore.updateSuccess) {
-    // 更新成功后，点击重启
+  } else if (updateSuccess) {
     await updateStore.restartApplication();
   }
 };
 
 // 更新按钮标题计算属性
 const updateButtonTitle = computed(() => {
-  if (updateStore.isChecking) return t('settings.checking');
-  if (updateStore.isUpdating) return t('settings.updating');
-  if (updateStore.updateSuccess) return t('settings.updateSuccessRestartRequired');
-  if (updateStore.hasUpdate) return `${t('settings.newVersionAvailable')}: ${updateStore.updateResult?.latestVersion || ''}`;
+  const { isChecking, isUpdating, updateSuccess, hasUpdate, updateResult } = updateStore;
+  
+  if (isChecking) return t('settings.checking');
+  if (isUpdating) return t('settings.updating');
+  if (updateSuccess) return t('settings.updateSuccessRestartRequired');
+  if (hasUpdate) return `${t('settings.newVersionAvailable')}: ${updateResult?.latestVersion || ''}`;
   return '';
 });
+
+// 统计数据的计算属性
+const statsData = computed(() => ({
+  lines: documentStats.value.lines,
+  characters: documentStats.value.characters,
+  selectedCharacters: documentStats.value.selectedCharacters
+}));
 </script>
 
 <template>
   <div class="toolbar-container">
     <div class="statistics">
-      <span class="stat-item" :title="t('toolbar.editor.lines')">{{ t('toolbar.editor.lines') }}: <span
-          class="stat-value">{{
-          editorStore.documentStats.lines
-        }}</span></span>
-      <span class="stat-item" :title="t('toolbar.editor.characters')">{{ t('toolbar.editor.characters') }}: <span
-          class="stat-value">{{
-          editorStore.documentStats.characters
-        }}</span></span>
-      <span class="stat-item" :title="t('toolbar.editor.selected')"
-            v-if="editorStore.documentStats.selectedCharacters > 0">
-        {{ t('toolbar.editor.selected') }}: <span class="stat-value">{{
-          editorStore.documentStats.selectedCharacters
-        }}</span>
+      <span class="stat-item" :title="t('toolbar.editor.lines')">
+        {{ t('toolbar.editor.lines') }}: 
+        <span class="stat-value">{{ statsData.lines }}</span>
+      </span>
+      <span class="stat-item" :title="t('toolbar.editor.characters')">
+        {{ t('toolbar.editor.characters') }}: 
+        <span class="stat-value">{{ statsData.characters }}</span>
+      </span>
+      <span 
+        v-if="statsData.selectedCharacters > 0"
+        class="stat-item" 
+        :title="t('toolbar.editor.selected')"
+      >
+        {{ t('toolbar.editor.selected') }}: 
+        <span class="stat-value">{{ statsData.selectedCharacters }}</span>
       </span>
     </div>
     <div class="actions">
-      <span class="font-size" :title="t('toolbar.fontSizeTooltip')" @click="() => configStore.resetFontSize()">
-        {{ configStore.config.editing.fontSize }}px
+      <span 
+        class="font-size" 
+        :title="t('toolbar.fontSizeTooltip')" 
+        @click="configStore.resetFontSize"
+      >
+        {{ config.editing.fontSize }}px
       </span>
 
       <!-- 文档选择器 -->
@@ -301,7 +305,6 @@ const updateButtonTitle = computed(() => {
               d="M557.44 104.96l361.6 361.6-60.16 64-26.88-33.92-181.12 181.12L617.6 832l-60.16 60.16-181.12-184.32-211.2 211.2-60.16-60.16 211.2-211.2-181.12-181.12 60.16-60.16 151.04-30.08 181.12-181.12-30.72-30.08 64-60.16zM587.52 256L387.84 455.04l-120.32 23.68 277.76 277.76 23.68-120.32L768 436.48z"/>
         </svg>
       </div>
-
 
       <button v-if="windowStore.isMainWindow" class="settings-btn" :title="t('toolbar.settings')" @click="goToSettings">
         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"

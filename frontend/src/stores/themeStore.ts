@@ -133,7 +133,7 @@ export const useThemeStore = defineStore('theme', () => {
     }
   };
   
-  // 刷新编辑器主题（在主题颜色更改后调用）
+  // 刷新编辑器主题
   const refreshEditorTheme = () => {
     // 使用当前主题重新应用DOM主题
     const theme = currentTheme.value;

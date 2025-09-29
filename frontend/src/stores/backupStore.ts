@@ -1,123 +1,175 @@
-import {defineStore} from 'pinia';
-import {computed, readonly, ref} from 'vue';
-import type {GitBackupConfig} from '@/../bindings/voidraft/internal/models';
-import {BackupService} from '@/../bindings/voidraft/internal/services';
-import {useConfigStore} from '@/stores/configStore';
+import { defineStore } from 'pinia';
+import { computed, readonly, ref, shallowRef, watchEffect, onScopeDispose } from 'vue';
+import type { GitBackupConfig } from '@/../bindings/voidraft/internal/models';
+import { BackupService } from '@/../bindings/voidraft/internal/services';
+import { useConfigStore } from '@/stores/configStore';
+import { createTimerManager } from '@/common/utils/timerUtils';
 
-/**
- * Minimalist Backup Store
- */
+// 备份状态枚举
+export enum BackupStatus {
+  IDLE = 'idle',
+  PUSHING = 'pushing',
+  SUCCESS = 'success',
+  ERROR = 'error'
+}
+
+// 备份操作结果类型
+export interface BackupResult {
+  status: BackupStatus;
+  message?: string;
+  timestamp?: number;
+}
+
+// 类型守卫函数
+const isBackupError = (error: unknown): error is Error => {
+  return error instanceof Error;
+};
+
+// 工具类型：提取错误消息
+type ErrorMessage<T> = T extends Error ? string : string;
+
+
 export const useBackupStore = defineStore('backup', () => {
-    // Core state
-    const config = ref<GitBackupConfig | null>(null);
-    const isPushing = ref(false);
-    const error = ref<string | null>(null);
-    const isInitialized = ref(false);
+  // === 核心状态 ===
+  const config = shallowRef<GitBackupConfig | null>(null);
+
+  // 统一的备份结果状态
+  const backupResult = ref<BackupResult>({
+    status: BackupStatus.IDLE
+  });
+
+  // === 定时器管理 ===
+  const statusTimer = createTimerManager();
+  
+  // 组件卸载时清理定时器
+  onScopeDispose(() => {
+    statusTimer.clear();
+  });
+
+  // === 外部依赖 ===
+  const configStore = useConfigStore();
+
+  // === 计算属性 ===
+  const isEnabled = computed(() => configStore.config.backup.enabled);
+  const isConfigured = computed(() => Boolean(configStore.config.backup.repo_url?.trim()));
+  
+  // 派生状态计算属性
+  const isPushing = computed(() => backupResult.value.status === BackupStatus.PUSHING);
+  const isSuccess = computed(() => backupResult.value.status === BackupStatus.SUCCESS);
+  const isError = computed(() => backupResult.value.status === BackupStatus.ERROR);
+  const errorMessage = computed(() => 
+    backupResult.value.status === BackupStatus.ERROR ? backupResult.value.message : null
+  );
+
+  // === 状态管理方法 ===
+  
+  /**
+   * 设置备份状态
+   * @param status 备份状态
+   * @param message 可选消息
+   * @param autoHide 是否自动隐藏（毫秒）
+   */
+  const setBackupStatus = <T extends BackupStatus>(
+    status: T,
+    message?: T extends BackupStatus.ERROR ? string : string,
+    autoHide?: number
+  ): void => {
+    statusTimer.clear();
     
-    // Backup result states
-    const pushSuccess = ref(false);
-    const pushError = ref(false);
+    backupResult.value = {
+      status,
+      message,
+      timestamp: Date.now()
+    };
+
+    // 自动隐藏逻辑
+    if (autoHide && (status === BackupStatus.SUCCESS || status === BackupStatus.ERROR)) {
+      statusTimer.set(() => {
+        if (backupResult.value.status === status) {
+          backupResult.value = { status: BackupStatus.IDLE };
+        }
+      }, autoHide);
+    }
+  };
+
+  /**
+   * 清除当前状态
+   */
+  const clearStatus = (): void => {
+    statusTimer.clear();
+    backupResult.value = { status: BackupStatus.IDLE };
+  };
+
+  /**
+   * 处理错误的通用方法
+   */
+  const handleError = (error: unknown): void => {
+    const message: ErrorMessage<typeof error> = isBackupError(error) 
+      ? error.message 
+      : 'Backup operation failed';
     
-    // Timers for auto-hiding status icons and error messages
-    let pushStatusTimer: number | null = null;
-    let errorTimer: number | null = null;
+    setBackupStatus(BackupStatus.ERROR, message, 5000);
+  };
 
-    // 获取configStore
-    const configStore = useConfigStore();
+  // === 业务逻辑方法 ===
+  
+  /**
+   * 推送到远程仓库
+   * 使用现代 async/await 和错误处理
+   */
+  const pushToRemote = async (): Promise<void> => {
+    // 前置条件检查
+    if (isPushing.value || !isConfigured.value) {
+      return;
+    }
 
-    // Computed properties
-    const isEnabled = computed(() => configStore.config.backup.enabled);
-    const isConfigured = computed(() => configStore.config.backup.repo_url);
+    try {
+      setBackupStatus(BackupStatus.PUSHING);
+      
+      await BackupService.PushToRemote();
+      
+      setBackupStatus(BackupStatus.SUCCESS, 'Backup completed successfully', 3000);
+    } catch (error) {
+      handleError(error);
+    }
+  };
 
-    // 清除状态显示
-    const clearPushStatus = () => {
-        if (pushStatusTimer !== null) {
-            window.clearTimeout(pushStatusTimer);
-            pushStatusTimer = null;
-        }
-        pushSuccess.value = false;
-        pushError.value = false;
-    };
+  /**
+   * 重试备份操作
+   */
+  const retryBackup = async (): Promise<void> => {
+    if (isError.value) {
+      await pushToRemote();
+    }
+  };
 
-    // 清除错误信息和错误图标
-    const clearError = () => {
-        if (errorTimer !== null) {
-            window.clearTimeout(errorTimer);
-            errorTimer = null;
-        }
-        error.value = null;
-        pushError.value = false;
-    };
+  // === 响应式副作用 ===
+  
+  // 监听配置变化，自动清除错误状态
+  watchEffect(() => {
+    if (isEnabled.value && isConfigured.value && isError.value) {
+      // 配置修复后清除错误状态
+      clearStatus();
+    }
+  });
 
-    // 设置错误信息和错误图标并自动清除
-    const setErrorWithAutoHide = (errorMessage: string, hideAfter: number = 3000) => {
-        clearError();
-        clearPushStatus();
-        error.value = errorMessage;
-        pushError.value = true;
-        errorTimer = window.setTimeout(() => {
-            error.value = null;
-            pushError.value = false;
-            errorTimer = null;
-        }, hideAfter);
-    };
+  // === 返回的 API ===
+  return {
+    // 只读状态
+    config: readonly(config),
+    backupResult: readonly(backupResult),
 
-    // Push to remote repository
-    const pushToRemote = async () => {
-        if (isPushing.value || !isConfigured.value) return;
+    // 计算属性
+    isEnabled,
+    isConfigured,
+    isPushing,
+    isSuccess,
+    isError,
+    errorMessage,
 
-        isPushing.value = true;
-        clearError(); // 清除之前的错误信息
-        clearPushStatus();
-
-        try {
-            await BackupService.PushToRemote();
-            // 显示成功状态，并设置3秒后自动消失
-            pushSuccess.value = true;
-            pushStatusTimer = window.setTimeout(() => {
-                pushSuccess.value = false;
-                pushStatusTimer = null;
-            }, 3000);
-        } catch (err: any) {
-            setErrorWithAutoHide(err?.message || 'Backup operation failed');
-        } finally {
-            isPushing.value = false;
-        }
-    };
-
-    // 初始化备份服务
-    const initialize = async () => {
-        if (!isEnabled.value) return;
-        
-        // 避免重复初始化
-        if (isInitialized.value) return;
-        
-        clearError(); // 清除之前的错误信息
-        try {
-            await BackupService.Initialize();
-            isInitialized.value = true;
-        } catch (err: any) {
-            setErrorWithAutoHide(err?.message || 'Failed to initialize backup service');
-        }
-    };
-
-
-    return {
-        // State
-        config: readonly(config),
-        isPushing: readonly(isPushing),
-        error: readonly(error),
-        isInitialized: readonly(isInitialized),
-        pushSuccess: readonly(pushSuccess),
-        pushError: readonly(pushError),
-
-        // Computed
-        isEnabled,
-        isConfigured,
-
-        // Methods
-        pushToRemote,
-        initialize,
-        clearError
-    };
+    // 方法
+    pushToRemote,
+    retryBackup,
+    clearStatus
+  } as const;
 });

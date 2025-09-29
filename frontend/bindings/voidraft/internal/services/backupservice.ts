@@ -12,6 +12,9 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
 /**
@@ -51,6 +54,11 @@ export function Reinitialize(): Promise<void> & { cancel(): void } {
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(422131801) as any;
+    return $resultPromise;
+}
+
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2900331732, options) as any;
     return $resultPromise;
 }
 

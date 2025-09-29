@@ -1,16 +1,21 @@
 <script setup lang="ts">
-import {useI18n} from 'vue-i18n';
-import {computed} from 'vue';
-import {useConfigStore} from '@/stores/configStore';
-import {useUpdateStore} from '@/stores/updateStore';
+import { useI18n } from 'vue-i18n';
+import { computed, onUnmounted } from 'vue';
+import { useConfigStore } from '@/stores/configStore';
+import { useUpdateStore } from '@/stores/updateStore';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 import { Remarkable } from 'remarkable';
 
-const {t} = useI18n();
+const { t } = useI18n();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
+
+// 清理状态
+onUnmounted(() => {
+  updateStore.clearStatus();
+});
 
 // 初始化Remarkable实例并配置
 const md = new Remarkable({
@@ -93,13 +98,21 @@ const currentVersion = computed(() => {
       </SettingItem>
 
       <!-- 检查结果 -->
-      <div class="check-results" v-if="updateStore.updateResult || updateStore.errorMessage">
+      <div class="check-results" v-if="updateStore.updateResult || updateStore.isError">
         <!-- 错误信息 -->
-        <div v-if="updateStore.errorMessage" class="result-item error-result">
+        <div v-if="updateStore.isError" class="result-item error-result">
           <div class="result-text">
             <span class="result-icon">⚠️</span>
             <div class="result-message">{{ updateStore.errorMessage }}</div>
           </div>
+          <button 
+            v-if="updateStore.isError" 
+            class="retry-button"
+            @click="updateStore.checkForUpdates"
+            :disabled="updateStore.isChecking"
+          >
+            {{ t('common.retry') }}
+          </button>
         </div>
 
         <!-- 更新成功 -->
@@ -128,7 +141,7 @@ const currentVersion = computed(() => {
         </div>
 
         <!-- 已是最新版本 -->
-        <div v-else-if="updateStore.updateResult && !updateStore.hasUpdate && !updateStore.errorMessage" 
+        <div v-else-if="updateStore.updateResult && !updateStore.hasUpdate && !updateStore.isError" 
              class="result-item latest-version">
           <div class="result-text">
             <span class="result-icon">✓</span>
@@ -231,6 +244,28 @@ const currentVersion = computed(() => {
       max-width: 100%;
       overflow: visible;
       padding-right: 8px; // 添加右侧内边距，防止文本贴近容器边缘
+    }
+
+    .retry-button {
+      margin-top: 8px;
+      padding: 6px 12px;
+      background-color: #ff9800;
+      border: 1px solid #ff9800;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+
+      &:hover:not(:disabled) {
+        background-color: #f57c00;
+        border-color: #f57c00;
+      }
+
+      &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
     }
   }
 }
@@ -421,4 +456,4 @@ const currentVersion = computed(() => {
     padding: 6px 12px;
   }
 }
-</style> 
+</style>

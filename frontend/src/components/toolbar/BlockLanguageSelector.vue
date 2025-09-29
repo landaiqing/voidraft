@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick, shallowRef, readonly, effectScope, onScopeDispose } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useEditorStore } from '@/stores/editorStore';
 import { type SupportedLanguage } from '@/views/editor/extensions/codeblock/types';
@@ -8,56 +8,46 @@ import { getActiveNoteBlock } from '@/views/editor/extensions/codeblock/state';
 import { changeCurrentBlockLanguage } from '@/views/editor/extensions/codeblock/commands';
 
 const { t } = useI18n();
-const editorStore = useEditorStore();
+const editorStore = readonly(useEditorStore());
 
 // 组件状态
-const showLanguageMenu = ref(false);
+const showLanguageMenu = shallowRef(false);
 const searchQuery = ref('');
 const searchInputRef = ref<HTMLInputElement>();
 
-// 支持的语言列表
-const supportedLanguages = getAllSupportedLanguages();
-
-// 动态生成语言显示名称映射
-const languageNames = computed(() => {
+// 优化语言数据处理
+const languageData = computed(() => {
+  const supportedLanguages = getAllSupportedLanguages();
   const names: Record<string, string> = {
     auto: 'Auto',
     text: 'Plain Text'
   };
-  
-  LANGUAGES.forEach(lang => {
-    names[lang.token] = lang.name;
-  });
-  
-  return names;
-});
-
-// 动态生成语言别名映射
-const languageAliases = computed(() => {
   const aliases: Record<string, string> = {
     auto: 'auto',
     text: 'txt'
   };
   
+  // 一次遍历完成所有映射
   LANGUAGES.forEach(lang => {
-    // 使用语言名称的小写作为别名
+    names[lang.token] = lang.name;
     aliases[lang.token] = lang.name.toLowerCase();
   });
   
-  return aliases;
+  return {
+    supportedLanguages,
+    names,
+    aliases
+  };
 });
 
 // 当前活动块的语言信息
-const currentBlockLanguage = ref<{ name: SupportedLanguage; auto: boolean }>({
+const currentBlockLanguage = shallowRef<{ name: SupportedLanguage; auto: boolean }>({
   name: 'text',
   auto: false
 });
 
-// 事件监听器引用
-const eventListeners = ref<{
-  updateListener?: () => void;
-  selectionUpdateListener?: () => void;
-}>({});
+// 事件监听器管理
+let editorScope: ReturnType<typeof effectScope> | null = null;
 
 // 更新当前块语言信息
 const updateCurrentBlockLanguage = () => {
@@ -81,7 +71,7 @@ const updateCurrentBlockLanguage = () => {
         currentBlockLanguage.value = newLanguage;
       }
     } else {
-      if (currentBlockLanguage.value.name !== 'text' || currentBlockLanguage.value.auto !== false) {
+      if (currentBlockLanguage.value.name !== 'text' || currentBlockLanguage.value.auto) {
         currentBlockLanguage.value = { name: 'text', auto: false };
       }
     }
@@ -93,57 +83,47 @@ const updateCurrentBlockLanguage = () => {
 
 // 清理事件监听器
 const cleanupEventListeners = () => {
-  if (editorStore.editorView?.dom && eventListeners.value.updateListener) {
-    const dom = editorStore.editorView.dom;
-    dom.removeEventListener('click', eventListeners.value.updateListener);
-    dom.removeEventListener('keyup', eventListeners.value.updateListener);
-    dom.removeEventListener('keydown', eventListeners.value.updateListener);
-    dom.removeEventListener('focus', eventListeners.value.updateListener);
-    dom.removeEventListener('mouseup', eventListeners.value.updateListener);
-    
-    if (eventListeners.value.selectionUpdateListener) {
-      dom.removeEventListener('selectionchange', eventListeners.value.selectionUpdateListener);
-    }
+  if (editorScope) {
+    editorScope.stop();
+    editorScope = null;
   }
-  eventListeners.value = {};
 };
 
-// 设置事件监听器
+// 设置事件监听器 - 使用 effectScope 管理
 const setupEventListeners = (view: any) => {
   cleanupEventListeners();
   
-  // 监听编辑器状态更新
-  const updateListener = () => {
-    // 使用 requestAnimationFrame 确保在下一帧更新，性能更好
-    requestAnimationFrame(() => {
-      updateCurrentBlockLanguage();
+  editorScope = effectScope();
+  editorScope.run(() => {
+    // 监听编辑器状态更新
+    const updateListener = () => {
+      // 使用 requestAnimationFrame 确保在下一帧更新
+      requestAnimationFrame(() => {
+        updateCurrentBlockLanguage();
+      });
+    };
+    
+    // 监听关键事件：光标位置变化、文档变化、焦点变化
+    view.dom.addEventListener('click', updateListener);
+    view.dom.addEventListener('keyup', updateListener);
+    view.dom.addEventListener('keydown', updateListener);
+    view.dom.addEventListener('focus', updateListener);
+    view.dom.addEventListener('mouseup', updateListener);
+    view.dom.addEventListener('selectionchange', updateListener);
+    
+    // 在 scope 销毁时清理
+    onScopeDispose(() => {
+      view.dom.removeEventListener('click', updateListener);
+      view.dom.removeEventListener('keyup', updateListener);
+      view.dom.removeEventListener('keydown', updateListener);
+      view.dom.removeEventListener('focus', updateListener);
+      view.dom.removeEventListener('mouseup', updateListener);
+      view.dom.removeEventListener('selectionchange', updateListener);
     });
-  };
-  
-  // 监听选择变化
-  const selectionUpdateListener = () => {
-    requestAnimationFrame(() => {
-      updateCurrentBlockLanguage();
-    });
-  };
-  
-  // 保存监听器引用
-  eventListeners.value = { updateListener, selectionUpdateListener };
-  
-  // 监听关键事件：光标位置变化、文档变化、焦点变化
-  view.dom.addEventListener('click', updateListener);
-  view.dom.addEventListener('keyup', updateListener);
-  view.dom.addEventListener('keydown', updateListener);
-  view.dom.addEventListener('focus', updateListener);
-  view.dom.addEventListener('mouseup', updateListener); // 鼠标选择结束
-  
-  // 监听编辑器的选择变化事件
-  if (view.dom.addEventListener) {
-    view.dom.addEventListener('selectionchange', selectionUpdateListener);
-  }
-  
-  // 立即更新一次当前状态
-  updateCurrentBlockLanguage();
+    
+    // 立即更新一次当前状态
+    updateCurrentBlockLanguage();
+  });
 };
 
 // 监听编辑器状态变化
@@ -159,16 +139,18 @@ watch(
   { immediate: true }
 );
 
-// 过滤后的语言列表
+// 过滤后的语言列表 - 优化搜索性能
 const filteredLanguages = computed(() => {
+  const { supportedLanguages, names, aliases } = languageData.value;
+  
   if (!searchQuery.value) {
     return supportedLanguages;
   }
   
   const query = searchQuery.value.toLowerCase();
   return supportedLanguages.filter(langId => {
-    const name = languageNames.value[langId];
-    const alias = languageAliases.value[langId];
+    const name = names[langId];
+    const alias = aliases[langId];
     return langId.toLowerCase().includes(query) ||
            (name && name.toLowerCase().includes(query)) ||
            (alias && alias.toLowerCase().includes(query));
@@ -191,7 +173,7 @@ const closeLanguageMenu = () => {
   searchQuery.value = '';
 };
 
-// 选择语言
+// 选择语言 - 优化性能
 const selectLanguage = (languageId: SupportedLanguage) => {
   if (!editorStore.editorView) {
     closeLanguageMenu();
@@ -203,18 +185,9 @@ const selectLanguage = (languageId: SupportedLanguage) => {
     const state = view.state;
     const dispatch = view.dispatch;
 
-    let targetLanguage: string;
-    let autoDetect: boolean;
-
-    if (languageId === 'auto') {
-      // 设置为自动检测
-      targetLanguage = 'text';
-      autoDetect = true;
-    } else {
-      // 设置为指定语言，关闭自动检测
-      targetLanguage = languageId;
-      autoDetect = false;
-    }
+    const [targetLanguage, autoDetect] = languageId === 'auto' 
+      ? ['text', true] 
+      : [languageId, false];
 
     // 使用修复后的函数来更改语言
     const success = changeCurrentBlockLanguage(state as any, dispatch, targetLanguage, autoDetect);
@@ -231,72 +204,75 @@ const selectLanguage = (languageId: SupportedLanguage) => {
   closeLanguageMenu();
 };
 
-// 点击外部关闭
+// 全局事件处理器 - 使用 effectScope 管理
+const globalScope = effectScope();
+
+// 点击外部关闭 - 只在菜单打开时处理
 const handleClickOutside = (event: MouseEvent) => {
+  if (!showLanguageMenu.value) return;
+  
   const target = event.target as HTMLElement;
   if (!target.closest('.block-language-selector')) {
     closeLanguageMenu();
   }
 };
 
-// 键盘事件处理
+// 键盘事件处理 - 只在菜单打开时处理
 const handleKeydown = (event: KeyboardEvent) => {
+  if (!showLanguageMenu.value) return;
+  
   if (event.key === 'Escape') {
     closeLanguageMenu();
   }
 };
 
-onMounted(() => {
+// 在 setup 阶段就设置全局事件监听器
+globalScope.run(() => {
   document.addEventListener('click', handleClickOutside);
   document.addEventListener('keydown', handleKeydown);
   
+  onScopeDispose(() => {
+    document.removeEventListener('click', handleClickOutside);
+    document.removeEventListener('keydown', handleKeydown);
+  });
+});
+
+onMounted(() => {
   // 立即更新一次当前语言状态
   updateCurrentBlockLanguage();
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-  document.removeEventListener('keydown', handleKeydown);
+  globalScope.stop();
   cleanupEventListeners();
 });
 
-// 获取当前语言的显示名称
-const getCurrentLanguageName = computed(() => {
+// 优化计算属性
+const languageDisplayInfo = computed(() => {
   const lang = currentBlockLanguage.value;
-  if (lang.auto) {
-    return `${lang.name} (auto)`;
-  }
-  return lang.name;
+  const displayName = lang.auto ? `${lang.name} (auto)` : lang.name;
+  const displayLanguage = lang.auto ? 'auto' : lang.name;
+  
+  return {
+    name: displayName,
+    language: displayLanguage
+  };
 });
 
-// 获取当前显示的语言选项
-const getCurrentDisplayLanguage = computed(() => {
-  const lang = currentBlockLanguage.value;
-  if (lang.auto) {
-    return 'auto';
-  }
-  return lang.name;
-});
-
-// 滚动到当前选择的语言
+// 滚动到当前选择的语言 - 优化性能
 const scrollToCurrentLanguage = () => {
   nextTick(() => {
-      const currentLang = getCurrentDisplayLanguage.value;
-      const selectorElement = document.querySelector('.block-language-selector');
-      
-      if (!selectorElement) return;
-      
-      const languageList = selectorElement.querySelector('.language-list') as HTMLElement;
-      const activeOption = selectorElement.querySelector(`.language-option[data-language="${currentLang}"]`) as HTMLElement;
-      
-      if (languageList && activeOption) {
-        // 使用 scrollIntoView 进行平滑滚动
-        activeOption.scrollIntoView({
-          behavior: 'auto',
-          block: 'nearest',
-          inline: 'nearest'
-        });
-      }
+    const currentLang = languageDisplayInfo.value.language;
+    const activeOption = document.querySelector(`.language-option[data-language="${currentLang}"]`) as HTMLElement;
+    
+    if (activeOption) {
+      // 使用 scrollIntoView 进行平滑滚动
+      activeOption.scrollIntoView({
+        behavior: 'auto',
+        block: 'nearest',
+        inline: 'nearest'
+      });
+    }
   });
 };
 </script>
@@ -314,7 +290,7 @@ const scrollToCurrentLanguage = () => {
           <polyline points="8 6 2 12 8 18"></polyline>
         </svg>
       </span>
-      <span class="language-name">{{ getCurrentLanguageName }}</span>
+      <span class="language-name">{{ languageDisplayInfo.name }}</span>
       <span class="arrow" :class="{ 'open': showLanguageMenu }">▲</span>
     </button>
     
@@ -341,11 +317,11 @@ const scrollToCurrentLanguage = () => {
           v-for="language in filteredLanguages" 
           :key="language"
           class="language-option"
-          :class="{ 'active': getCurrentDisplayLanguage === language }"
+          :class="{ 'active': languageDisplayInfo.language === language }"
           :data-language="language"
           @click="selectLanguage(language)"
         >
-          <span class="language-name">{{ languageNames[language] || language }}</span>
+          <span class="language-name">{{ languageData.names[language] || language }}</span>
           <span class="language-alias">{{ language }}</span>
         </div>
         
@@ -517,4 +493,4 @@ const scrollToCurrentLanguage = () => {
     background-color: var(--text-muted);
   }
 }
-</style> 
+</style>

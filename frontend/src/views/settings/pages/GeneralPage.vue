@@ -11,10 +11,11 @@ import {
   MigrationService,
   MigrationStatus
 } from '@/../bindings/voidraft/internal/services';
-import * as runtime from '@wailsio/runtime';
+import {useSystemStore} from "@/stores/systemStore";
 
 const {t} = useI18n();
 const configStore = useConfigStore();
+const systemStore = useSystemStore();
 
 // 迁移进度状态
 const migrationProgress = ref<MigrationProgress>(new MigrationProgress({
@@ -148,8 +149,7 @@ const alwaysOnTop = computed({
   set: async (value: boolean) => {
     // 先更新配置
     await configStore.setAlwaysOnTop(value);
-    // 然后立即应用窗口置顶状态
-    await runtime.Window.SetAlwaysOnTop(value);
+    await systemStore.setWindowOnTop(value);
   }
 });
 

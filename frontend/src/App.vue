@@ -5,7 +5,6 @@ import {useSystemStore} from '@/stores/systemStore';
 import {useKeybindingStore} from '@/stores/keybindingStore';
 import {useThemeStore} from '@/stores/themeStore';
 import {useUpdateStore} from '@/stores/updateStore';
-import {useBackupStore} from '@/stores/backupStore';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
 
 const configStore = useConfigStore();
@@ -13,7 +12,6 @@ const systemStore = useSystemStore();
 const keybindingStore = useKeybindingStore();
 const themeStore = useThemeStore();
 const updateStore = useUpdateStore();
-const backupStore = useBackupStore();
 
 // 应用启动时加载配置和初始化系统信息
 onMounted(async () => {
@@ -27,10 +25,7 @@ onMounted(async () => {
   // 初始化语言和主题
   await configStore.initializeLanguage();
   themeStore.initializeTheme();
-  
-  // 初始化备份服务
-  await backupStore.initialize();
-  
+
   // 启动时检查更新
   await updateStore.checkOnStartup();
 });

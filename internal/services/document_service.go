@@ -211,7 +211,7 @@ func (ds *DocumentService) LockDocument(id int64) error {
 		return errors.New("database service not available")
 	}
 
-	// 先检查文档是否存在且未删除（不加锁避免死锁）
+	// 先检查文档是否存在且未删除
 	doc, err := ds.GetDocumentByID(id)
 	if err != nil {
 		return fmt.Errorf("failed to get document: %w", err)
@@ -245,7 +245,7 @@ func (ds *DocumentService) UnlockDocument(id int64) error {
 		return errors.New("database service not available")
 	}
 
-	// 先检查文档是否存在（不加锁避免死锁）
+	// 先检查文档是否存在
 	doc, err := ds.GetDocumentByID(id)
 	if err != nil {
 		return fmt.Errorf("failed to get document: %w", err)
@@ -437,25 +437,4 @@ func (ds *DocumentService) ListDeletedDocumentsMeta() ([]*models.Document, error
 	}
 
 	return documents, nil
-}
-
-// GetFirstDocumentID gets the first active document's ID for frontend initialization
-func (ds *DocumentService) GetFirstDocumentID() (int64, error) {
-	ds.mu.RLock()
-	defer ds.mu.RUnlock()
-
-	if ds.databaseService == nil || ds.databaseService.db == nil {
-		return 0, errors.New("database service not available")
-	}
-
-	var id int64
-	err := ds.databaseService.db.QueryRow(sqlGetFirstDocumentID).Scan(&id)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil // No documents exist
-		}
-		return 0, fmt.Errorf("failed to get first document ID: %w", err)
-	}
-
-	return id, nil
 }

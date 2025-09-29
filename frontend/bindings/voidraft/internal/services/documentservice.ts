@@ -50,14 +50,6 @@ export function GetDocumentByID(id: number): Promise<models$0.Document | null> &
 }
 
 /**
- * GetFirstDocumentID gets the first active document's ID for frontend initialization
- */
-export function GetFirstDocumentID(): Promise<number> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2970773833) as any;
-    return $resultPromise;
-}
-
-/**
  * ListAllDocumentsMeta lists all active (non-deleted) document metadata
  */
 export function ListAllDocumentsMeta(): Promise<(models$0.Document | null)[]> & { cancel(): void } {

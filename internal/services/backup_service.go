@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,6 +45,13 @@ func NewBackupService(configService *ConfigService, dbService *DatabaseService, 
 		dbService:     dbService,
 		logger:        logger,
 	}
+}
+
+func (ds *BackupService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	if err := ds.Initialize(); err != nil {
+		return fmt.Errorf("initializing backup service: %w", err)
+	}
+	return nil
 }
 
 // Initialize 初始化备份服务

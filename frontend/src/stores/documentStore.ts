@@ -6,7 +6,7 @@ import {Document} from '@/../bindings/voidraft/internal/models/models';
 
 export const useDocumentStore = defineStore('document', () => {
     const DEFAULT_DOCUMENT_ID = ref<number>(1); // 默认草稿文档ID
-    
+
     // === 核心状态 ===
     const documents = ref<Record<number, Document>>({});
     const currentDocumentId = ref<number | null>(null);
@@ -34,7 +34,7 @@ export const useDocumentStore = defineStore('document', () => {
 
     // === 错误处理 ===
     const setError = (docId: number, message: string) => {
-        selectorError.value = { docId, message };
+        selectorError.value = {docId, message};
     };
 
     const clearError = () => {
@@ -88,25 +88,8 @@ export const useDocumentStore = defineStore('document', () => {
         }
     };
 
-    // 保存新文档
-    const saveNewDocument = async (title: string, content: string): Promise<Document | null> => {
-        try {
-            const doc = await DocumentService.CreateDocument(title);
-            if (doc) {
-                await DocumentService.UpdateDocumentContent(doc.id, content);
-                doc.content = content;
-                documents.value[doc.id] = doc;
-                return doc;
-            }
-            return null;
-        } catch (error) {
-            console.error('Failed to save new document:', error);
-            return null;
-        }
-    };
-
-    // 更新文档列表
-    const updateDocuments = async () => {
+    // 获取文档列表
+    const getDocumentMetaList = async () => {
         try {
             isLoading.value = true;
             const docs = await DocumentService.ListAllDocumentsMeta();
@@ -199,7 +182,7 @@ export const useDocumentStore = defineStore('document', () => {
     // === 初始化 ===
     const initialize = async (urlDocumentId?: number): Promise<void> => {
         try {
-            await updateDocuments();
+            await getDocumentMetaList();
 
             // 优先使用URL参数中的文档ID
             if (urlDocumentId && documents.value[urlDocumentId]) {
@@ -208,11 +191,8 @@ export const useDocumentStore = defineStore('document', () => {
                 // 如果URL中没有指定文档ID，则使用持久化的文档ID
                 await openDocument(currentDocumentId.value);
             } else {
-                // 否则获取第一个文档ID并打开
-                const firstDocId = await DocumentService.GetFirstDocumentID();
-                if (firstDocId && documents.value[firstDocId]) {
-                    await openDocument(firstDocId);
-                }
+                // 否则打开默认文档
+                await openDocument(DEFAULT_DOCUMENT_ID.value);
             }
         } catch (error) {
             console.error('Failed to initialize document store:', error);
@@ -231,11 +211,10 @@ export const useDocumentStore = defineStore('document', () => {
         isLoading,
 
         // 方法
-        updateDocuments,
+        getDocumentMetaList,
         openDocument,
         openDocumentInNewWindow,
         createNewDocument,
-        saveNewDocument,
         updateDocumentMetadata,
         deleteDocument,
         openDocumentSelector,

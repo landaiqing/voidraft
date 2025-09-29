@@ -149,7 +149,6 @@ export const useTranslationStore = defineStore('translation', () => {
             if (defaultTargetLang.value) {
                 const validatedLang = validateLanguage(defaultTargetLang.value, defaultTranslator.value);
                 if (validatedLang !== defaultTargetLang.value) {
-                    console.log(`目标语言 ${defaultTargetLang.value} 不受支持，已切换到 ${validatedLang}`);
                     defaultTargetLang.value = validatedLang;
                 }
             }

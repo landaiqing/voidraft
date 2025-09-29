@@ -16,7 +16,7 @@ import {
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/common/utils/configUtils';
 import {FONT_OPTIONS} from '@/common/constant/fonts';
-import {SupportedLocaleType, SUPPORTED_LOCALES} from '@/common/constant/locales';
+import {SUPPORTED_LOCALES} from '@/common/constant/locales';
 import {
     NumberConfigKey,
     GENERAL_CONFIG_KEY_MAP,
@@ -28,19 +28,6 @@ import {
     DEFAULT_CONFIG
 } from '@/common/constant/config';
 import * as runtime from '@wailsio/runtime';
-
-// 获取浏览器的默认语言
-const getBrowserLanguage = (): SupportedLocaleType => {
-    const browserLang = navigator.language;
-    const langCode = browserLang.split('-')[0];
-
-    // 检查是否支持此语言
-    const supportedLang = SUPPORTED_LOCALES.find(locale =>
-        locale.code.startsWith(langCode) || locale.code.split('-')[0] === langCode
-    );
-
-    return supportedLang?.code || 'zh-CN';
-};
 
 export const useConfigStore = defineStore('config', () => {
     const {locale} = useI18n();
@@ -231,7 +218,7 @@ export const useConfigStore = defineStore('config', () => {
             const frontendLocale = ConfigUtils.backendLanguageToFrontend(state.config.appearance.language);
             locale.value = frontendLocale as any;
         } catch (_error) {
-            const browserLang = getBrowserLanguage();
+            const browserLang = SUPPORTED_LOCALES[0].code;
             locale.value = browserLang as any;
         }
     };

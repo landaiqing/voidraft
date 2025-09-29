@@ -2,7 +2,7 @@
 import {useConfigStore} from '@/stores/configStore';
 import {useBackupStore} from '@/stores/backupStore';
 import {useI18n} from 'vue-i18n';
-import {computed, onMounted, onUnmounted} from 'vue';
+import {computed, onUnmounted} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
@@ -13,14 +13,8 @@ const {t} = useI18n();
 const configStore = useConfigStore();
 const backupStore = useBackupStore();
 
-// 确保配置已加载
-onMounted(async () => {
-  if (!configStore.configLoaded) {
-    await configStore.initConfig();
-  }
-});
 onUnmounted(() => {
-  backupStore.clearError();
+  backupStore.clearStatus();
 });
 
 // 认证方式选项
@@ -140,6 +134,11 @@ const handleBackupIntervalChange = (event: Event) => {
 // 推送到远程
 const pushToRemote = async () => {
   await backupStore.pushToRemote();
+};
+
+// 重试备份
+const retryBackup = async () => {
+  await backupStore.retryBackup();
 };
 
 // 选择SSH密钥文件
@@ -311,8 +310,8 @@ const selectSshKeyFile = async () => {
       >
         <div class="backup-operation-container">
           <div class="backup-status-icons">
-            <span v-if="backupStore.pushSuccess" class="success-icon">✓</span>
-            <span v-if="backupStore.pushError" class="error-icon">✗</span>
+            <span v-if="backupStore.isSuccess" class="success-icon">✓</span>
+            <span v-if="backupStore.isError" class="error-icon">✗</span>
           </div>
           <button
               class="push-button"
@@ -323,10 +322,18 @@ const selectSshKeyFile = async () => {
             <span v-if="backupStore.isPushing" class="loading-spinner"></span>
             {{ backupStore.isPushing ? t('settings.backup.pushing') : t('settings.backup.actions.push') }}
           </button>
+          <button
+              v-if="backupStore.isError"
+              class="retry-button"
+              @click="() => retryBackup()"
+              :disabled="backupStore.isPushing"
+          >
+            {{ t('settings.backup.actions.retry') }}
+          </button>
         </div>
       </SettingItem>
-      <div v-if="backupStore.error" class="error-message-row">
-        {{ backupStore.error }}
+      <div v-if="backupStore.errorMessage" class="error-message-row">
+        {{ backupStore.errorMessage }}
       </div>
     </SettingSection>
   </div>
@@ -428,7 +435,8 @@ const selectSshKeyFile = async () => {
 }
 
 // 按钮样式
-.push-button {
+.push-button,
+.retry-button {
   padding: 8px 16px;
   background-color: var(--settings-input-bg);
   border: 1px solid var(--settings-input-border);
@@ -469,6 +477,17 @@ const selectSshKeyFile = async () => {
     background-color: #2196f3;
     border-color: #2196f3;
     color: white;
+  }
+}
+
+.retry-button {
+  background-color: #ff9800;
+  border-color: #ff9800;
+  color: white;
+
+  &:hover:not(:disabled) {
+    background-color: #f57c00;
+    border-color: #f57c00;
   }
 }
 
