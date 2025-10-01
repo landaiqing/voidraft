@@ -112,40 +112,8 @@ func initDeeplLanguages() map[string]LanguageInfo {
 	// 基于 DeepL API 支持的语言列表
 	// 参考: https://developers.deepl.com/docs/resources/supported-languages
 
-	// 源语言和目标语言
-	languages["ar"] = LanguageInfo{Code: "AR", Name: "Arabic"}
-	languages["bg"] = LanguageInfo{Code: "BG", Name: "Bulgarian"}
-	languages["cs"] = LanguageInfo{Code: "CS", Name: "Czech"}
-	languages["da"] = LanguageInfo{Code: "DA", Name: "Danish"}
-	languages["de"] = LanguageInfo{Code: "DE", Name: "German"}
-	languages["el"] = LanguageInfo{Code: "EL", Name: "Greek"}
+	// 源语言和目标语言 - 精简为中英互译
 	languages["en"] = LanguageInfo{Code: "EN", Name: "English"}
-	languages["en-gb"] = LanguageInfo{Code: "EN-GB", Name: "English (British)"}
-	languages["en-us"] = LanguageInfo{Code: "EN-US", Name: "English (American)"}
-	languages["es"] = LanguageInfo{Code: "ES", Name: "Spanish"}
-	languages["et"] = LanguageInfo{Code: "ET", Name: "Estonian"}
-	languages["fi"] = LanguageInfo{Code: "FI", Name: "Finnish"}
-	languages["fr"] = LanguageInfo{Code: "FR", Name: "French"}
-	languages["hu"] = LanguageInfo{Code: "HU", Name: "Hungarian"}
-	languages["id"] = LanguageInfo{Code: "ID", Name: "Indonesian"}
-	languages["it"] = LanguageInfo{Code: "IT", Name: "Italian"}
-	languages["ja"] = LanguageInfo{Code: "JA", Name: "Japanese"}
-	languages["ko"] = LanguageInfo{Code: "KO", Name: "Korean"}
-	languages["lt"] = LanguageInfo{Code: "LT", Name: "Lithuanian"}
-	languages["lv"] = LanguageInfo{Code: "LV", Name: "Latvian"}
-	languages["nb"] = LanguageInfo{Code: "NB", Name: "Norwegian Bokmål"}
-	languages["nl"] = LanguageInfo{Code: "NL", Name: "Dutch"}
-	languages["pl"] = LanguageInfo{Code: "PL", Name: "Polish"}
-	languages["pt"] = LanguageInfo{Code: "PT", Name: "Portuguese"}
-	languages["pt-br"] = LanguageInfo{Code: "PT-BR", Name: "Portuguese (Brazilian)"}
-	languages["pt-pt"] = LanguageInfo{Code: "PT-PT", Name: "Portuguese (Portugal)"}
-	languages["ro"] = LanguageInfo{Code: "RO", Name: "Romanian"}
-	languages["ru"] = LanguageInfo{Code: "RU", Name: "Russian"}
-	languages["sk"] = LanguageInfo{Code: "SK", Name: "Slovak"}
-	languages["sl"] = LanguageInfo{Code: "SL", Name: "Slovenian"}
-	languages["sv"] = LanguageInfo{Code: "SV", Name: "Swedish"}
-	languages["tr"] = LanguageInfo{Code: "TR", Name: "Turkish"}
-	languages["uk"] = LanguageInfo{Code: "UK", Name: "Ukrainian"}
 	languages["zh"] = LanguageInfo{Code: "ZH", Name: "Chinese"}
 
 	return languages
@@ -155,11 +123,6 @@ func initDeeplLanguages() map[string]LanguageInfo {
 func (t *DeeplTranslator) SetTimeout(timeout time.Duration) {
 	t.Timeout = timeout
 	t.httpClient.Timeout = timeout
-}
-
-// SetDeeplHost 设置DeepL主机
-func (t *DeeplTranslator) SetDeeplHost(host string) {
-	t.DeeplHost = host
 }
 
 // Translate 使用标准语言标签进行文本翻译
@@ -318,10 +281,4 @@ func (t *DeeplTranslator) GetSupportedLanguages() map[string]LanguageInfo {
 func (t *DeeplTranslator) IsLanguageSupported(languageCode string) bool {
 	_, ok := t.languages[strings.ToLower(languageCode)]
 	return ok
-}
-
-// GetStandardLanguageCode 获取标准化的语言代码
-func (t *DeeplTranslator) GetStandardLanguageCode(languageCode string) string {
-	// 简单返回小写版本作为标准代码
-	return strings.ToLower(languageCode)
 }

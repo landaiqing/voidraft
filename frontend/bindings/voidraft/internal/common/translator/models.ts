@@ -68,4 +68,9 @@ export enum TranslatorType {
      * DeeplTranslatorType DeepL翻译器
      */
     DeeplTranslatorType = "deepl",
+
+    /**
+     * TartuNLPTranslatorType TartuNLP翻译器
+     */
+    TartuNLPTranslatorType = "tartunlp",
 };

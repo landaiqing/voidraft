@@ -32,6 +32,8 @@ const (
 	YoudaoTranslatorType TranslatorType = "youdao"
 	// DeeplTranslatorType DeepL翻译器
 	DeeplTranslatorType TranslatorType = "deepl"
+	// TartuNLPTranslatorType TartuNLP翻译器
+	TartuNLPTranslatorType TranslatorType = "tartunlp"
 )
 
 // LanguageInfo 语言信息结构体
@@ -56,9 +58,6 @@ type Translator interface {
 
 	// IsLanguageSupported 检查指定的语言代码是否受支持
 	IsLanguageSupported(languageCode string) bool
-
-	// GetStandardLanguageCode 获取标准化的语言代码
-	GetStandardLanguageCode(languageCode string) string
 }
 
 // TranslatorFactory 翻译器工厂，用于创建不同类型的翻译器
@@ -80,6 +79,8 @@ func (f *TranslatorFactory) Create(translatorType TranslatorType) (Translator, e
 		return NewYoudaoTranslator(), nil
 	case DeeplTranslatorType:
 		return NewDeeplTranslator(), nil
+	case TartuNLPTranslatorType:
+		return NewTartuNLPTranslator(), nil
 	default:
 		return nil, fmt.Errorf("unsupported translator type: %s", translatorType)
 	}

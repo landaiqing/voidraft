@@ -89,14 +89,15 @@ func (s *TranslationService) TranslateWith(text string, from string, to string, 
 	return trans.TranslateWithParams(text, params)
 }
 
-// GetAvailableTranslators 获取所有可用翻译器类型
+// GetTranslators 获取所有可用翻译器类型
 // @returns {[]string} 翻译器类型列表
-func (s *TranslationService) GetAvailableTranslators() []string {
+func (s *TranslationService) GetTranslators() []string {
 	return []string{
-		string(translator.GoogleTranslatorType),
 		string(translator.BingTranslatorType),
+		string(translator.GoogleTranslatorType),
 		string(translator.YoudaoTranslatorType),
 		string(translator.DeeplTranslatorType),
+		string(translator.TartuNLPTranslatorType),
 	}
 }
 
@@ -121,13 +122,4 @@ func (s *TranslationService) IsLanguageSupported(translatorType translator.Trans
 		return false
 	}
 	return translator.IsLanguageSupported(languageCode)
-}
-
-// GetStandardLanguageCode 获取标准化的语言代码
-func (s *TranslationService) GetStandardLanguageCode(translatorType translator.TranslatorType, languageCode string) string {
-	translator, err := s.getTranslator(translatorType)
-	if err != nil {
-		return ""
-	}
-	return translator.GetStandardLanguageCode(languageCode)
 }

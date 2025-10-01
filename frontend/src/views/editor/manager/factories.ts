@@ -158,14 +158,12 @@ export const checkboxFactory: ExtensionFactory = {
 export const translatorFactory: ExtensionFactory = {
     create(config: any) {
         return createTranslatorExtension({
-            defaultTranslator: config.defaultTranslator || 'bing',
             minSelectionLength: config.minSelectionLength || 2,
             maxTranslationLength: config.maxTranslationLength || 5000,
         });
     },
     getDefaultConfig() {
         return {
-            defaultTranslator: 'bing',
             minSelectionLength: 2,
             maxTranslationLength: 5000,
         };

@@ -50,8 +50,7 @@ func initYoudaoLanguages() map[string]LanguageInfo {
 	// 创建语言映射表
 	languages := make(map[string]LanguageInfo)
 
-	// 自动检测
-	languages["auto"] = LanguageInfo{Code: "auto", Name: "Auto"}
+	languages["auto"] = LanguageInfo{Code: "AUTO", Name: "Auto"}
 
 	return languages
 }
@@ -64,8 +63,7 @@ func (t *YoudaoTranslator) SetTimeout(timeout time.Duration) {
 
 // Translate 使用标准语言标签进行文本翻译
 func (t *YoudaoTranslator) Translate(text string, from language.Tag, to language.Tag) (string, error) {
-	// 有道翻译不需要指定源语言和目标语言，它会自动检测
-	return t.translate(text)
+	return t.translate(text, to.String())
 }
 
 // TranslateWithParams 使用简单字符串参数进行文本翻译
@@ -75,16 +73,15 @@ func (t *YoudaoTranslator) TranslateWithParams(text string, params TranslationPa
 		t.SetTimeout(params.Timeout)
 	}
 
-	// 有道翻译不需要指定源语言和目标语言，它会自动检测
-	return t.translate(text)
+	return t.translate(text, params.To)
 }
 
 // translate 执行实际翻译操作
-func (t *YoudaoTranslator) translate(text string) (string, error) {
+func (t *YoudaoTranslator) translate(text string, typeName string) (string, error) {
 	// 构建表单数据
 	form := url.Values{}
 	form.Add("inputtext", text)
-	form.Add("type", "AUTO")
+	form.Add("type", typeName)
 
 	// 创建请求
 	req, err := http.NewRequest("POST", youdaoTranslateURL, strings.NewReader(form.Encode()))

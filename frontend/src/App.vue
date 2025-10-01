@@ -1,20 +1,21 @@
 <script setup lang="ts">
-import {onMounted} from 'vue';
+import {onBeforeMount} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useSystemStore} from '@/stores/systemStore';
 import {useKeybindingStore} from '@/stores/keybindingStore';
 import {useThemeStore} from '@/stores/themeStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
+import {useTranslationStore} from "@/stores/translationStore";
 
 const configStore = useConfigStore();
 const systemStore = useSystemStore();
 const keybindingStore = useKeybindingStore();
 const themeStore = useThemeStore();
 const updateStore = useUpdateStore();
+const translationStore = useTranslationStore();
 
-// 应用启动时加载配置和初始化系统信息
-onMounted(async () => {
+onBeforeMount(async () => {
   // 并行初始化配置、系统信息和快捷键配置
   await Promise.all([
     configStore.initConfig(),
@@ -24,7 +25,8 @@ onMounted(async () => {
   
   // 初始化语言和主题
   await configStore.initializeLanguage();
-  themeStore.initializeTheme();
+  await themeStore.initializeTheme();
+  await translationStore.loadTranslators();
 
   // 启动时检查更新
   await updateStore.checkOnStartup();

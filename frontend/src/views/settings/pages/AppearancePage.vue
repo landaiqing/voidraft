@@ -8,11 +8,38 @@ import SettingItem from '../components/SettingItem.vue';
 import { SystemThemeType, LanguageType } from '@/../bindings/voidraft/internal/models/models';
 import { defaultDarkColors } from '@/views/editor/theme/dark';
 import { defaultLightColors } from '@/views/editor/theme/light';
+import { createDebounce } from '@/common/utils/debounce';
+import { createTimerManager } from '@/common/utils/timerUtils';
 import PickColors from 'vue-pick-colors';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 const themeStore = useThemeStore();
+
+// 创建防抖函数实例
+const { debouncedFn: debouncedUpdateColor } = createDebounce(
+  (colorKey: string, value: string) => updateLocalColor(colorKey, value),
+  { delay: 100 }
+);
+
+const { debouncedFn: debouncedResetTheme } = createDebounce(
+  async () => {
+    const themeType = activeThemeType.value;
+    const success = await themeStore.resetThemeColors(themeType);
+    
+    if (success) {
+      tempColors.value = {
+        darkTheme: { ...themeStore.themeColors.darkTheme },
+        lightTheme: { ...themeStore.themeColors.lightTheme }
+      };
+      hasUnsavedChanges.value = false;
+    }
+  },
+  { delay: 300 }
+);
+
+// 创建定时器管理器
+const resetTimer = createTimerManager();
 
 // 添加临时颜色状态
 const tempColors = ref({
@@ -25,36 +52,19 @@ const hasUnsavedChanges = ref(false);
 
 // 重置按钮状态
 const resetButtonState = ref({
-  confirming: false,
-  timer: null as number | null
+  confirming: false
 });
 
-// 防抖函数
-const debounce = <T extends (...args: any[]) => any>(
-  func: T, 
-  wait: number
-): ((...args: Parameters<T>) => void) => {
-  let timeout: number | undefined;
-  
-  return function(...args: Parameters<T>): void {
-    clearTimeout(timeout);
-    timeout = window.setTimeout(() => {
-      func(...args);
-    }, wait);
-  };
-};
+// 当前激活的主题类型
+const isDarkMode = computed(() => 
+  themeStore.currentTheme === SystemThemeType.SystemThemeDark || 
+  (themeStore.currentTheme === SystemThemeType.SystemThemeAuto && 
+   window.matchMedia('(prefers-color-scheme: dark)').matches)
+);
 
-// 当前激活的主题类型（基于当前系统主题）
-const activeThemeType = computed(() => {
-  const isDark = 
-    themeStore.currentTheme === SystemThemeType.SystemThemeDark || 
-    (themeStore.currentTheme === SystemThemeType.SystemThemeAuto && 
-     window.matchMedia('(prefers-color-scheme: dark)').matches);
-  
-  return isDark ? 'darkTheme' : 'lightTheme';
-});
+const activeThemeType = computed(() => isDarkMode.value ? 'darkTheme' : 'lightTheme');
 
-// 当前主题的颜色配置 - 使用临时状态
+// 当前主题的颜色配置
 const currentColors = computed(() => {
   const themeType = activeThemeType.value;
   return tempColors.value[themeType] || 
@@ -62,144 +72,85 @@ const currentColors = computed(() => {
 });
 
 // 获取当前主题模式
-const currentThemeMode = computed(() => {
-  const isDark = 
-    themeStore.currentTheme === SystemThemeType.SystemThemeDark || 
-    (themeStore.currentTheme === SystemThemeType.SystemThemeAuto && 
-     window.matchMedia('(prefers-color-scheme: dark)').matches);
-  
-  return isDark ? 'dark' : 'light';
-});
+const currentThemeMode = computed(() => isDarkMode.value ? 'dark' : 'light');
 
-// 监听主题颜色变更，更新临时颜色
+// 监听主题颜色变更，
 watch(
   () => themeStore.themeColors,
   (newValue) => {
     if (!hasUnsavedChanges.value) {
-      tempColors.value = {
-        darkTheme: { ...newValue.darkTheme },
-        lightTheme: { ...newValue.lightTheme }
-      };
+      tempColors.value.darkTheme = { ...newValue.darkTheme };
+      tempColors.value.lightTheme = { ...newValue.lightTheme };
     }
   },
   { deep: true, immediate: true }
 );
 
-// 初始化时加载主题颜色
 onMounted(() => {
-  // 使用themeStore中的颜色作为初始值
   tempColors.value = {
     darkTheme: { ...themeStore.themeColors.darkTheme },
     lightTheme: { ...themeStore.themeColors.lightTheme }
   };
 });
 
-// 颜色配置分组
-const colorGroups = computed(() => [
+// 颜色配置
+const colorConfig = [
   {
     key: 'basic',
-    title: t('settings.themeColors.basic'),
-    colors: [
-      { key: 'background', label: t('settings.themeColors.background') },
-      { key: 'backgroundSecondary', label: t('settings.themeColors.backgroundSecondary') },
-      { key: 'surface', label: t('settings.themeColors.surface') }
-    ]
+    colors: ['background', 'backgroundSecondary', 'surface']
   },
   {
-    key: 'text',
-    title: t('settings.themeColors.text'),
-    colors: [
-      { key: 'foreground', label: t('settings.themeColors.foreground') },
-      { key: 'foregroundSecondary', label: t('settings.themeColors.foregroundSecondary') },
-      { key: 'comment', label: t('settings.themeColors.comment') }
-    ]
+    key: 'text', 
+    colors: ['foreground', 'foregroundSecondary', 'comment']
   },
   {
     key: 'syntax',
-    title: t('settings.themeColors.syntax'),
-    colors: [
-      { key: 'keyword', label: t('settings.themeColors.keyword') },
-      { key: 'string', label: t('settings.themeColors.string') },
-      { key: 'function', label: t('settings.themeColors.function') },
-      { key: 'number', label: t('settings.themeColors.number') },
-      { key: 'operator', label: t('settings.themeColors.operator') },
-      { key: 'variable', label: t('settings.themeColors.variable') },
-      { key: 'type', label: t('settings.themeColors.type') }
-    ]
+    colors: ['keyword', 'string', 'function', 'number', 'operator', 'variable', 'type']
   },
   {
     key: 'interface',
-    title: t('settings.themeColors.interface'),
-    colors: [
-      { key: 'cursor', label: t('settings.themeColors.cursor') },
-      { key: 'selection', label: t('settings.themeColors.selection') },
-      { key: 'selectionBlur', label: t('settings.themeColors.selectionBlur') },
-      { key: 'activeLine', label: t('settings.themeColors.activeLine') },
-      { key: 'lineNumber', label: t('settings.themeColors.lineNumber') },
-      { key: 'activeLineNumber', label: t('settings.themeColors.activeLineNumber') }
-    ]
+    colors: ['cursor', 'selection', 'selectionBlur', 'activeLine', 'lineNumber', 'activeLineNumber']
   },
   {
     key: 'border',
-    title: t('settings.themeColors.border'),
-    colors: [
-      { key: 'borderColor', label: t('settings.themeColors.borderColor') },
-      { key: 'borderLight', label: t('settings.themeColors.borderLight') }
-    ]
+    colors: ['borderColor', 'borderLight']
   },
   {
     key: 'search',
-    title: t('settings.themeColors.search'),
-    colors: [
-      { key: 'searchMatch', label: t('settings.themeColors.searchMatch') },
-      { key: 'matchingBracket', label: t('settings.themeColors.matchingBracket') }
-    ]
+    colors: ['searchMatch', 'matchingBracket']
   }
-]);
+];
+
+// 颜色配置分组
+const colorGroups = computed(() => 
+  colorConfig.map(group => ({
+    key: group.key,
+    title: t(`settings.themeColors.${group.key}`),
+    colors: group.colors.map(colorKey => ({
+      key: colorKey,
+      label: t(`settings.themeColors.${colorKey}`)
+    }))
+  }))
+);
 
 // 处理重置按钮点击
 const handleResetClick = () => {
   if (resetButtonState.value.confirming) {
-    // 如果已经在确认状态，执行重置操作
-    resetCurrentTheme();
-    
-    // 重置按钮状态
+
+    debouncedResetTheme();
+
     resetButtonState.value.confirming = false;
-    if (resetButtonState.value.timer !== null) {
-      clearTimeout(resetButtonState.value.timer);
-      resetButtonState.value.timer = null;
-    }
+    resetTimer.clear();
   } else {
-    // 进入确认状态
     resetButtonState.value.confirming = true;
-    
     // 设置3秒后自动恢复
-    resetButtonState.value.timer = window.setTimeout(() => {
+    resetTimer.set(() => {
       resetButtonState.value.confirming = false;
-      resetButtonState.value.timer = null;
     }, 3000);
   }
 };
 
-// 重置当前主题为默认配置
-const resetCurrentTheme = debounce(async () => {
-  // 使用themeStore的原子重置操作
-  const themeType = activeThemeType.value;
-  const success = await themeStore.resetThemeColors(themeType);
-  
-  if (success) {
-    // 更新临时颜色状态
-    tempColors.value = {
-      darkTheme: { ...themeStore.themeColors.darkTheme },
-      lightTheme: { ...themeStore.themeColors.lightTheme }
-    };
-    
-    // 标记没有未保存的更改
-    hasUnsavedChanges.value = false;
-  }
-}, 300);
-
-// 更新本地颜色配置 - 仅更新临时状态，不提交到后端
+// 更新本地颜色配置
 const updateLocalColor = (colorKey: string, value: string) => {
   const themeType = activeThemeType.value;
   
@@ -211,13 +162,9 @@ const updateLocalColor = (colorKey: string, value: string) => {
       [colorKey]: value
     }
   };
-  
-  // 标记有未保存的更改
+
   hasUnsavedChanges.value = true;
 };
-
-// 防抖包装的颜色更新函数
-const updateColor = debounce(updateLocalColor, 100);
 
 // 应用颜色更改到系统
 const applyChanges = async () => {
@@ -290,7 +237,7 @@ const showPickerMap = ref<Record<string, boolean>>({});
 
 // 颜色变更处理
 const handleColorChange = (colorKey: string, value: string) => {
-  updateColor(colorKey, value);
+  debouncedUpdateColor(colorKey, value);
 };
 
 // 颜色选择器关闭处理
@@ -374,7 +321,7 @@ const handlePickerClose = () => {
                 <input 
                   type="text" 
                   :value="currentColors[color.key] || ''" 
-                  @input="updateColor(color.key, ($event.target as HTMLInputElement).value)"
+                  @input="debouncedUpdateColor(color.key, ($event.target as HTMLInputElement).value)"
                   class="color-text-input"
                   :placeholder="t('settings.colorValue')"
                 />

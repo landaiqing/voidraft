@@ -1,11 +1,11 @@
-import {defineStore} from 'pinia';
-import {computed, reactive} from 'vue';
-import {SystemThemeType, ThemeType, ThemeColorConfig} from '@/../bindings/voidraft/internal/models/models';
-import {ThemeService} from '@/../bindings/voidraft/internal/services';
-import {useConfigStore} from './configStore';
-import {useEditorStore} from './editorStore';
-import {defaultDarkColors} from '@/views/editor/theme/dark';
-import {defaultLightColors} from '@/views/editor/theme/light';
+import { defineStore } from 'pinia';
+import { computed, reactive } from 'vue';
+import { SystemThemeType, ThemeType, ThemeColorConfig } from '@/../bindings/voidraft/internal/models/models';
+import { ThemeService } from '@/../bindings/voidraft/internal/services';
+import { useConfigStore } from './configStore';
+import { useEditorStore } from './editorStore';
+import { defaultDarkColors } from '@/views/editor/theme/dark';
+import { defaultLightColors } from '@/views/editor/theme/light';
 
 /**
  * 主题管理 Store
@@ -14,25 +14,44 @@ import {defaultLightColors} from '@/views/editor/theme/light';
 export const useThemeStore = defineStore('theme', () => {
   const configStore = useConfigStore();
   
-  // 响应式状态 - 存储当前使用的主题颜色
+  // 响应式状态
   const themeColors = reactive({
     darkTheme: { ...defaultDarkColors },
     lightTheme: { ...defaultLightColors }
   });
   
-  // 计算属性 - 当前选择的主题类型
+  // 计算属性
   const currentTheme = computed(() => 
     configStore.config?.appearance?.systemTheme || SystemThemeType.SystemThemeAuto
   );
 
-  // 初始化主题颜色 - 从数据库加载
+  // 获取默认主题颜色
+  const getDefaultColors = (themeType: ThemeType) => 
+    themeType === ThemeType.ThemeTypeDark ? defaultDarkColors : defaultLightColors;
+
+  // 应用主题到 DOM
+  const applyThemeToDOM = (theme: SystemThemeType) => {
+    const themeMap = {
+      [SystemThemeType.SystemThemeAuto]: 'auto',
+      [SystemThemeType.SystemThemeDark]: 'dark',
+      [SystemThemeType.SystemThemeLight]: 'light'
+    };
+    document.documentElement.setAttribute('data-theme', themeMap[theme]);
+  };
+
+  // 初始化主题颜色
   const initializeThemeColors = async () => {
     try {
       const themes = await ThemeService.GetDefaultThemes();
+      
+      // 如果没有获取到主题数据，使用默认值
       if (!themes) {
-          Object.assign(themeColors.darkTheme, defaultDarkColors);
-          Object.assign(themeColors.lightTheme, defaultLightColors);
+        Object.assign(themeColors.darkTheme, defaultDarkColors);
+        Object.assign(themeColors.lightTheme, defaultLightColors);
+        return;
       }
+
+      // 更新主题颜色
       if (themes[ThemeType.ThemeTypeDark]) {
         Object.assign(themeColors.darkTheme, themes[ThemeType.ThemeTypeDark].colors);
       }
@@ -47,17 +66,9 @@ export const useThemeStore = defineStore('theme', () => {
     }
   };
 
-  // 应用主题到 DOM
-  const applyThemeToDOM = (theme: SystemThemeType) => {
-    document.documentElement.setAttribute('data-theme', 
-      theme === SystemThemeType.SystemThemeAuto ? 'auto' :
-      theme === SystemThemeType.SystemThemeDark ? 'dark' : 'light'
-    );
-  };
-
   // 初始化主题
   const initializeTheme = async () => {
-    const theme = configStore.config?.appearance?.systemTheme || SystemThemeType.SystemThemeAuto;
+    const theme = currentTheme.value;
     applyThemeToDOM(theme);
     await initializeThemeColors();
   };
@@ -69,27 +80,25 @@ export const useThemeStore = defineStore('theme', () => {
     refreshEditorTheme();
   };
   
-  // 更新主题颜色
-  const updateThemeColors = (darkColors: any = null, lightColors: any = null): boolean => {
+  // 更新主题颜色 - 合并逻辑，减少重复代码
+  const updateThemeColors = (darkColors?: any, lightColors?: any): boolean => {
     let hasChanges = false;
     
-    if (darkColors) {
-      Object.entries(darkColors).forEach(([key, value]) => {
-        if (value !== undefined && themeColors.darkTheme[key] !== value) {
-          themeColors.darkTheme[key] = value;
-          hasChanges = true;
+    const updateColors = (target: any, source: any) => {
+      if (!source) return false;
+      
+      let changed = false;
+      Object.entries(source).forEach(([key, value]) => {
+        if (value !== undefined && target[key] !== value) {
+          target[key] = value;
+          changed = true;
         }
       });
-    }
+      return changed;
+    };
     
-    if (lightColors) {
-      Object.entries(lightColors).forEach(([key, value]) => {
-        if (value !== undefined && themeColors.lightTheme[key] !== value) {
-          themeColors.lightTheme[key] = value;
-          hasChanges = true;
-        }
-      });
-    }
+    hasChanges = updateColors(themeColors.darkTheme, darkColors) || hasChanges;
+    hasChanges = updateColors(themeColors.lightTheme, lightColors) || hasChanges;
     
     return hasChanges;
   };
@@ -100,8 +109,10 @@ export const useThemeStore = defineStore('theme', () => {
       const darkColors = ThemeColorConfig.createFrom(themeColors.darkTheme);
       const lightColors = ThemeColorConfig.createFrom(themeColors.lightTheme);
       
-      await ThemeService.UpdateThemeColors(ThemeType.ThemeTypeDark, darkColors);
-      await ThemeService.UpdateThemeColors(ThemeType.ThemeTypeLight, lightColors);
+      await Promise.all([
+        ThemeService.UpdateThemeColors(ThemeType.ThemeTypeDark, darkColors),
+        ThemeService.UpdateThemeColors(ThemeType.ThemeTypeLight, lightColors)
+      ]);
     } catch (error) {
       console.error('Failed to save theme colors:', error);
       throw error;
@@ -117,11 +128,8 @@ export const useThemeStore = defineStore('theme', () => {
       await ThemeService.ResetThemeColors(dbThemeType);
       
       // 2. 更新内存中的颜色状态
-      if (themeType === 'darkTheme') {
-        Object.assign(themeColors.darkTheme, defaultDarkColors);
-      } else {
-        Object.assign(themeColors.lightTheme, defaultLightColors);
-      }
+      const defaultColors = getDefaultColors(dbThemeType);
+      Object.assign(themeColors[themeType], defaultColors);
       
       // 3. 刷新编辑器主题
       refreshEditorTheme();
@@ -136,13 +144,10 @@ export const useThemeStore = defineStore('theme', () => {
   // 刷新编辑器主题
   const refreshEditorTheme = () => {
     // 使用当前主题重新应用DOM主题
-    const theme = currentTheme.value;
-    applyThemeToDOM(theme);
+    applyThemeToDOM(currentTheme.value);
     
     const editorStore = useEditorStore();
-    if (editorStore) {
-      editorStore.applyThemeSettings();
-    }
+    editorStore?.applyThemeSettings();
   };
 
   return {

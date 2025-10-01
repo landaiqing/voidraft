@@ -15,27 +15,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as translator$0 from "../common/translator/models.js";
 
 /**
- * GetAvailableTranslators 获取所有可用翻译器类型
- * @returns {[]string} 翻译器类型列表
- */
-export function GetAvailableTranslators(): Promise<string[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1186597995) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType0($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetStandardLanguageCode 获取标准化的语言代码
- */
-export function GetStandardLanguageCode(translatorType: translator$0.TranslatorType, languageCode: string): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1158131995, translatorType, languageCode) as any;
-    return $resultPromise;
-}
-
-/**
  * GetTranslatorLanguages 获取翻译器的语言列表
  * @param {string} translatorType - 翻译器类型 ("google", "bing", "youdao", "deepl")
  * @returns {map[string]string} 语言代码到名称的映射
@@ -43,6 +22,19 @@ export function GetStandardLanguageCode(translatorType: translator$0.TranslatorT
  */
 export function GetTranslatorLanguages(translatorType: translator$0.TranslatorType): Promise<{ [_: string]: translator$0.LanguageInfo }> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3976114458, translatorType) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType1($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * GetTranslators 获取所有可用翻译器类型
+ * @returns {[]string} 翻译器类型列表
+ */
+export function GetTranslators(): Promise<string[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3720069432) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType2($result);
     }) as any;
@@ -73,6 +65,6 @@ export function TranslateWith(text: string, $from: string, to: string, translato
 }
 
 // Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);
-const $$createType1 = translator$0.LanguageInfo.createFrom;
-const $$createType2 = $Create.Map($Create.Any, $$createType1);
+const $$createType0 = translator$0.LanguageInfo.createFrom;
+const $$createType1 = $Create.Map($Create.Any, $$createType0);
+const $$createType2 = $Create.Array($Create.Any);

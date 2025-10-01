@@ -2,20 +2,17 @@
 package translator
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"log"
-	"math"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/robertkrimen/otto"
 	"golang.org/x/text/language"
 )
 
@@ -24,155 +21,126 @@ var (
 	ErrBadNetwork = errors.New("bad network, please check your internet connection")
 )
 
-// GoogleTranslator Google翻译器结构体，统一管理翻译功能
+// 常量定义
+const (
+	googleTranslateTKK = "448487.932609646" // 固定TKK值
+)
+
+// GoogleTranslator 带token的Google翻译器（使用translate.google.com）
 type GoogleTranslator struct {
-	GoogleHost string                  // Google服务主机
-	vm         *otto.Otto              // JavaScript虚拟机
-	ttk        otto.Value              // 翻译token缓存
 	httpClient *http.Client            // HTTP客户端
 	Timeout    time.Duration           // 请求超时时间
 	languages  map[string]LanguageInfo // 支持的语言列表
 }
 
-// NewGoogleTranslator 创建一个新的Google翻译器实例
+// GoogleTranslatorTokenFree 无token的Google翻译器（使用translate.googleapis.com）
+type GoogleTranslatorTokenFree struct {
+	httpClient *http.Client            // HTTP客户端
+	Timeout    time.Duration           // 请求超时时间
+	languages  map[string]LanguageInfo // 支持的语言列表
+}
+
+// NewGoogleTranslator 创建一个新的带token的Google翻译器实例
 func NewGoogleTranslator() *GoogleTranslator {
-	translator := &GoogleTranslator{
-		GoogleHost: "google.com",
-		vm:         otto.New(),
-		Timeout:    defaultTimeout,
+	return &GoogleTranslator{
 		httpClient: &http.Client{Timeout: defaultTimeout},
+		Timeout:    defaultTimeout,
 		languages:  initGoogleLanguages(),
 	}
-
-	// 初始化ttk
-	translator.ttk, _ = otto.ToValue("0")
-
-	return translator
 }
 
 // initGoogleLanguages 初始化Google翻译器支持的语言列表
 func initGoogleLanguages() map[string]LanguageInfo {
-	// 创建语言映射表
 	languages := make(map[string]LanguageInfo)
 
-	// 添加所有支持的语言
-	// 参考: https://cloud.google.com/translate/docs/languages
-
-	// 添加自动检测
-	languages["auto"] = LanguageInfo{Code: "auto", Name: "Auto Detect"}
-
-	// 主要语言
+	// 只支持三种语言
 	languages["en"] = LanguageInfo{Code: "en", Name: "English"}
 	languages["zh-cn"] = LanguageInfo{Code: "zh-CN", Name: "Chinese (Simplified)"}
 	languages["zh-tw"] = LanguageInfo{Code: "zh-TW", Name: "Chinese (Traditional)"}
-	languages["ja"] = LanguageInfo{Code: "ja", Name: "Japanese"}
-	languages["ko"] = LanguageInfo{Code: "ko", Name: "Korean"}
-	languages["fr"] = LanguageInfo{Code: "fr", Name: "French"}
-	languages["de"] = LanguageInfo{Code: "de", Name: "German"}
-	languages["es"] = LanguageInfo{Code: "es", Name: "Spanish"}
-	languages["ru"] = LanguageInfo{Code: "ru", Name: "Russian"}
-	languages["it"] = LanguageInfo{Code: "it", Name: "Italian"}
-	languages["pt"] = LanguageInfo{Code: "pt", Name: "Portuguese"}
-
-	// 其他语言
-	languages["af"] = LanguageInfo{Code: "af", Name: "Afrikaans"}
-	languages["sq"] = LanguageInfo{Code: "sq", Name: "Albanian"}
-	languages["am"] = LanguageInfo{Code: "am", Name: "Amharic"}
-	languages["ar"] = LanguageInfo{Code: "ar", Name: "Arabic"}
-	languages["hy"] = LanguageInfo{Code: "hy", Name: "Armenian"}
-	languages["az"] = LanguageInfo{Code: "az", Name: "Azerbaijani"}
-	languages["eu"] = LanguageInfo{Code: "eu", Name: "Basque"}
-	languages["be"] = LanguageInfo{Code: "be", Name: "Belarusian"}
-	languages["bn"] = LanguageInfo{Code: "bn", Name: "Bengali"}
-	languages["bs"] = LanguageInfo{Code: "bs", Name: "Bosnian"}
-	languages["bg"] = LanguageInfo{Code: "bg", Name: "Bulgarian"}
-	languages["ca"] = LanguageInfo{Code: "ca", Name: "Catalan"}
-	languages["ceb"] = LanguageInfo{Code: "ceb", Name: "Cebuano"}
-	languages["zh"] = LanguageInfo{Code: "zh", Name: "Chinese"}
-	languages["co"] = LanguageInfo{Code: "co", Name: "Corsican"}
-	languages["hr"] = LanguageInfo{Code: "hr", Name: "Croatian"}
-	languages["cs"] = LanguageInfo{Code: "cs", Name: "Czech"}
-	languages["da"] = LanguageInfo{Code: "da", Name: "Danish"}
-	languages["nl"] = LanguageInfo{Code: "nl", Name: "Dutch"}
-	languages["eo"] = LanguageInfo{Code: "eo", Name: "Esperanto"}
-	languages["et"] = LanguageInfo{Code: "et", Name: "Estonian"}
-	languages["fi"] = LanguageInfo{Code: "fi", Name: "Finnish"}
-	languages["fy"] = LanguageInfo{Code: "fy", Name: "Frisian"}
-	languages["gl"] = LanguageInfo{Code: "gl", Name: "Galician"}
-	languages["ka"] = LanguageInfo{Code: "ka", Name: "Georgian"}
-	languages["el"] = LanguageInfo{Code: "el", Name: "Greek"}
-	languages["gu"] = LanguageInfo{Code: "gu", Name: "Gujarati"}
-	languages["ht"] = LanguageInfo{Code: "ht", Name: "Haitian Creole"}
-	languages["ha"] = LanguageInfo{Code: "ha", Name: "Hausa"}
-	languages["haw"] = LanguageInfo{Code: "haw", Name: "Hawaiian"}
-	languages["he"] = LanguageInfo{Code: "he", Name: "Hebrew"}
-	languages["hi"] = LanguageInfo{Code: "hi", Name: "Hindi"}
-	languages["hmn"] = LanguageInfo{Code: "hmn", Name: "Hmong"}
-	languages["hu"] = LanguageInfo{Code: "hu", Name: "Hungarian"}
-	languages["is"] = LanguageInfo{Code: "is", Name: "Icelandic"}
-	languages["ig"] = LanguageInfo{Code: "ig", Name: "Igbo"}
-	languages["id"] = LanguageInfo{Code: "id", Name: "Indonesian"}
-	languages["ga"] = LanguageInfo{Code: "ga", Name: "Irish"}
-	languages["jw"] = LanguageInfo{Code: "jw", Name: "Javanese"}
-	languages["kn"] = LanguageInfo{Code: "kn", Name: "Kannada"}
-	languages["kk"] = LanguageInfo{Code: "kk", Name: "Kazakh"}
-	languages["km"] = LanguageInfo{Code: "km", Name: "Khmer"}
-	languages["ku"] = LanguageInfo{Code: "ku", Name: "Kurdish"}
-	languages["ky"] = LanguageInfo{Code: "ky", Name: "Kyrgyz"}
-	languages["lo"] = LanguageInfo{Code: "lo", Name: "Lao"}
-	languages["la"] = LanguageInfo{Code: "la", Name: "Latin"}
-	languages["lv"] = LanguageInfo{Code: "lv", Name: "Latvian"}
-	languages["lt"] = LanguageInfo{Code: "lt", Name: "Lithuanian"}
-	languages["lb"] = LanguageInfo{Code: "lb", Name: "Luxembourgish"}
-	languages["mk"] = LanguageInfo{Code: "mk", Name: "Macedonian"}
-	languages["mg"] = LanguageInfo{Code: "mg", Name: "Malagasy"}
-	languages["ms"] = LanguageInfo{Code: "ms", Name: "Malay"}
-	languages["ml"] = LanguageInfo{Code: "ml", Name: "Malayalam"}
-	languages["mt"] = LanguageInfo{Code: "mt", Name: "Maltese"}
-	languages["mi"] = LanguageInfo{Code: "mi", Name: "Maori"}
-	languages["mr"] = LanguageInfo{Code: "mr", Name: "Marathi"}
-	languages["mn"] = LanguageInfo{Code: "mn", Name: "Mongolian"}
-	languages["my"] = LanguageInfo{Code: "my", Name: "Myanmar (Burmese)"}
-	languages["ne"] = LanguageInfo{Code: "ne", Name: "Nepali"}
-	languages["no"] = LanguageInfo{Code: "no", Name: "Norwegian"}
-	languages["ny"] = LanguageInfo{Code: "ny", Name: "Nyanja (Chichewa)"}
-	languages["ps"] = LanguageInfo{Code: "ps", Name: "Pashto"}
-	languages["fa"] = LanguageInfo{Code: "fa", Name: "Persian"}
-	languages["pl"] = LanguageInfo{Code: "pl", Name: "Polish"}
-	languages["pt-br"] = LanguageInfo{Code: "pt-BR", Name: "Portuguese (Brazil)"}
-	languages["pt-pt"] = LanguageInfo{Code: "pt-PT", Name: "Portuguese (Portugal)"}
-	languages["pa"] = LanguageInfo{Code: "pa", Name: "Punjabi"}
-	languages["ro"] = LanguageInfo{Code: "ro", Name: "Romanian"}
-	languages["sm"] = LanguageInfo{Code: "sm", Name: "Samoan"}
-	languages["gd"] = LanguageInfo{Code: "gd", Name: "Scots Gaelic"}
-	languages["sr"] = LanguageInfo{Code: "sr", Name: "Serbian"}
-	languages["st"] = LanguageInfo{Code: "st", Name: "Sesotho"}
-	languages["sn"] = LanguageInfo{Code: "sn", Name: "Shona"}
-	languages["sd"] = LanguageInfo{Code: "sd", Name: "Sindhi"}
-	languages["si"] = LanguageInfo{Code: "si", Name: "Sinhala (Sinhalese)"}
-	languages["sk"] = LanguageInfo{Code: "sk", Name: "Slovak"}
-	languages["sl"] = LanguageInfo{Code: "sl", Name: "Slovenian"}
-	languages["so"] = LanguageInfo{Code: "so", Name: "Somali"}
-	languages["su"] = LanguageInfo{Code: "su", Name: "Sundanese"}
-	languages["sw"] = LanguageInfo{Code: "sw", Name: "Swahili"}
-	languages["sv"] = LanguageInfo{Code: "sv", Name: "Swedish"}
-	languages["tl"] = LanguageInfo{Code: "tl", Name: "Tagalog (Filipino)"}
-	languages["tg"] = LanguageInfo{Code: "tg", Name: "Tajik"}
-	languages["ta"] = LanguageInfo{Code: "ta", Name: "Tamil"}
-	languages["te"] = LanguageInfo{Code: "te", Name: "Telugu"}
-	languages["th"] = LanguageInfo{Code: "th", Name: "Thai"}
-	languages["tr"] = LanguageInfo{Code: "tr", Name: "Turkish"}
-	languages["uk"] = LanguageInfo{Code: "uk", Name: "Ukrainian"}
-	languages["ur"] = LanguageInfo{Code: "ur", Name: "Urdu"}
-	languages["uz"] = LanguageInfo{Code: "uz", Name: "Uzbek"}
-	languages["vi"] = LanguageInfo{Code: "vi", Name: "Vietnamese"}
-	languages["cy"] = LanguageInfo{Code: "cy", Name: "Welsh"}
-	languages["xh"] = LanguageInfo{Code: "xh", Name: "Xhosa"}
-	languages["yi"] = LanguageInfo{Code: "yi", Name: "Yiddish"}
-	languages["yo"] = LanguageInfo{Code: "yo", Name: "Yoruba"}
-	languages["zu"] = LanguageInfo{Code: "zu", Name: "Zulu"}
 
 	return languages
+}
+
+// generateToken 生成翻译token
+func generateToken(query string) string {
+	// 实现TypeScript中的token生成逻辑
+	tkkSplited := strings.Split(googleTranslateTKK, ".")
+	tkkIndex, _ := strconv.Atoi(tkkSplited[0])
+	tkkKey, _ := strconv.Atoi(tkkSplited[1])
+
+	// 转换查询字符串为字节数组
+	bytesArray := transformQuery(query)
+
+	// 计算hash
+	encodingRound := tkkIndex
+	for _, b := range bytesArray {
+		encodingRound += int(b)
+		encodingRound = shiftLeftOrRightThenSumOrXor(encodingRound, "+-a^+6")
+	}
+	encodingRound = shiftLeftOrRightThenSumOrXor(encodingRound, "+-3^+b+-f")
+
+	encodingRound ^= tkkKey
+	if encodingRound <= 0 {
+		encodingRound = (encodingRound & 2147483647) + 2147483648
+	}
+
+	normalizedResult := encodingRound % 1000000
+	return fmt.Sprintf("%d.%d", normalizedResult, normalizedResult^tkkIndex)
+}
+
+// transformQuery 转换查询字符串
+func transformQuery(query string) []byte {
+	var bytesArray []byte
+	runes := []rune(query)
+
+	for i := 0; i < len(runes); i++ {
+		charCode := int(runes[i])
+
+		if charCode < 128 {
+			bytesArray = append(bytesArray, byte(charCode))
+		} else if charCode < 2048 {
+			bytesArray = append(bytesArray, byte((charCode>>6)|192))
+			bytesArray = append(bytesArray, byte((charCode&63)|128))
+		} else {
+			if (charCode&64512) == 55296 && i+1 < len(runes) && (int(runes[i+1])&64512) == 56320 {
+				charCode = 65536 + ((charCode & 1023) << 10) + (int(runes[i+1]) & 1023)
+				i++
+				bytesArray = append(bytesArray, byte((charCode>>18)|240))
+				bytesArray = append(bytesArray, byte(((charCode>>12)&63)|128))
+			} else {
+				bytesArray = append(bytesArray, byte((charCode>>12)|224))
+			}
+			bytesArray = append(bytesArray, byte(((charCode>>6)&63)|128))
+			bytesArray = append(bytesArray, byte((charCode&63)|128))
+		}
+	}
+
+	return bytesArray
+}
+
+// shiftLeftOrRightThenSumOrXor 位运算操作
+func shiftLeftOrRightThenSumOrXor(num int, optString string) int {
+	for i := 0; i < len(optString)-2; i += 3 {
+		acc := int(optString[i+2])
+		if acc >= 'a' {
+			acc = acc - 87
+		} else {
+			acc = acc - '0'
+		}
+
+		if optString[i+1] == '+' {
+			acc = num >> uint(acc)
+		} else {
+			acc = num << uint(acc)
+		}
+
+		if optString[i] == '+' {
+			num = (num + acc) & 4294967295
+		} else {
+			num ^= acc
+		}
+	}
+	return num
 }
 
 // SetTimeout 设置请求超时时间
@@ -181,248 +149,100 @@ func (t *GoogleTranslator) SetTimeout(timeout time.Duration) {
 	t.httpClient.Timeout = timeout
 }
 
-// SetGoogleHost 设置Google主机
-func (t *GoogleTranslator) SetGoogleHost(host string) {
-	t.GoogleHost = host
-}
-
 // Translate 使用Go语言提供的标准语言标签进行文本翻译
 func (t *GoogleTranslator) Translate(text string, from language.Tag, to language.Tag) (string, error) {
-	return t.translate(text, from.String(), to.String(), false)
+	return t.translate(text, from.String(), to.String())
 }
 
 // TranslateWithParams 使用简单字符串参数进行文本翻译
 func (t *GoogleTranslator) TranslateWithParams(text string, params TranslationParams) (string, error) {
-	// 设置超时时间（如果有指定）
 	if params.Timeout > 0 {
 		t.SetTimeout(params.Timeout)
 	}
-
-	return t.translate(text, params.From, params.To, true)
+	return t.translate(text, params.From, params.To)
 }
 
-// translate 执行实际翻译操作
-func (t *GoogleTranslator) translate(text, from, to string, withVerification bool) (string, error) {
-	if withVerification {
-		if _, err := language.Parse(from); err != nil && from != "auto" {
-			log.Println("[WARNING], '" + from + "' is a invalid language, switching to 'auto'")
-			from = "auto"
-		}
-		if _, err := language.Parse(to); err != nil {
-			log.Println("[WARNING], '" + to + "' is a invalid language, switching to 'en'")
-			to = "en"
-		}
+// translate 执行实际翻译操作（带token版本）
+func (t *GoogleTranslator) translate(text, from, to string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), t.Timeout)
+	defer cancel()
+
+	// 生成token
+	token := generateToken(text)
+
+	// 构建请求URL
+	apiURL := "https://translate.google.com/translate_a/single"
+	params := url.Values{}
+	params.Set("client", "t")
+	params.Set("sl", from)
+	params.Set("tl", to)
+	params.Set("hl", to)
+	params.Set("ie", "UTF-8")
+	params.Set("oe", "UTF-8")
+	params.Set("otf", "1")
+	params.Set("ssel", "0")
+	params.Set("tsel", "0")
+	params.Set("kc", "7")
+	params.Set("q", text)
+	params.Set("tk", token)
+
+	// 添加dt参数
+	dtParams := []string{"at", "bd", "ex", "ld", "md", "qca", "rw", "rm", "ss", "t"}
+	for _, dt := range dtParams {
+		params.Add("dt", dt)
 	}
 
-	textValue, _ := otto.ToValue(text)
-	urlStr := fmt.Sprintf("https://translate.%s/translate_a/single", t.GoogleHost)
-	token := t.getToken(textValue)
+	fullURL := apiURL + "?" + params.Encode()
 
-	data := map[string]string{
-		"client": "gtx",
-		"sl":     from,
-		"tl":     to,
-		"hl":     to,
-		"ie":     "UTF-8",
-		"oe":     "UTF-8",
-		"otf":    "1",
-		"ssel":   "0",
-		"tsel":   "0",
-		"kc":     "7",
-		"q":      text,
-	}
-
-	u, err := url.Parse(urlStr)
+	// 创建请求
+	req, err := http.NewRequestWithContext(ctx, "GET", fullURL, nil)
 	if err != nil {
 		return "", err
 	}
 
-	parameters := url.Values{}
-	for k, v := range data {
-		parameters.Add(k, v)
-	}
-	for _, v := range []string{"at", "bd", "ex", "ld", "md", "qca", "rw", "rm", "ss", "t"} {
-		parameters.Add("dt", v)
-	}
-
-	parameters.Add("tk", token)
-	u.RawQuery = parameters.Encode()
-
-	req, err := http.NewRequest("GET", u.String(), nil)
-	if err != nil {
-		return "", err
-	}
-
-	r, err := t.httpClient.Do(req)
-	if err != nil {
-		if errors.Is(err, http.ErrHandlerTimeout) {
-			return "", ErrBadNetwork
-		}
-		return "", err
-	}
-
-	if r.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("API error: status code %d", r.StatusCode)
-	}
-
-	raw, err := io.ReadAll(r.Body)
-	if err != nil {
-		return "", err
-	}
-	defer r.Body.Close()
-
-	var resp []interface{}
-	err = json.Unmarshal(raw, &resp)
-	if err != nil {
-		return "", err
-	}
-
-	responseText := ""
-	for _, obj := range resp[0].([]interface{}) {
-		if len(obj.([]interface{})) == 0 {
-			break
-		}
-
-		t, ok := obj.([]interface{})[0].(string)
-		if ok {
-			responseText += t
-		}
-	}
-
-	return responseText, nil
-}
-
-// getToken 获取翻译API所需的token
-func (t *GoogleTranslator) getToken(text otto.Value) string {
-	ttk, err := t.updateTTK()
-	if err != nil {
-		return ""
-	}
-
-	tk, err := t.generateToken(text, ttk)
-	if err != nil {
-		return ""
-	}
-
-	return strings.Replace(tk.String(), "&tk=", "", -1)
-}
-
-// updateTTK 更新TTK值
-func (t *GoogleTranslator) updateTTK() (otto.Value, error) {
-	timestamp := time.Now().UnixNano() / 3600000
-	now := math.Floor(float64(timestamp))
-	ttk, err := strconv.ParseFloat(t.ttk.String(), 64)
-	if err != nil {
-		return otto.UndefinedValue(), err
-	}
-
-	if ttk == now {
-		return t.ttk, nil
-	}
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("https://translate.%s", t.GoogleHost), nil)
-	if err != nil {
-		return otto.UndefinedValue(), err
-	}
-
+	// 发送请求
 	resp, err := t.httpClient.Do(req)
 	if err != nil {
-		return otto.UndefinedValue(), err
+		return "", ErrBadNetwork
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("API error: status code %d", resp.StatusCode)
+	}
+
+	// 读取响应
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return otto.UndefinedValue(), err
+		return "", err
 	}
 
-	matches := regexp.MustCompile(`tkk:\s?'(.+?)'`).FindStringSubmatch(string(body))
-	if len(matches) > 0 {
-		v, err := otto.ToValue(matches[0])
-		if err != nil {
-			return otto.UndefinedValue(), err
-		}
-		t.ttk = v
-		return v, nil
+	// 解析JSON响应
+	var result []interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
 	}
 
-	return t.ttk, nil
-}
-
-// generateToken 生成翻译API所需的token
-func (t *GoogleTranslator) generateToken(a otto.Value, TTK otto.Value) (otto.Value, error) {
-	err := t.vm.Set("x", a)
-	if err != nil {
-		return otto.UndefinedValue(), err
+	if len(result) == 0 {
+		return "", errors.New("unexpected response format")
 	}
 
-	_ = t.vm.Set("internalTTK", TTK)
+	// 提取翻译文本
+	translations, ok := result[0].([]interface{})
+	if !ok {
+		return "", errors.New("unexpected response format")
+	}
 
-	result, err := t.vm.Run(`
-		function sM(a) {
-			var b;
-			if (null !== yr)
-				b = yr;
-			else {
-				b = wr(String.fromCharCode(84));
-				var c = wr(String.fromCharCode(75));
-				b = [b(), b()];
-				b[1] = c();
-				b = (yr = window[b.join(c())] || "") || ""
-			}
-			var d = wr(String.fromCharCode(116))
-				, c = wr(String.fromCharCode(107))
-				, d = [d(), d()];
-			d[1] = c();
-			c = "&" + d.join("") + "=";
-			d = b.split(".");
-			b = Number(d[0]) || 0;
-			for (var e = [], f = 0, g = 0; g < a.length; g++) {
-				var l = a.charCodeAt(g);
-				128 > l ? e[f++] = l : (2048 > l ? e[f++] = l >> 6 | 192 : (55296 == (l & 64512) && g + 1 < a.length && 56320 == (a.charCodeAt(g + 1) & 64512) ? (l = 65536 + ((l & 1023) << 10) + (a.charCodeAt(++g) & 1023),
-					e[f++] = l >> 18 | 240,
-					e[f++] = l >> 12 & 63 | 128) : e[f++] = l >> 12 | 224,
-					e[f++] = l >> 6 & 63 | 128),
-					e[f++] = l & 63 | 128)
-			}
-			a = b;
-			for (f = 0; f < e.length; f++)
-				a += e[f],
-					a = xr(a, "+-a^+6");
-			a = xr(a, "+-3^+b+-f");
-			a ^= Number(d[1]) || 0;
-			0 > a && (a = (a & 2147483647) + 2147483648);
-			a %= 1E6;
-			return c + (a.toString() + "." + (a ^ b))
-		}
-
-		var yr = null;
-		var wr = function(a) {
-			return function() {
-				return a
+	var translatedText strings.Builder
+	for _, translation := range translations {
+		if chunk, ok := translation.([]interface{}); ok && len(chunk) > 0 {
+			if text, ok := chunk[0].(string); ok {
+				translatedText.WriteString(text)
 			}
 		}
-			, xr = function(a, b) {
-			for (var c = 0; c < b.length - 2; c += 3) {
-				var d = b.charAt(c + 2)
-					, d = "a" <= d ? d.charCodeAt(0) - 87 : Number(d)
-					, d = "+" == b.charAt(c + 1) ? a >>> d : a << d;
-				a = "+" == b.charAt(c) ? a + d & 4294967295 : a ^ d
-			}
-			return a
-		};
-		
-		var window = {
-			TKK: internalTTK
-		};
-
-		sM(x)
-	`)
-	if err != nil {
-		return otto.UndefinedValue(), err
 	}
 
-	return result, nil
+	return translatedText.String(), nil
 }
 
 // GetSupportedLanguages 获取翻译器支持的语言列表
@@ -436,8 +256,24 @@ func (t *GoogleTranslator) IsLanguageSupported(languageCode string) bool {
 	return ok
 }
 
-// GetStandardLanguageCode 获取标准化的语言代码
-func (t *GoogleTranslator) GetStandardLanguageCode(languageCode string) string {
-	// 简单返回小写版本作为标准代码
-	return strings.ToLower(languageCode)
+// visitArrayItems 递归访问数组项
+func visitArrayItems(arr []interface{}, visitor func(interface{})) {
+	for _, obj := range arr {
+		if subArr, ok := obj.([]interface{}); ok {
+			visitArrayItems(subArr, visitor)
+		} else {
+			visitor(obj)
+		}
+	}
+}
+
+// GetSupportedLanguages 获取翻译器支持的语言列表
+func (t *GoogleTranslatorTokenFree) GetSupportedLanguages() map[string]LanguageInfo {
+	return t.languages
+}
+
+// IsLanguageSupported 检查指定的语言代码是否受支持
+func (t *GoogleTranslatorTokenFree) IsLanguageSupported(languageCode string) bool {
+	_, ok := t.languages[strings.ToLower(languageCode)]
+	return ok
 }
