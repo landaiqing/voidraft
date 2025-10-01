@@ -26,10 +26,10 @@ onMounted(async () => {
 
   // 从URL查询参数中获取documentId
   const urlDocumentId = windowStore.currentDocumentId ? parseInt(windowStore.currentDocumentId) : undefined;
-  
+
   // 初始化文档存储，优先使用URL参数中的文档ID
   await documentStore.initialize(urlDocumentId);
-  
+
   // 设置编辑器容器
   editorStore.setEditorContainer(editorElement.value);
 
@@ -42,12 +42,14 @@ onBeforeUnmount(() => {
   if (editorElement.value) {
     editorElement.value.removeEventListener('wheel', wheelHandler);
   }
+  editorStore.clearAllEditors();
+
 });
 </script>
 
 <template>
   <div class="editor-container">
-    <LoadingScreen v-if="editorStore.isLoading && configStore.config.general?.enableLoadingAnimation" text="VOIDRAFT" />
+    <LoadingScreen v-if="editorStore.isLoading && configStore.config.general?.enableLoadingAnimation" text="VOIDRAFT"/>
     <div ref="editorElement" class="editor"></div>
     <Toolbar/>
   </div>

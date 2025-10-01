@@ -38,9 +38,6 @@ export interface CodeBlockOptions {
 
     /** 新建块时的默认语言 */
     defaultLanguage?: SupportedLanguage;
-
-    /** 新建块时是否默认启用自动检测（添加-a标记） */
-    defaultAutoDetect?: boolean;
 }
 
 /**
@@ -87,7 +84,6 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         showBackground = true,
         enableAutoDetection = true,
         defaultLanguage = 'text',
-        defaultAutoDetect = true,
     } = options;
 
     return [

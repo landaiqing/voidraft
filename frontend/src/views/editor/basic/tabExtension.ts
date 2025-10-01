@@ -16,7 +16,7 @@ export const tabHandler = (view: EditorView, tabSize: number, tabType: TabType):
   }
   
   // 根据tabType创建缩进字符
-  const indent = tabType === 'spaces' ? ' '.repeat(tabSize) : '\t';
+  const indent = tabType === TabType.TabTypeSpaces ? ' '.repeat(tabSize) : '\t';
   
   // 在光标位置插入缩进字符
   const {state, dispatch} = view;
@@ -29,7 +29,7 @@ export const getTabExtensions = (tabSize: number, enableTabIndent: boolean, tabT
   const extensions: Extension[] = [];
   
   // 根据tabType设置缩进单位
-  const indentStr = tabType === 'spaces' ? ' '.repeat(tabSize) : '\t';
+  const indentStr = tabType === TabType.TabTypeSpaces ? ' '.repeat(tabSize) : '\t';
   extensions.push(tabSizeCompartment.of(indentUnit.of(indentStr)));
   
   // 如果启用了Tab缩进，添加自定义Tab键映射
@@ -59,7 +59,7 @@ export const updateTabConfig = (
   if (!view) return;
   
   // 根据tabType更新indentUnit配置
-  const indentStr = tabType === 'spaces' ? ' '.repeat(tabSize) : '\t';
+  const indentStr = tabType === TabType.TabTypeSpaces ? ' '.repeat(tabSize) : '\t';
   view.dispatch({
     effects: tabSizeCompartment.reconfigure(indentUnit.of(indentStr))
   });
