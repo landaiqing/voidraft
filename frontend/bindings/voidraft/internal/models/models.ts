@@ -486,6 +486,11 @@ export class GeneralConfig {
      */
     "enableLoadingAnimation": boolean;
 
+    /**
+     * 是否启用标签页模式
+     */
+    "enableTabs": boolean;
+
     /** Creates a new GeneralConfig instance. */
     constructor($$source: Partial<GeneralConfig> = {}) {
         if (!("alwaysOnTop" in $$source)) {
@@ -511,6 +516,9 @@ export class GeneralConfig {
         }
         if (!("enableLoadingAnimation" in $$source)) {
             this["enableLoadingAnimation"] = false;
+        }
+        if (!("enableTabs" in $$source)) {
+            this["enableTabs"] = false;
         }
 
         Object.assign(this, $$source);

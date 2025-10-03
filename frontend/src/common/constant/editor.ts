@@ -9,5 +9,5 @@ export const EDITOR_CONFIG = {
   /** 语法树缓存过期时间（毫秒） */
   SYNTAX_TREE_CACHE_TIMEOUT: 30000,
   /** 加载状态延迟时间（毫秒） */
-  LOADING_DELAY: 800,
+  LOADING_DELAY: 500,
 } as const;

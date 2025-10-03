@@ -32,8 +32,8 @@ CREATE TABLE IF NOT EXISTS documents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
     content TEXT DEFAULT '∞∞∞text-a',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
     is_deleted INTEGER DEFAULT 0,
     is_locked INTEGER DEFAULT 0
 )`
@@ -45,8 +45,8 @@ CREATE TABLE IF NOT EXISTS extensions (
     enabled INTEGER NOT NULL DEFAULT 1,
     is_default INTEGER NOT NULL DEFAULT 0,
     config TEXT DEFAULT '{}',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
 )`
 
 	// Key bindings table
@@ -58,8 +58,8 @@ CREATE TABLE IF NOT EXISTS key_bindings (
     key TEXT NOT NULL,
     enabled INTEGER NOT NULL DEFAULT 1,
     is_default INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
     UNIQUE(command, extension)
 )`
 
@@ -71,8 +71,8 @@ CREATE TABLE IF NOT EXISTS themes (
     type TEXT NOT NULL,
     colors TEXT NOT NULL,
     is_default INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
     UNIQUE(type, is_default)
 )`
 )

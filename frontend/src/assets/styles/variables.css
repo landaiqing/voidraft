@@ -8,6 +8,7 @@
   --dark-toolbar-text: #ffffff;
   --dark-toolbar-text-secondary: #cccccc;
   --dark-toolbar-button-hover: #404040;
+  --dark-tab-active-line: linear-gradient(90deg, #007acc 0%, #0099ff 100%);
   --dark-bg-secondary: #0E1217;
   --dark-text-secondary: #a0aec0;
   --dark-text-muted: #666;
@@ -40,6 +41,7 @@
   --light-toolbar-text: #212529;
   --light-toolbar-text-secondary: #495057;
   --light-toolbar-button-hover: #e9ecef;
+  --light-tab-active-line: linear-gradient(90deg, #0066cc 0%, #0088ff 100%);
   --light-bg-secondary: #f7fef7;
   --light-text-secondary: #374151;
   --light-text-muted: #6b7280;
@@ -73,6 +75,7 @@
   --toolbar-text-secondary: var(--dark-toolbar-text-secondary);
   --toolbar-button-hover: var(--dark-toolbar-button-hover);
   --toolbar-separator: var(--dark-toolbar-button-hover);
+  --tab-active-line: var(--dark-tab-active-line);
   --bg-secondary: var(--dark-bg-secondary);
   --text-secondary: var(--dark-text-secondary);
   --text-muted: var(--dark-text-muted);
@@ -112,6 +115,7 @@
     --toolbar-text-secondary: var(--dark-toolbar-text-secondary);
     --toolbar-button-hover: var(--dark-toolbar-button-hover);
     --toolbar-separator: var(--dark-toolbar-button-hover);
+    --tab-active-line: var(--dark-tab-active-line);
     --bg-secondary: var(--dark-bg-secondary);
     --text-secondary: var(--dark-text-secondary);
     --text-muted: var(--dark-text-muted);
@@ -149,6 +153,7 @@
     --toolbar-text-secondary: var(--light-toolbar-text-secondary);
     --toolbar-button-hover: var(--light-toolbar-button-hover);
     --toolbar-separator: var(--light-toolbar-button-hover);
+    --tab-active-line: var(--light-tab-active-line);
     --bg-secondary: var(--light-bg-secondary);
     --text-secondary: var(--light-text-secondary);
     --text-muted: var(--light-text-muted);
@@ -185,6 +190,7 @@
   --toolbar-text-secondary: var(--light-toolbar-text-secondary);
   --toolbar-button-hover: var(--light-toolbar-button-hover);
   --toolbar-separator: var(--light-toolbar-button-hover);
+  --tab-active-line: var(--light-tab-active-line);
   --bg-secondary: var(--light-bg-secondary);
   --text-secondary: var(--light-text-secondary);
   --text-muted: var(--light-text-muted);
@@ -220,6 +226,7 @@
   --toolbar-text-secondary: var(--dark-toolbar-text-secondary);
   --toolbar-button-hover: var(--dark-toolbar-button-hover);
   --toolbar-separator: var(--dark-toolbar-button-hover);
+  --tab-active-line: var(--dark-tab-active-line);
   --bg-secondary: var(--dark-bg-secondary);
   --text-secondary: var(--dark-text-secondary);
   --text-muted: var(--dark-text-muted);

@@ -177,12 +177,12 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 	}
 
 	// Create document with default content
-	now := time.Now()
+	now := time.Now().Format("2006-01-02 15:04:05")
 	doc := &models.Document{
 		Title:     title,
 		Content:   "∞∞∞text-a\n",
-		CreatedAt: now.String(),
-		UpdatedAt: now.String(),
+		CreatedAt: now,
+		UpdatedAt: now,
 		IsDeleted: false,
 		IsLocked:  false,
 	}

@@ -1,134 +1,111 @@
 <template>
-  <div class="tab-container" style="--wails-draggable:no-drag">
+  <div class="tab-container" style="--wails-draggable:drag">
     <div class="tab-bar" ref="tabBarRef">
-      <div class="tab-scroll-wrapper" ref="tabScrollWrapperRef" style="--wails-draggable:no-drag" @wheel.prevent.stop="onWheelScroll">
+      <div class="tab-scroll-wrapper" ref="tabScrollWrapperRef" style="--wails-draggable:drag" @wheel.prevent.stop="onWheelScroll">
         <div class="tab-list" ref="tabListRef">
           <TabItem
-            v-for="tab in mockTabs"
-            :key="tab.id"
+            v-for="tab in tabStore.tabs"
+            :key="tab.documentId"
             :tab="tab"
-            :is-active="tab.id === activeTabId"
-            @click="switchToTab(tab.id)"
-            @close="closeTab(tab.id)"
-            @dragstart="onDragStart($event, tab.id)"
+            :isActive="tab.documentId === tabStore.currentDocumentId"
+            :canClose="tabStore.canCloseTab"
+            @click="switchToTab"
+            @close="closeTab"
+            @dragstart="onDragStart"
             @dragover="onDragOver"
-            @drop="onDrop($event, tab.id)"
+            @drop="onDrop"
+            @contextmenu="onContextMenu"
           />
         </div>
       </div>
-      
-
     </div>
     
-    <!-- 右键菜单占位 -->
-    <div v-if="showContextMenu" class="context-menu-placeholder">
-      <!-- 这里将来会放置 TabContextMenu 组件 -->
-    </div>
+    <!-- 右键菜单 -->
+    <TabContextMenu
+      :visible="showContextMenu"
+      :position="contextMenuPosition"
+      :targetDocumentId="contextMenuTargetId"
+      @close="closeContextMenu"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import TabItem from './TabItem.vue';
+import TabContextMenu from './TabContextMenu.vue';
+import { useTabStore } from '@/stores/tabStore';
 
-// 模拟数据接口
-interface MockTab {
-  id: number;
-  title: string;
-  isDirty: boolean;
-  isActive: boolean;
-  documentId: number;
-}
-
-// 模拟标签页数据
-const mockTabs = ref<MockTab[]>([
-  { id: 1, title: 'Document 1', isDirty: false, isActive: true, documentId: 1 },
-  { id: 2, title: 'Long Document Name Example', isDirty: true, isActive: false, documentId: 2 },
-  { id: 3, title: 'README.md', isDirty: false, isActive: false, documentId: 3 },
-  { id: 4, title: 'config.json', isDirty: true, isActive: false, documentId: 4 },
-  { id: 5, title: 'Another Very Long Document Title', isDirty: false, isActive: false, documentId: 5 },
-  { id: 6, title: 'package.json', isDirty: false, isActive: false, documentId: 6 },
-  { id: 7, title: 'index.html', isDirty: true, isActive: false, documentId: 7 },
-  { id: 8, title: 'styles.css', isDirty: false, isActive: false, documentId: 8 },
-  { id: 9, title: 'main.js', isDirty: false, isActive: false, documentId: 9 },
-  { id: 10, title: 'utils.ts', isDirty: true, isActive: false, documentId: 10 },
-]);
-
-const activeTabId = ref(1);
-const showContextMenu = ref(false);
+const tabStore = useTabStore();
 
 // DOM 引用
 const tabBarRef = ref<HTMLElement>();
 const tabListRef = ref<HTMLElement>();
-// 新增：滚动容器引用
 const tabScrollWrapperRef = ref<HTMLDivElement | null>(null);
 
-// 拖拽状态
-let draggedTabId: number | null = null;
+// 右键菜单状态
+const showContextMenu = ref(false);
+const contextMenuPosition = ref({ x: 0, y: 0 });
+const contextMenuTargetId = ref<number | null>(null);
 
-// 切换标签页
-const switchToTab = (tabId: number) => {
-  activeTabId.value = tabId;
-  mockTabs.value.forEach(tab => {
-    tab.isActive = tab.id === tabId;
-  });
-  console.log('Switch to tab:', tabId);
+
+// 标签页操作
+const switchToTab = (documentId: number) => {
+  tabStore.switchToTabAndDocument(documentId);
 };
 
-// 关闭标签页
-const closeTab = (tabId: number) => {
-  const index = mockTabs.value.findIndex(tab => tab.id === tabId);
-  if (index === -1) return;
-  
-  mockTabs.value.splice(index, 1);
-  
-  // 如果关闭的是活跃标签页，切换到其他标签页
-  if (activeTabId.value === tabId && mockTabs.value.length > 0) {
-    const nextTab = mockTabs.value[Math.max(0, index - 1)];
-    switchToTab(nextTab.id);
-  }
-  
-  console.log('Close tab:', tabId);
+const closeTab = (documentId: number) => {
+  tabStore.closeTab(documentId);
 };
 
-// 拖拽开始
-const onDragStart = (event: DragEvent, tabId: number) => {
-  draggedTabId = tabId;
-  event.dataTransfer?.setData('text/plain', tabId.toString());
-  console.log('Drag start:', tabId);
+// 拖拽操作
+const onDragStart = (event: DragEvent, documentId: number) => {
+  tabStore.draggedTabId = documentId;
+  event.dataTransfer!.effectAllowed = 'move';
 };
 
-// 拖拽悬停
 const onDragOver = (event: DragEvent) => {
   event.preventDefault();
+  event.dataTransfer!.dropEffect = 'move';
 };
 
-// 拖拽放置
-const onDrop = (event: DragEvent, targetTabId: number) => {
+const onDrop = (event: DragEvent, targetDocumentId: number) => {
   event.preventDefault();
   
-  if (draggedTabId && draggedTabId !== targetTabId) {
-    const draggedIndex = mockTabs.value.findIndex(tab => tab.id === draggedTabId);
-    const targetIndex = mockTabs.value.findIndex(tab => tab.id === targetTabId);
+  if (tabStore.draggedTabId && tabStore.draggedTabId !== targetDocumentId) {
+    const draggedIndex = tabStore.getTabIndex(tabStore.draggedTabId);
+    const targetIndex = tabStore.getTabIndex(targetDocumentId);
     
     if (draggedIndex !== -1 && targetIndex !== -1) {
-      const draggedTab = mockTabs.value.splice(draggedIndex, 1)[0];
-      mockTabs.value.splice(targetIndex, 0, draggedTab);
-      console.log('Reorder tabs:', draggedTabId, 'to position of', targetTabId);
+      tabStore.moveTab(draggedIndex, targetIndex);
     }
   }
   
-  draggedTabId = null;
+  tabStore.draggedTabId = null;
 };
 
+// 右键菜单操作
+const onContextMenu = (event: MouseEvent, documentId: number) => {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  contextMenuPosition.value = { x: event.clientX, y: event.clientY };
+  contextMenuTargetId.value = documentId;
+  showContextMenu.value = true;
+};
 
+const closeContextMenu = () => {
+  showContextMenu.value = false;
+  contextMenuTargetId.value = null;
+};
+
+// 滚轮滚动处理
 const onWheelScroll = (event: WheelEvent) => {
   const el = tabScrollWrapperRef.value;
   if (!el) return;
   const delta = event.deltaY || event.deltaX || 0;
   el.scrollLeft += delta;
 };
-
 
 onMounted(() => {
   // 组件挂载时的初始化逻辑
@@ -204,18 +181,6 @@ onUnmounted(() => {
     width: 12px;
     height: 12px;
   }
-}
-
-.context-menu-placeholder {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  z-index: 1000;
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 4px 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* 响应式设计 */

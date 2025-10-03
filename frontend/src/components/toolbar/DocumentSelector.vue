@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useDocumentStore } from '@/stores/documentStore';
+import { useTabStore } from '@/stores/tabStore';
 import { useWindowStore } from '@/stores/windowStore';
 import { useI18n } from 'vue-i18n';
 import type { Document } from '@/../bindings/voidraft/internal/models/models';
 
 const documentStore = useDocumentStore();
+const tabStore = useTabStore();
 const windowStore = useWindowStore();
 const { t } = useI18n();
 
@@ -109,7 +111,12 @@ const selectDoc = async (doc: Document) => {
   }
 
   const success = await documentStore.openDocument(doc.id);
-  if (success) closeMenu();
+  if (success) {
+    if (tabStore.isTabsEnabled) {
+      tabStore.addOrActivateTab(doc);
+    }
+    closeMenu();
+  }
 };
 
 const createDoc = async (title: string) => {
@@ -159,6 +166,11 @@ const saveEdit = async () => {
   try {
     await documentStore.updateDocumentMetadata(editingId.value, trimmedTitle);
     await documentStore.getDocumentMetaList();
+    
+    // 如果tabs功能开启且该文档有标签页，更新标签页标题
+    if (tabStore.isTabsEnabled && tabStore.hasTab(editingId.value)) {
+      tabStore.updateTabTitle(editingId.value, trimmedTitle);
+    }
   } catch (error) {
     console.error('Failed to update document:', error);
   } finally {
@@ -472,10 +484,12 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
     border-radius: 3px;
     margin-bottom: 4px;
     width: 260px;
-    //max-height: 320px;
+    max-height: calc(100vh - 40px); // 限制最大高度，留出titlebar空间(32px)和一些边距
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 
     .input-box {
       position: relative;
@@ -513,8 +527,9 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
     }
 
     .item-list {
-      max-height: 240px;
+      max-height: calc(100vh - 100px); // 为输入框和边距预留空间
       overflow-y: auto;
+      flex: 1;
 
       .list-item {
         cursor: pointer;

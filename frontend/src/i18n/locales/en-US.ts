@@ -112,6 +112,14 @@ export default {
       textHighlightToggle: 'Toggle text highlight',
     }
   },
+  tabs: {
+    contextMenu: {
+      closeTab: 'Close Tab',
+      closeOthers: 'Close Others',
+      closeLeft: 'Close Left',
+      closeRight: 'Close Right'
+    }
+  },
   settings: {
     title: 'Settings',
     backToEditor: 'Back to Editor',
@@ -136,6 +144,7 @@ export default {
     alwaysOnTop: 'Always on Top',
     enableWindowSnap: 'Enable Window Snapping',
     enableLoadingAnimation: 'Enable Loading Animation',
+    enableTabs: 'Enable Tabs',
     startup: 'Startup Settings',
     startAtLogin: 'Start at Login',
     dataStorage: 'Data Storage',

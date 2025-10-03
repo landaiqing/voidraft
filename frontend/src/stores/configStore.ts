@@ -4,28 +4,28 @@ import {ConfigService, StartupService} from '@/../bindings/voidraft/internal/ser
 import {
     AppConfig,
     AppearanceConfig,
+    AuthMethod,
     EditingConfig,
     GeneralConfig,
+    GitBackupConfig,
     LanguageType,
     SystemThemeType,
     TabType,
-    UpdatesConfig,
-    GitBackupConfig,
-    AuthMethod
+    UpdatesConfig
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/common/utils/configUtils';
 import {FONT_OPTIONS} from '@/common/constant/fonts';
 import {SUPPORTED_LOCALES} from '@/common/constant/locales';
 import {
-    NumberConfigKey,
-    GENERAL_CONFIG_KEY_MAP,
-    EDITING_CONFIG_KEY_MAP,
     APPEARANCE_CONFIG_KEY_MAP,
-    UPDATES_CONFIG_KEY_MAP,
     BACKUP_CONFIG_KEY_MAP,
     CONFIG_LIMITS,
-    DEFAULT_CONFIG
+    DEFAULT_CONFIG,
+    EDITING_CONFIG_KEY_MAP,
+    GENERAL_CONFIG_KEY_MAP,
+    NumberConfigKey,
+    UPDATES_CONFIG_KEY_MAP
 } from '@/common/constant/config';
 import * as runtime from '@wailsio/runtime';
 
@@ -38,7 +38,7 @@ export const useConfigStore = defineStore('config', () => {
         isLoading: false,
         configLoaded: false
     });
-    
+
     // Font options (no longer localized)
     const fontOptions = computed(() => FONT_OPTIONS);
 
@@ -205,7 +205,6 @@ export const useConfigStore = defineStore('config', () => {
     };
 
 
-
     // 初始化语言设置
     const initializeLanguage = async (): Promise<void> => {
         try {
@@ -255,7 +254,7 @@ export const useConfigStore = defineStore('config', () => {
         configLoaded: computed(() => state.configLoaded),
         isLoading: computed(() => state.isLoading),
         fontOptions,
-        
+
         // 限制常量
         ...limits,
 
@@ -317,19 +316,26 @@ export const useConfigStore = defineStore('config', () => {
             // 再调用系统设置API
             await StartupService.SetEnabled(value);
         },
-        
+
         // 窗口吸附配置相关方法
         setEnableWindowSnap: async (value: boolean) => await updateGeneralConfig('enableWindowSnap', value),
 
         // 加载动画配置相关方法
         setEnableLoadingAnimation: async (value: boolean) => await updateGeneralConfig('enableLoadingAnimation', value),
 
+        // 标签页配置相关方法
+        setEnableTabs: async (value: boolean) => await updateGeneralConfig('enableTabs', value),
+
         // 更新配置相关方法
         setAutoUpdate: async (value: boolean) => await updateUpdatesConfig('autoUpdate', value),
 
         // 备份配置相关方法
-        setEnableBackup: async (value: boolean) => {await updateBackupConfig('enabled', value);},
-        setAutoBackup: async (value: boolean) => {await updateBackupConfig('auto_backup', value);},
+        setEnableBackup: async (value: boolean) => {
+            await updateBackupConfig('enabled', value);
+        },
+        setAutoBackup: async (value: boolean) => {
+            await updateBackupConfig('auto_backup', value);
+        },
         setRepoUrl: async (value: string) => await updateBackupConfig('repo_url', value),
         setAuthMethod: async (value: AuthMethod) => await updateBackupConfig('auth_method', value),
         setUsername: async (value: string) => await updateBackupConfig('username', value),

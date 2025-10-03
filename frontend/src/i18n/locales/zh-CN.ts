@@ -112,6 +112,14 @@ export default {
     textHighlightToggle: '切换文本高亮',
     }
   },
+  tabs: {
+    contextMenu: {
+      closeTab: '关闭标签',
+      closeOthers: '关闭其他',
+      closeLeft: '关闭左侧',
+      closeRight: '关闭右侧'
+    }
+  },
   settings: {
     title: '设置',
     backToEditor: '返回编辑器',
@@ -137,6 +145,7 @@ export default {
     alwaysOnTop: '窗口始终置顶',
     enableWindowSnap: '启用窗口吸附',
     enableLoadingAnimation: '启用加载动画',
+    enableTabs: '启用标签页',
     startup: '启动设置',
     startAtLogin: '开机自启动',
     dataStorage: '数据存储',

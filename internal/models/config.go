@@ -78,6 +78,7 @@ type GeneralConfig struct {
 
 	// 界面设置
 	EnableLoadingAnimation bool `json:"enableLoadingAnimation"` // 是否启用加载动画
+	EnableTabs             bool `json:"enableTabs"`             // 是否启用标签页模式
 }
 
 // HotkeyCombo 热键组合定义
@@ -154,7 +155,8 @@ func NewDefaultAppConfig() *AppConfig {
 			StartAtLogin:           false,
 			EnableWindowSnap:       true, // 默认启用窗口吸附
 			EnableGlobalHotkey:     false,
-			EnableLoadingAnimation: true, // 默认启用加载动画
+			EnableLoadingAnimation: true,  // 默认启用加载动画
+			EnableTabs:             false, // 默认不启用标签页模式
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,
 				Shift: false,
@@ -166,7 +168,7 @@ func NewDefaultAppConfig() *AppConfig {
 		Editing: EditingConfig{
 			// 字体设置
 			FontSize:   13,
-			FontFamily: `"HarmonyOS SC", "HarmonyOS", "Microsoft YaHei", "PingFang SC", "Helvetica Neue", Arial, sans-serif`,
+			FontFamily: `"HarmonyOS"`,
 			FontWeight: "normal",
 			LineHeight: 1.5,
 			// Tab设置

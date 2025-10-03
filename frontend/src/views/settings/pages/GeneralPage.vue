@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {useConfigStore} from '@/stores/configStore';
+import {useTabStore} from '@/stores/tabStore';
 import {useI18n} from 'vue-i18n';
 import {computed, onUnmounted, ref} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -16,7 +17,7 @@ import {useSystemStore} from "@/stores/systemStore";
 const {t} = useI18n();
 const configStore = useConfigStore();
 const systemStore = useSystemStore();
-
+const tabStore = useTabStore();
 // 迁移进度状态
 const migrationProgress = ref<MigrationProgress>(new MigrationProgress({
   status: MigrationStatus.MigrationStatusCompleted,
@@ -169,6 +170,21 @@ const enableWindowSnap = computed({
 const enableLoadingAnimation = computed({
   get: () => configStore.config.general.enableLoadingAnimation,
   set: (value: boolean) => configStore.setEnableLoadingAnimation(value)
+});
+
+// 计算属性 - 启用标签页
+const enableTabs = computed({
+  get: () => configStore.config.general.enableTabs,
+  set: async (value: boolean) => {
+    await configStore.setEnableTabs(value);
+    if (value) {
+      // 开启tabs功能时，初始化当前文档到标签页
+      tabStore.initializeTab();
+    } else {
+      // 关闭tabs功能时，清空所有标签页
+      tabStore.clearAllTabs();
+    }
+  }
 });
 
 // 计算属性 - 开机启动
@@ -351,6 +367,9 @@ onUnmounted(() => {
       </SettingItem>
       <SettingItem :title="t('settings.enableLoadingAnimation')">
         <ToggleSwitch v-model="enableLoadingAnimation"/>
+      </SettingItem>
+      <SettingItem :title="t('settings.enableTabs')">
+        <ToggleSwitch v-model="enableTabs"/>
       </SettingItem>
     </SettingSection>
 
@@ -734,4 +753,4 @@ onUnmounted(() => {
   opacity: 0;
   transform: translateY(-4px);
 }
-</style> 
+</style>

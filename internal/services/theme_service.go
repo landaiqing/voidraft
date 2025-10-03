@@ -62,13 +62,14 @@ func (ts *ThemeService) initializeDefaultThemes() error {
 	}
 
 	// 创建默认深色主题
+	now := time.Now().Format("2006-01-02 15:04:05")
 	darkTheme := &models.Theme{
 		Name:      "Default Dark",
 		Type:      models.ThemeTypeDark,
 		Colors:    *models.NewDefaultDarkTheme(),
 		IsDefault: true,
-		CreatedAt: time.Now().String(),
-		UpdatedAt: time.Now().String(),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	// 创建默认浅色主题
@@ -77,8 +78,8 @@ func (ts *ThemeService) initializeDefaultThemes() error {
 		Type:      models.ThemeTypeLight,
 		Colors:    *models.NewDefaultLightTheme(),
 		IsDefault: true,
-		CreatedAt: time.Now().String(),
-		UpdatedAt: time.Now().String(),
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	// 插入默认主题
@@ -174,7 +175,7 @@ func (ts *ThemeService) UpdateThemeColors(themeType models.ThemeType, colors mod
 	`
 
 	db := ts.getDB()
-	_, err := db.Exec(query, colors, time.Now(), themeType)
+	_, err := db.Exec(query, colors, time.Now().Format("2006-01-02 15:04:05"), themeType)
 	if err != nil {
 		return fmt.Errorf("failed to update theme colors: %w", err)
 	}

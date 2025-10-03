@@ -39,9 +39,10 @@
     
     <!-- 关闭按钮 -->
     <div 
+      v-if="props.canClose"
       class="tab-close"
       @click.stop="handleClose"
-      :title="'关闭标签页'"
+      :title="'Close tab'"
     >
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
@@ -70,25 +71,23 @@ import { computed, ref } from 'vue';
 // 组件属性
 interface TabProps {
   tab: {
-    id: number;
-    title: string;
-    isDirty: boolean;
-    isActive: boolean;
-    documentId: number;
+    documentId: number;  // 直接使用文档ID作为唯一标识
+    title: string;       // 标签页标题
   };
   isActive: boolean;
+  canClose?: boolean; // 是否可以关闭标签页
 }
 
 const props = defineProps<TabProps>();
 
 // 组件事件
 const emit = defineEmits<{
-  click: [tabId: number];
-  close: [tabId: number];
-  dragstart: [event: DragEvent, tabId: number];
+  click: [documentId: number];
+  close: [documentId: number];
+  dragstart: [event: DragEvent, documentId: number];
   dragover: [event: DragEvent];
-  drop: [event: DragEvent, tabId: number];
-  contextmenu: [event: MouseEvent, tabId: number];
+  drop: [event: DragEvent, documentId: number];
+  contextmenu: [event: MouseEvent, documentId: number];
 }>();
 
 // 组件状态
@@ -103,16 +102,16 @@ const displayTitle = computed(() => {
 
 // 事件处理
 const handleClick = () => {
-  emit('click', props.tab.id);
+  emit('click', props.tab.documentId);
 };
 
 const handleClose = () => {
-  emit('close', props.tab.id);
+  emit('close', props.tab.documentId);
 };
 
 const handleDragStart = (event: DragEvent) => {
   isDragging.value = true;
-  emit('dragstart', event, props.tab.id);
+  emit('dragstart', event, props.tab.documentId);
 };
 
 const handleDragOver = (event: DragEvent) => {
@@ -121,7 +120,7 @@ const handleDragOver = (event: DragEvent) => {
 
 const handleDrop = (event: DragEvent) => {
   isDragging.value = false;
-  emit('drop', event, props.tab.id);
+  emit('drop', event, props.tab.documentId);
 };
 
 const handleDragEnd = () => {
@@ -130,7 +129,7 @@ const handleDragEnd = () => {
 
 const handleContextMenu = (event: MouseEvent) => {
   event.preventDefault();
-  emit('contextmenu', event, props.tab.id);
+  emit('contextmenu', event, props.tab.documentId);
 };
 </script>
 
@@ -159,14 +158,36 @@ const handleContextMenu = (event: MouseEvent) => {
   }
   
   &.active {
-    background-color: var(--toolbar-button-hover);
-    border-bottom: 2px solid var(--accent-color);
+    background-color: var(--toolbar-button-active, var(--toolbar-button-hover));
     color: var(--toolbar-text);
-    
+    position: relative;
     .tab-title {
       color: var(--toolbar-text);
-      /* 不用加粗，避免抖动 */
+      font-weight: 600; /* 字体加粗 */
+      text-shadow: 0 0 1px rgba(0, 0, 0, 0.1); /* 轻微阴影增强可读性 */
     }
+    
+    .tab-icon {
+      color: var(--accent-color);
+      filter: brightness(1.1);
+    }
+  }
+
+  /* 底部活跃线条 */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--tab-active-line);
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+  }
+
+  &.active::after {
+    width: 100%;
   }
   
   &.dragging {

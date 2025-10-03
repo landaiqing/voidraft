@@ -46,6 +46,7 @@ export const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     globalHotkey: 'general.globalHotkey',
     enableWindowSnap: 'general.enableWindowSnap',
     enableLoadingAnimation: 'general.enableLoadingAnimation',
+    enableTabs: 'general.enableTabs',
 } as const;
 
 export const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
@@ -113,6 +114,7 @@ export const DEFAULT_CONFIG: AppConfig = {
         },
         enableWindowSnap: true,
         enableLoadingAnimation: true,
+        enableTabs: false,
     },
     editing: {
         fontSize: CONFIG_LIMITS.fontSize.default,

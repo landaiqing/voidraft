@@ -286,19 +286,6 @@ export class TranslationTooltip implements TooltipView {
     }
 
     /**
-     * 寻找替代的目标语言
-     */
-    private findAlternativeTargetLanguage(): void {
-        const options = Array.from(this.targetLangSelector.options);
-        for (const option of options) {
-            if (option.value !== this.sourceLangSelector.value) {
-                this.targetLangSelector.value = option.value;
-                break;
-            }
-        }
-    }
-
-    /**
      * 交换源语言和目标语言
      */
     private swapLanguages(): void {

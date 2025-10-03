@@ -4,11 +4,13 @@
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
       </div>
-<!--      <div class="titlebar-title">{{ titleText }}</div>-->
+      <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title">{{ titleText }}</div>
       <!-- 标签页容器区域 -->
-      <div class="titlebar-tabs" style="--wails-draggable:no-drag">
+      <div class="titlebar-tabs" v-if="tabStore.isTabsEnabled && !isInSettings" style="--wails-draggable:drag">
         <TabContainer />
       </div>
+      <!-- 设置页面标题 -->
+      <div v-if="isInSettings" class="titlebar-title">{{ titleText }}</div>
     </div>
 
     <div class="titlebar-controls" style="--wails-draggable:no-drag" @contextmenu.prevent>
@@ -42,19 +44,29 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
+import {useRoute} from 'vue-router';
 import * as runtime from '@wailsio/runtime';
 import {useDocumentStore} from '@/stores/documentStore';
 import TabContainer from '@/components/tabs/TabContainer.vue';
+import {useTabStore} from "@/stores/tabStore";
 
+const tabStore = useTabStore();
 const {t} = useI18n();
+const route = useRoute();
 const isMaximized = ref(false);
 const documentStore = useDocumentStore();
 
 // 计算属性用于图标，减少重复渲染
 const maximizeIcon = computed(() => isMaximized.value ? '&#xE923;' : '&#xE922;');
 
+// 判断是否在设置页面
+const isInSettings = computed(() => route.path.startsWith('/settings'));
+
 // 计算标题文本
 const titleText = computed(() => {
+  if (isInSettings.value) {
+    return 'voidraft - settings';
+  }
   const currentDoc = documentStore.currentDocument;
   return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
 });

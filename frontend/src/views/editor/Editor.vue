@@ -7,11 +7,13 @@ import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 import {useWindowStore} from "@/stores/windowStore";
 import LoadingScreen from '@/components/loading/LoadingScreen.vue';
+import {useTabStore} from "@/stores/tabStore";
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
 const configStore = useConfigStore();
 const windowStore = useWindowStore();
+const tabStore = useTabStore();
 
 const editorElement = ref<HTMLElement | null>(null);
 
@@ -32,6 +34,8 @@ onMounted(async () => {
 
   // 设置编辑器容器
   editorStore.setEditorContainer(editorElement.value);
+
+  await tabStore.initializeTab();
 
   // 添加滚轮事件监听
   editorElement.value.addEventListener('wheel', wheelHandler, {passive: false});
