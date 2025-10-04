@@ -4,13 +4,13 @@
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
       </div>
-      <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title">{{ titleText }}</div>
+      <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
       <!-- 标签页容器区域 -->
       <div class="titlebar-tabs" v-if="tabStore.isTabsEnabled && !isInSettings" style="--wails-draggable:drag">
         <TabContainer />
       </div>
       <!-- 设置页面标题 -->
-      <div v-if="isInSettings" class="titlebar-title">{{ titleText }}</div>
+      <div v-if="isInSettings" class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
     </div>
 
     <div class="titlebar-controls" style="--wails-draggable:no-drag" @contextmenu.prevent>
@@ -65,7 +65,24 @@ const isInSettings = computed(() => route.path.startsWith('/settings'));
 // 计算标题文本
 const titleText = computed(() => {
   if (isInSettings.value) {
-    return 'voidraft - settings';
+    return `voidraft - ` + t('settings.title');
+  }
+  const currentDoc = documentStore.currentDocument;
+  if (currentDoc) {
+    // 限制文档标题长度，避免标题栏换行
+    const maxTitleLength = 30;
+    const truncatedTitle = currentDoc.title.length > maxTitleLength 
+      ? currentDoc.title.substring(0, maxTitleLength) + '...' 
+      : currentDoc.title;
+    return `voidraft - ${truncatedTitle}`;
+  }
+  return 'voidraft';
+});
+
+// 计算完整标题文本（用于tooltip）
+const fullTitleText = computed(() => {
+  if (isInSettings.value) {
+    return `voidraft - ` + t('settings.title');
   }
   const currentDoc = documentStore.currentDocument;
   return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';

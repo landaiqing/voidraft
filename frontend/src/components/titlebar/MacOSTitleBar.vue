@@ -43,8 +43,13 @@
       </button>
     </div>
     
-    <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent>
-      <div class="titlebar-title">{{ titleText }}</div>
+    <!-- 标签页容器区域 -->
+    <div class="titlebar-tabs" v-if="tabStore.isTabsEnabled && !isInSettings" style="--wails-draggable:drag">
+      <TabContainer />
+    </div>
+    
+    <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent v-if="!tabStore.isTabsEnabled || isInSettings">
+      <div class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
     </div>
   </div>
 </template>
@@ -52,13 +57,21 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import * as runtime from '@wailsio/runtime';
 import { useDocumentStore } from '@/stores/documentStore';
+import TabContainer from '@/components/tabs/TabContainer.vue';
+import { useTabStore } from "@/stores/tabStore";
 
+const tabStore = useTabStore();
 const { t } = useI18n();
+const route = useRoute();
 const isMaximized = ref(false);
 const showControlIcons = ref(false);
 const documentStore = useDocumentStore();
+
+// 判断是否在设置页面
+const isInSettings = computed(() => route.path.startsWith('/settings'));
 
 const minimizeWindow = async () => {
   try {
@@ -95,6 +108,26 @@ const checkMaximizedState = async () => {
 
 // 计算标题文本
 const titleText = computed(() => {
+  if (isInSettings.value) {
+    return `voidraft - ` + t('settings.title');
+  }
+  const currentDoc = documentStore.currentDocument;
+  if (currentDoc) {
+    // 限制文档标题长度，避免标题栏换行
+    const maxTitleLength = 30;
+    const truncatedTitle = currentDoc.title.length > maxTitleLength 
+      ? currentDoc.title.substring(0, maxTitleLength) + '...' 
+      : currentDoc.title;
+    return `voidraft - ${truncatedTitle}`;
+  }
+  return 'voidraft';
+});
+
+// 计算完整标题文本（用于tooltip）
+const fullTitleText = computed(() => {
+  if (isInSettings.value) {
+    return `voidraft - ` + t('settings.title');
+  }
   const currentDoc = documentStore.currentDocument;
   return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
 });
@@ -134,6 +167,7 @@ onMounted(async () => {
   align-items: center;
   padding-left: 8px;
   gap: 8px;
+  flex-shrink: 0;
   
   -webkit-context-menu: none;
   -moz-context-menu: none;
@@ -212,10 +246,65 @@ onMounted(async () => {
   justify-content: center;
   flex: 1;
   cursor: default;
+  min-width: 0;
   
   -webkit-context-menu: none;
   -moz-context-menu: none;
   context-menu: none;
+}
+
+.titlebar-tabs {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  margin-right: 8px;
+  min-width: 0;
+  overflow: visible; /* 允许TabContainer内部处理滚动 */
+  
+  /* 确保TabContainer能够正确处理滚动 */
+  :deep(.tab-container) {
+    width: 100%;
+    height: 100%;
+  }
+  
+  :deep(.tab-bar) {
+    width: 100%;
+    height: 100%;
+  }
+  
+  :deep(.tab-scroll-wrapper) {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  
+  /* 确保底部线条能够正确显示 */
+  :deep(.tab-item) {
+    position: relative;
+    
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background: var(--tab-active-line, var(--accent-color, #007acc));
+      transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 10;
+    }
+
+    &.active::after {
+      width: 100%;
+    }
+  }
 }
 
 .titlebar-title {

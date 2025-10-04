@@ -4,7 +4,13 @@
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
       </div>
-      <div class="titlebar-title">{{ titleText }}</div>
+      <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
+      <!-- 标签页容器区域 -->
+      <div class="titlebar-tabs" v-if="tabStore.isTabsEnabled && !isInSettings" style="--wails-draggable:drag">
+        <TabContainer />
+      </div>
+      <!-- 设置页面标题 -->
+      <div v-if="isInSettings" class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
     </div>
 
     <div class="titlebar-controls" style="--wails-draggable:no-drag" @contextmenu.prevent>
@@ -48,15 +54,43 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
+import {useRoute} from 'vue-router';
 import * as runtime from '@wailsio/runtime';
 import {useDocumentStore} from '@/stores/documentStore';
+import TabContainer from '@/components/tabs/TabContainer.vue';
+import {useTabStore} from "@/stores/tabStore";
 
+const tabStore = useTabStore();
 const {t} = useI18n();
+const route = useRoute();
 const isMaximized = ref(false);
 const documentStore = useDocumentStore();
 
+// 判断是否在设置页面
+const isInSettings = computed(() => route.path.startsWith('/settings'));
+
 // 计算标题文本
 const titleText = computed(() => {
+  if (isInSettings.value) {
+    return `voidraft - ` + t('settings.title');
+  }
+  const currentDoc = documentStore.currentDocument;
+  if (currentDoc) {
+    // 限制文档标题长度，避免标题栏换行
+    const maxTitleLength = 30;
+    const truncatedTitle = currentDoc.title.length > maxTitleLength 
+      ? currentDoc.title.substring(0, maxTitleLength) + '...' 
+      : currentDoc.title;
+    return `voidraft - ${truncatedTitle}`;
+  }
+  return 'voidraft';
+});
+
+// 计算完整标题文本（用于tooltip）
+const fullTitleText = computed(() => {
+  if (isInSettings.value) {
+    return `voidraft - ` + t('settings.title');
+  }
   const currentDoc = documentStore.currentDocument;
   return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
 });
@@ -126,6 +160,7 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 500;
   cursor: default;
+  min-width: 0; /* 允许内容收缩 */
 
   -webkit-context-menu: none;
   -moz-context-menu: none;
@@ -135,6 +170,7 @@ onMounted(async () => {
 .titlebar-content .titlebar-icon {
   width: 16px;
   height: 16px;
+  flex-shrink: 0;
 
   img {
     width: 100%;
@@ -147,6 +183,15 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--toolbar-text, #333);
   font-weight: 500;
+}
+
+.titlebar-tabs {
+  flex: 1;
+  height: 100%;
+  align-items: center;
+  overflow: hidden;
+  margin-left: 8px;
+  min-width: 0;
 }
 
 .titlebar-controls {

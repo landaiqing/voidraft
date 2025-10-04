@@ -100,6 +100,23 @@ export const useTabStore = defineStore('tab', () => {
     };
 
     /**
+     * 批量关闭标签页
+     * @param documentIds 要关闭的文档ID数组
+     */
+    const closeTabs = (documentIds: number[]) => {
+        documentIds.forEach(documentId => {
+            if (!hasTab(documentId)) return;
+
+            const tabIndex = tabOrder.value.indexOf(documentId);
+            if (tabIndex === -1) return;
+
+            // 从映射和顺序数组中移除
+            tabsMap.value.delete(documentId);
+            tabOrder.value.splice(tabIndex, 1);
+        });
+    };
+
+    /**
      * 切换到指定标签页并打开对应文档
      */
     const switchToTabAndDocument = (documentId: number) => {
@@ -156,8 +173,13 @@ export const useTabStore = defineStore('tab', () => {
         // 获取所有其他标签页的ID
         const otherTabIds = tabOrder.value.filter(id => id !== keepDocumentId);
         
-        // 关闭其他标签页
-        otherTabIds.forEach(id => closeTab(id));
+        // 批量关闭其他标签页
+        closeTabs(otherTabIds);
+        
+        // 如果当前打开的文档在被关闭的标签中，需要切换到保留的文档
+        if (otherTabIds.includes(documentStore.currentDocumentId!)) {
+            switchToTabAndDocument(keepDocumentId);
+        }
     };
 
     /**
@@ -170,8 +192,13 @@ export const useTabStore = defineStore('tab', () => {
         // 获取右侧所有标签页的ID
         const rightTabIds = tabOrder.value.slice(index + 1);
         
-        // 关闭右侧标签页
-        rightTabIds.forEach(id => closeTab(id));
+        // 批量关闭右侧标签页
+        closeTabs(rightTabIds);
+        
+        // 如果当前打开的文档在被关闭的右侧标签中，需要切换到指定的文档
+        if (rightTabIds.includes(documentStore.currentDocumentId!)) {
+            switchToTabAndDocument(documentId);
+        }
     };
 
     /**
@@ -184,8 +211,13 @@ export const useTabStore = defineStore('tab', () => {
         // 获取左侧所有标签页的ID
         const leftTabIds = tabOrder.value.slice(0, index);
         
-        // 关闭左侧标签页
-        leftTabIds.forEach(id => closeTab(id));
+        // 批量关闭左侧标签页
+        closeTabs(leftTabIds);
+        
+        // 如果当前打开的文档在被关闭的左侧标签中，需要切换到指定的文档
+        if (leftTabIds.includes(documentStore.currentDocumentId!)) {
+            switchToTabAndDocument(documentId);
+        }
     };
 
     /**
