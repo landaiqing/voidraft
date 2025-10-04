@@ -236,7 +236,7 @@ const handleContextMenu = (event: MouseEvent) => {
   
   &:hover {
     background-color: var(--error-color);
-    color: white;
+    color: var(--text-muted);
     opacity: 1 !important;
   }
   

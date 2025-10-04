@@ -1,8 +1,8 @@
 import {Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {useExtensionStore} from '@/stores/extensionStore';
-import {ExtensionManager} from './ExtensionManager';
-import {registerAllExtensions} from './factories';
+import {ExtensionManager} from './extensionManager';
+import {registerAllExtensions} from './extensions';
 
 /**
  * 全局扩展管理器实例
@@ -58,6 +58,5 @@ export const removeExtensionManagerView = (documentId: number): void => {
 };
 
 // 导出相关模块
-export {ExtensionManager} from './ExtensionManager';
-export {registerAllExtensions, getExtensionDisplayName, getExtensionDescription} from './factories';
-export type {ExtensionFactory} from './ExtensionManager';
+export {ExtensionManager} from './extensionManager';
+export {registerAllExtensions, getExtensionDisplayName, getExtensionDescription} from './extensions';

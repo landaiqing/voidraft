@@ -1,6 +1,7 @@
-import {ExtensionFactory, ExtensionManager} from './ExtensionManager';
+import {ExtensionManager} from './extensionManager';
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import i18n from '@/i18n';
+import {ExtensionFactory} from './types'
 
 // 导入现有扩展的创建函数
 import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension';

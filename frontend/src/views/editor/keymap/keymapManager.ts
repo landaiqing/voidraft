@@ -2,7 +2,7 @@ import {keymap} from '@codemirror/view';
 import {Extension, Compartment} from '@codemirror/state';
 import {KeyBinding as KeyBindingConfig, ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import {KeyBinding, KeymapResult} from './types';
-import {getCommandHandler, isCommandRegistered} from './commandRegistry';
+import {getCommandHandler, isCommandRegistered} from './commands';
 
 /**
  * 快捷键管理器
@@ -81,46 +81,5 @@ export class KeymapManager {
         view.dispatch({
             effects: this.compartment.reconfigure(keymap.of(cmKeyBindings))
         });
-    }
-
-    /**
-     * 按扩展分组快捷键
-     * @param keyBindings 快捷键配置列表
-     * @returns 按扩展分组的快捷键映射
-     */
-    static groupByExtension(keyBindings: KeyBindingConfig[]): Map<ExtensionID, KeyBindingConfig[]> {
-        const groups = new Map<ExtensionID, KeyBindingConfig[]>();
-        
-        for (const binding of keyBindings) {
-            if (!groups.has(binding.extension)) {
-                groups.set(binding.extension, []);
-            }
-            groups.get(binding.extension)!.push(binding);
-        }
-        
-        return groups;
-    }
-
-    /**
-     * 验证快捷键配置
-     * @param keyBindings 快捷键配置列表
-     * @returns 验证结果
-     */
-    static validateKeyBindings(keyBindings: KeyBindingConfig[]): {
-        valid: KeyBindingConfig[]
-        invalid: KeyBindingConfig[]
-    } {
-        const valid: KeyBindingConfig[] = [];
-        const invalid: KeyBindingConfig[] = [];
-
-        for (const binding of keyBindings) {
-            if (binding.enabled && binding.key && isCommandRegistered(binding.command)) {
-                valid.push(binding);
-            } else {
-                invalid.push(binding);
-            }
-        }
-
-        return {valid, invalid};
     }
 } 

@@ -5,7 +5,7 @@ import SettingSection from '../components/SettingSection.vue';
 import { useKeybindingStore } from '@/stores/keybindingStore';
 import { useExtensionStore } from '@/stores/extensionStore';
 import { useSystemStore } from '@/stores/systemStore';
-import { getCommandDescription } from '@/views/editor/keymap/commandRegistry';
+import { getCommandDescription } from '@/views/editor/keymap/commands';
 import {KeyBindingCommand} from "@/../bindings/voidraft/internal/models";
 
 const { t } = useI18n();
@@ -61,7 +61,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     if (systemStore.isMacOS) {
       return ['⌘', '⌥', '[']; // macOS: Cmd+Alt+[
     } else {
-      return ['Ctrl', '⇧', '[']; // Windows/Linux: Ctrl+Shift+[
+      return ['Ctrl', 'Shift', '[']; // Windows/Linux: Ctrl+Shift+[
     }
   }
   
@@ -69,7 +69,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     if (systemStore.isMacOS) {
       return ['⌘', '⌥', ']']; // macOS: Cmd+Alt+]
     } else {
-      return ['Ctrl', '⇧', ']']; // Windows/Linux: Ctrl+Shift+]
+      return ['Ctrl', 'Shift', ']']; // Windows/Linux: Ctrl+Shift+]
     }
   }
   
@@ -142,7 +142,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     if (systemStore.isMacOS) {
       return ['⇧', '⌘', '\\']; // macOS: Shift+Cmd+\
     } else {
-      return ['⇧', 'Ctrl', '\\']; // Windows/Linux: Shift+Ctrl+\
+      return ['Shift', 'Ctrl', '\\']; // Windows/Linux: Shift+Ctrl+\
     }
   }
   
@@ -300,4 +300,4 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
   font-style: italic;
   font-size: 13px;
 }
-</style> 
+</style>

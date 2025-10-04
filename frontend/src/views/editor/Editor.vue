@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {onBeforeUnmount, onMounted, ref} from 'vue';
+import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
 import {useEditorStore} from '@/stores/editorStore';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useConfigStore} from '@/stores/configStore';
@@ -16,6 +16,8 @@ const windowStore = useWindowStore();
 const tabStore = useTabStore();
 
 const editorElement = ref<HTMLElement | null>(null);
+
+const enableLoadingAnimation = computed(() => configStore.config.general.enableLoadingAnimation);
 
 // 创建滚轮缩放处理器
 const wheelHandler = createWheelZoomHandler(
@@ -53,7 +55,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="editor-container">
-    <LoadingScreen v-if="editorStore.isLoading && configStore.config.general?.enableLoadingAnimation" text="VOIDRAFT"/>
+    <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
     <div ref="editorElement" class="editor"></div>
     <Toolbar/>
   </div>

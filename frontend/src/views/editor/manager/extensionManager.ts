@@ -1,53 +1,10 @@
-import {Compartment, Extension, StateEffect} from '@codemirror/state';
+import {Compartment, Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {Extension as ExtensionConfig, ExtensionID} from '@/../bindings/voidraft/internal/models/models';
+import {ExtensionState, EditorViewInfo, ExtensionFactory} from './types'
+import {createDebounce} from '@/common/utils/debounce';
 
-/**
- * 扩展工厂接口
- * 每个扩展需要实现此接口来创建和配置扩展
- */
-export interface ExtensionFactory {
-    /**
-     * 创建扩展实例
-     * @param config 扩展配置
-     * @returns CodeMirror扩展
-     */
-    create(config: any): Extension
 
-    /**
-     * 获取默认配置
-     * @returns 默认配置对象
-     */
-    getDefaultConfig(): any
-
-    /**
-     * 验证配置
-     * @param config 配置对象
-     * @returns 是否有效
-     */
-    validateConfig?(config: any): boolean
-}
-
-/**
- * 扩展状态
- */
-interface ExtensionState {
-    id: ExtensionID
-    factory: ExtensionFactory
-    config: any
-    enabled: boolean
-    compartment: Compartment
-    extension: Extension
-}
-
-/**
- * 视图信息
- */
-interface EditorViewInfo {
-    view: EditorView
-    documentId: number
-    registered: boolean
-}
 
 /**
  * 扩展管理器
@@ -66,8 +23,11 @@ export class ExtensionManager {
     private extensionFactories = new Map<ExtensionID, ExtensionFactory>();
     
     // 防抖处理
-    private debounceTimers = new Map<ExtensionID, number>();
-    private debounceDelay = 300;  // 默认防抖时间为300毫秒
+    private debouncedUpdateFunctions = new Map<ExtensionID, {
+        debouncedFn: (enabled: boolean, config: any) => void;
+        cancel: () => void;
+        flush: () => void;
+    }>();
     
     /**
      * 注册扩展工厂
@@ -89,6 +49,22 @@ export class ExtensionManager {
                 enabled: false,
                 compartment,
                 extension: []  // 默认为空扩展（禁用状态）
+            });
+        }
+
+        // 为每个扩展创建防抖函数
+        if (!this.debouncedUpdateFunctions.has(id)) {
+            const { debouncedFn, cancel, flush } = createDebounce(
+                (enabled: boolean, config: any) => {
+                    this.updateExtensionImmediate(id, enabled, config);
+                },
+                { delay: 300 }
+            );
+            
+            this.debouncedUpdateFunctions.set(id, {
+                debouncedFn,
+                cancel,
+                flush
             });
         }
     }
@@ -197,18 +173,13 @@ export class ExtensionManager {
      * @param config 扩展配置
      */
     updateExtension(id: ExtensionID, enabled: boolean, config: any = {}): void {
-        // 清除之前的定时器
-        if (this.debounceTimers.has(id)) {
-            window.clearTimeout(this.debounceTimers.get(id));
-        }
-        
-        // 设置新的定时器
-        const timerId = window.setTimeout(() => {
+        const debouncedUpdate = this.debouncedUpdateFunctions.get(id);
+        if (debouncedUpdate) {
+            debouncedUpdate.debouncedFn(enabled, config);
+        } else {
+            // 如果没有防抖函数，直接执行
             this.updateExtensionImmediate(id, enabled, config);
-            this.debounceTimers.delete(id);
-        }, this.debounceDelay);
-        
-        this.debounceTimers.set(id, timerId);
+        }
     }
 
     /**
@@ -268,72 +239,6 @@ export class ExtensionManager {
         }
     }
 
-    /**
-     * 批量更新扩展
-     * @param updates 更新配置数组
-     */
-    updateExtensions(updates: Array<{
-        id: ExtensionID
-        enabled: boolean
-        config: any
-    }>): void {
-        // 清除所有相关的防抖定时器
-        for (const update of updates) {
-            if (this.debounceTimers.has(update.id)) {
-                window.clearTimeout(this.debounceTimers.get(update.id));
-                this.debounceTimers.delete(update.id);
-            }
-        }
-        
-        // 更新所有扩展状态
-        for (const update of updates) {
-            // 获取扩展状态
-            const state = this.extensionStates.get(update.id);
-            if (!state) continue;
-            
-            // 获取工厂
-            const factory = state.factory;
-            
-            // 验证配置
-            if (factory.validateConfig && !factory.validateConfig(update.config)) {
-                continue;
-            }
-            
-            try {
-                // 创建新的扩展实例
-                const extension = update.enabled ? factory.create(update.config) : [];
-                
-                // 更新内部状态
-                state.config = update.config;
-                state.enabled = update.enabled;
-                state.extension = extension;
-            } catch (error) {
-                console.error(`Failed to update extension ${update.id}:`, error);
-            }
-        }
-        
-        // 将更改应用到所有视图
-        for (const viewInfo of this.viewsMap.values()) {
-            if (!viewInfo.registered) continue;
-            
-            const effects: StateEffect<any>[] = [];
-            
-            for (const update of updates) {
-                const state = this.extensionStates.get(update.id);
-                if (!state) continue;
-                
-                effects.push(state.compartment.reconfigure(state.extension));
-            }
-            
-            if (effects.length > 0) {
-                try {
-                    viewInfo.view.dispatch({ effects });
-                } catch (error) {
-                    console.error(`Failed to apply extensions to document ${viewInfo.documentId}:`, error);
-                }
-            }
-        }
-    }
 
     /**
      * 获取扩展当前状态
@@ -380,15 +285,15 @@ export class ExtensionManager {
      * 销毁管理器
      */
     destroy(): void {
-        // 清除所有防抖定时器
-        for (const timerId of this.debounceTimers.values()) {
-            window.clearTimeout(timerId);
+        // 清除所有防抖函数
+        for (const { cancel } of this.debouncedUpdateFunctions.values()) {
+            cancel();
         }
-        this.debounceTimers.clear();
+        this.debouncedUpdateFunctions.clear();
         
         this.viewsMap.clear();
         this.activeViewId = null;
         this.extensionFactories.clear();
         this.extensionStates.clear();
     }
-} 
+}

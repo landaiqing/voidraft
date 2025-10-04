@@ -11,7 +11,7 @@ import {
   getExtensionDescription,
   getExtensionDisplayName,
   hasExtensionConfig
-} from '@/views/editor/manager/factories';
+} from '@/views/editor/manager/extensions';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';

@@ -17,7 +17,7 @@ const blockSeparatorRegex = new RegExp(`\\n∞∞∞(${languageTokensMatcher})(-
 /**
  * 获取被复制的范围和内容
  */
-function copiedRange(state: EditorState) {
+function copiedRange(state: EditorState, forCut: boolean = false) {
   const content: string[] = [];
   const ranges: any[] = [];
   
@@ -37,7 +37,13 @@ function copiedRange(state: EditorState) {
         const lineContent = state.sliceDoc(line.from, line.to);
         if (!copiedLines.includes(line.from)) {
           content.push(lineContent);
-          ranges.push(range);
+          // 对于剪切操作，需要包含整行范围（包括换行符）
+          if (forCut) {
+            const lineEnd = line.to < state.doc.length ? line.to + 1 : line.to;
+            ranges.push({ from: line.from, to: lineEnd });
+          } else {
+            ranges.push(range);
+          }
           copiedLines.push(line.from);
         }
       }
@@ -68,7 +74,7 @@ export const codeBlockCopyCut = EditorView.domEventHandlers({
   },
   
   cut(event, view) {
-    let { text, ranges } = copiedRange(view.state);
+    let { text, ranges } = copiedRange(view.state, true);
     // 将块分隔符替换为双换行符
     text = text.replaceAll(blockSeparatorRegex, "\n\n");
     
@@ -93,7 +99,7 @@ export const codeBlockCopyCut = EditorView.domEventHandlers({
  * 复制和剪切的通用函数
  */
 const copyCut = (view: EditorView, cut: boolean): boolean => {
-  let { text, ranges } = copiedRange(view.state);
+  let { text, ranges } = copiedRange(view.state, cut);
   // 将块分隔符替换为双换行符
   text = text.replaceAll(blockSeparatorRegex, "\n\n");
 

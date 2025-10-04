@@ -11,10 +11,6 @@ import { useKeybindingStore } from "@/stores/keybindingStore";
 import { 
   undo, redo
 } from "@codemirror/commands";
-import { 
-  deleteBlock, formatCurrentBlock, 
-  addNewBlockAfterCurrent, addNewBlockAfterLast, addNewBlockBeforeCurrent
-} from "../extensions/codeblock/commands";
 import i18n from "@/i18n";
 import {useSystemStore} from "@/stores/systemStore";
 
@@ -133,44 +129,6 @@ function createHistoryItems(): MenuItem[] {
   ];
 }
 
-/**
- * 创建代码块相关菜单项
- */
-function createCodeBlockItems(): MenuItem[] {
-  const defaultOptions = { defaultBlockToken: 'text', defaultBlockAutoDetect: true };
-  return [
-    // 格式化
-    {
-      label: t("keybindings.commands.blockFormat"),
-      command: formatCurrentBlock,
-      shortcut: getShortcutText(KeyBindingCommand.BlockFormatCommand)
-    },
-    // 删除
-    {
-      label: t("keybindings.commands.blockDelete"),
-      command: deleteBlock(defaultOptions),
-      shortcut: getShortcutText(KeyBindingCommand.BlockDeleteCommand)
-    },
-    // 在当前块后添加新块
-    {
-      label: t("keybindings.commands.blockAddAfterCurrent"),
-      command: addNewBlockAfterCurrent(defaultOptions),
-      shortcut: getShortcutText(KeyBindingCommand.BlockAddAfterCurrentCommand)
-    },
-    // 在当前块前添加新块
-    {
-      label: t("keybindings.commands.blockAddBeforeCurrent"),
-      command: addNewBlockBeforeCurrent(defaultOptions),
-      shortcut: getShortcutText(KeyBindingCommand.BlockAddBeforeCurrentCommand)
-    },
-    // 在最后添加新块
-    {
-      label: t("keybindings.commands.blockAddAfterLast"),
-      command: addNewBlockAfterLast(defaultOptions),
-      shortcut: getShortcutText(KeyBindingCommand.BlockAddAfterLastCommand)
-    }
-  ];
-}
 
 /**
  * 创建主菜单项
@@ -185,11 +143,7 @@ function createMainMenuItems(): MenuItem[] {
   // 构建主菜单
   return [
     ...basicItems,
-    ...historyItems,
-    {
-      label: t("extensions.codeblock.name"),
-      submenu: createCodeBlockItems()
-    }
+    ...historyItems
   ];
 }
 

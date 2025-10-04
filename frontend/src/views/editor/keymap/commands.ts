@@ -66,7 +66,7 @@ const defaultEditorOptions = {
  * 前端命令注册表
  * 将后端定义的command字段映射到具体的前端方法和翻译键
  */
-export const commandRegistry = {
+export const commands = {
     [KeyBindingCommand.ShowSearchCommand]: {
         handler: showSearchVisibilityCommand,
         descriptionKey: 'keybindings.commands.showSearch'
@@ -299,7 +299,7 @@ export const commandRegistry = {
  * @returns 对应的处理函数，如果不存在则返回 undefined
  */
 export const getCommandHandler = (command: KeyBindingCommand) => {
-    return commandRegistry[command]?.handler;
+    return commands[command]?.handler;
 };
 
 /**
@@ -308,7 +308,7 @@ export const getCommandHandler = (command: KeyBindingCommand) => {
  * @returns 对应的描述，如果不存在则返回 undefined
  */
 export const getCommandDescription = (command: KeyBindingCommand) => {
-    const descriptionKey = commandRegistry[command]?.descriptionKey;
+    const descriptionKey = commands[command]?.descriptionKey;
     return descriptionKey ? i18n.global.t(descriptionKey) : undefined;
 };
 
@@ -318,7 +318,7 @@ export const getCommandDescription = (command: KeyBindingCommand) => {
  * @returns 是否已注册
  */
 export const isCommandRegistered = (command: KeyBindingCommand): boolean => {
-    return command in commandRegistry;
+    return command in commands;
 };
 
 /**
@@ -326,5 +326,5 @@ export const isCommandRegistered = (command: KeyBindingCommand): boolean => {
  * @returns 已注册的命令列表
  */
 export const getRegisteredCommands = (): KeyBindingCommand[] => {
-    return Object.keys(commandRegistry) as KeyBindingCommand[];
+    return Object.keys(commands) as KeyBindingCommand[];
 }; 

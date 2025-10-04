@@ -35,6 +35,12 @@ export const useDocumentStore = defineStore('document', () => {
     // === 错误处理 ===
     const setError = (docId: number, message: string) => {
         selectorError.value = {docId, message};
+        // 3秒后自动清除错误状态
+        setTimeout(() => {
+            if (selectorError.value?.docId === docId) {
+                selectorError.value = null;
+            }
+        }, 3000);
     };
 
     const clearError = () => {

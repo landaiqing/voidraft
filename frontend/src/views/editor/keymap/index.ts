@@ -2,11 +2,9 @@ import { Extension } from '@codemirror/state';
 import { useKeybindingStore } from '@/stores/keybindingStore';
 import { useExtensionStore } from '@/stores/extensionStore';
 import { KeymapManager } from './keymapManager';
-import { ExtensionID } from '@/../bindings/voidraft/internal/models/models';
 
 /**
  * 异步创建快捷键扩展
- * 确保快捷键配置和扩展配置已加载
  */
 export const createDynamicKeymapExtension = async (): Promise<Extension> => {
   const keybindingStore = useKeybindingStore();
@@ -42,17 +40,7 @@ export const updateKeymapExtension = (view: any): void => {
   KeymapManager.updateKeymap(view, keybindingStore.keyBindings, enabledExtensionIds);
 };
 
-/**
- * 获取指定扩展的快捷键
- * @param extensionId 扩展ID
- * @returns 该扩展的快捷键列表
- */
-export const getExtensionKeyBindings = (extensionId: ExtensionID) => {
-  const keybindingStore = useKeybindingStore();
-  return keybindingStore.getKeyBindingsByExtension(extensionId);
-};
-
 // 导出相关模块
 export { KeymapManager } from './keymapManager';
-export { commandRegistry, getCommandHandler, getCommandDescription, isCommandRegistered, getRegisteredCommands } from './commandRegistry';
+export { commands, getCommandHandler, getCommandDescription, isCommandRegistered, getRegisteredCommands } from './commands';
 export type { KeyBinding, CommandHandler, CommandDefinition, KeymapResult } from './types';

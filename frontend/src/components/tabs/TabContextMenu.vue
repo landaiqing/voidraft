@@ -16,22 +16,22 @@
     </div>
     <div v-if="hasOtherTabs" class="menu-item" @click="handleMenuClick('closeOthers')">
       <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 6h18M3 12h18M3 18h18"/>
-        <path d="M18 6L6 18M6 6l12 12"/>
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+        <path d="M9 9l6 6M15 9l-6 6"/>
       </svg>
       <span class="menu-text">{{ t('tabs.contextMenu.closeOthers') }}</span>
     </div>
     <div v-if="hasTabsToLeft" class="menu-item" @click="handleMenuClick('closeLeft')">
       <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 18l-6-6 6-6"/>
-        <path d="M18 6L6 18M6 6l12 12"/>
+        <path d="M9 18l-6-6 6-6"/>
       </svg>
       <span class="menu-text">{{ t('tabs.contextMenu.closeLeft') }}</span>
     </div>
     <div v-if="hasTabsToRight" class="menu-item" @click="handleMenuClick('closeRight')">
       <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 18l6-6-6-6"/>
-        <path d="M18 6L6 18M6 6l12 12"/>
+        <path d="M15 18l6-6-6-6"/>
       </svg>
       <span class="menu-text">{{ t('tabs.contextMenu.closeRight') }}</span>
     </div>
@@ -136,7 +136,7 @@ onUnmounted(() => {
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   overflow: hidden;
-  min-width: 140px;
+  min-width: 100px;
   user-select: none;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
@@ -147,7 +147,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   cursor: pointer;
   font-size: 12px;
-  color: var(--text-primary);
+  color: var(--text-muted);
   transition: all 0.15s ease;
   gap: 8px;
   
@@ -165,7 +165,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 12px;
   height: 12px;
-  color: var(--text-secondary);
+  color: var(--text-muted);
   transition: color 0.15s ease;
   
   .menu-item:hover & {
@@ -177,52 +177,5 @@ onUnmounted(() => {
   white-space: nowrap;
   font-weight: 400;
   flex: 1;
-}
-
-/* 主题适配 */
-:root[data-theme="dark"] .tab-context-menu {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  
-  .menu-item {
-    color: var(--text-primary);
-    
-    &:hover {
-      background-color: var(--toolbar-button-hover);
-      color: #ffffff;
-    }
-  }
-  
-  .menu-icon {
-    color: var(--text-secondary);
-    
-    .menu-item:hover & {
-      color: #ffffff;
-    }
-  }
-}
-
-:root[data-theme="light"] .tab-context-menu {
-  background-color: var(--bg-secondary);
-  border-color: var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  
-  .menu-item {
-    color: var(--text-primary);
-    
-    &:hover {
-      background-color: var(--toolbar-button-hover);
-      color: #000000;
-    }
-  }
-  
-  .menu-icon {
-    color: var(--text-secondary);
-    
-    .menu-item:hover & {
-      color: #000000;
-    }
-  }
 }
 </style>
