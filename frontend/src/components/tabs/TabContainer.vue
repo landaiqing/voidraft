@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import TabItem from './TabItem.vue';
 import TabContextMenu from './TabContextMenu.vue';
 import { useTabStore } from '@/stores/tabStore';
@@ -107,12 +107,56 @@ const onWheelScroll = (event: WheelEvent) => {
   el.scrollLeft += delta;
 };
 
+// 自动滚动到活跃标签页
+const scrollToActiveTab = async () => {
+  await nextTick();
+  
+  const scrollWrapper = tabScrollWrapperRef.value;
+  const tabList = tabListRef.value;
+  
+  if (!scrollWrapper || !tabList) return;
+  
+  // 查找当前活跃的标签页元素
+  const activeTabElement = tabList.querySelector('.tab-item.active') as HTMLElement;
+  if (!activeTabElement) return;
+  
+  const scrollWrapperRect = scrollWrapper.getBoundingClientRect();
+  const activeTabRect = activeTabElement.getBoundingClientRect();
+  
+  // 计算活跃标签页相对于滚动容器的位置
+  const activeTabLeft = activeTabRect.left - scrollWrapperRect.left + scrollWrapper.scrollLeft;
+  const activeTabRight = activeTabLeft + activeTabRect.width;
+  
+  // 获取滚动容器的可视区域
+  const scrollLeft = scrollWrapper.scrollLeft;
+  const scrollRight = scrollLeft + scrollWrapper.clientWidth;
+  
+  // 如果活跃标签页不在可视区域内，则滚动到合适位置
+  if (activeTabLeft < scrollLeft) {
+    // 标签页在左侧不可见，滚动到左边
+    scrollWrapper.scrollLeft = activeTabLeft - 10; // 留一点边距
+  } else if (activeTabRight > scrollRight) {
+    // 标签页在右侧不可见，滚动到右边
+    scrollWrapper.scrollLeft = activeTabRight - scrollWrapper.clientWidth + 10; // 留一点边距
+  }
+};
+
 onMounted(() => {
   // 组件挂载时的初始化逻辑
 });
 
 onUnmounted(() => {
   // 组件卸载时的清理逻辑
+});
+
+// 监听当前活跃标签页的变化
+watch(() => tabStore.currentDocumentId, () => {
+  scrollToActiveTab();
+});
+
+// 监听标签页列表变化
+watch(() => tabStore.tabs.length, () => {
+  scrollToActiveTab();
 });
 </script>
 

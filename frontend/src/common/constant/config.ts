@@ -119,7 +119,7 @@ export const DEFAULT_CONFIG: AppConfig = {
     editing: {
         fontSize: CONFIG_LIMITS.fontSize.default,
         fontFamily: FONT_OPTIONS[0].value,
-        fontWeight: 'normal',
+        fontWeight: '400',
         lineHeight: CONFIG_LIMITS.lineHeight.default,
         enableTabIndent: true,
         tabSize: CONFIG_LIMITS.tabSize.default,

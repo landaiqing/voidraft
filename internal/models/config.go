@@ -169,7 +169,7 @@ func NewDefaultAppConfig() *AppConfig {
 			// 字体设置
 			FontSize:   13,
 			FontFamily: `"HarmonyOS"`,
-			FontWeight: "normal",
+			FontWeight: "400",
 			LineHeight: 1.5,
 			// Tab设置
 			EnableTabIndent: true,
