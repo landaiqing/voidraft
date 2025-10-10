@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/services/badge"
+	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
@@ -13,12 +13,12 @@ import (
 // TestService 测试服务 - 仅在开发环境使用
 type TestService struct {
 	logger              *log.LogService
-	badgeService        *badge.BadgeService
+	badgeService        *dock.DockService
 	notificationService *notifications.NotificationService
 }
 
 // NewTestService 创建测试服务实例
-func NewTestService(badgeService *badge.BadgeService, notificationService *notifications.NotificationService, logger *log.LogService) *TestService {
+func NewTestService(badgeService *dock.DockService, notificationService *notifications.NotificationService, logger *log.LogService) *TestService {
 	if logger == nil {
 		logger = log.New()
 	}

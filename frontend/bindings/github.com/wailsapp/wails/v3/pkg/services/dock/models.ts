@@ -9,15 +9,18 @@ import {Create as $Create} from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as color$0 from "../../../../../../../image/color/models.js";
 
-export class Options {
+/**
+ * BadgeOptions represents options for customizing badge appearance
+ */
+export class BadgeOptions {
     "TextColour": color$0.RGBA;
     "BackgroundColour": color$0.RGBA;
     "FontName": string;
     "FontSize": number;
     "SmallFontSize": number;
 
-    /** Creates a new Options instance. */
-    constructor($$source: Partial<Options> = {}) {
+    /** Creates a new BadgeOptions instance. */
+    constructor($$source: Partial<BadgeOptions> = {}) {
         if (!("TextColour" in $$source)) {
             this["TextColour"] = (new color$0.RGBA());
         }
@@ -38,9 +41,9 @@ export class Options {
     }
 
     /**
-     * Creates a new Options instance from a string or object.
+     * Creates a new BadgeOptions instance from a string or object.
      */
-    static createFrom($$source: any = {}): Options {
+    static createFrom($$source: any = {}): BadgeOptions {
         const $$createField0_0 = $$createType0;
         const $$createField1_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
@@ -50,7 +53,7 @@ export class Options {
         if ("BackgroundColour" in $$parsedSource) {
             $$parsedSource["BackgroundColour"] = $$createField1_0($$parsedSource["BackgroundColour"]);
         }
-        return new Options($$parsedSource as Partial<Options>);
+        return new BadgeOptions($$parsedSource as Partial<BadgeOptions>);
     }
 }
 

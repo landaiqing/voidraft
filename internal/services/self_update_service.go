@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/creativeprojects/go-selfupdate"
-	"github.com/wailsapp/wails/v3/pkg/services/badge"
+	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 	"os"
@@ -30,7 +30,7 @@ type SelfUpdateResult struct {
 type SelfUpdateService struct {
 	logger              *log.LogService
 	configService       *ConfigService
-	badgeService        *badge.BadgeService                // 直接使用Wails原生badge服务
+	badgeService        *dock.DockService                  // 直接使用Wails原生badge服务
 	notificationService *notifications.NotificationService // 通知服务
 	config              *models.AppConfig
 
@@ -39,7 +39,7 @@ type SelfUpdateService struct {
 }
 
 // NewSelfUpdateService 创建自我更新服务实例
-func NewSelfUpdateService(configService *ConfigService, badgeService *badge.BadgeService, notificationService *notifications.NotificationService, logger *log.LogService) (*SelfUpdateService, error) {
+func NewSelfUpdateService(configService *ConfigService, badgeService *dock.DockService, notificationService *notifications.NotificationService, logger *log.LogService) (*SelfUpdateService, error) {
 	// 获取配置
 	appConfig, err := configService.GetConfig()
 	if err != nil {

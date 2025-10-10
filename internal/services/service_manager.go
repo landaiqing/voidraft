@@ -4,7 +4,7 @@ import (
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	"github.com/wailsapp/wails/v3/pkg/services/badge"
+	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 )
@@ -27,7 +27,7 @@ type ServiceManager struct {
 	selfUpdateService   *SelfUpdateService
 	translationService  *TranslationService
 	themeService        *ThemeService
-	badgeService        *badge.BadgeService
+	badgeService        *dock.DockService
 	notificationService *notifications.NotificationService
 	testService         *TestService // 测试服务（仅开发环境）
 	BackupService       *BackupService
@@ -40,7 +40,7 @@ func NewServiceManager() *ServiceManager {
 	logger := log.New()
 
 	// 初始化badge服务
-	badgeService := badge.New()
+	badgeService := dock.New()
 
 	// 初始化通知服务
 	notificationService := notifications.New()
@@ -258,7 +258,7 @@ func (sm *ServiceManager) GetThemeService() *ThemeService {
 }
 
 // GetBadgeService 获取badge服务实例
-func (sm *ServiceManager) GetBadgeService() *badge.BadgeService {
+func (sm *ServiceManager) GetBadgeService() *dock.DockService {
 	return sm.badgeService
 }
 
