@@ -166,12 +166,17 @@ export default {
       interface: 'Interface Elements',
       border: 'Borders & Dividers',
       search: 'Search & Matching',
+      // Base Colors
       background: 'Main Background',
       backgroundSecondary: 'Secondary Background',
       surface: 'Panel Background',
+      dropdownBackground: 'Dropdown Background',
+      dropdownBorder: 'Dropdown Border',
+      // Text Colors
       foreground: 'Primary Text',
       foregroundSecondary: 'Secondary Text',
       comment: 'Comments',
+      // Syntax Highlighting - Core
       keyword: 'Keywords',
       string: 'Strings',
       function: 'Functions',
@@ -179,14 +184,25 @@ export default {
       operator: 'Operators',
       variable: 'Variables',
       type: 'Types',
+      // Syntax Highlighting - Extended
+      constant: 'Constants',
+      storage: 'Storage Type',
+      parameter: 'Parameters',
+      class: 'Class Names',
+      heading: 'Headings',
+      invalid: 'Invalid/Error',
+      regexp: 'Regular Expressions',
+      // Interface Elements
       cursor: 'Cursor',
       selection: 'Selection Background',
       selectionBlur: 'Unfocused Selection',
       activeLine: 'Active Line Highlight',
       lineNumber: 'Line Numbers',
       activeLineNumber: 'Active Line Number',
+      // Borders & Dividers
       borderColor: 'Border Color',
       borderLight: 'Light Border',
+      // Search & Matching
       searchMatch: 'Search Match',
       matchingBracket: 'Matching Bracket'
     },
@@ -199,6 +215,7 @@ export default {
     enableTabIndent: 'Enable Tab Indent',
     language: 'Interface Language',
     systemTheme: 'System Theme',
+    presetTheme: 'Preset Theme',
     saveOptions: 'Save Options',
     autoSaveDelay: 'Auto Save Delay (ms)',
     updateSettings: 'Update Settings',

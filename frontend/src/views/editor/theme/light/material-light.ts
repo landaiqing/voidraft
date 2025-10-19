@@ -1,128 +1,57 @@
-import {EditorView} from '@codemirror/view'
 import {Extension} from '@codemirror/state'
-import {HighlightStyle, syntaxHighlighting} from '@codemirror/language'
-import {tags as t} from '@lezer/highlight'
+import {createBaseTheme} from '../base'
+import type {ThemeColors} from '../types'
 
-export const config = {
-  name: 'materialLight',
+export const config: ThemeColors = {
+  name: 'material-light',
   dark: false,
+  
+  // 基础色调
   background: '#FAFAFA',
-  foreground: '#90A4AE',
-  selection: '#80CBC440',
-  cursor: '#272727',
+  backgroundSecondary: '#FAFAFA',
+  surface: '#FAFAFA',
   dropdownBackground: '#FAFAFA',
   dropdownBorder: '#00000010',
-  activeLine: '#c2c2c222',
-  lineNumber: '#CFD8DC',
-  activeLineNumber: '#7E939E',
-  matchingBracket: '#FAFAFA',
-  keyword: '#7C4DFF',
-  storage: '#7C4DFF',
-  variable: '#90A4AE',
-  parameter: '#90A4AE',
-  function: '#6182B8',
-  string: '#91B859',
-  constant: '#F76D47',
-  type: '#8796B0',
-  class: '#FFB62C',
-  number: '#F76D47',
+  
+  // 文本颜色
+  foreground: '#90A4AE',
+  foregroundSecondary: '#90A4AE',
   comment: '#90A4AE',
+  
+  // 语法高亮色 - 核心
+  keyword: '#7C4DFF',
+  string: '#91B859',
+  function: '#6182B8',
+  number: '#F76D47',
+  operator: '#7C4DFF',
+  variable: '#90A4AE',
+  type: '#8796B0',
+  
+  // 语法高亮色 - 扩展
+  constant: '#F76D47',
+  storage: '#7C4DFF',
+  parameter: '#90A4AE',
+  class: '#FFB62C',
   heading: '#91B859',
   invalid: '#E53935',
   regexp: '#39ADB5',
+  
+  // 界面元素
+  cursor: '#272727',
+  selection: '#80CBC440',
+  selectionBlur: '#80CBC440',
+  activeLine: '#c2c2c222',
+  lineNumber: '#CFD8DC',
+  activeLineNumber: '#7E939E',
+  
+  // 边框和分割线
+  borderColor: '#00000010',
+  borderLight: '#90A4AE19',
+  
+  // 搜索和匹配
+  searchMatch: '#6182B8',
+  matchingBracket: '#FAFAFA',
 }
 
-export const materialLightTheme = EditorView.theme({
-  '&': {
-    color: config.foreground,
-    backgroundColor: config.background,
-  },
-
-  '.cm-content': {caretColor: config.cursor},
-
-  '.cm-cursor, .cm-dropCursor': {borderLeftColor: config.cursor},
-  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {backgroundColor: config.selection},
-
-  '.cm-panels': {backgroundColor: config.dropdownBackground, color: config.foreground},
-  '.cm-panels.cm-panels-top': {borderBottom: '2px solid black'},
-  '.cm-panels.cm-panels-bottom': {borderTop: '2px solid black'},
-
-  '.cm-searchMatch': {
-    backgroundColor: config.dropdownBackground,
-    outline: `1px solid ${config.dropdownBorder}`
-  },
-  '.cm-searchMatch.cm-searchMatch-selected': {
-    backgroundColor: config.selection
-  },
-
-  '.cm-activeLine': {backgroundColor: config.activeLine},
-  '.cm-selectionMatch': {backgroundColor: config.selection},
-
-  '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
-    backgroundColor: config.matchingBracket,
-    outline: 'none'
-  },
-
-  '.cm-gutters': {
-    backgroundColor: config.background,
-    color: config.foreground,
-    border: 'none'
-  },
-  '.cm-activeLineGutter': {backgroundColor: config.background},
-
-  '.cm-lineNumbers .cm-gutterElement': {color: config.lineNumber},
-  '.cm-lineNumbers .cm-activeLineGutter': {color: config.activeLineNumber},
-
-  '.cm-foldPlaceholder': {
-    backgroundColor: 'transparent',
-    border: 'none',
-    color: config.foreground
-  },
-  '.cm-tooltip': {
-    border: `1px solid ${config.dropdownBorder}`,
-    backgroundColor: config.dropdownBackground,
-    color: config.foreground,
-  },
-  '.cm-tooltip .cm-tooltip-arrow:before': {
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent'
-  },
-  '.cm-tooltip .cm-tooltip-arrow:after': {
-    borderTopColor: config.foreground,
-    borderBottomColor: config.foreground,
-  },
-  '.cm-tooltip-autocomplete': {
-    '& > ul > li[aria-selected]': {
-      background: config.selection,
-      color: config.foreground,
-    }
-  }
-}, {dark: config.dark})
-
-export const materialLightHighlightStyle = HighlightStyle.define([
-  {tag: t.keyword, color: config.keyword},
-  {tag: [t.name, t.deleted, t.character, t.macroName], color: config.variable},
-  {tag: [t.propertyName], color: config.function},
-  {tag: [t.processingInstruction, t.string, t.inserted, t.special(t.string)], color: config.string},
-  {tag: [t.function(t.variableName), t.labelName], color: config.function},
-  {tag: [t.color, t.constant(t.name), t.standard(t.name)], color: config.constant},
-  {tag: [t.definition(t.name), t.separator], color: config.variable},
-  {tag: [t.className], color: config.class},
-  {tag: [t.number, t.changed, t.annotation, t.modifier, t.self, t.namespace], color: config.number},
-  {tag: [t.typeName], color: config.type, fontStyle: config.type},
-  {tag: [t.operator, t.operatorKeyword], color: config.keyword},
-  {tag: [t.url, t.escape, t.regexp, t.link], color: config.regexp},
-  {tag: [t.meta, t.comment], color: config.comment},
-  {tag: t.strong, fontWeight: 'bold'},
-  {tag: t.emphasis, fontStyle: 'italic'},
-  {tag: t.link, textDecoration: 'underline'},
-  {tag: t.heading, fontWeight: 'bold', color: config.heading},
-  {tag: [t.atom, t.bool, t.special(t.variableName)], color: config.variable},
-  {tag: t.invalid, color: config.invalid},
-  {tag: t.strikethrough, textDecoration: 'line-through'},
-])
-
-export const materialLight: Extension = [
-  materialLightTheme,
-  syntaxHighlighting(materialLightHighlightStyle),
-]
+// 使用通用主题工厂函数创建 Material Light 主题
+export const materialLight: Extension = createBaseTheme(config)

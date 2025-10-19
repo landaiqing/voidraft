@@ -1,128 +1,57 @@
-import {EditorView} from '@codemirror/view'
 import {Extension} from '@codemirror/state'
-import {HighlightStyle, syntaxHighlighting} from '@codemirror/language'
-import {tags as t} from '@lezer/highlight'
+import {createBaseTheme} from '../base'
+import type {ThemeColors} from '../types'
 
-export const config = {
-  name: 'tokyoNightDay',
+export const config: ThemeColors = {
+  name: 'tokyo-night-day',
   dark: false,
+  
+  // 基础色调
   background: '#e1e2e7',
-  foreground: '#6a6f8e',
-  selection: '#8591b840',
-  cursor: '#3760bf',
+  backgroundSecondary: '#e1e2e7',
+  surface: '#e1e2e7',
   dropdownBackground: '#e1e2e7',
   dropdownBorder: '#6a6f8e',
-  activeLine: '#a7aaba22',
-  lineNumber: '#b3b6cd',
-  activeLineNumber: '#68709a',
-  matchingBracket: '#e9e9ec',
-  keyword: '#9854f1',
-  storage: '#9854f1',
-  variable: '#3760bf',
-  parameter: '#3760bf',
-  function: '#2e7de9',
-  string: '#587539',
-  constant: '#9854f1',
-  type: '#07879d',
-  class: '#3760bf',
-  number: '#b15c00',
+  
+  // 文本颜色
+  foreground: '#6a6f8e',
+  foregroundSecondary: '#6a6f8e',
   comment: '#9da3c2',
+  
+  // 语法高亮色 - 核心
+  keyword: '#9854f1',
+  string: '#587539',
+  function: '#2e7de9',
+  number: '#b15c00',
+  operator: '#9854f1',
+  variable: '#3760bf',
+  type: '#07879d',
+  
+  // 语法高亮色 - 扩展
+  constant: '#9854f1',
+  storage: '#9854f1',
+  parameter: '#3760bf',
+  class: '#3760bf',
   heading: '#006a83',
   invalid: '#ff3e64',
   regexp: '#2e5857',
+  
+  // 界面元素
+  cursor: '#3760bf',
+  selection: '#8591b840',
+  selectionBlur: '#8591b840',
+  activeLine: '#a7aaba22',
+  lineNumber: '#b3b6cd',
+  activeLineNumber: '#68709a',
+  
+  // 边框和分割线
+  borderColor: '#e9e9ec',
+  borderLight: '#6a6f8e19',
+  
+  // 搜索和匹配
+  searchMatch: '#2e7de9',
+  matchingBracket: '#e9e9ec',
 }
 
-export const tokyoNightDayTheme = EditorView.theme({
-  '&': {
-    color: config.foreground,
-    backgroundColor: config.background,
-  },
-
-  '.cm-content': {caretColor: config.cursor},
-
-  '.cm-cursor, .cm-dropCursor': {borderLeftColor: config.cursor},
-  '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {backgroundColor: config.selection},
-
-  '.cm-panels': {backgroundColor: config.dropdownBackground, color: config.foreground},
-  '.cm-panels.cm-panels-top': {borderBottom: '2px solid black'},
-  '.cm-panels.cm-panels-bottom': {borderTop: '2px solid black'},
-
-  '.cm-searchMatch': {
-    backgroundColor: config.dropdownBackground,
-    outline: `1px solid ${config.dropdownBorder}`
-  },
-  '.cm-searchMatch.cm-searchMatch-selected': {
-    backgroundColor: config.selection
-  },
-
-  '.cm-activeLine': {backgroundColor: config.activeLine},
-  '.cm-selectionMatch': {backgroundColor: config.selection},
-
-  '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
-    backgroundColor: config.matchingBracket,
-    outline: 'none'
-  },
-
-  '.cm-gutters': {
-    backgroundColor: config.background,
-    color: config.foreground,
-    border: 'none'
-  },
-  '.cm-activeLineGutter': {backgroundColor: config.background},
-
-  '.cm-lineNumbers .cm-gutterElement': {color: config.lineNumber},
-  '.cm-lineNumbers .cm-activeLineGutter': {color: config.activeLineNumber},
-
-  '.cm-foldPlaceholder': {
-    backgroundColor: 'transparent',
-    border: 'none',
-    color: config.foreground
-  },
-  '.cm-tooltip': {
-    border: `1px solid ${config.dropdownBorder}`,
-    backgroundColor: config.dropdownBackground,
-    color: config.foreground,
-  },
-  '.cm-tooltip .cm-tooltip-arrow:before': {
-    borderTopColor: 'transparent',
-    borderBottomColor: 'transparent'
-  },
-  '.cm-tooltip .cm-tooltip-arrow:after': {
-    borderTopColor: config.foreground,
-    borderBottomColor: config.foreground,
-  },
-  '.cm-tooltip-autocomplete': {
-    '& > ul > li[aria-selected]': {
-      background: config.selection,
-      color: config.foreground,
-    }
-  }
-}, {dark: config.dark})
-
-export const tokyoNightDayHighlightStyle = HighlightStyle.define([
-  {tag: t.keyword, color: config.keyword},
-  {tag: [t.name, t.deleted, t.character, t.macroName], color: config.variable},
-  {tag: [t.propertyName], color: config.function},
-  {tag: [t.processingInstruction, t.string, t.inserted, t.special(t.string)], color: config.string},
-  {tag: [t.function(t.variableName), t.labelName], color: config.function},
-  {tag: [t.color, t.constant(t.name), t.standard(t.name)], color: config.constant},
-  {tag: [t.definition(t.name), t.separator], color: config.variable},
-  {tag: [t.className], color: config.class},
-  {tag: [t.number, t.changed, t.annotation, t.modifier, t.self, t.namespace], color: config.number},
-  {tag: [t.typeName], color: config.type, fontStyle: config.type},
-  {tag: [t.operator, t.operatorKeyword], color: config.keyword},
-  {tag: [t.url, t.escape, t.regexp, t.link], color: config.regexp},
-  {tag: [t.meta, t.comment], color: config.comment},
-  {tag: t.strong, fontWeight: 'bold'},
-  {tag: t.emphasis, fontStyle: 'italic'},
-  {tag: t.link, textDecoration: 'underline'},
-  {tag: t.heading, fontWeight: 'bold', color: config.heading},
-  {tag: [t.atom, t.bool, t.special(t.variableName)], color: config.variable},
-  {tag: t.invalid, color: config.invalid},
-  {tag: t.strikethrough, textDecoration: 'line-through'},
-])
-
-export const tokyoNightDay: Extension = [
-  tokyoNightDayTheme,
-  syntaxHighlighting(tokyoNightDayHighlightStyle),
-]
+// 使用通用主题工厂函数创建 Tokyo Night Day 主题
+export const tokyoNightDay: Extension = createBaseTheme(config)

@@ -1191,9 +1191,20 @@ export class Theme {
 }
 
 /**
- * ThemeColorConfig 主题颜色配置
+ * ThemeColorConfig 主题颜色配置（与前端 ThemeColors 接口保持一致）
  */
 export class ThemeColorConfig {
+    /**
+     * 主题基本信息
+     * 主题名称
+     */
+    "name": string;
+
+    /**
+     * 是否为深色主题
+     */
+    "dark": boolean;
+
     /**
      * 基础色调
      * 主背景色
@@ -1201,7 +1212,7 @@ export class ThemeColorConfig {
     "background": string;
 
     /**
-     * 次要背景色
+     * 次要背景色（用于代码块交替背景）
      */
     "backgroundSecondary": string;
 
@@ -1211,6 +1222,17 @@ export class ThemeColorConfig {
     "surface": string;
 
     /**
+     * 下拉菜单背景
+     */
+    "dropdownBackground": string;
+
+    /**
+     * 下拉菜单边框
+     */
+    "dropdownBorder": string;
+
+    /**
+     * 文本颜色
      * 主文本色
      */
     "foreground": string;
@@ -1221,12 +1243,12 @@ export class ThemeColorConfig {
     "foregroundSecondary": string;
 
     /**
-     * 语法高亮
      * 注释色
      */
     "comment": string;
 
     /**
+     * 语法高亮色 - 核心
      * 关键字
      */
     "keyword": string;
@@ -1262,6 +1284,42 @@ export class ThemeColorConfig {
     "type": string;
 
     /**
+     * 语法高亮色 - 扩展
+     * 常量
+     */
+    "constant": string;
+
+    /**
+     * 存储类型（如 static, const）
+     */
+    "storage": string;
+
+    /**
+     * 参数
+     */
+    "parameter": string;
+
+    /**
+     * 类名
+     */
+    "class": string;
+
+    /**
+     * 标题（Markdown等）
+     */
+    "heading": string;
+
+    /**
+     * 无效内容/错误
+     */
+    "invalid": string;
+
+    /**
+     * 正则表达式
+     */
+    "regexp": string;
+
+    /**
      * 界面元素
      * 光标
      */
@@ -1288,12 +1346,12 @@ export class ThemeColorConfig {
     "lineNumber": string;
 
     /**
-     * 活动行号
+     * 活动行号颜色
      */
     "activeLineNumber": string;
 
     /**
-     * 边框分割线
+     * 边框和分割线
      * 边框色
      */
     "borderColor": string;
@@ -1304,7 +1362,7 @@ export class ThemeColorConfig {
     "borderLight": string;
 
     /**
-     * 搜索匹配
+     * 搜索和匹配
      * 搜索匹配
      */
     "searchMatch": string;
@@ -1316,6 +1374,12 @@ export class ThemeColorConfig {
 
     /** Creates a new ThemeColorConfig instance. */
     constructor($$source: Partial<ThemeColorConfig> = {}) {
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("dark" in $$source)) {
+            this["dark"] = false;
+        }
         if (!("background" in $$source)) {
             this["background"] = "";
         }
@@ -1324,6 +1388,12 @@ export class ThemeColorConfig {
         }
         if (!("surface" in $$source)) {
             this["surface"] = "";
+        }
+        if (!("dropdownBackground" in $$source)) {
+            this["dropdownBackground"] = "";
+        }
+        if (!("dropdownBorder" in $$source)) {
+            this["dropdownBorder"] = "";
         }
         if (!("foreground" in $$source)) {
             this["foreground"] = "";
@@ -1354,6 +1424,27 @@ export class ThemeColorConfig {
         }
         if (!("type" in $$source)) {
             this["type"] = "";
+        }
+        if (!("constant" in $$source)) {
+            this["constant"] = "";
+        }
+        if (!("storage" in $$source)) {
+            this["storage"] = "";
+        }
+        if (!("parameter" in $$source)) {
+            this["parameter"] = "";
+        }
+        if (!("class" in $$source)) {
+            this["class"] = "";
+        }
+        if (!("heading" in $$source)) {
+            this["heading"] = "";
+        }
+        if (!("invalid" in $$source)) {
+            this["invalid"] = "";
+        }
+        if (!("regexp" in $$source)) {
+            this["regexp"] = "";
         }
         if (!("cursor" in $$source)) {
             this["cursor"] = "";

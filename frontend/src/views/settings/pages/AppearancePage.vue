@@ -6,11 +6,10 @@ import { computed, watch, onMounted, ref } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import { SystemThemeType, LanguageType } from '@/../bindings/voidraft/internal/models/models';
-import { defaultDarkColors } from '@/views/editor/theme/dark';
-import { defaultLightColors } from '@/views/editor/theme/light';
 import { createDebounce } from '@/common/utils/debounce';
 import { createTimerManager } from '@/common/utils/timerUtils';
 import PickColors from 'vue-pick-colors';
+import type { ThemeColors } from '@/views/editor/theme/types';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
@@ -24,14 +23,12 @@ const { debouncedFn: debouncedUpdateColor } = createDebounce(
 
 const { debouncedFn: debouncedResetTheme } = createDebounce(
   async () => {
-    const themeType = activeThemeType.value;
-    const success = await themeStore.resetThemeColors(themeType);
+    const isDark = isDarkMode.value;
+    const success = await themeStore.resetCurrentTheme(isDark);
     
     if (success) {
-      tempColors.value = {
-        darkTheme: { ...themeStore.themeColors.darkTheme },
-        lightTheme: { ...themeStore.themeColors.lightTheme }
-      };
+      // 重新加载临时颜色
+      syncTempColors();
       hasUnsavedChanges.value = false;
     }
   },
@@ -41,11 +38,8 @@ const { debouncedFn: debouncedResetTheme } = createDebounce(
 // 创建定时器管理器
 const resetTimer = createTimerManager();
 
-// 添加临时颜色状态
-const tempColors = ref({
-  darkTheme: { ...defaultDarkColors },
-  lightTheme: { ...defaultLightColors }
-});
+// 临时颜色状态（用于编辑）
+const tempColors = ref<ThemeColors | null>(null);
 
 // 标记是否有未保存的更改
 const hasUnsavedChanges = ref(false);
@@ -55,81 +49,72 @@ const resetButtonState = ref({
   confirming: false
 });
 
-// 当前激活的主题类型
+// 当前激活的主题类型（深色/浅色）
 const isDarkMode = computed(() => 
   themeStore.currentTheme === SystemThemeType.SystemThemeDark || 
   (themeStore.currentTheme === SystemThemeType.SystemThemeAuto && 
    window.matchMedia('(prefers-color-scheme: dark)').matches)
 );
 
-const activeThemeType = computed(() => isDarkMode.value ? 'darkTheme' : 'lightTheme');
+// 当前可用的预设主题列表
+const availableThemes = computed(() => 
+  isDarkMode.value ? themeStore.darkThemes : themeStore.lightThemes
+);
 
-// 当前主题的颜色配置
-const currentColors = computed(() => {
-  const themeType = activeThemeType.value;
-  return tempColors.value[themeType] || 
-    (themeType === 'darkTheme' ? defaultDarkColors : defaultLightColors);
+// 当前选中的主题ID
+const currentThemeId = computed({
+  get: () => isDarkMode.value ? themeStore.currentThemeIds.dark : themeStore.currentThemeIds.light,
+  set: async (themeId: number) => {
+    await themeStore.switchToTheme(themeId);
+    syncTempColors();
+    hasUnsavedChanges.value = false;
+  }
 });
 
-// 获取当前主题模式
+// 当前主题的颜色配置
+const currentColors = computed(() => tempColors.value || ({} as ThemeColors));
+
+// 获取当前主题模式（用于颜色选择器）
 const currentThemeMode = computed(() => isDarkMode.value ? 'dark' : 'light');
 
-// 监听主题颜色变更，
+// 同步临时颜色从 store
+const syncTempColors = () => {
+  const colors = isDarkMode.value ? themeStore.currentColors.dark : themeStore.currentColors.light;
+  if (colors) {
+    tempColors.value = { ...colors };
+  }
+};
+
+// 监听主题切换，同步临时颜色
 watch(
-  () => themeStore.themeColors,
-  (newValue) => {
+  [() => themeStore.currentColors.dark, () => themeStore.currentColors.light, isDarkMode],
+  () => {
     if (!hasUnsavedChanges.value) {
-      tempColors.value.darkTheme = { ...newValue.darkTheme };
-      tempColors.value.lightTheme = { ...newValue.lightTheme };
+      syncTempColors();
     }
   },
-  { deep: true, immediate: true }
+  { deep: true }
 );
 
 onMounted(() => {
-  tempColors.value = {
-    darkTheme: { ...themeStore.themeColors.darkTheme },
-    lightTheme: { ...themeStore.themeColors.lightTheme }
-  };
+  syncTempColors();
 });
 
-// 颜色配置
-const colorConfig = [
-  {
-    key: 'basic',
-    colors: ['background', 'backgroundSecondary', 'surface']
-  },
-  {
-    key: 'text', 
-    colors: ['foreground', 'foregroundSecondary', 'comment']
-  },
-  {
-    key: 'syntax',
-    colors: ['keyword', 'string', 'function', 'number', 'operator', 'variable', 'type']
-  },
-  {
-    key: 'interface',
-    colors: ['cursor', 'selection', 'selectionBlur', 'activeLine', 'lineNumber', 'activeLineNumber']
-  },
-  {
-    key: 'border',
-    colors: ['borderColor', 'borderLight']
-  },
-  {
-    key: 'search',
-    colors: ['searchMatch', 'matchingBracket']
-  }
-];
+// 从 ThemeColors 接口自动提取所有颜色字段
+const colorKeys = computed(() => {
+  if (!tempColors.value) return [];
+  
+  // 获取所有字段，排除 name 和 dark（这两个是元数据）
+  return Object.keys(tempColors.value).filter(key => 
+    key !== 'name' && key !== 'dark'
+  );
+});
 
-// 颜色配置分组
-const colorGroups = computed(() => 
-  colorConfig.map(group => ({
-    key: group.key,
-    title: t(`settings.themeColors.${group.key}`),
-    colors: group.colors.map(colorKey => ({
-      key: colorKey,
-      label: t(`settings.themeColors.${colorKey}`)
-    }))
+// 颜色配置列表
+const colorList = computed(() => 
+  colorKeys.value.map(colorKey => ({
+    key: colorKey,
+    label: t(`settings.themeColors.${colorKey}`)
   }))
 );
 
@@ -152,15 +137,12 @@ const handleResetClick = () => {
 
 // 更新本地颜色配置
 const updateLocalColor = (colorKey: string, value: string) => {
-  const themeType = activeThemeType.value;
+  if (!tempColors.value) return;
   
   // 更新临时颜色
   tempColors.value = {
     ...tempColors.value,
-    [themeType]: {
-      ...tempColors.value[themeType],
-      [colorKey]: value
-    }
+    [colorKey]: value
   };
 
   hasUnsavedChanges.value = true;
@@ -169,17 +151,15 @@ const updateLocalColor = (colorKey: string, value: string) => {
 // 应用颜色更改到系统
 const applyChanges = async () => {
   try {
-    // 获取当前主题的自定义颜色
-    const customTheme = {
-      darkTheme: tempColors.value.darkTheme,
-      lightTheme: tempColors.value.lightTheme
-    };
+    if (!tempColors.value) return;
     
-    // 更新themeStore中的颜色
-    themeStore.updateThemeColors(customTheme.darkTheme, customTheme.lightTheme);
+    const isDark = isDarkMode.value;
     
-    // 保存到配置
-    await themeStore.saveThemeColors();
+    // 更新 store 中的颜色
+    themeStore.updateCurrentColors(tempColors.value, isDark);
+    
+    // 保存到数据库
+    await themeStore.saveCurrentTheme(isDark);
     
     // 刷新编辑器主题
     themeStore.refreshEditorTheme();
@@ -193,11 +173,8 @@ const applyChanges = async () => {
 
 // 取消颜色更改
 const cancelChanges = () => {
-  // 恢复到themeStore中的颜色
-  tempColors.value = {
-    darkTheme: { ...themeStore.themeColors.darkTheme },
-    lightTheme: { ...themeStore.themeColors.lightTheme }
-  };
+  // 恢复到 store 中的颜色
+  syncTempColors();
   
   // 清除未保存标记
   hasUnsavedChanges.value = false;
@@ -266,6 +243,15 @@ const handlePickerClose = () => {
           </option>
         </select>
       </SettingItem>
+      
+      <!-- 预设主题选择 -->
+      <SettingItem :title="t('settings.presetTheme')">
+        <select class="select-input" v-model="currentThemeId" :disabled="hasUnsavedChanges">
+          <option v-for="theme in availableThemes" :key="theme.id" :value="theme.id">
+            {{ theme.name }}
+          </option>
+        </select>
+      </SettingItem>
     </SettingSection>
 
     <!-- 自定义主题颜色配置 -->
@@ -290,45 +276,41 @@ const handlePickerClose = () => {
         </div>
       </template>
       
-      <div class="color-groups">
-        <div v-for="group in colorGroups" :key="group.key" class="color-group">
-          <h4 class="group-title">{{ group.title }}</h4>
-          <div class="color-items">
-            <SettingItem 
-              v-for="color in group.colors" 
-              :key="color.key" 
-              :title="color.label"
-              class="color-setting-item"
-            >
-              <div class="color-input-wrapper">
-                <div class="color-picker-wrapper">
-                  <PickColors
-                    v-model:value="currentColors[color.key]"
-                    v-model:show-picker="showPickerMap[color.key]"
-                    :size="28"
-                    show-alpha
-                    :theme="currentThemeMode"
-                    :colors="[]"
-                    format="hex"
-                    :format-options="['rgb', 'hex', 'hsl', 'hsv']"
-                    placement="bottom"
-                    position="absolute"
-                    :z-index="1000"
-                    @change="(val) => handleColorChange(color.key, val)"
-                    @close-picker="handlePickerClose"
-                  />
-                </div>
-                <input 
-                  type="text" 
-                  :value="currentColors[color.key] || ''" 
-                  @input="debouncedUpdateColor(color.key, ($event.target as HTMLInputElement).value)"
-                  class="color-text-input"
-                  :placeholder="t('settings.colorValue')"
-                />
-              </div>
-            </SettingItem>
+      <!-- 颜色列表 -->
+      <div class="color-list">
+        <SettingItem 
+          v-for="color in colorList" 
+          :key="color.key" 
+          :title="color.label"
+          class="color-setting-item"
+        >
+          <div class="color-input-wrapper">
+            <div class="color-picker-wrapper">
+              <PickColors
+                v-model:value="currentColors[color.key]"
+                v-model:show-picker="showPickerMap[color.key]"
+                :size="28"
+                show-alpha
+                :theme="currentThemeMode"
+                :colors="[]"
+                format="hex"
+                :format-options="['rgb', 'hex', 'hsl', 'hsv']"
+                placement="bottom"
+                position="absolute"
+                :z-index="1000"
+                @change="(val) => handleColorChange(color.key, val)"
+                @close-picker="handlePickerClose"
+              />
+            </div>
+            <input 
+              type="text" 
+              :value="currentColors[color.key] || ''" 
+              @input="debouncedUpdateColor(color.key, ($event.target as HTMLInputElement).value)"
+              class="color-text-input"
+              :placeholder="t('settings.colorValue')"
+            />
           </div>
-        </div>
+        </SettingItem>
       </div>
     </SettingSection>
   </div>
@@ -430,27 +412,11 @@ const handlePickerClose = () => {
   }
 }
 
-.color-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.color-group {
-  .group-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--settings-text);
-    margin: 0 0 12px 0;
-    padding-bottom: 6px;
-    border-bottom: 1px solid var(--settings-input-border);
-  }
-  
-  .color-items {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 8px;
-  }
+.color-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .color-setting-item {

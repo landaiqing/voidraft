@@ -42,12 +42,12 @@ export function GetAllThemes(): Promise<(models$0.Theme | null)[]> & { cancel():
 }
 
 /**
- * GetDefaultThemes 获取默认主题
+ * GetThemeByID 根据ID获取主题
  */
-export function GetDefaultThemes(): Promise<{ [_: string]: models$0.Theme | null }> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3801788118) as any;
+export function GetThemeByID(id: number): Promise<models$0.Theme | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3053137052, id) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType3($result);
+        return $$createType1($result);
     }) as any;
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -66,10 +66,22 @@ export function GetThemeByType(themeType: models$0.ThemeType): Promise<models$0.
 }
 
 /**
- * ResetThemeColors 重置主题颜色为默认值
+ * GetThemesByType 根据类型获取所有主题
  */
-export function ResetThemeColors(themeType: models$0.ThemeType): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(342461245, themeType) as any;
+export function GetThemesByType(themeType: models$0.ThemeType): Promise<(models$0.Theme | null)[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1478417492, themeType) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType2($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * ResetTheme 重置主题为预设配置
+ */
+export function ResetTheme(id: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1806334457, id) as any;
     return $resultPromise;
 }
 
@@ -90,10 +102,10 @@ export function ServiceStartup(options: application$0.ServiceOptions): Promise<v
 }
 
 /**
- * UpdateThemeColors 更新主题颜色
+ * UpdateTheme 更新主题
  */
-export function UpdateThemeColors(themeType: models$0.ThemeType, colors: models$0.ThemeColorConfig): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2750902529, themeType, colors) as any;
+export function UpdateTheme(id: number, colors: models$0.ThemeColorConfig): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(70189749, id, colors) as any;
     return $resultPromise;
 }
 
@@ -101,4 +113,3 @@ export function UpdateThemeColors(themeType: models$0.ThemeType, colors: models$
 const $$createType0 = models$0.Theme.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = $Create.Map($Create.Any, $$createType1);

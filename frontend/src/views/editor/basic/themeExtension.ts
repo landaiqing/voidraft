@@ -1,8 +1,7 @@
 import { Extension, Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
-import { createDarkTheme } from '@/views/editor/theme/dark';
-import { createLightTheme } from '@/views/editor/theme/light';
+import { createThemeByColors } from '@/views/editor/theme/registry';
 import { useThemeStore } from '@/stores/themeStore';
 
 // 主题区间 - 用于动态切换主题
@@ -11,23 +10,25 @@ export const themeCompartment = new Compartment();
 /**
  * 根据主题类型获取主题扩展
  */
-const getThemeExtension = (themeType: SystemThemeType): Extension => {
+const getThemeExtension = (themeType: SystemThemeType): Extension | null => {
   const themeStore = useThemeStore();
   
   // 处理 auto 主题类型
-  let actualTheme: SystemThemeType = themeType;
+  let isDark = themeType === SystemThemeType.SystemThemeDark;
   if (themeType === SystemThemeType.SystemThemeAuto) {
-    actualTheme = window.matchMedia('(prefers-color-scheme: dark)').matches 
-      ? SystemThemeType.SystemThemeDark 
-      : SystemThemeType.SystemThemeLight;
+    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
-  // 根据主题类型创建主题
-  if (actualTheme === SystemThemeType.SystemThemeLight) {
-    return createLightTheme(themeStore.themeColors.lightTheme);
-  } else {
-    return createDarkTheme(themeStore.themeColors.darkTheme);
+  // 根据主题类型获取对应的颜色配置
+  const colors = isDark ? themeStore.currentColors.dark : themeStore.currentColors.light;
+  
+  if (!colors) {
+    console.warn('Theme colors not loaded yet');
+    return null;
   }
+
+  // 使用颜色配置创建主题
+  return createThemeByColors(colors);
 };
 
 /**
@@ -35,6 +36,12 @@ const getThemeExtension = (themeType: SystemThemeType): Extension => {
  */
 export const createThemeExtension = (themeType: SystemThemeType = SystemThemeType.SystemThemeDark): Extension => {
   const extension = getThemeExtension(themeType);
+  
+  // 如果主题未加载，返回空扩展
+  if (!extension) {
+    return themeCompartment.of([]);
+  }
+  
   return themeCompartment.of(extension);
 };
 
@@ -48,6 +55,13 @@ export const updateEditorTheme = (view: EditorView, themeType: SystemThemeType):
 
   try {
     const extension = getThemeExtension(themeType);
+    
+    // 如果主题未加载，不更新
+    if (!extension) {
+      console.warn('Cannot update theme: theme not loaded');
+      return;
+    }
+    
     view.dispatch({
       effects: themeCompartment.reconfigure(extension)
     });
