@@ -91,7 +91,6 @@ func main() {
 		URL:              "/",
 	})
 	mainWindow.Center()
-	mainWindow.Focus()
 	window = mainWindow
 
 	trayService := serviceManager.GetTrayService()
