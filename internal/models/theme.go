@@ -219,7 +219,7 @@ func NewDraculaTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#282A36",
-		BackgroundSecondary: "#282A36",
+		BackgroundSecondary: "#323543FF",
 		Surface:             "#282A36",
 		DropdownBackground:  "#282A36",
 		DropdownBorder:      "#191A21",
@@ -266,7 +266,7 @@ func NewAuraTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#21202e",
-		BackgroundSecondary: "#21202e",
+		BackgroundSecondary: "#2B2A3BFF",
 		Surface:             "#21202e",
 		DropdownBackground:  "#21202e",
 		DropdownBorder:      "#3b334b",
@@ -313,7 +313,7 @@ func NewGitHubDarkTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#24292e",
-		BackgroundSecondary: "#24292e",
+		BackgroundSecondary: "#2E343BFF",
 		Surface:             "#24292e",
 		DropdownBackground:  "#24292e",
 		DropdownBorder:      "#1b1f23",
@@ -360,7 +360,7 @@ func NewMaterialDarkTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#263238",
-		BackgroundSecondary: "#263238",
+		BackgroundSecondary: "#2D3E46FF",
 		Surface:             "#263238",
 		DropdownBackground:  "#263238",
 		DropdownBorder:      "#FFFFFF10",
@@ -407,7 +407,7 @@ func NewOneDarkTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#282c34",
-		BackgroundSecondary: "#2c313a",
+		BackgroundSecondary: "#313949FF",
 		Surface:             "#353a42",
 		DropdownBackground:  "#21252b",
 		DropdownBorder:      "#7d8799",
@@ -454,7 +454,7 @@ func NewSolarizedDarkTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#002B36",
-		BackgroundSecondary: "#002B36",
+		BackgroundSecondary: "#003643FF",
 		Surface:             "#002B36",
 		DropdownBackground:  "#002B36",
 		DropdownBorder:      "#2AA19899",
@@ -501,7 +501,7 @@ func NewTokyoNightTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#1a1b26",
-		BackgroundSecondary: "#1a1b26",
+		BackgroundSecondary: "#272839FF",
 		Surface:             "#1a1b26",
 		DropdownBackground:  "#1a1b26",
 		DropdownBorder:      "#787c99",
@@ -548,7 +548,7 @@ func NewTokyoNightStormTheme() *ThemeColorConfig {
 		Dark: true,
 
 		Background:          "#24283b",
-		BackgroundSecondary: "#24283b",
+		BackgroundSecondary: "#2B3151FF",
 		Surface:             "#24283b",
 		DropdownBackground:  "#24283b",
 		DropdownBorder:      "#7982a9",
@@ -597,7 +597,7 @@ func NewGitHubLightTheme() *ThemeColorConfig {
 		Dark: false,
 
 		Background:          "#fff",
-		BackgroundSecondary: "#fff",
+		BackgroundSecondary: "#f1faf1",
 		Surface:             "#fff",
 		DropdownBackground:  "#fff",
 		DropdownBorder:      "#e1e4e8",
@@ -644,7 +644,7 @@ func NewMaterialLightTheme() *ThemeColorConfig {
 		Dark: false,
 
 		Background:          "#FAFAFA",
-		BackgroundSecondary: "#FAFAFA",
+		BackgroundSecondary: "#f1faf1",
 		Surface:             "#FAFAFA",
 		DropdownBackground:  "#FAFAFA",
 		DropdownBorder:      "#00000010",
@@ -691,7 +691,7 @@ func NewSolarizedLightTheme() *ThemeColorConfig {
 		Dark: false,
 
 		Background:          "#FDF6E3",
-		BackgroundSecondary: "#FDF6E3",
+		BackgroundSecondary: "#FFEEBCD4",
 		Surface:             "#FDF6E3",
 		DropdownBackground:  "#FDF6E3",
 		DropdownBorder:      "#D3AF86",
@@ -738,7 +738,7 @@ func NewTokyoNightDayTheme() *ThemeColorConfig {
 		Dark: false,
 
 		Background:          "#e1e2e7",
-		BackgroundSecondary: "#e1e2e7",
+		BackgroundSecondary: "#D2D8EFFF",
 		Surface:             "#e1e2e7",
 		DropdownBackground:  "#e1e2e7",
 		DropdownBorder:      "#6a6f8e",

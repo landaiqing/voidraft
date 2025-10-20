@@ -109,8 +109,9 @@ type EditingConfig struct {
 
 // AppearanceConfig 外观设置配置
 type AppearanceConfig struct {
-	Language    LanguageType    `json:"language"`    // 界面语言
-	SystemTheme SystemThemeType `json:"systemTheme"` // 系统界面主题
+	Language     LanguageType    `json:"language"`     // 界面语言
+	SystemTheme  SystemThemeType `json:"systemTheme"`  // 系统界面主题
+	CurrentTheme string          `json:"currentTheme"` // 当前选择的预设主题名称
 }
 
 // UpdatesConfig 更新设置配置
@@ -179,8 +180,9 @@ func NewDefaultAppConfig() *AppConfig {
 			AutoSaveDelay: 2000,
 		},
 		Appearance: AppearanceConfig{
-			Language:    LangEnUS,
-			SystemTheme: SystemThemeAuto,
+			Language:     LangEnUS,
+			SystemTheme:  SystemThemeAuto,
+			CurrentTheme: "default-dark", // 默认使用 default-dark 主题
 		},
 		Updates: UpdatesConfig{
 			Version:            version.Version,

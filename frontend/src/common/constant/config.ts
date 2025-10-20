@@ -62,7 +62,8 @@ export const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
 
 export const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
     language: 'appearance.language',
-    systemTheme: 'appearance.systemTheme'
+    systemTheme: 'appearance.systemTheme',
+    currentTheme: 'appearance.currentTheme'
 } as const;
 
 export const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
@@ -128,7 +129,8 @@ export const DEFAULT_CONFIG: AppConfig = {
     },
     appearance: {
         language: LanguageType.LangZhCN,
-        systemTheme: SystemThemeType.SystemThemeAuto
+        systemTheme: SystemThemeType.SystemThemeAuto,
+        currentTheme: 'default-dark'
     },
     updates: {
         version: "1.0.0",

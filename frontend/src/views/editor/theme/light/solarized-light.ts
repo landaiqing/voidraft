@@ -8,7 +8,7 @@ export const config: ThemeColors = {
   
   // 基础色调
   background: '#FDF6E3',
-  backgroundSecondary: '#FDF6E3',
+  backgroundSecondary: '#FFEEBCD4',
   surface: '#FDF6E3',
   dropdownBackground: '#FDF6E3',
   dropdownBorder: '#D3AF86',

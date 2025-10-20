@@ -1,13 +1,15 @@
 <script setup lang="ts">
 defineProps<{
-  title: string;
+  title?: string;
 }>();
 </script>
 
 <template>
   <div class="setting-section">
     <div class="section-header">
-      <h2 class="section-title">{{ title }}</h2>
+      <h2 class="section-title">
+        <slot name="title">{{ title }}</slot>
+      </h2>
       <div class="section-title-right">
         <slot name="title-right"></slot>
       </div>

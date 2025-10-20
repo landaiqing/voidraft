@@ -1,7 +1,6 @@
 import { Extension, Compartment } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
-import { SystemThemeType } from '@/../bindings/voidraft/internal/models/models';
-import { createThemeByColors } from '@/views/editor/theme/registry';
+import { createThemeByColors } from '@/views/editor/theme';
 import { useThemeStore } from '@/stores/themeStore';
 
 // 主题区间 - 用于动态切换主题
@@ -10,20 +9,13 @@ export const themeCompartment = new Compartment();
 /**
  * 根据主题类型获取主题扩展
  */
-const getThemeExtension = (themeType: SystemThemeType): Extension | null => {
+const getThemeExtension = (): Extension | null => {
   const themeStore = useThemeStore();
   
-  // 处理 auto 主题类型
-  let isDark = themeType === SystemThemeType.SystemThemeDark;
-  if (themeType === SystemThemeType.SystemThemeAuto) {
-    isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  }
-
-  // 根据主题类型获取对应的颜色配置
-  const colors = isDark ? themeStore.currentColors.dark : themeStore.currentColors.light;
+  // 直接获取当前主题颜色配置
+  const colors = themeStore.currentColors;
   
   if (!colors) {
-    console.warn('Theme colors not loaded yet');
     return null;
   }
 
@@ -34,8 +26,8 @@ const getThemeExtension = (themeType: SystemThemeType): Extension | null => {
 /**
  * 创建主题扩展（用于编辑器初始化）
  */
-export const createThemeExtension = (themeType: SystemThemeType = SystemThemeType.SystemThemeDark): Extension => {
-  const extension = getThemeExtension(themeType);
+export const createThemeExtension = (): Extension => {
+  const extension = getThemeExtension();
   
   // 如果主题未加载，返回空扩展
   if (!extension) {
@@ -48,17 +40,16 @@ export const createThemeExtension = (themeType: SystemThemeType = SystemThemeTyp
 /**
  * 更新编辑器主题
  */
-export const updateEditorTheme = (view: EditorView, themeType: SystemThemeType): void => {
+export const updateEditorTheme = (view: EditorView): void => {
   if (!view?.dispatch) {
     return;
   }
 
   try {
-    const extension = getThemeExtension(themeType);
+    const extension = getThemeExtension();
     
     // 如果主题未加载，不更新
     if (!extension) {
-      console.warn('Cannot update theme: theme not loaded');
       return;
     }
     

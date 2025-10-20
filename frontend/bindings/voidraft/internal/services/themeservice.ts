@@ -18,18 +18,6 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as models$0 from "../models/models.js";
 
 /**
- * CreateTheme 创建新主题
- */
-export function CreateTheme(theme: models$0.Theme | null): Promise<models$0.Theme | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3274757686, theme) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
  * GetAllThemes 获取所有主题
  */
 export function GetAllThemes(): Promise<(models$0.Theme | null)[]> & { cancel(): void } {
@@ -42,36 +30,13 @@ export function GetAllThemes(): Promise<(models$0.Theme | null)[]> & { cancel():
 }
 
 /**
- * GetThemeByID 根据ID获取主题
+ * GetThemeByID 根据ID或名称获取主题
+ * 如果 id > 0，按ID查询；如果 id = 0，按名称查询
  */
-export function GetThemeByID(id: number): Promise<models$0.Theme | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3053137052, id) as any;
+export function GetThemeByIdOrName(id: number, ...name: string[]): Promise<models$0.Theme | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(127385338, id, name) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetThemeByType 根据类型获取默认主题
- */
-export function GetThemeByType(themeType: models$0.ThemeType): Promise<models$0.Theme | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1680465265, themeType) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetThemesByType 根据类型获取所有主题
- */
-export function GetThemesByType(themeType: models$0.ThemeType): Promise<(models$0.Theme | null)[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1478417492, themeType) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType2($result);
     }) as any;
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -80,8 +45,8 @@ export function GetThemesByType(themeType: models$0.ThemeType): Promise<(models$
 /**
  * ResetTheme 重置主题为预设配置
  */
-export function ResetTheme(id: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1806334457, id) as any;
+export function ResetTheme(id: number, ...name: string[]): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1806334457, id, name) as any;
     return $resultPromise;
 }
 

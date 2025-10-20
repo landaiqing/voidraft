@@ -150,18 +150,35 @@ func (ts *ThemeService) initializeDefaultThemes() error {
 	return nil
 }
 
-// GetThemeByID 根据ID获取主题
-func (ts *ThemeService) GetThemeByID(id int) (*models.Theme, error) {
-	query := `
-		SELECT id, name, type, colors, is_default, created_at, updated_at 
-		FROM themes 
-		WHERE id = ?
-		LIMIT 1
-	`
+// GetThemeByID 根据ID或名称获取主题
+// 如果 id > 0，按ID查询；如果 id = 0，按名称查询
+func (ts *ThemeService) GetThemeByIdOrName(id int, name ...string) (*models.Theme, error) {
+	var query string
+	var args []interface{}
+
+	if id > 0 {
+		query = `
+			SELECT id, name, type, colors, is_default, created_at, updated_at 
+			FROM themes 
+			WHERE id = ?
+			LIMIT 1
+		`
+		args = []interface{}{id}
+	} else if len(name) > 0 && name[0] != "" {
+		query = `
+			SELECT id, name, type, colors, is_default, created_at, updated_at 
+			FROM themes 
+			WHERE name = ?
+			LIMIT 1
+		`
+		args = []interface{}{name[0]}
+	} else {
+		return nil, fmt.Errorf("either id or name must be provided")
+	}
 
 	theme := &models.Theme{}
 	db := ts.getDB()
-	err := db.QueryRow(query, id).Scan(
+	err := db.QueryRow(query, args...).Scan(
 		&theme.ID,
 		&theme.Name,
 		&theme.Type,
@@ -173,84 +190,15 @@ func (ts *ThemeService) GetThemeByID(id int) (*models.Theme, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("theme not found with id: %d", id)
+			if id > 0 {
+				return nil, fmt.Errorf("theme not found with id: %d", id)
+			}
+			return nil, fmt.Errorf("theme not found with name: %s", name[0])
 		}
-		return nil, fmt.Errorf("failed to get theme by id: %w", err)
+		return nil, fmt.Errorf("failed to get theme: %w", err)
 	}
 
 	return theme, nil
-}
-
-// GetThemeByType 根据类型获取默认主题
-func (ts *ThemeService) GetThemeByType(themeType models.ThemeType) (*models.Theme, error) {
-	query := `
-		SELECT id, name, type, colors, is_default, created_at, updated_at 
-		FROM themes 
-		WHERE type = ? AND is_default = 1
-		LIMIT 1
-	`
-
-	theme := &models.Theme{}
-	db := ts.getDB()
-	err := db.QueryRow(query, themeType).Scan(
-		&theme.ID,
-		&theme.Name,
-		&theme.Type,
-		&theme.Colors,
-		&theme.IsDefault,
-		&theme.CreatedAt,
-		&theme.UpdatedAt,
-	)
-
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("no default theme found for type: %s", themeType)
-		}
-		return nil, fmt.Errorf("failed to get theme by type: %w", err)
-	}
-
-	return theme, nil
-}
-
-// GetThemesByType 根据类型获取所有主题
-func (ts *ThemeService) GetThemesByType(themeType models.ThemeType) ([]*models.Theme, error) {
-	query := `
-		SELECT id, name, type, colors, is_default, created_at, updated_at 
-		FROM themes 
-		WHERE type = ?
-		ORDER BY is_default DESC, name ASC
-	`
-
-	db := ts.getDB()
-	rows, err := db.Query(query, themeType)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query themes by type: %w", err)
-	}
-	defer rows.Close()
-
-	var themes []*models.Theme
-	for rows.Next() {
-		theme := &models.Theme{}
-		err := rows.Scan(
-			&theme.ID,
-			&theme.Name,
-			&theme.Type,
-			&theme.Colors,
-			&theme.IsDefault,
-			&theme.CreatedAt,
-			&theme.UpdatedAt,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan theme: %w", err)
-		}
-		themes = append(themes, theme)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("failed to iterate themes: %w", err)
-	}
-
-	return themes, nil
 }
 
 // UpdateTheme 更新主题
@@ -280,9 +228,9 @@ func (ts *ThemeService) UpdateTheme(id int, colors models.ThemeColorConfig) erro
 }
 
 // ResetTheme 重置主题为预设配置
-func (ts *ThemeService) ResetTheme(id int) error {
+func (ts *ThemeService) ResetTheme(id int, name ...string) error {
 	// 先获取主题信息
-	theme, err := ts.GetThemeByID(id)
+	theme, err := ts.GetThemeByIdOrName(id, name...)
 	if err != nil {
 		return err
 	}
@@ -329,37 +277,6 @@ func (ts *ThemeService) ResetTheme(id int) error {
 	}
 
 	return ts.UpdateTheme(id, *presetConfig)
-}
-
-// CreateTheme 创建新主题
-func (ts *ThemeService) CreateTheme(theme *models.Theme) (*models.Theme, error) {
-	query := `
-		INSERT INTO themes (name, type, colors, is_default, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`
-
-	db := ts.getDB()
-	result, err := db.Exec(
-		query,
-		theme.Name,
-		theme.Type,
-		theme.Colors,
-		theme.IsDefault,
-		theme.CreatedAt,
-		theme.UpdatedAt,
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to create theme: %w", err)
-	}
-
-	id, err := result.LastInsertId()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get theme ID: %w", err)
-	}
-
-	theme.ID = int(id)
-	return theme, nil
 }
 
 // GetAllThemes 获取所有主题

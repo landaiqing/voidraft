@@ -110,6 +110,11 @@ export class AppearanceConfig {
      */
     "systemTheme": SystemThemeType;
 
+    /**
+     * 当前选择的预设主题名称
+     */
+    "currentTheme": string;
+
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
@@ -117,6 +122,9 @@ export class AppearanceConfig {
         }
         if (!("systemTheme" in $$source)) {
             this["systemTheme"] = ("" as SystemThemeType);
+        }
+        if (!("currentTheme" in $$source)) {
+            this["currentTheme"] = "";
         }
 
         Object.assign(this, $$source);

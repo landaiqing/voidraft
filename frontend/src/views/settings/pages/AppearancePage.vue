@@ -23,8 +23,7 @@ const { debouncedFn: debouncedUpdateColor } = createDebounce(
 
 const { debouncedFn: debouncedResetTheme } = createDebounce(
   async () => {
-    const isDark = isDarkMode.value;
-    const success = await themeStore.resetCurrentTheme(isDark);
+    const success = await themeStore.resetCurrentTheme();
     
     if (success) {
       // 重新加载临时颜色
@@ -49,23 +48,11 @@ const resetButtonState = ref({
   confirming: false
 });
 
-// 当前激活的主题类型（深色/浅色）
-const isDarkMode = computed(() => 
-  themeStore.currentTheme === SystemThemeType.SystemThemeDark || 
-  (themeStore.currentTheme === SystemThemeType.SystemThemeAuto && 
-   window.matchMedia('(prefers-color-scheme: dark)').matches)
-);
-
-// 当前可用的预设主题列表
-const availableThemes = computed(() => 
-  isDarkMode.value ? themeStore.darkThemes : themeStore.lightThemes
-);
-
-// 当前选中的主题ID
-const currentThemeId = computed({
-  get: () => isDarkMode.value ? themeStore.currentThemeIds.dark : themeStore.currentThemeIds.light,
-  set: async (themeId: number) => {
-    await themeStore.switchToTheme(themeId);
+// 当前选中的主题名称
+const currentThemeName = computed({
+  get: () => themeStore.currentColors?.name || '',
+  set: async (themeName: string) => {
+    await themeStore.switchToTheme(themeName);
     syncTempColors();
     hasUnsavedChanges.value = false;
   }
@@ -74,20 +61,19 @@ const currentThemeId = computed({
 // 当前主题的颜色配置
 const currentColors = computed(() => tempColors.value || ({} as ThemeColors));
 
-// 获取当前主题模式（用于颜色选择器）
-const currentThemeMode = computed(() => isDarkMode.value ? 'dark' : 'light');
+// 获取当前主题模式
+const currentThemeMode = computed(() => themeStore.isDarkMode ? 'dark' : 'light');
 
 // 同步临时颜色从 store
 const syncTempColors = () => {
-  const colors = isDarkMode.value ? themeStore.currentColors.dark : themeStore.currentColors.light;
-  if (colors) {
-    tempColors.value = { ...colors };
+  if (themeStore.currentColors) {
+    tempColors.value = { ...themeStore.currentColors };
   }
 };
 
 // 监听主题切换，同步临时颜色
 watch(
-  [() => themeStore.currentColors.dark, () => themeStore.currentColors.light, isDarkMode],
+  () => themeStore.currentColors,
   () => {
     if (!hasUnsavedChanges.value) {
       syncTempColors();
@@ -153,13 +139,11 @@ const applyChanges = async () => {
   try {
     if (!tempColors.value) return;
     
-    const isDark = isDarkMode.value;
-    
     // 更新 store 中的颜色
-    themeStore.updateCurrentColors(tempColors.value, isDark);
+    themeStore.updateCurrentColors(tempColors.value);
     
     // 保存到数据库
-    await themeStore.saveCurrentTheme(isDark);
+    await themeStore.saveCurrentTheme();
     
     // 刷新编辑器主题
     themeStore.refreshEditorTheme();
@@ -207,6 +191,17 @@ const updateSystemTheme = async (event: Event) => {
   const selectedSystemTheme = select.value as SystemThemeType;
   
   await themeStore.setTheme(selectedSystemTheme);
+  
+  const availableThemes = themeStore.availableThemes;
+  const currentThemeName = currentColors.value?.name;
+  const isCurrentThemeAvailable = availableThemes.some(t => t.name === currentThemeName);
+  
+  if (!isCurrentThemeAvailable && availableThemes.length > 0) {
+    const firstTheme = availableThemes[0];
+    await themeStore.switchToTheme(firstTheme.name);
+    syncTempColors();
+    hasUnsavedChanges.value = false;
+  }
 };
 
 // 控制颜色选择器显示状态
@@ -246,8 +241,8 @@ const handlePickerClose = () => {
       
       <!-- 预设主题选择 -->
       <SettingItem :title="t('settings.presetTheme')">
-        <select class="select-input" v-model="currentThemeId" :disabled="hasUnsavedChanges">
-          <option v-for="theme in availableThemes" :key="theme.id" :value="theme.id">
+        <select class="select-input" v-model="currentThemeName" :disabled="hasUnsavedChanges">
+          <option v-for="theme in themeStore.availableThemes" :key="theme.id" :value="theme.name">
             {{ theme.name }}
           </option>
         </select>
@@ -256,6 +251,12 @@ const handlePickerClose = () => {
 
     <!-- 自定义主题颜色配置 -->
     <SettingSection :title="t('settings.customThemeColors')">
+      <template #title>
+        <div class="theme-section-title">
+          <span class="section-title-text">{{ t('settings.customThemeColors') }}</span>
+          <span v-if="currentColors.name" class="current-theme-name">{{ currentColors.name }}</span>
+        </div>
+      </template>
       <template #title-right>
         <div class="theme-controls">
           <button 
@@ -346,6 +347,27 @@ const handlePickerClose = () => {
     background-color: var(--settings-card-bg);
     color: var(--settings-text);
   }
+}
+
+// 主题部分标题
+.theme-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.section-title-text {
+  font-weight: 500;
+}
+
+.current-theme-name {
+  font-size: 13px;
+  color: var(--settings-text-secondary);
+  font-weight: normal;
+  padding: 2px 8px;
+  background-color: var(--settings-input-bg);
+  border: 1px solid var(--settings-input-border);
+  border-radius: 4px;
 }
 
 // 主题控制区域

@@ -1,11 +1,10 @@
 import { defineStore } from 'pinia';
-import { computed, reactive, ref } from 'vue';
+import { computed, ref } from 'vue';
 import {SystemThemeType, ThemeType, Theme, ThemeColorConfig} from '@/../bindings/voidraft/internal/models/models';
 import { ThemeService } from '@/../bindings/voidraft/internal/services';
 import { useConfigStore } from './configStore';
 import { useEditorStore } from './editorStore';
 import type { ThemeColors } from '@/views/editor/theme/types';
-import { getThemeConfig } from '@/views/editor/theme/registry';
 
 /**
  * 主题管理 Store
@@ -14,27 +13,22 @@ import { getThemeConfig } from '@/views/editor/theme/registry';
 export const useThemeStore = defineStore('theme', () => {
   const configStore = useConfigStore();
   
-  // 所有主题列表（从数据库加载）
+  // 所有主题列表
   const allThemes = ref<Theme[]>([]);
   
-  // 当前选中的主题 ID
-  const currentThemeIds = reactive({
-    dark: 0,   // 当前深色主题ID
-    light: 0,  // 当前浅色主题ID
-  });
-  
-  // 当前主题的颜色配置（用于编辑器渲染）
-  const currentColors = reactive<{
-    dark: ThemeColors | null;
-    light: ThemeColors | null;
-  }>({
-    dark: null,
-    light: null,
-  });
+  // 当前主题的颜色配置
+  const currentColors = ref<ThemeColors | null>(null);
   
   // 计算属性：当前系统主题模式
   const currentTheme = computed(() => 
     configStore.config?.appearance?.systemTheme || SystemThemeType.SystemThemeAuto
+  );
+
+  // 计算属性：当前是否为深色模式
+  const isDarkMode = computed(() => 
+    currentTheme.value === SystemThemeType.SystemThemeDark || 
+    (currentTheme.value === SystemThemeType.SystemThemeAuto && 
+     window.matchMedia('(prefers-color-scheme: dark)').matches)
   );
 
   // 计算属性：根据类型获取主题列表
@@ -46,14 +40,10 @@ export const useThemeStore = defineStore('theme', () => {
     allThemes.value.filter(t => t.type === ThemeType.ThemeTypeLight)
   );
   
-  // 计算属性：获取当前激活的主题对象
-  const activeTheme = computed(() => {
-    const isDark = currentTheme.value === SystemThemeType.SystemThemeDark || 
-      (currentTheme.value === SystemThemeType.SystemThemeAuto && 
-       window.matchMedia('(prefers-color-scheme: dark)').matches);
-    
-    return isDark ? currentColors.dark : currentColors.light;
-  });
+  // 计算属性：当前可用的主题列表
+  const availableThemes = computed(() => 
+    isDarkMode.value ? darkThemes.value : lightThemes.value
+  );
 
   // 应用主题到 DOM
   const applyThemeToDOM = (theme: SystemThemeType) => {
@@ -77,66 +67,24 @@ export const useThemeStore = defineStore('theme', () => {
       return [];
     }
   };
-  
-  // 根据主题对象加载颜色配置
-  const loadThemeColors = (theme: Theme): ThemeColors => {
-    // 优先使用数据库中的颜色配置
-    const dbColors = theme.colors as unknown as ThemeColors;
-    
-    // 如果数据库颜色不完整，尝试从预设主题获取
-    if (!dbColors || Object.keys(dbColors).length < 10) {
-      const presetConfig = getThemeConfig(theme.name);
-      if (presetConfig) {
-        return presetConfig;
-      }
-    }
-    
-    return dbColors;
-  };
 
-  // 初始化主题颜色（加载默认主题）
+  // 初始化主题颜色
   const initializeThemeColors = async () => {
-    try {
-      // 加载所有主题
-      await loadAllThemes();
-      
-      // 查找默认主题
-      const defaultDark = allThemes.value.find(
-        t => t.type === ThemeType.ThemeTypeDark && t.isDefault
-      );
-      const defaultLight = allThemes.value.find(
-        t => t.type === ThemeType.ThemeTypeLight && t.isDefault
-      );
-      
-      // 设置默认主题
-      if (defaultDark) {
-        currentThemeIds.dark = defaultDark.id;
-        currentColors.dark = loadThemeColors(defaultDark);
-      }
-      
-      if (defaultLight) {
-        currentThemeIds.light = defaultLight.id;
-        currentColors.light = loadThemeColors(defaultLight);
-      }
-      
-      // 如果没有找到默认主题，使用第一个可用主题
-      if (!currentColors.dark && darkThemes.value.length > 0) {
-        const fallback = darkThemes.value[0];
-        currentThemeIds.dark = fallback.id;
-        currentColors.dark = loadThemeColors(fallback);
-      }
-      
-      if (!currentColors.light && lightThemes.value.length > 0) {
-        const fallback = lightThemes.value[0];
-        currentThemeIds.light = fallback.id;
-        currentColors.light = loadThemeColors(fallback);
-      }
-    } catch (error) {
-      console.error('Failed to initialize theme colors:', error);
-      // 使用预设主题作为后备
-      currentColors.dark = getThemeConfig('default-dark');
-      currentColors.light = getThemeConfig('default-light');
+    // 加载所有主题
+    await loadAllThemes();
+    
+    // 从配置获取当前主题名称并加载
+    const currentThemeName = configStore.config?.appearance?.currentTheme || 'default-dark';
+    
+    const theme = allThemes.value.find(t => t.name === currentThemeName);
+
+    if (!theme) {
+      console.error(`Theme not found: ${currentThemeName}`);
+      return;
     }
+
+    // 直接设置当前主题颜色
+    currentColors.value = theme.colors as ThemeColors;
   };
 
   // 初始化主题
@@ -153,98 +101,66 @@ export const useThemeStore = defineStore('theme', () => {
     refreshEditorTheme();
   };
   
-  // 切换到指定的预设主题（通过主题ID）
-  const switchToTheme = async (themeId: number) => {
-    try {
-      const theme = allThemes.value.find(t => t.id === themeId);
-      if (!theme) {
-        console.error('Theme not found:', themeId);
-        return false;
-      }
-      
-      // 加载主题颜色
-      const colors = loadThemeColors(theme);
-      
-      // 根据主题类型更新对应的颜色配置
-      if (theme.type === ThemeType.ThemeTypeDark) {
-        currentThemeIds.dark = themeId;
-        currentColors.dark = colors;
-      } else {
-        currentThemeIds.light = themeId;
-        currentColors.light = colors;
-      }
-      
-      // 刷新编辑器主题
-      refreshEditorTheme();
-      return true;
-    } catch (error) {
-      console.error('Failed to switch theme:', error);
+  // 切换到指定的预设主题
+  const switchToTheme = async (themeName: string) => {
+    const theme = allThemes.value.find(t => t.name === themeName);
+    if (!theme) {
+      console.error('Theme not found:', themeName);
       return false;
     }
+
+    // 直接设置当前主题颜色
+    currentColors.value = theme.colors as ThemeColors;
+    
+    // 持久化到配置
+    await configStore.setCurrentTheme(themeName);
+    
+    // 刷新编辑器
+    refreshEditorTheme();
+    return true;
   };
   
   // 更新当前主题的颜色配置
-  const updateCurrentColors = (colors: Partial<ThemeColors>, isDark: boolean) => {
-    const target = isDark ? currentColors.dark : currentColors.light;
-    if (!target) return;
-    
-    Object.assign(target, colors);
+  const updateCurrentColors = (colors: Partial<ThemeColors>) => {
+    if (!currentColors.value) return;
+    Object.assign(currentColors.value, colors);
   };
   
   // 保存当前主题颜色到数据库
-  const saveCurrentTheme = async (isDark: boolean) => {
-    try {
-      const themeId = isDark ? currentThemeIds.dark : currentThemeIds.light;
-      const colors = isDark ? currentColors.dark : currentColors.light;
-      
-      if (!themeId || !colors) {
-        throw new Error('No theme selected');
-      }
-      
-      // 转换为数据库格式并保存
-      const dbColors = colors as ThemeColorConfig; // ThemeColorConfig from bindings
-      await ThemeService.UpdateTheme(themeId, dbColors);
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to save theme:', error);
-      throw error;
+  const saveCurrentTheme = async () => {
+    if (!currentColors.value) {
+      throw new Error('No theme selected');
     }
+
+    const theme = allThemes.value.find(t => t.name === currentColors.value!.name);
+    if (!theme) {
+      throw new Error('Theme not found');
+    }
+    
+    await ThemeService.UpdateTheme(theme.id, currentColors.value as ThemeColorConfig);
+    return true;
   };
   
   // 重置当前主题为预设配置
-  const resetCurrentTheme = async (isDark: boolean) => {
-    try {
-      const themeId = isDark ? currentThemeIds.dark : currentThemeIds.light;
-      
-      if (!themeId) {
-        throw new Error('No theme selected');
-      }
-      
-      // 调用后端重置服务
-      await ThemeService.ResetTheme(themeId);
-      
-      // 重新加载主题
-      await loadAllThemes();
-      const theme = allThemes.value.find(t => t.id === themeId);
-      
-      if (theme) {
-        const colors = loadThemeColors(theme);
-        if (isDark) {
-          currentColors.dark = colors;
-        } else {
-          currentColors.light = colors;
-        }
-      }
-      
-      // 刷新编辑器主题
-      refreshEditorTheme();
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to reset theme:', error);
-      return false;
+  const resetCurrentTheme = async () => {
+    if (!currentColors.value) {
+      throw new Error('No theme selected');
     }
+    
+    // 调用后端重置
+    await ThemeService.ResetTheme(0, currentColors.value.name);
+    
+    // 重新加载所有主题
+    await loadAllThemes();
+
+    const updatedTheme = allThemes.value.find(t => t.name === currentColors.value!.name);
+    
+    if (updatedTheme) {
+      currentColors.value = updatedTheme.colors as ThemeColors;
+    }
+    
+    refreshEditorTheme();
+    return true;
   };
   
   // 刷新编辑器主题
@@ -260,10 +176,10 @@ export const useThemeStore = defineStore('theme', () => {
     allThemes,
     darkThemes,
     lightThemes,
+    availableThemes,
     currentTheme,
-    currentThemeIds,
     currentColors,
-    activeTheme,
+    isDarkMode,
     
     // 方法
     setTheme,

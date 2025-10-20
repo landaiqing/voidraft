@@ -204,6 +204,11 @@ export const useConfigStore = defineStore('config', () => {
         await updateAppearanceConfig('systemTheme', systemTheme);
     };
 
+    // 当前主题设置方法
+    const setCurrentTheme = async (themeName: string): Promise<void> => {
+        await updateAppearanceConfig('currentTheme', themeName);
+    };
+
 
     // 初始化语言设置
     const initializeLanguage = async (): Promise<void> => {
@@ -268,6 +273,7 @@ export const useConfigStore = defineStore('config', () => {
 
         // 主题相关方法
         setSystemTheme,
+        setCurrentTheme,
 
         // 字体大小操作
         ...adjusters.fontSize,

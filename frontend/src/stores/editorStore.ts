@@ -125,9 +125,7 @@ export const useEditorStore = defineStore('editor', () => {
         const basicExtensions = createBasicSetup();
 
         // 获取主题扩展
-        const themeExtension = createThemeExtension(
-            configStore.config.appearance.systemTheme || SystemThemeType.SystemThemeAuto
-        );
+        const themeExtension = createThemeExtension();
 
         // Tab相关扩展
         const tabExtensions = getTabExtensions(
@@ -504,9 +502,7 @@ export const useEditorStore = defineStore('editor', () => {
     // 应用主题设置
     const applyThemeSettings = () => {
         editorCache.values().forEach(instance => {
-            updateEditorTheme(instance.view,
-                themeStore.currentTheme || SystemThemeType.SystemThemeAuto
-            );
+            updateEditorTheme(instance.view);
         });
     };
 
