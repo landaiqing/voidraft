@@ -27,8 +27,7 @@ type HotkeyService struct {
 	logger        *log.LogService
 	configService *ConfigService
 	windowService *WindowService
-	app           *application.App
-	mainWindow    *application.WebviewWindow
+	windowHelper  *WindowHelper
 
 	mu            sync.RWMutex
 	currentHotkey *models.HotkeyCombo
@@ -84,6 +83,7 @@ func NewHotkeyService(configService *ConfigService, windowService *WindowService
 		logger:        logger,
 		configService: configService,
 		windowService: windowService,
+		windowHelper:  NewWindowHelper(),
 		ctx:           ctx,
 	}
 	// 初始化时设置cancel函数
@@ -91,11 +91,14 @@ func NewHotkeyService(configService *ConfigService, windowService *WindowService
 	return service
 }
 
-// Initialize 初始化热键服务
-func (hs *HotkeyService) Initialize(app *application.App, mainWindow *application.WebviewWindow) error {
-	hs.app = app
-	hs.mainWindow = mainWindow
+// ServiceStartup initializes the service when the application starts
+func (ds *HotkeyService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	ds.ctx = ctx
+	return ds.Initialize()
+}
 
+// Initialize 初始化热键服务
+func (hs *HotkeyService) Initialize() error {
 	config, err := hs.configService.GetConfig()
 	if err != nil {
 		return &HotkeyError{"load_config", err}
@@ -229,13 +232,14 @@ func cBool(b bool) C.int {
 
 // toggleWindow 切换窗口显示状态
 func (hs *HotkeyService) toggleWindow() {
-	if hs.mainWindow == nil {
-		hs.logger.Error("main window not set")
+	mainWindow := hs.windowHelper.MustGetMainWindow()
+	if mainWindow == nil {
+		hs.logger.Error("main window not found")
 		return
 	}
 
 	// 检查主窗口是否可见
-	if hs.isWindowVisible(hs.mainWindow) {
+	if mainWindow.IsVisible() {
 		// 如果主窗口可见，隐藏所有窗口
 		hs.hideAllWindows()
 	} else {
@@ -252,7 +256,7 @@ func (hs *HotkeyService) isWindowVisible(window *application.WebviewWindow) bool
 // hideAllWindows 隐藏所有窗口
 func (hs *HotkeyService) hideAllWindows() {
 	// 隐藏主窗口
-	hs.mainWindow.Hide()
+	hs.windowHelper.HideMainWindow()
 
 	// 隐藏所有子窗口
 	if hs.windowService != nil {
@@ -268,9 +272,7 @@ func (hs *HotkeyService) hideAllWindows() {
 // showAllWindows 显示所有窗口
 func (hs *HotkeyService) showAllWindows() {
 	// 显示主窗口
-	hs.mainWindow.Show()
-	hs.mainWindow.Restore()
-	hs.mainWindow.Focus()
+	hs.windowHelper.FocusMainWindow()
 
 	// 显示所有子窗口
 	if hs.windowService != nil {

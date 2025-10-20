@@ -10,10 +10,6 @@
 // @ts-ignore: Unused imports
 import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
-
 /**
  * HandleWindowClose 处理窗口关闭事件
  */
@@ -35,14 +31,6 @@ export function HandleWindowMinimize(): Promise<void> & { cancel(): void } {
  */
 export function MinimizeButtonClicked(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2477618539) as any;
-    return $resultPromise;
-}
-
-/**
- * SetAppReferences 设置应用引用
- */
-export function SetAppReferences(app: application$0.App | null, mainWindow: application$0.WebviewWindow | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3544515719, app, mainWindow) as any;
     return $resultPromise;
 }
 

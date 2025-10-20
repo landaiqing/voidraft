@@ -7,8 +7,8 @@ import (
 
 // DialogService 对话框服务，处理文件选择等对话框操作
 type DialogService struct {
-	logger *log.LogService
-	window *application.WebviewWindow // 绑定的窗口
+	logger       *log.LogService
+	windowHelper *WindowHelper
 }
 
 // NewDialogService 创建新的对话框服务实例
@@ -18,14 +18,9 @@ func NewDialogService(logger *log.LogService) *DialogService {
 	}
 
 	return &DialogService{
-		logger: logger,
-		window: nil, // 初始为空，后续通过 SetWindow 设置
+		logger:       logger,
+		windowHelper: NewWindowHelper(),
 	}
-}
-
-// SetWindow 设置绑定的窗口
-func (ds *DialogService) SetWindow(window *application.WebviewWindow) {
-	ds.window = window
 }
 
 // SelectDirectory 打开目录选择对话框
@@ -59,7 +54,7 @@ func (ds *DialogService) SelectDirectory() (string, error) {
 		Directory: "",
 
 		// 绑定到主窗口
-		Window: ds.window,
+		Window: ds.windowHelper.MustGetMainWindow(),
 	})
 
 	path, err := dialog.PromptForSingleSelection()
@@ -100,7 +95,7 @@ func (ds *DialogService) SelectFile() (string, error) {
 		Directory: "",
 
 		// 绑定到主窗口
-		Window: ds.window,
+		Window: ds.windowHelper.MustGetMainWindow(),
 	})
 
 	path, err := dialog.PromptForSingleSelection()

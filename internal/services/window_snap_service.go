@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"math"
 	"sync"
 	"time"
@@ -15,8 +16,7 @@ import (
 type WindowSnapService struct {
 	logger        *log.LogService
 	configService *ConfigService
-	app           *application.App
-	mainWindow    *application.WebviewWindow
+	windowHelper  *WindowHelper
 	mu            sync.RWMutex
 
 	// 吸附配置
@@ -53,6 +53,7 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 	return &WindowSnapService{
 		logger:             logger,
 		configService:      configService,
+		windowHelper:       NewWindowHelper(),
 		snapEnabled:        snapEnabled,
 		baseThresholdRatio: 0.025, // 2.5%的主窗口宽度作为基础阈值
 		minThreshold:       8,     // 最小8像素（小屏幕保底）
@@ -62,18 +63,14 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 	}
 }
 
-// SetAppReferences 设置应用和主窗口引用
-func (wss *WindowSnapService) SetAppReferences(app *application.App, mainWindow *application.WebviewWindow) {
-	wss.app = app
-	wss.mainWindow = mainWindow
-
+// ServiceStartup 服务启动时初始化
+func (wss *WindowSnapService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	// 初始化主窗口位置缓存
 	wss.updateMainWindowCache()
 
-	// 设置主窗口移动事件监听
-	if mainWindow != nil {
-		wss.setupMainWindowEvents()
-	}
+	wss.setupMainWindowEvents()
+
+	return nil
 }
 
 // RegisterWindow 注册需要吸附管理的窗口
@@ -171,8 +168,14 @@ func (wss *WindowSnapService) OnWindowSnapConfigChanged(enabled bool) error {
 
 // setupMainWindowEvents 设置主窗口事件监听
 func (wss *WindowSnapService) setupMainWindowEvents() {
+	// 获取主窗口
+	mainWindow, ok := wss.windowHelper.GetMainWindow()
+	if !ok {
+		return
+	}
+
 	// 监听主窗口移动事件
-	wss.mainWindow.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
+	mainWindow.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
 		wss.onMainWindowMoved()
 	})
 }
@@ -187,12 +190,13 @@ func (wss *WindowSnapService) setupWindowEvents(window *application.WebviewWindo
 
 // updateMainWindowCache 更新主窗口缓存
 func (wss *WindowSnapService) updateMainWindowCache() {
-	if wss.mainWindow == nil {
+	mainWindow := wss.windowHelper.MustGetMainWindow()
+	if mainWindow == nil {
 		return
 	}
 
-	x, y := wss.mainWindow.Position()
-	w, h := wss.mainWindow.Size()
+	x, y := mainWindow.Position()
+	w, h := mainWindow.Size()
 
 	wss.lastMainWindowPos = models.WindowPosition{X: x, Y: y}
 	wss.lastMainWindowSize = [2]int{w, h}

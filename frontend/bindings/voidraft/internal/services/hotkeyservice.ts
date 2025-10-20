@@ -32,8 +32,8 @@ export function GetCurrentHotkey(): Promise<models$0.HotkeyCombo | null> & { can
 /**
  * Initialize 初始化热键服务
  */
-export function Initialize(app: application$0.App | null, mainWindow: application$0.WebviewWindow | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3671360458, app, mainWindow) as any;
+export function Initialize(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3671360458) as any;
     return $resultPromise;
 }
 
@@ -58,6 +58,14 @@ export function RegisterHotkey(hotkey: models$0.HotkeyCombo | null): Promise<voi
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(157291181) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup initializes the service when the application starts
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3079990808, options) as any;
     return $resultPromise;
 }
 

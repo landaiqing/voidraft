@@ -12,10 +12,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -48,14 +44,6 @@ export function GetSystemInfo(): Promise<$models.SystemInfo | null> & { cancel()
     }) as any;
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
-}
-
-/**
- * SetAppReferences 设置应用引用
- */
-export function SetAppReferences(app: application$0.App | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3873053414, app) as any;
-    return $resultPromise;
 }
 
 /**

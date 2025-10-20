@@ -9,7 +9,8 @@ import (
 )
 
 // SetupSystemTray 设置系统托盘及其功能
-func SetupSystemTray(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
+func SetupSystemTray(mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
+	app := application.Get()
 	// 创建系统托盘
 	systray := app.SystemTray.New()
 	// 设置提示

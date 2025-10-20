@@ -2,14 +2,16 @@ package services
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
+	"voidraft/internal/common/constant"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
-// WindowInfo 窗口信息（简化版）
+// WindowInfo 窗口信息
 type WindowInfo struct {
 	Window     *application.WebviewWindow
 	DocumentID int64
@@ -20,8 +22,6 @@ type WindowInfo struct {
 type WindowService struct {
 	logger          *log.LogService
 	documentService *DocumentService
-	app             *application.App
-	mainWindow      *application.WebviewWindow
 	windows         map[int64]*WindowInfo // documentID -> WindowInfo
 	mu              sync.RWMutex
 
@@ -47,17 +47,6 @@ func (ws *WindowService) SetWindowSnapService(snapService *WindowSnapService) {
 	ws.windowSnapService = snapService
 }
 
-// SetAppReferences 设置应用和主窗口引用
-func (ws *WindowService) SetAppReferences(app *application.App, mainWindow *application.WebviewWindow) {
-	ws.app = app
-	ws.mainWindow = mainWindow
-
-	// 如果吸附服务已设置，也为它设置引用
-	if ws.windowSnapService != nil {
-		ws.windowSnapService.SetAppReferences(app, mainWindow)
-	}
-}
-
 // OpenDocumentWindow 为指定文档ID打开新窗口
 func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 	ws.mu.Lock()
@@ -81,11 +70,13 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 		return fmt.Errorf("document not found: %d", documentID)
 	}
 
+	app := application.Get()
 	// 创建新窗口
-	newWindow := ws.app.Window.NewWithOptions(application.WebviewWindowOptions{
+	newWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
+		Name:                       strconv.FormatInt(doc.ID, 10),
 		Title:                      fmt.Sprintf("voidraft - %s", doc.Title),
-		Width:                      700,
-		Height:                     800,
+		Width:                      constant.VOIDRAFT_WINDOW_WIDTH,
+		Height:                     constant.VOIDRAFT_WINDOW_HEIGHT,
 		Hidden:                     false,
 		Frameless:                  true,
 		DevToolsEnabled:            false,
@@ -104,7 +95,7 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 
 	newWindow.Center()
 
-	ws.app.Window.Add(newWindow)
+	app.Window.Add(newWindow)
 
 	// 保存窗口信息
 	windowInfo := &WindowInfo{

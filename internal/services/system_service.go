@@ -11,7 +11,6 @@ import (
 // SystemService 系统监控服务
 type SystemService struct {
 	logger *log.LogService
-	app    *application.App
 }
 
 // MemoryStats 内存统计信息
@@ -54,11 +53,6 @@ func NewSystemService(logger *log.LogService) *SystemService {
 	}
 }
 
-// SetAppReferences 设置应用引用
-func (ss *SystemService) SetAppReferences(app *application.App) {
-	ss.app = app
-}
-
 // GetMemoryStats 获取当前内存统计信息
 func (ss *SystemService) GetMemoryStats() MemoryStats {
 	var m runtime.MemStats
@@ -76,11 +70,8 @@ func (ss *SystemService) GetMemoryStats() MemoryStats {
 
 // GetSystemInfo 获取系统环境信息
 func (ss *SystemService) GetSystemInfo() (*SystemInfo, error) {
-	if ss.app == nil {
-		return nil, fmt.Errorf("app reference not set")
-	}
-
-	envInfo := ss.app.Env.Info()
+	app := application.Get()
+	envInfo := app.Env.Info()
 
 	systemInfo := &SystemInfo{
 		OS:           envInfo.OS,

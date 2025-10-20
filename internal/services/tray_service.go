@@ -9,8 +9,7 @@ import (
 type TrayService struct {
 	logger        *log.LogService
 	configService *ConfigService
-	app           *application.App
-	mainWindow    *application.WebviewWindow
+	windowHelper  *WindowHelper
 }
 
 // NewTrayService 创建新的系统托盘服务实例
@@ -18,13 +17,8 @@ func NewTrayService(logger *log.LogService, configService *ConfigService) *TrayS
 	return &TrayService{
 		logger:        logger,
 		configService: configService,
+		windowHelper:  NewWindowHelper(),
 	}
-}
-
-// SetAppReferences 设置应用引用
-func (ts *TrayService) SetAppReferences(app *application.App, mainWindow *application.WebviewWindow) {
-	ts.app = app
-	ts.mainWindow = mainWindow
 }
 
 // ShouldMinimizeToTray 检查是否应该最小化到托盘
@@ -41,10 +35,10 @@ func (ts *TrayService) ShouldMinimizeToTray() bool {
 func (ts *TrayService) HandleWindowClose() {
 	if ts.ShouldMinimizeToTray() {
 		// 隐藏到托盘
-		ts.mainWindow.Hide()
+		ts.windowHelper.HideMainWindow()
 	} else {
 		// 直接退出应用
-		ts.app.Quit()
+		application.Get().Quit()
 	}
 }
 
@@ -52,21 +46,16 @@ func (ts *TrayService) HandleWindowClose() {
 func (ts *TrayService) HandleWindowMinimize() {
 	if ts.ShouldMinimizeToTray() {
 		// 隐藏到托盘
-		ts.mainWindow.Hide()
+		ts.windowHelper.HideMainWindow()
 	}
 }
 
 // ShowWindow 显示主窗口
 func (ts *TrayService) ShowWindow() {
-	if ts.mainWindow != nil {
-		ts.mainWindow.Show()
-		ts.mainWindow.Restore()
-		ts.mainWindow.Focus()
-	}
+	ts.windowHelper.FocusMainWindow()
 }
 
 // MinimizeButtonClicked 处理标题栏最小化按钮点击
 func (ts *TrayService) MinimizeButtonClicked() {
-	// 最小化按钮总是执行正常最小化到任务栏，不隐藏到托盘
-	ts.mainWindow.Minimise()
+	ts.windowHelper.MinimiseMainWindow()
 }

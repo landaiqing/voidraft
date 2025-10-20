@@ -6,6 +6,7 @@ import (
 	"log"
 	"log/slog"
 	"time"
+	"voidraft/internal/common/constant"
 	"voidraft/internal/services"
 	"voidraft/internal/systray"
 
@@ -70,9 +71,10 @@ func main() {
 	// 'BackgroundColour' is the background colour of the window.
 	// 'URL' is the URL that will be loaded into the webview.
 	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:                      "voidraft",
-		Width:                      700,
-		Height:                     800,
+		Name:                       constant.VOIDRAFT_MAIN_WINDOW_NAME,
+		Title:                      constant.VOIDRAFT_WINDOW_TITLE,
+		Width:                      constant.VOIDRAFT_WINDOW_WIDTH,
+		Height:                     constant.VOIDRAFT_WINDOW_HEIGHT,
 		Hidden:                     false,
 		Frameless:                  true,
 		DevToolsEnabled:            false,
@@ -89,46 +91,15 @@ func main() {
 		URL:              "/",
 	})
 	mainWindow.Center()
+	mainWindow.Focus()
 	window = mainWindow
 
-	// 获取系统服务并设置应用引用
-	systemService := serviceManager.GetSystemService()
-	systemService.SetAppReferences(app)
-
-	// 获取托盘服务并设置应用引用
 	trayService := serviceManager.GetTrayService()
-	trayService.SetAppReferences(app, mainWindow)
-
-	// 获取窗口服务并设置应用引用
-	windowService := serviceManager.GetWindowService()
-	windowService.SetAppReferences(app, mainWindow)
-
 	// 设置系统托盘
-	systray.SetupSystemTray(app, mainWindow, assets, trayService)
-
-	// 初始化热键服务
-	hotkeyService := serviceManager.GetHotkeyService()
-	err := hotkeyService.Initialize(app, mainWindow)
-	if err != nil {
-		panic(err)
-	}
-
-	// 设置对话框服务的窗口绑定
-	dialogService := serviceManager.GetDialogService()
-	dialogService.SetWindow(mainWindow)
-
-	// Create a goroutine that emits an event containing the current time every second.
-	// The frontend can listen to this event and update the UI accordingly.
-	go func() {
-		for {
-			now := time.Now().Format(time.RFC1123)
-			app.Event.Emit("time", now)
-			time.Sleep(time.Second)
-		}
-	}()
+	systray.SetupSystemTray(mainWindow, assets, trayService)
 
 	// Run the application. This blocks until the application has been exited.
-	err = app.Run()
+	err := app.Run()
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {

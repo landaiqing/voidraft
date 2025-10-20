@@ -287,7 +287,7 @@ export class SystemInfo {
 }
 
 /**
- * WindowInfo 窗口信息（简化版）
+ * WindowInfo 窗口信息
  */
 export class WindowInfo {
     "Window": application$0.WebviewWindow | null;

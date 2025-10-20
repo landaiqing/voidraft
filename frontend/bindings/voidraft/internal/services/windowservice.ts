@@ -12,10 +12,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
@@ -51,14 +47,6 @@ export function OpenDocumentWindow(documentID: number): Promise<void> & { cancel
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(202192783) as any;
-    return $resultPromise;
-}
-
-/**
- * SetAppReferences 设置应用和主窗口引用
- */
-export function SetAppReferences(app: application$0.App | null, mainWindow: application$0.WebviewWindow | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1120840759, app, mainWindow) as any;
     return $resultPromise;
 }
 
