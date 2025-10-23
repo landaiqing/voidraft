@@ -17,16 +17,16 @@ export default defineConfig(({mode}: { mode: string }): object => {
         plugins: [
             vue(),
             nodePolyfills({
-                include: [],
+                include: ['process','fs','crypto','stream','vm'],
                 exclude: [],
                 // Whether to polyfill specific globals.
                 globals: {
-                    Buffer: true, // can also be 'build', 'dev', or false
+                    Buffer: false, // can also be 'build', 'dev', or false
                     global: true,
                     process: true,
                 },
                 // Whether to polyfill `node:` protocol imports.
-                protocolImports: true,
+                protocolImports: false,
             }),
             Components({
                 dts: true,

@@ -3,6 +3,7 @@ import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
+import {useTabStore} from "@/stores/tabStore";
 
 export const useDocumentStore = defineStore('document', () => {
     const DEFAULT_DOCUMENT_ID = ref<number>(1); // 默认草稿文档ID
@@ -72,6 +73,11 @@ export const useDocumentStore = defineStore('document', () => {
     const openDocumentInNewWindow = async (docId: number): Promise<boolean> => {
         try {
             await OpenDocumentWindow(docId);
+            const tabStore = useTabStore();
+            if (tabStore.isTabsEnabled && tabStore.hasTab(docId)) {
+                tabStore.closeTab(docId);
+            }
+            
             return true;
         } catch (error) {
             console.error('Failed to open document in new window:', error);
