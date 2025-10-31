@@ -27,6 +27,11 @@ export const blockState = StateField.define<Block[]>({
  * 获取当前活动的块
  */
 export function getActiveNoteBlock(state: EditorState): Block | undefined {
+  // 检查 blockState 字段是否存在
+  if (!state.field(blockState, false)) {
+    return undefined;
+  }
+  
   // 找到光标所在的块
   const range = state.selection.asSingle().ranges[0];
   return state.field(blockState).find(block => 
@@ -38,6 +43,9 @@ export function getActiveNoteBlock(state: EditorState): Block | undefined {
  * 获取第一个块
  */
 export function getFirstNoteBlock(state: EditorState): Block | undefined {
+  if (!state.field(blockState, false)) {
+    return undefined;
+  }
   return state.field(blockState)[0];
 }
 
@@ -45,6 +53,9 @@ export function getFirstNoteBlock(state: EditorState): Block | undefined {
  * 获取最后一个块
  */
 export function getLastNoteBlock(state: EditorState): Block | undefined {
+  if (!state.field(blockState, false)) {
+    return undefined;
+  }
   const blocks = state.field(blockState);
   return blocks[blocks.length - 1];
 }
@@ -53,6 +64,9 @@ export function getLastNoteBlock(state: EditorState): Block | undefined {
  * 根据位置获取块
  */
 export function getNoteBlockFromPos(state: EditorState, pos: number): Block | undefined {
+  if (!state.field(blockState, false)) {
+    return undefined;
+  }
   return state.field(blockState).find(block => 
     block.range.from <= pos && block.range.to >= pos
   );

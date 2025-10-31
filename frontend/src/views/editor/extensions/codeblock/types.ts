@@ -65,6 +65,7 @@ export type SupportedLanguage =
     | 'less'
     | 'angular'
     | 'svelte'
+    | 'http'        // HTTP Client
 
 /**
  * 创建块的选项

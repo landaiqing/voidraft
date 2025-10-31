@@ -23,6 +23,7 @@ import {sassLanguage} from "@codemirror/lang-sass";
 import {lessLanguage} from "@codemirror/lang-less";
 import {angularLanguage} from "@codemirror/lang-angular";
 import { svelteLanguage } from "@replit/codemirror-lang-svelte";
+import { httpLanguage } from "@/views/editor/extensions/httpclient/language/http-language";
 
 import {StreamLanguage} from "@codemirror/language";
 import {ruby} from "@codemirror/legacy-modes/mode/ruby";
@@ -224,6 +225,7 @@ export const LANGUAGES: LanguageInfo[] = [
             filename: "index.svelte"
         }
     }),
+    new LanguageInfo("http", "Http", httpLanguage.parser, ["http"]),
 
 ];
 

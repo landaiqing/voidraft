@@ -1,0 +1,267 @@
+@precedence {
+  member,
+  call
+}
+
+@top Document { statement* }
+
+statement {
+  VariableDeclaration |
+  ResponseLine |
+  RequestLine |
+  HeaderStatement |
+  BodyStatement |
+  VariablesStatement
+}
+
+// ==================== 变量定义 ====================
+
+VariableDeclaration {
+  "@" VariableName "=" VariableValue ";"
+}
+
+VariableName { word }
+
+VariableValue[isolate] { anyContent }
+
+// ==================== 请求行 ====================
+
+RequestLine {
+  Method Url HttpVersion? ";"
+}
+
+Method {
+  @specialize[@name="GET"]<word, "GET"> |
+  @specialize[@name="POST"]<word, "POST"> |
+  @specialize[@name="PUT"]<word, "PUT"> |
+  @specialize[@name="DELETE"]<word, "DELETE"> |
+  @specialize[@name="PATCH"]<word, "PATCH"> |
+  @specialize[@name="HEAD"]<word, "HEAD"> |
+  @specialize[@name="OPTIONS"]<word, "OPTIONS"> |
+  @specialize[@name="CONNECT"]<word, "CONNECT"> |
+  @specialize[@name="TRACE"]<word, "TRACE">
+}
+
+Url { urlPart+ }
+
+urlPart { urlContent | TemplateExpression }
+
+HttpVersion { httpVersionToken }
+
+// ==================== Header 语句 ====================
+
+HeaderStatement {
+  HeaderKeyword HeaderName colon HeaderValue ";"
+}
+
+colon { ":" }
+
+HeaderKeyword { @specialize[@name="HEADER"]<word, "HEADER"> }
+
+HeaderName { word }
+
+HeaderValue { headerValuePart* }
+
+headerValuePart { headerValueContent | TemplateExpression }
+
+// ==================== Body 语句 ====================
+
+BodyStatement {
+  BodyKeyword BodyType BodyContent ";"
+}
+
+BodyKeyword { @specialize[@name="BODY"]<word, "BODY"> }
+
+BodyType {
+  @specialize[@name="JSON"]<word, "JSON"> |
+  @specialize[@name="FORM"]<word, "FORM"> |
+  @specialize[@name="URLENCODED"]<word, "URLENCODED"> |
+  @specialize[@name="GRAPHQL"]<word, "GRAPHQL"> |
+  @specialize[@name="XML"]<word, "XML"> |
+  @specialize[@name="TEXT"]<word, "TEXT"> |
+  @specialize[@name="BINARY"]<word, "BINARY"> |
+  @specialize[@name="MULTIPART"]<word, "MULTIPART">
+}
+
+BodyContent { bodyContentPart* }
+
+bodyContentPart { bodyText | TemplateExpression | FileReference }
+
+FileReference {
+  "@file" FilePath
+}
+
+FilePath { filePathContent }
+
+// ==================== Variables 语句 ====================
+
+VariablesStatement {
+  VariablesKeyword VariablesContent ";"
+}
+
+VariablesKeyword { @specialize[@name="VARIABLES"]<word, "VARIABLES"> }
+
+VariablesContent[isolate] { variablesContent }
+
+// ==================== 响应 ====================
+
+// 响应行 - 固定格式：RESPONSE <状态码> <状态文本> <大小> <时间戳>;
+ResponseLine {
+  ResponseKeyword StatusCode StatusText Size Timestamp ";"
+}
+
+ResponseKeyword { @specialize[@name="RESPONSE"]<word, "RESPONSE"> }
+
+StatusCode { Number }
+
+StatusText { word+ }
+
+Size { Number sizeUnit }
+
+// 时间戳格式：YYYY-MM-DD HH:MM:SS 或 ISO8601 格式
+Timestamp { timestampContent }
+
+// ==================== 模板表达式 ====================
+
+TemplateExpression {
+  "{{" templateContent "}}"
+}
+
+templateContent {
+  VariableName |
+  MemberExpression |
+  FunctionCall
+}
+
+MemberExpression {
+  VariableName !member ("." PropertyName)+
+}
+
+PropertyName { word }
+
+FunctionCall {
+  "$" FunctionName !call "(" argumentList? ")"
+}
+
+FunctionName { word }
+
+argumentList {
+  argument ("," argument)*
+}
+
+argument { Number | String | word }
+
+// ==================== Tokens ====================
+
+@skip { spaces | newline | LineComment }
+
+@tokens {
+  // 空白字符
+  spaces[@export] { $[ \t]+ }
+  
+  newline[@export] { $[\r\n] }
+  
+  // 注释
+  LineComment[@export,isolate] { "#" ![\n]* }
+  
+  // 标识符
+  identifierChar { @asciiLetter | $[_$] }
+  
+  word { identifierChar (identifierChar | @digit | $[-])* }
+  
+  // 数字
+  Number {
+    @digit+ ("." @digit+)?
+  }
+  
+  // 字符串
+  String {
+    '"' stringContentDouble* '"' |
+    "'" stringContentSingle* "'"
+  }
+  
+  stringContentDouble { ![\\\n"]+ | "\\" _ }
+  
+  stringContentSingle { ![\\\n']+ | "\\" _ }
+  
+  // URL 内容 - 排除空格、换行、特殊前缀字符
+  // 允许 # （用于锚点），但不允许以 # 开头（避免和注释冲突）
+  urlContent { ![ \t\n\r@{};]+ }
+  
+  // HTTP 版本
+  httpVersionToken { "HTTP/" @digit+ "." @digit+ }
+  
+  // Header 值内容 - 排除所有 skip tokens 和特殊字符
+  headerValueContent { ![ \t\n\r#{};]+ }
+  
+  // Body 文本内容 - 排除空格、换行、分号
+  // 允许大括号、#、@、$ 等，因为JSON/XML/GraphQL/email等需要它们
+  // {{ 和 @file 是独立token，有更高优先级
+  bodyText { ![ \t\n\r;]+ }
+  
+  // 任意内容（直到分号） - 只排除换行和分号
+  // 允许空格、#、数字等所有字符
+  anyContent { ![\n\r;]+ }
+  
+  // 文件路径内容 - 排除空格、换行、分号
+  filePathContent { ![ \t\n\r;]+ }
+  
+  // Variables 内容 - 只排除分号，允许所有字符包括换行
+  variablesContent { ![;]+ }
+  
+  // 时间戳内容 - 日期时间格式，包含日期时间字符
+  timestampContent { timestampChar+ }
+  
+  timestampChar { @digit | $[-:TZ.+] }
+  
+  // Duration 单位
+  durationUnit { "ms" | "s" | "m" }
+  
+  // Size 单位
+  sizeUnit { "B" | "KB" | "MB" | "GB" }
+  
+  // 优先级声明
+  @precedence { urlContent, LineComment }
+  
+  @precedence { "{{", bodyText }
+  
+  @precedence { "@file", bodyText }
+  
+  @precedence { "$", bodyText }
+  
+  @precedence { bodyText, LineComment }
+  
+  @precedence { anyContent, LineComment }
+  
+  @precedence { anyContent, spaces }
+  
+  @precedence { filePathContent, LineComment }
+  
+  @precedence { variablesContent, newline }
+  
+  @precedence { variablesContent, LineComment }
+  
+  @precedence { variablesContent, spaces }
+  
+  @precedence { "$", word }
+  
+  @precedence { spaces, newline, word }
+  
+  @precedence { httpVersionToken, urlContent, word }
+  
+  @precedence { "{{", bodyText }
+  
+  @precedence { word, bodyText }
+  
+  @precedence { Number, word }
+  
+  // 符号
+  "(" ")" "[" "]" "{" "}"
+  
+  "." "," ":" "=" "@" "$" ";" "{{" "}}"
+  
+  // 组合 tokens
+  "@file"
+}
+
+@detectDelim

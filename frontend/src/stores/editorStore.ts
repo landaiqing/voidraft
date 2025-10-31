@@ -23,6 +23,7 @@ import {AsyncManager} from '@/common/utils/asyncManager';
 import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
+import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
 
 export interface DocumentStats {
     lines: number;
@@ -154,6 +155,8 @@ export const useEditorStore = defineStore('editor', () => {
             enableAutoDetection: true
         });
 
+        const httpExtension = createHttpClientExtension();
+
         // 再次检查操作有效性
         if (!operationManager.isOperationValid(operationId, documentId)) {
             throw new Error('Operation cancelled');
@@ -185,7 +188,8 @@ export const useEditorStore = defineStore('editor', () => {
             statsExtension,
             contentChangeExtension,
             codeBlockExtension,
-            ...dynamicExtensions
+            ...dynamicExtensions,
+            ...httpExtension
         ];
 
         // 创建编辑器状态
