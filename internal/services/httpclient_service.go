@@ -92,7 +92,16 @@ func (hcs *HttpClientService) setRequestBody(req *resty.Request, request *HttpRe
 	case "formdata":
 		if formData, ok := request.Body.(map[string]interface{}); ok {
 			for key, value := range formData {
-				req.SetFormData(map[string]string{key: fmt.Sprintf("%v", value)})
+				valueStr := fmt.Sprintf("%v", value)
+				// 检查是否是文件类型，使用 @file 关键词
+				if strings.HasPrefix(valueStr, "@file ") {
+					// 提取文件路径（去掉 @file 前缀）
+					filePath := strings.TrimSpace(strings.TrimPrefix(valueStr, "@file "))
+					req.SetFile(key, filePath)
+				} else {
+					// 普通表单字段
+					req.SetFormData(map[string]string{key: valueStr})
+				}
 			}
 		}
 	case "urlencoded":

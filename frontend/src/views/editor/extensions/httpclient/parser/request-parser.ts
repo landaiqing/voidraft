@@ -206,7 +206,7 @@ export class HttpRequestParser {
   }
 
   /**
-   * 解析 JsonBlock（用于 @json, @formdata, @urlencoded）
+   * 解析 JsonBlock（用于 @json, @form, @urlencoded）
    */
   private parseJsonBlock(node: SyntaxNode): any {
     const result: any = {};
