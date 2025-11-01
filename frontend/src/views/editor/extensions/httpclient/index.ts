@@ -4,7 +4,7 @@
 
 import {Extension} from '@codemirror/state';
 
-import {httpRunButtonGutter, httpRunButtonTheme} from './widgets/run-gutter';
+import {httpRunButtonGutter, httpRunButtonTheme, httpRequestsField} from './widgets/run-gutter';
 
 /**
  * 创建 HTTP Client 扩展
@@ -16,7 +16,10 @@ export function createHttpClientExtension(): Extension[] {
     // HTTP 语言解析器
     // extensions.push(httpLanguage);
 
-    // 运行按钮 Gutte
+    // StateField：缓存 HTTP 请求解析结果
+    extensions.push(httpRequestsField);
+
+    // 运行按钮 Gutter
     extensions.push(httpRunButtonGutter);
     extensions.push(httpRunButtonTheme);
 

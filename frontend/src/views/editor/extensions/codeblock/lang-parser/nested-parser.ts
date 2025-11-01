@@ -4,7 +4,7 @@
  */
 
 import { parseMixed } from "@lezer/common";
-import { BlockContent, BlockLanguage } from "./parser.terms.js";
+import { BlockContent, BlockLanguage } from "./parser.terms";
 import { languageMapping } from "./languages";
 
 /**

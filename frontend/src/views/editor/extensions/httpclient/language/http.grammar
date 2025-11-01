@@ -1,267 +1,214 @@
-@precedence {
-  member,
-  call
+// HTTP Client Grammar
+//
+// 语法规则：
+// 1. HTTP 头部属性：逗号可选
+//    host: "example.com"
+//    content-type: "application/json"
+//
+// 2. 请求体格式：
+//    @json        - JSON 格式（属性必须用逗号分隔）
+//    @formdata    - 表单数据（属性必须用逗号分隔）
+//    @urlencoded  - URL 编码格式（属性必须用逗号分隔）
+//    @text        - 纯文本内容（使用 content 字段）
+//    @res         - 响应数据（属性必须用逗号分隔）
+//
+// 3. 注释：
+//    # 单行注释
+//
+// 示例 1 - JSON 请求：
+// POST "http://api.example.com/users" {
+//   content-type: "application/json"
+//   
+//   @json {
+//     name: "张三",
+//     age: 25,
+//     email: "zhangsan@example.com"
+//   }
+// }
+//   
+// 示例 2 - FormData 请求：
+// POST "http://api.example.com/upload" {
+//   content-type: "multipart/form-data"
+//   
+//   @formdata {
+//     file: "avatar.png",
+//     username: "zhangsan"
+//   }
+// }
+//
+// 示例 3 - URLEncoded 请求：
+// POST "http://api.example.com/login" {
+//   content-type: "application/x-www-form-urlencoded"
+//   
+//   @urlencoded {
+//     username: "admin",
+//     password: "123456"
+//   }
+// }
+//
+// 示例 4 - 纯文本请求：
+// POST "http://api.example.com/webhook" {
+//   content-type: "text/plain"
+//   
+//   @text {
+//     content: "纯文本内容"
+//   }
+// }
+
+@skip { whitespace | LineComment }
+
+@top Document { item* }
+
+item {
+  RequestStatement |
+  AtRule
 }
 
-@top Document { statement* }
-
-statement {
-  VariableDeclaration |
-  ResponseLine |
-  RequestLine |
-  HeaderStatement |
-  BodyStatement |
-  VariablesStatement
-}
-
-// ==================== 变量定义 ====================
-
-VariableDeclaration {
-  "@" VariableName "=" VariableValue ";"
-}
-
-VariableName { word }
-
-VariableValue[isolate] { anyContent }
-
-// ==================== 请求行 ====================
-
-RequestLine {
-  Method Url HttpVersion? ";"
+// HTTP 请求 - URL 必须是字符串
+RequestStatement {
+  Method Url Block
 }
 
 Method {
-  @specialize[@name="GET"]<word, "GET"> |
-  @specialize[@name="POST"]<word, "POST"> |
-  @specialize[@name="PUT"]<word, "PUT"> |
-  @specialize[@name="DELETE"]<word, "DELETE"> |
-  @specialize[@name="PATCH"]<word, "PATCH"> |
-  @specialize[@name="HEAD"]<word, "HEAD"> |
-  @specialize[@name="OPTIONS"]<word, "OPTIONS"> |
-  @specialize[@name="CONNECT"]<word, "CONNECT"> |
-  @specialize[@name="TRACE"]<word, "TRACE">
+  @specialize[@name=GET]<identifier, "GET"> |
+  @specialize[@name=POST]<identifier, "POST"> |
+  @specialize[@name=PUT]<identifier, "PUT"> |
+  @specialize[@name=DELETE]<identifier, "DELETE"> |
+  @specialize[@name=PATCH]<identifier, "PATCH"> |
+  @specialize[@name=HEAD]<identifier, "HEAD"> |
+  @specialize[@name=OPTIONS]<identifier, "OPTIONS"> |
+  @specialize[@name=CONNECT]<identifier, "CONNECT"> |
+  @specialize[@name=TRACE]<identifier, "TRACE">
 }
 
-Url { urlPart+ }
+// URL 必须是字符串
+Url { StringLiteral }
 
-urlPart { urlContent | TemplateExpression }
-
-HttpVersion { httpVersionToken }
-
-// ==================== Header 语句 ====================
-
-HeaderStatement {
-  HeaderKeyword HeaderName colon HeaderValue ";"
+// @ 规则（支持多种请求体格式）
+AtRule { 
+  JsonRule |
+  FormDataRule |
+  UrlEncodedRule |
+  TextRule |
+  ResponseRule
 }
 
-colon { ":" }
-
-HeaderKeyword { @specialize[@name="HEADER"]<word, "HEADER"> }
-
-HeaderName { word }
-
-HeaderValue { headerValuePart* }
-
-headerValuePart { headerValueContent | TemplateExpression }
-
-// ==================== Body 语句 ====================
-
-BodyStatement {
-  BodyKeyword BodyType BodyContent ";"
+// @json 块：JSON 格式请求体（属性必须用逗号分隔）
+JsonRule {
+  @specialize[@name=JsonKeyword]<AtKeyword, "@json">
+  JsonBlock
 }
 
-BodyKeyword { @specialize[@name="BODY"]<word, "BODY"> }
-
-BodyType {
-  @specialize[@name="JSON"]<word, "JSON"> |
-  @specialize[@name="FORM"]<word, "FORM"> |
-  @specialize[@name="URLENCODED"]<word, "URLENCODED"> |
-  @specialize[@name="GRAPHQL"]<word, "GRAPHQL"> |
-  @specialize[@name="XML"]<word, "XML"> |
-  @specialize[@name="TEXT"]<word, "TEXT"> |
-  @specialize[@name="BINARY"]<word, "BINARY"> |
-  @specialize[@name="MULTIPART"]<word, "MULTIPART">
+// @formdata 块：表单数据格式（属性必须用逗号分隔）
+FormDataRule {
+  @specialize[@name=FormDataKeyword]<AtKeyword, "@formdata">
+  JsonBlock
 }
 
-BodyContent { bodyContentPart* }
-
-bodyContentPart { bodyText | TemplateExpression | FileReference }
-
-FileReference {
-  "@file" FilePath
+// @urlencoded 块：URL 编码格式（属性必须用逗号分隔）
+UrlEncodedRule {
+  @specialize[@name=UrlEncodedKeyword]<AtKeyword, "@urlencoded">
+  JsonBlock
 }
 
-FilePath { filePathContent }
-
-// ==================== Variables 语句 ====================
-
-VariablesStatement {
-  VariablesKeyword VariablesContent ";"
+// @text 块：纯文本请求体（使用 content 字段）
+TextRule {
+  @specialize[@name=TextKeyword]<AtKeyword, "@text">
+  JsonBlock
 }
 
-VariablesKeyword { @specialize[@name="VARIABLES"]<word, "VARIABLES"> }
-
-VariablesContent[isolate] { variablesContent }
-
-// ==================== 响应 ====================
-
-// 响应行 - 固定格式：RESPONSE <状态码> <状态文本> <大小> <时间戳>;
-ResponseLine {
-  ResponseKeyword StatusCode StatusText Size Timestamp ";"
+// @res 块：响应数据（属性必须用逗号分隔）
+ResponseRule {
+  @specialize[@name=ResKeyword]<AtKeyword, "@res">
+  JsonBlock
 }
 
-ResponseKeyword { @specialize[@name="RESPONSE"]<word, "RESPONSE"> }
-
-StatusCode { Number }
-
-StatusText { word+ }
-
-Size { Number sizeUnit }
-
-// 时间戳格式：YYYY-MM-DD HH:MM:SS 或 ISO8601 格式
-Timestamp { timestampContent }
-
-// ==================== 模板表达式 ====================
-
-TemplateExpression {
-  "{{" templateContent "}}"
+// 普通块结构（属性逗号可选）
+Block { 
+  "{" blockContent "}" 
 }
 
-templateContent {
-  VariableName |
-  MemberExpression |
-  FunctionCall
+blockContent { 
+  (Property | AtRule)*
 }
 
-MemberExpression {
-  VariableName !member ("." PropertyName)+
+// HTTP 属性（逗号可选）
+Property {
+  PropertyName { identifier }
+  ":" value ","?
 }
 
-PropertyName { word }
-
-FunctionCall {
-  "$" FunctionName !call "(" argumentList? ")"
+// JSON 块结构（属性必须用逗号分隔）
+JsonBlock {
+  "{" jsonBlockContent? "}"
 }
 
-FunctionName { word }
-
-argumentList {
-  argument ("," argument)*
+jsonBlockContent {
+  JsonProperty ("," JsonProperty)* ","?
 }
 
-argument { Number | String | word }
+// JSON 属性
+JsonProperty {
+  PropertyName { identifier }
+  ":" jsonValue
+}
 
-// ==================== Tokens ====================
+// 值
+NumberLiteral {
+  numberLiteralInner Unit?
+}
 
-@skip { spaces | newline | LineComment }
+// HTTP 属性值（支持块嵌套）
+value {
+  StringLiteral |
+  NumberLiteral |
+  Block |
+  identifier
+}
 
+// JSON 属性值（支持嵌套对象）
+jsonValue {
+  StringLiteral |
+  NumberLiteral |
+  JsonBlock |
+  identifier
+}
+
+// Tokens
 @tokens {
-  // 空白字符
-  spaces[@export] { $[ \t]+ }
+  // 单行注释（# 开头到行尾）
+  LineComment { "#" ![\n]* }
   
-  newline[@export] { $[\r\n] }
+  AtKeyword { "@" "-"? @asciiLetter (@asciiLetter | @digit | "-")* }
   
-  // 注释
-  LineComment[@export,isolate] { "#" ![\n]* }
-  
-  // 标识符
-  identifierChar { @asciiLetter | $[_$] }
-  
-  word { identifierChar (identifierChar | @digit | $[-])* }
-  
-  // 数字
-  Number {
-    @digit+ ("." @digit+)?
+  // 标识符（属性名，支持连字符）
+  identifier { 
+    (@asciiLetter | $[_$]) 
+    (@asciiLetter | @digit | $[-_$])* 
   }
   
-  // 字符串
-  String {
-    '"' stringContentDouble* '"' |
-    "'" stringContentSingle* "'"
+  // 单位（必须跟在数字后面，所以不单独匹配）
+  Unit { @asciiLetter+ }
+
+  whitespace { @whitespace+ }
+  
+  @precedence { identifier, Unit }
+
+  numberLiteralInner { 
+    ("+" | "-")? (@digit+ ("." @digit*)? | "." @digit+) 
+    (("e" | "E") ("+" | "-")? @digit+)? 
   }
-  
-  stringContentDouble { ![\\\n"]+ | "\\" _ }
-  
-  stringContentSingle { ![\\\n']+ | "\\" _ }
-  
-  // URL 内容 - 排除空格、换行、特殊前缀字符
-  // 允许 # （用于锚点），但不允许以 # 开头（避免和注释冲突）
-  urlContent { ![ \t\n\r@{};]+ }
-  
-  // HTTP 版本
-  httpVersionToken { "HTTP/" @digit+ "." @digit+ }
-  
-  // Header 值内容 - 排除所有 skip tokens 和特殊字符
-  headerValueContent { ![ \t\n\r#{};]+ }
-  
-  // Body 文本内容 - 排除空格、换行、分号
-  // 允许大括号、#、@、$ 等，因为JSON/XML/GraphQL/email等需要它们
-  // {{ 和 @file 是独立token，有更高优先级
-  bodyText { ![ \t\n\r;]+ }
-  
-  // 任意内容（直到分号） - 只排除换行和分号
-  // 允许空格、#、数字等所有字符
-  anyContent { ![\n\r;]+ }
-  
-  // 文件路径内容 - 排除空格、换行、分号
-  filePathContent { ![ \t\n\r;]+ }
-  
-  // Variables 内容 - 只排除分号，允许所有字符包括换行
-  variablesContent { ![;]+ }
-  
-  // 时间戳内容 - 日期时间格式，包含日期时间字符
-  timestampContent { timestampChar+ }
-  
-  timestampChar { @digit | $[-:TZ.+] }
-  
-  // Duration 单位
-  durationUnit { "ms" | "s" | "m" }
-  
-  // Size 单位
-  sizeUnit { "B" | "KB" | "MB" | "GB" }
-  
-  // 优先级声明
-  @precedence { urlContent, LineComment }
-  
-  @precedence { "{{", bodyText }
-  
-  @precedence { "@file", bodyText }
-  
-  @precedence { "$", bodyText }
-  
-  @precedence { bodyText, LineComment }
-  
-  @precedence { anyContent, LineComment }
-  
-  @precedence { anyContent, spaces }
-  
-  @precedence { filePathContent, LineComment }
-  
-  @precedence { variablesContent, newline }
-  
-  @precedence { variablesContent, LineComment }
-  
-  @precedence { variablesContent, spaces }
-  
-  @precedence { "$", word }
-  
-  @precedence { spaces, newline, word }
-  
-  @precedence { httpVersionToken, urlContent, word }
-  
-  @precedence { "{{", bodyText }
-  
-  @precedence { word, bodyText }
-  
-  @precedence { Number, word }
-  
-  // 符号
-  "(" ")" "[" "]" "{" "}"
-  
-  "." "," ":" "=" "@" "$" ";" "{{" "}}"
-  
-  // 组合 tokens
-  "@file"
+
+  StringLiteral[isolate] { 
+    "\"" (!["\n\\] | "\\" _)* "\"" | 
+    "'" (!['\n\\] | "\\" _)* "'" 
+  }
+
+  ":" ","
+
+  "{" "}"
 }
+
+@external propSource httpHighlighting from "./http.highlight"
 
 @detectDelim

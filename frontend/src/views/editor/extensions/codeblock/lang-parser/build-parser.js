@@ -26,20 +26,20 @@ try {
 
   // 运行 lezer-generator
   console.log('⚙️  building parser...');
-  execSync('npx lezer-generator codeblock.grammar -o parser.js', {
+  execSync('npx lezer-generator codeblock.grammar -o parser.ts --typeScript', {
     cwd: __dirname,
     stdio: 'inherit'
   });
 
   // 检查生成的文件
-  const parserFile = path.join(__dirname, 'parser.js');
-  const termsFile = path.join(__dirname, 'parser.terms.js');
+  const parserFile = path.join(__dirname, 'parser.ts');
+  const termsFile = path.join(__dirname, 'parser.terms.ts');
 
   if (fs.existsSync(parserFile) && fs.existsSync(termsFile)) {
     console.log('✅ parser file successfully generated！');
     console.log('📦 parser files:');
-    console.log('  - parser.js');
-    console.log('  - parser.terms.js');
+    console.log('  - parser.ts');
+    console.log('  - parser.terms.ts');
   } else {
     throw new Error('failed to generate parser');
   }

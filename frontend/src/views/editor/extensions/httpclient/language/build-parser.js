@@ -2,8 +2,8 @@
 
 /**
  * HTTP Grammar Parser Builder
- * 编译 Lezer grammar 文件为 JavaScript parser
- * 使用命令行方式编译
+ * 编译 Lezer grammar 文件为 TypeScript parser
+ * 使用 --typeScript 选项生成 .ts 文件
  */
 
 import { execSync } from 'child_process';
@@ -13,7 +13,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-console.log('🚀 开始编译 HTTP grammar parser...');
+console.log('🚀 开始编译 HTTP grammar parser (TypeScript)...');
 
 try {
   // 检查语法文件是否存在
@@ -24,22 +24,22 @@ try {
 
   console.log('📄 语法文件:', grammarFile);
 
-  // 运行 lezer-generator
-  console.log('⚙️  编译 parser...');
-  execSync('npx lezer-generator http.grammar -o http.grammar.js', {
+  // 运行 lezer-generator with TypeScript output
+  console.log('⚙️  编译 parser (生成 TypeScript)...');
+  execSync('npx lezer-generator http.grammar -o http.parser.ts --typeScript', {
     cwd: __dirname,
     stdio: 'inherit'
   });
 
   // 检查生成的文件
-  const parserFile = path.join(__dirname, 'http.grammar.js');
-  const termsFile = path.join(__dirname, 'http.grammar.terms.js');
+  const parserFile = path.join(__dirname, 'http.parser.ts');
+  const termsFile = path.join(__dirname, 'http.parser.terms.ts');
 
   if (fs.existsSync(parserFile) && fs.existsSync(termsFile)) {
     console.log('✅ Parser 文件成功生成！');
     console.log('📦 生成的文件:');
-    console.log('  - http.grammar.js');
-    console.log('  - http.grammar.terms.js');
+    console.log('  - http.parser.ts');
+    console.log('  - http.parser.terms.ts');
   } else {
     throw new Error('Parser 生成失败');
   }
@@ -50,4 +50,3 @@ try {
   console.error('❌ 编译失败:', error.message);
   process.exit(1);
 }
-

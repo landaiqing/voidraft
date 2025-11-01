@@ -4,7 +4,7 @@
  */
 
 import { ExternalTokenizer } from "@lezer/lr";
-import { BlockContent } from "./parser.terms.js";
+import { BlockContent } from "./parser.terms";
 import { LANGUAGES } from "./languages";
 
 const EOF = -1;

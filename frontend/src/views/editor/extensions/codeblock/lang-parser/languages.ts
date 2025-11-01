@@ -86,7 +86,7 @@ export class LanguageInfo {
  * 支持的语言列表
  */
 export const LANGUAGES: LanguageInfo[] = [
-    new LanguageInfo("text", "Plain Text", null),
+    new LanguageInfo("text", "Text", null),
     new LanguageInfo("json", "JSON", jsonLanguage.parser, ["json"], {
         parser: "json",
         plugins: [babelPrettierPlugin, prettierPluginEstree]

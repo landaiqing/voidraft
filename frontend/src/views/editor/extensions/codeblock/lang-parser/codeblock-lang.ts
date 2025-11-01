@@ -3,7 +3,7 @@
  * 提供多语言代码块支持
  */
 
-import { parser } from "./parser.js";
+import { parser } from "./parser";
 import { configureNesting } from "./nested-parser";
 
 import {

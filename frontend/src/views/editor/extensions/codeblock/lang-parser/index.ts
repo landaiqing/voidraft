@@ -24,7 +24,7 @@ export {
 } from './nested-parser';
 
 // 解析器术语
-export * from './parser.terms.js';
+export * from './parser.terms';
 
 // 外部标记器
 export {
@@ -34,4 +34,4 @@ export {
 // 解析器
 export {
   parser
-} from './parser.js'; 
+} from './parser';
