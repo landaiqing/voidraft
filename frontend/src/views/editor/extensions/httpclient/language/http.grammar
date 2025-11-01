@@ -10,9 +10,13 @@
 //    @formdata    - 表单数据（属性必须用逗号分隔）
 //    @urlencoded  - URL 编码格式（属性必须用逗号分隔）
 //    @text        - 纯文本内容（使用 content 字段）
-//    @res         - 响应数据（属性必须用逗号分隔）
 //
-// 3. 注释：
+// 3. 响应数据：
+//    使用独立的 JSON 块
+//    # Response 200 OK 234ms
+//    { "code": 200, "message": "success" }
+//
+// 4. 注释：
 //    # 单行注释
 //
 // 示例 1 - JSON 请求：
@@ -54,6 +58,25 @@
 //     content: "纯文本内容"
 //   }
 // }
+//
+// 示例 5 - 带响应数据：
+// POST "http://api.example.com/login" {
+//   @json {
+//     username: "admin",
+//     password: "123456"
+//   }
+// }
+//
+// # Response 200 OK 234ms 2025-10-11 10:30:25
+// {
+//   "code": 200,
+//   "message": "登录成功",
+//   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
+//   "data": {
+//     "userId": 1001,
+//     "username": "admin"
+//   }
+// }
 
 @skip { whitespace | LineComment }
 
@@ -61,7 +84,9 @@
 
 item {
   RequestStatement |
-  AtRule
+  AtRule |
+  JsonObject |
+  JsonArray
 }
 
 // HTTP 请求 - URL 必须是字符串
@@ -89,8 +114,7 @@ AtRule {
   JsonRule |
   FormDataRule |
   UrlEncodedRule |
-  TextRule |
-  ResponseRule
+  TextRule
 }
 
 // @json 块：JSON 格式请求体（属性必须用逗号分隔）
@@ -114,12 +138,6 @@ UrlEncodedRule {
 // @text 块：纯文本请求体（使用 content 字段）
 TextRule {
   @specialize[@name=TextKeyword]<AtKeyword, "@text">
-  JsonBlock
-}
-
-// @res 块：响应数据（属性必须用逗号分隔）
-ResponseRule {
-  @specialize[@name=ResKeyword]<AtKeyword, "@res">
   JsonBlock
 }
 
@@ -166,13 +184,58 @@ value {
   identifier
 }
 
-// JSON 属性值（支持嵌套对象）
+// JSON 属性值（严格的 JSON 语法：字符串必须用引号）
 jsonValue {
   StringLiteral |
   NumberLiteral |
   JsonBlock |
-  identifier
+  JsonTrue |
+  JsonFalse |
+  JsonNull
 }
+
+// ===============================
+// 独立 JSON 语法（用于响应数据）
+// ===============================
+
+// JSON 对象（独立的 JSON 块，不需要 @ 前缀）
+JsonObject {
+  "{" jsonObjectContent? "}"
+}
+
+jsonObjectContent {
+  JsonMember ("," JsonMember)* ","?
+}
+
+// JSON 成员（支持字符串键名和标识符键名）
+JsonMember {
+  (StringLiteral | identifier) ":" JsonValue
+}
+
+// JSON 数组
+JsonArray {
+  "[" jsonArrayContent? "]"
+}
+
+jsonArrayContent {
+  JsonValue ("," JsonValue)* ","?
+}
+
+// JSON 值（完整的 JSON 值类型）
+JsonValue {
+  StringLiteral |
+  NumberLiteral |
+  JsonObject |
+  JsonArray |
+  JsonTrue |
+  JsonFalse |
+  JsonNull
+}
+
+// JSON 字面量
+JsonTrue { @specialize[@name=True]<identifier, "true"> }
+JsonFalse { @specialize[@name=False]<identifier, "false"> }
+JsonNull { @specialize[@name=Null]<identifier, "null"> }
 
 // Tokens
 @tokens {
@@ -207,6 +270,8 @@ jsonValue {
   ":" ","
 
   "{" "}"
+  
+  "[" "]"
 }
 
 @external propSource httpHighlighting from "./http.highlight"

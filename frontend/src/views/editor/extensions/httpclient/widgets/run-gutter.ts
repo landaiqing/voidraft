@@ -2,8 +2,9 @@ import { EditorView, GutterMarker, gutter } from '@codemirror/view';
 import { StateField } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { blockState } from '../../codeblock/state';
-import type { SyntaxNode } from '@lezer/common';
 import { parseHttpRequest, type HttpRequest } from '../parser/request-parser';
+import { insertHttpResponse, type HttpResponse } from '../parser/response-inserter';
+import { createDebounce } from '@/common/utils/debounce';
 
 /**
  * 语法树节点类型常量
@@ -14,21 +15,6 @@ const NODE_TYPES = {
   URL: 'Url',
   BLOCK: 'Block',
 } as const;
-
-/**
- * 有效的 HTTP 方法列表
- */
-const VALID_HTTP_METHODS = new Set([
-  'GET',
-  'POST',
-  'PUT',
-  'DELETE',
-  'PATCH',
-  'HEAD',
-  'OPTIONS',
-  'CONNECT',
-  'TRACE'
-]);
 
 /**
  * HTTP 请求缓存信息
@@ -117,11 +103,22 @@ const httpRequestsField = StateField.define<Map<number, CachedHttpRequest>>({
  * 运行按钮 Gutter Marker
  */
 class RunButtonMarker extends GutterMarker {
+  private isLoading = false;
+  private buttonElement: HTMLButtonElement | null = null;
+  private readonly debouncedExecute: ((view: EditorView) => void) | null = null;
+
   constructor(
     private readonly lineNumber: number,
     private readonly cachedRequest: HttpRequest
   ) {
     super();
+    
+    // 创建防抖执行函数
+    const { debouncedFn } = createDebounce(
+      (view: EditorView) => this.executeRequestInternal(view),
+      { delay: 500 }
+    );
+    this.debouncedExecute = debouncedFn;
   }
 
   toDOM(view: EditorView) {
@@ -130,26 +127,82 @@ class RunButtonMarker extends GutterMarker {
     button.innerHTML = '▶';
     button.title = 'Run HTTP Request';
     button.setAttribute('aria-label', 'Run HTTP Request');
+    
+    this.buttonElement = button;
 
     button.onclick = (e) => {
       e.preventDefault();
       e.stopPropagation();
+      
+      if (this.isLoading) {
+        return;
+      }
+      
       this.executeRequest(view);
     };
 
     return button;
   }
 
-  private async executeRequest(view: EditorView) {
-    console.log(`\n============ 执行 HTTP 请求 ============`);
-    console.log('行号:', this.lineNumber);
+  private executeRequest(view: EditorView) {
+    if (this.debouncedExecute) {
+      this.debouncedExecute(view);
+    }
+  }
+
+  private async executeRequestInternal(view: EditorView) {
+    if (this.isLoading) return;
     
-    // 直接使用缓存的解析结果，无需重新解析！
-    console.log('解析结果:', JSON.stringify(this.cachedRequest, null, 2));
+    this.setLoadingState(true);
     
-    // TODO: 调用后端 API 执行请求
-    // const response = await executeHttpRequest(this.cachedRequest);
-    // renderResponse(response);
+    try {
+      console.log(`\n============ 执行 HTTP 请求 ============`);
+      console.log('行号:', this.lineNumber);
+      console.log('解析结果:', JSON.stringify(this.cachedRequest, null, 2));
+      
+      // TODO: 调用后端 API 执行请求
+      // 临时模拟网络延迟
+      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+      
+      // 临时模拟响应数据用于测试
+      const mockResponse: HttpResponse = {
+        status: 200,
+        statusText: 'OK',
+        time: Math.floor(Math.random() * 500) + 50, // 50-550ms
+        body: {
+          code: 200,
+          message: "请求成功",
+          data: {
+            id: 1001,
+            timestamp: new Date().toISOString()
+          }
+        },
+        timestamp: new Date()
+      };
+      
+      // 插入响应数据
+      insertHttpResponse(view, this.cachedRequest.position.from, mockResponse);
+    } catch (error) {
+      console.error('HTTP 请求执行失败:', error);
+    } finally {
+      this.setLoadingState(false);
+    }
+  }
+
+  private setLoadingState(loading: boolean) {
+    this.isLoading = loading;
+    
+    if (this.buttonElement) {
+      if (loading) {
+        this.buttonElement.className = 'cm-http-run-button cm-http-run-button-loading';
+        this.buttonElement.title = 'Request in progress...';
+        this.buttonElement.disabled = true;
+      } else {
+        this.buttonElement.className = 'cm-http-run-button';
+        this.buttonElement.title = 'Run HTTP Request';
+        this.buttonElement.disabled = false;
+      }
+    }
   }
 }
 
@@ -194,7 +247,7 @@ export const httpRunButtonTheme = EditorView.baseTheme({
     alignItems: 'center',
     justifyContent: 'center',
     padding: '0',
-    transition: 'color 0.15s ease',
+    transition: 'color 0.15s ease, opacity 0.15s ease',
   },
 
   // 悬停效果
@@ -207,6 +260,18 @@ export const httpRunButtonTheme = EditorView.baseTheme({
   '.cm-http-run-button:active': {
     color: '#3d8b40',
     // backgroundColor: 'rgba(76, 175, 80, 0.2)',
+  },
+
+  // 加载状态样式
+  '.cm-http-run-button-loading': {
+    color: '#999999 !important', // 灰色
+    cursor: 'not-allowed !important',
+    opacity: '0.6',
+  },
+
+  // 禁用悬停效果当加载时
+  '.cm-http-run-button-loading:hover': {
+    color: '#999999 !important',
   },
 });
 

@@ -24,9 +24,6 @@ export const httpHighlighting = styleTags({
   // @text - 使用特殊类型
   "TextKeyword": t.special(t.typeName),
   
-  // @res - 使用命名空间（紫色系）
-  "ResKeyword": t.namespace,
-  
   // @ 符号本身 - 使用元标记
   "AtKeyword": t.meta,
   
@@ -55,6 +52,23 @@ export const httpHighlighting = styleTags({
   // # 单行注释 - 行注释颜色
   "LineComment": t.lineComment,
   
+  // ========== JSON 语法（独立 JSON 块）==========
+  // JSON 对象和数组
+  "JsonObject": t.brace,
+  "JsonArray": t.squareBracket,
+  
+  // JSON 成员（属性名）
+  "JsonMember/StringLiteral": t.definition(t.propertyName),
+  "JsonMember/identifier": t.definition(t.propertyName),
+  
+  // JSON 字面量值
+  "True False": t.bool,
+  "Null": t.null,
+  
+  // JSON 值（确保字符串和数字正确高亮）
+  "JsonValue/StringLiteral": t.string,
+  "JsonValue/NumberLiteral": t.number,
+  
   // ========== 标点符号 ==========
   // 冒号 - 分隔符
   ":": t.separator,
@@ -64,4 +78,7 @@ export const httpHighlighting = styleTags({
   
   // 花括号 - 大括号
   "{ }": t.brace,
+  
+  // 方括号 - 方括号
+  "[ ]": t.squareBracket,
 })
