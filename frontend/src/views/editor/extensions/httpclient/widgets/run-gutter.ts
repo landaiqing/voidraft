@@ -5,6 +5,7 @@ import { blockState } from '../../codeblock/state';
 import { parseHttpRequest, type HttpRequest } from '../parser/request-parser';
 import { insertHttpResponse, type HttpResponse } from '../parser/response-inserter';
 import { createDebounce } from '@/common/utils/debounce';
+import { ExecuteRequest } from '@/../bindings/voidraft/internal/services/httpclientservice';
 
 /**
  * 语法树节点类型常量
@@ -156,34 +157,36 @@ class RunButtonMarker extends GutterMarker {
     this.setLoadingState(true);
     
     try {
-      console.log(`\n============ 执行 HTTP 请求 ============`);
-      console.log('行号:', this.lineNumber);
-      console.log('解析结果:', JSON.stringify(this.cachedRequest, null, 2));
+      const response = await ExecuteRequest(this.cachedRequest);
+      if (!response) {
+        throw new Error('No response');
+      }
       
-      // TODO: 调用后端 API 执行请求
-      // 临时模拟网络延迟
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
-      
-      // 临时模拟响应数据用于测试
-      const mockResponse: HttpResponse = {
-        status: 200,
-        statusText: 'OK',
-        time: Math.floor(Math.random() * 500) + 50, // 50-550ms
-        body: {
-          code: 200,
-          message: "请求成功",
-          data: {
-            id: 1001,
-            timestamp: new Date().toISOString()
-          }
-        },
-        timestamp: new Date()
+      // 转换后端响应为前端格式
+      const httpResponse: HttpResponse = {
+        status: response.status,        // 后端已返回完整状态如"200 OK"
+        time: response.time,
+        requestSize: response.requestSize,
+        body: response.body,
+        headers: response.headers,
+        timestamp: response.timestamp ? new Date(response.timestamp) : new Date(),
+        error: response.error
       };
       
       // 插入响应数据
-      insertHttpResponse(view, this.cachedRequest.position.from, mockResponse);
+      insertHttpResponse(view, this.cachedRequest.position.from, httpResponse);
     } catch (error) {
-      console.error('HTTP 请求执行失败:', error);
+      // 创建错误响应
+      const errorResponse: HttpResponse = {
+        status: 'Request Failed',
+        time: 0,
+        body: `Error: ${error instanceof Error ? error.message : String(error)}`,
+        timestamp: new Date(),
+        error: error
+      };
+      
+      // 插入错误响应
+      insertHttpResponse(view, this.cachedRequest.position.from, errorResponse);
     } finally {
       this.setLoadingState(false);
     }

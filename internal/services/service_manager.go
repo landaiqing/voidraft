@@ -31,6 +31,7 @@ type ServiceManager struct {
 	notificationService *notifications.NotificationService
 	testService         *TestService // 测试服务（仅开发环境）
 	BackupService       *BackupService
+	httpClientService   *HttpClientService // HTTP客户端服务
 	logger              *log.LogService
 }
 
@@ -102,6 +103,9 @@ func NewServiceManager() *ServiceManager {
 	// 初始化备份服务
 	backupService := NewBackupService(configService, databaseService, logger)
 
+	// 初始化HTTP客户端服务
+	httpClientService := NewHttpClientService(logger)
+
 	// 初始化测试服务（开发环境使用）
 	testService := NewTestService(badgeService, notificationService, logger)
 
@@ -142,7 +146,6 @@ func NewServiceManager() *ServiceManager {
 		databaseService:     databaseService,
 		documentService:     documentService,
 		windowService:       windowService,
-		windowSnapService:   windowSnapService,
 		migrationService:    migrationService,
 		systemService:       systemService,
 		hotkeyService:       hotkeyService,
@@ -158,6 +161,7 @@ func NewServiceManager() *ServiceManager {
 		notificationService: notificationService,
 		testService:         testService,
 		BackupService:       backupService,
+		httpClientService:   httpClientService,
 		logger:              logger,
 	}
 }
@@ -169,7 +173,6 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
 		application.NewService(sm.windowService),
-		application.NewService(sm.windowSnapService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
 		application.NewService(sm.migrationService),
@@ -185,6 +188,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.notificationService),
 		application.NewService(sm.testService),
 		application.NewService(sm.BackupService),
+		application.NewService(sm.httpClientService),
 	}
 	return services
 }
@@ -272,4 +276,9 @@ func (sm *ServiceManager) GetNotificationService() *notifications.NotificationSe
 // GetSystemService 获取系统服务实例
 func (sm *ServiceManager) GetSystemService() *SystemService {
 	return sm.systemService
+}
+
+// GetHttpClientService 获取HTTP客户端服务
+func (sm *ServiceManager) GetHttpClientService() *HttpClientService {
+	return sm.httpClientService
 }

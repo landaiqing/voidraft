@@ -8,6 +8,114 @@ import {Create as $Create} from "@wailsio/runtime";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as http$0 from "../../../net/http/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as time$0 from "../../../time/models.js";
+
+/**
+ * HttpRequest HTTP请求结构
+ */
+export class HttpRequest {
+    "method": string;
+    "url": string;
+    "headers": { [_: string]: string };
+
+    /**
+     * json, formdata, urlencoded, text
+     */
+    "bodyType"?: string;
+    "body"?: any;
+
+    /** Creates a new HttpRequest instance. */
+    constructor($$source: Partial<HttpRequest> = {}) {
+        if (!("method" in $$source)) {
+            this["method"] = "";
+        }
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("headers" in $$source)) {
+            this["headers"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HttpRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HttpRequest {
+        const $$createField2_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("headers" in $$parsedSource) {
+            $$parsedSource["headers"] = $$createField2_0($$parsedSource["headers"]);
+        }
+        return new HttpRequest($$parsedSource as Partial<HttpRequest>);
+    }
+}
+
+/**
+ * HttpResponse HTTP响应结构
+ */
+export class HttpResponse {
+    /**
+     * 使用resp.Status()返回完整状态如"200 OK"
+     */
+    "status": string;
+
+    /**
+     * 响应时间（毫秒）
+     */
+    "time": number;
+
+    /**
+     * 请求大小
+     */
+    "requestSize": string;
+    "body": any;
+    "headers": http$0.Header;
+    "timestamp": time$0.Time;
+    "error"?: any;
+
+    /** Creates a new HttpResponse instance. */
+    constructor($$source: Partial<HttpResponse> = {}) {
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("time" in $$source)) {
+            this["time"] = 0;
+        }
+        if (!("requestSize" in $$source)) {
+            this["requestSize"] = "";
+        }
+        if (!("body" in $$source)) {
+            this["body"] = null;
+        }
+        if (!("headers" in $$source)) {
+            this["headers"] = ({} as http$0.Header);
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = null;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HttpResponse instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HttpResponse {
+        const $$createField4_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("headers" in $$parsedSource) {
+            $$parsedSource["headers"] = $$createField4_0($$parsedSource["headers"]);
+        }
+        return new HttpResponse($$parsedSource as Partial<HttpResponse>);
+    }
+}
 
 /**
  * MemoryStats 内存统计信息
@@ -273,8 +381,8 @@ export class SystemInfo {
      * Creates a new SystemInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): SystemInfo {
-        const $$createField3_0 = $$createType1;
-        const $$createField4_0 = $$createType2;
+        const $$createField3_0 = $$createType5;
+        const $$createField4_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("osInfo" in $$parsedSource) {
             $$parsedSource["osInfo"] = $$createField3_0($$parsedSource["osInfo"]);
@@ -313,7 +421,7 @@ export class WindowInfo {
      * Creates a new WindowInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): WindowInfo {
-        const $$createField0_0 = $$createType4;
+        const $$createField0_0 = $$createType8;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("Window" in $$parsedSource) {
             $$parsedSource["Window"] = $$createField0_0($$parsedSource["Window"]);
@@ -343,8 +451,17 @@ export class WindowSnapService {
 }
 
 // Private type creation functions
-const $$createType0 = OSInfo.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Map($Create.Any, $Create.Any);
-const $$createType3 = application$0.WebviewWindow.createFrom;
-const $$createType4 = $Create.Nullable($$createType3);
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+var $$createType1 = (function $$initCreateType1(...args): any {
+    if ($$createType1 === $$initCreateType1) {
+        $$createType1 = $$createType3;
+    }
+    return $$createType1(...args);
+});
+const $$createType2 = $Create.Array($Create.Any);
+const $$createType3 = $Create.Map($Create.Any, $$createType2);
+const $$createType4 = OSInfo.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $Create.Map($Create.Any, $Create.Any);
+const $$createType7 = application$0.WebviewWindow.createFrom;
+const $$createType8 = $Create.Nullable($$createType7);

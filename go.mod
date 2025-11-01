@@ -15,6 +15,7 @@ require (
 	golang.org/x/sys v0.37.0
 	golang.org/x/text v0.30.0
 	modernc.org/sqlite v1.39.1
+	resty.dev/v3 v3.0.0-beta.3
 )
 
 require (

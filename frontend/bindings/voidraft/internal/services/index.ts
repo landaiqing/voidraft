@@ -8,6 +8,7 @@ import * as DialogService from "./dialogservice.js";
 import * as DocumentService from "./documentservice.js";
 import * as ExtensionService from "./extensionservice.js";
 import * as HotkeyService from "./hotkeyservice.js";
+import * as HttpClientService from "./httpclientservice.js";
 import * as KeyBindingService from "./keybindingservice.js";
 import * as MigrationService from "./migrationservice.js";
 import * as SelfUpdateService from "./selfupdateservice.js";
@@ -18,7 +19,6 @@ import * as ThemeService from "./themeservice.js";
 import * as TranslationService from "./translationservice.js";
 import * as TrayService from "./trayservice.js";
 import * as WindowService from "./windowservice.js";
-import * as WindowSnapService from "./windowsnapservice.js";
 export {
     BackupService,
     ConfigService,
@@ -27,6 +27,7 @@ export {
     DocumentService,
     ExtensionService,
     HotkeyService,
+    HttpClientService,
     KeyBindingService,
     MigrationService,
     SelfUpdateService,
@@ -36,8 +37,7 @@ export {
     ThemeService,
     TranslationService,
     TrayService,
-    WindowService,
-    WindowSnapService
+    WindowService
 };
 
 export * from "./models.js";
