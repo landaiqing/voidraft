@@ -17,15 +17,25 @@ export const httpHighlighting = styleTags({
   // 其他方法 - 使用修饰关键字
   "TRACE CONNECT": t.modifier,
   
-  // ========== @ 规则（请求体格式）==========
+  // ========== @ 规则（请求体格式和变量声明）==========
   // @json, @formdata, @urlencoded - 使用类型名
   "JsonKeyword FormDataKeyword UrlEncodedKeyword": t.typeName,
   
   // @text - 使用特殊类型
   "TextKeyword": t.special(t.typeName),
   
+  // @var - 变量声明关键字
+  "VarKeyword": t.definitionKeyword,
+  
+  // @response - 响应关键字
+  "ResponseKeyword": t.keyword,
+  
   // @ 符号本身 - 使用元标记
   "AtKeyword": t.meta,
+  
+  // ========== 变量引用 ==========
+  // {{variableName}} - 使用特殊变量名
+  "VariableRef": t.special(t.definitionKeyword),
   
   // ========== URL（特殊处理）==========
   // URL 节点 - 使用链接颜色
@@ -48,6 +58,22 @@ export const httpHighlighting = styleTags({
   // 单位 - 单位颜色
   "Unit": t.unit,
   
+  // ========== 响应相关 ==========
+  // 响应状态码 - 数字颜色
+  "StatusCode": t.number,
+  "ResponseStatus/StatusCode": t.number,
+  
+  // 响应错误状态 - 关键字
+  "ErrorStatus": t.operatorKeyword,
+  
+  // 响应时间 - 数字颜色
+  "TimeValue": t.number,
+  "ResponseTime": t.number,
+  
+  // 时间戳 - 字符串颜色
+  "Timestamp": t.string,
+  "ResponseTimestamp": t.string,
+  
   // ========== 注释 ==========
   // # 单行注释 - 行注释颜色
   "LineComment": t.lineComment,
@@ -57,9 +83,13 @@ export const httpHighlighting = styleTags({
   "JsonObject": t.brace,
   "JsonArray": t.squareBracket,
   
-  // JSON 成员（属性名）
-  "JsonMember/StringLiteral": t.definition(t.propertyName),
-  "JsonMember/identifier": t.definition(t.propertyName),
+  // JSON 属性名 - 使用属性名颜色
+  "JsonProperty/PropertyName": t.propertyName,
+  "JsonProperty/StringLiteral": t.propertyName,
+  
+  // JSON 成员（属性名）- 使用属性名颜色（适用于独立 JSON 对象）
+  "JsonMember/StringLiteral": t.propertyName,
+  "JsonMember/identifier": t.propertyName,
   
   // JSON 字面量值
   "True False": t.bool,

@@ -1,6 +1,7 @@
 import { EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode } from '@lezer/common';
+import { VariableResolver } from './variable-resolver';
 
 /**
  * HTTP 请求模型
@@ -53,13 +54,36 @@ const NODE_TYPES = {
   TEXT_KEYWORD: 'TextKeyword',
   JSON_BLOCK: 'JsonBlock',
   JSON_PROPERTY: 'JsonProperty',
+  VARIABLE_REF: 'VariableRef',
 } as const;
 
 /**
  * HTTP 请求解析器
  */
 export class HttpRequestParser {
-  constructor(private state: EditorState) {}
+  private variableResolver: VariableResolver | null = null;
+
+  /**
+   * 构造函数
+   * @param state EditorState
+   * @param blockRange 块的范围（可选），如果提供则只解析该块内的变量
+   */
+  constructor(
+    private state: EditorState,
+    private blockRange?: { from: number; to: number }
+  ) {
+
+  }
+
+  /**
+   * 获取或创建变量解析器（懒加载）
+   */
+  private getVariableResolver(): VariableResolver {
+    if (!this.variableResolver) {
+      this.variableResolver = new VariableResolver(this.state, this.blockRange);
+    }
+    return this.variableResolver;
+  }
 
   /**
    * 解析指定位置的 HTTP 请求
@@ -152,7 +176,9 @@ export class HttpRequestParser {
   private parseUrl(node: SyntaxNode): string {
     const urlText = this.getNodeText(node);
     // 移除引号
-    return urlText.replace(/^["']|["']$/g, '');
+    const url = urlText.replace(/^["']|["']$/g, '');
+    // 替换变量
+    return this.getVariableResolver().replaceVariables(url);
   }
 
   /**
@@ -236,12 +262,13 @@ export class HttpRequestParser {
 
     const name = this.getNodeText(nameNode);
 
-    // 尝试获取值节点（String, Number, JsonBlock）
+    // 尝试获取值节点（String, Number, JsonBlock, VariableRef）
     let value: any = null;
     for (let child = node.firstChild; child; child = child.nextSibling) {
       if (child.name === NODE_TYPES.STRING_LITERAL || 
           child.name === NODE_TYPES.NUMBER_LITERAL ||
           child.name === NODE_TYPES.JSON_BLOCK ||
+          child.name === NODE_TYPES.VARIABLE_REF ||
           child.name === NODE_TYPES.IDENTIFIER) {
         value = this.parseValue(child);
         return { name, value };
@@ -305,20 +332,36 @@ export class HttpRequestParser {
       }
     }
 
+    // HTTP Header 的值必须转换为字符串
+    if (value !== null && value !== undefined) {
+      value = String(value);
+    }
+
     return { name, value };
   }
 
   /**
-   * 解析值节点（字符串、数字、标识符、嵌套块）
+   * 解析值节点（字符串、数字、标识符、嵌套块、变量引用）
    */
   private parseValue(node: SyntaxNode): any {
     if (node.name === NODE_TYPES.STRING_LITERAL) {
       const text = this.getNodeText(node);
       // 移除引号
-      return text.replace(/^["']|["']$/g, '');
+      const value = text.replace(/^["']|["']$/g, '');
+      // 替换字符串中的变量
+      return this.getVariableResolver().replaceVariables(value);
     } else if (node.name === NODE_TYPES.NUMBER_LITERAL) {
       const text = this.getNodeText(node);
       return parseFloat(text);
+    } else if (node.name === NODE_TYPES.VARIABLE_REF) {
+      // 处理变量引用节点
+      const text = this.getNodeText(node);
+      const resolver = this.getVariableResolver();
+      const ref = resolver.parseVariableRef(text);
+      if (ref) {
+        return resolver.resolveVariable(ref.name, ref.defaultValue);
+      }
+      return text;
     } else if (node.name === NODE_TYPES.IDENTIFIER) {
       const text = this.getNodeText(node);
       // 处理布尔值
@@ -347,9 +390,16 @@ export class HttpRequestParser {
 
 /**
  * 便捷函数：解析指定位置的 HTTP 请求
+ * @param state EditorState
+ * @param pos 光标位置
+ * @param blockRange 块的范围（可选），如果提供则只解析该块内的变量
  */
-export function parseHttpRequest(state: EditorState, pos: number): HttpRequest | null {
-  const parser = new HttpRequestParser(state);
+export function parseHttpRequest(
+  state: EditorState,
+  pos: number,
+  blockRange?: { from: number; to: number }
+): HttpRequest | null {
+  const parser = new HttpRequestParser(state, blockRange);
   return parser.parseRequestAt(pos);
 }
 

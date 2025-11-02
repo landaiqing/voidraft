@@ -1,6 +1,6 @@
 import { EditorView } from '@codemirror/view';
-import { EditorState, ChangeSpec, StateField } from '@codemirror/state';
-import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
+import { EditorState, ChangeSpec } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
 import type { SyntaxNode } from '@lezer/common';
 import { getNoteBlockFromPos } from '../../codeblock/state';
 
@@ -31,370 +31,210 @@ export interface HttpResponse {
 }
 
 /**
- * 节点类型常量
- */
-const NODE_TYPES = {
-  REQUEST_STATEMENT: 'RequestStatement',
-  LINE_COMMENT: 'LineComment',
-  JSON_OBJECT: 'JsonObject',
-  JSON_ARRAY: 'JsonArray',
-} as const;
-
-/**
- * 缓存接口
- */
-interface ParseCache {
-  version: number;
-  blockId: string;
-  requestPositions: Map<number, {
-    requestNode: SyntaxNode | null;
-    nextRequestPos: number | null;
-    oldResponse: { from: number; to: number } | null;
-  }>;
-}
-
-/**
- * StateField用于缓存解析结果
- */
-const responseCacheField = StateField.define<ParseCache>({
-  create(): ParseCache {
-    return {
-      version: 0,
-      blockId: '',
-      requestPositions: new Map()
-    };
-  },
-  
-  update(cache, tr): ParseCache {
-    // 如果有文档变更，清空缓存
-    if (tr.docChanged) {
-      return {
-        version: cache.version + 1,
-        blockId: '',
-        requestPositions: new Map()
-      };
-    }
-    return cache;
-  }
-});
-
-/**
- * 响应插入位置信息
- */
-interface InsertPosition {
-  /** 插入位置 */
-  from: number;
-  
-  /** 删除结束位置（如果需要删除旧响应） */
-  to: number;
-  
-  /** 是否需要删除旧响应 */
-  hasOldResponse: boolean;
-}
-
-/**
  * HTTP 响应插入器
  */
 export class HttpResponseInserter {
   constructor(private view: EditorView) {}
 
   /**
-   * 插入HTTP响应（优化版本）
+   * 插入HTTP响应
    * @param requestPos 请求的起始位置
    * @param response 响应数据
    */
   insertResponse(requestPos: number, response: HttpResponse): void {
     const state = this.view.state;
     
-    // 检查语法树是否可用，避免阻塞UI
-    if (!syntaxTreeAvailable(state)) {
-      // 延迟执行，等待语法树可用
-      setTimeout(() => {
-        if (syntaxTreeAvailable(this.view.state)) {
-          this.insertResponse(requestPos, response);
-        }
-      }, 10);
-      return;
-    }
-    
-    const insertPos = this.findInsertPosition(state, requestPos);
-    
-    if (!insertPos) {
+    // 获取当前代码块
+    const blockInfo = getNoteBlockFromPos(state, requestPos);
+    if (!blockInfo) {
       return;
     }
 
-    // 生成响应文本
+    const blockFrom = blockInfo.range.from;
+    const blockTo = blockInfo.range.to;
+    
+    // 查找请求节点和旧响应
+    const context = this.findRequestAndResponse(state, requestPos, blockFrom, blockTo);
+    
+    if (!context.requestNode) {
+      return;
+    }
+
+    // 生成新响应文本
     const responseText = this.formatResponse(response);
 
-    // 根据是否有旧响应决定插入内容
-    const insertText = insertPos.hasOldResponse 
-      ? responseText  // 替换旧响应，不需要额外换行
-      : `\n${responseText}`; // 新插入，需要换行分隔
+    // 确定插入位置
+    let insertFrom: number;
+    let insertTo: number;
+
+    if (context.oldResponseNode) {
+      // 替换旧响应
+      insertFrom = context.oldResponseNode.from;
+      insertTo = context.oldResponseNode.to;
+    } else {
+      // 在请求后插入新响应
+      // 使用 requestNode.to - 1 定位到请求的最后一个字符所在行
+      const lastCharPos = Math.max(context.requestNode.from, context.requestNode.to - 1);
+      const requestEndLine = state.doc.lineAt(lastCharPos);
+      insertFrom = requestEndLine.to;
+      insertTo = insertFrom;
+    }
 
     const changes: ChangeSpec = {
-      from: insertPos.from,
-      to: insertPos.to,
-      insert: insertText
+      from: insertFrom,
+      to: insertTo,
+      insert: context.oldResponseNode ? responseText : `\n\n${responseText}`
     };
 
     this.view.dispatch({
       changes,
       userEvent: 'http.response.insert',
-      // 保持光标在请求位置
       selection: { anchor: requestPos },
-      // 滚动到插入位置
       scrollIntoView: true
     });
   }
-  /**
-   * 查找插入位置（带缓存优化）
-   */
-  private findInsertPosition(state: EditorState, requestPos: number): InsertPosition | null {
-    // 获取当前代码块
-    const blockInfo = getNoteBlockFromPos(state, requestPos);
-    if (!blockInfo) {
-      return null;
-    }
-
-    const blockFrom = blockInfo.range.from;
-    const blockTo = blockInfo.range.to;
-    const blockId = `${blockFrom}-${blockTo}`; // 使用位置作为唯一ID
-    
-    // 检查缓存
-    const cache = state.field(responseCacheField, false);
-    if (cache && cache.blockId === blockId) {
-      const cachedResult = cache.requestPositions.get(requestPos);
-      if (cachedResult) {
-        // 使用缓存结果
-        const { requestNode, nextRequestPos, oldResponse } = cachedResult;
-        if (requestNode) {
-          const insertFrom = oldResponse ? oldResponse.from : requestNode.to + 1;
-          const insertTo = oldResponse ? oldResponse.to : insertFrom;
-          return {
-            from: insertFrom,
-            to: insertTo,
-            hasOldResponse: !!oldResponse
-          };
-        }
-      }
-    }
-
-    // 缓存未命中，执行解析
-    const tree = syntaxTree(state);
-    const context = this.findInsertionContext(tree, state, requestPos, blockFrom, blockTo);
-    
-    // 更新缓存
-    if (cache) {
-      cache.blockId = blockId;
-      cache.requestPositions.set(requestPos, context);
-    }
-
-    if (!context.requestNode) {
-      return null;
-    }
-
-    // 计算插入位置
-    let insertFrom: number;
-    let insertTo: number;
-    let hasOldResponse = false;
-
-    if (context.oldResponse) {
-      // 有旧响应，替换
-      insertFrom = context.oldResponse.from;
-      insertTo = context.oldResponse.to;
-      hasOldResponse = true;
-    } else {
-      // 没有旧响应，在请求后插入
-      const requestEndLine = state.doc.lineAt(context.requestNode.to);
-      // 在请求行末尾插入，添加换行符分隔
-      insertFrom = requestEndLine.to;
-      insertTo = insertFrom;
-    }
-
-    return { from: insertFrom, to: insertTo, hasOldResponse };
-  }
 
   /**
-   * 单次遍历查找插入上下文
+   * 查找请求节点和旧响应节点（使用 tree.iterate）
    */
-  private findInsertionContext(
-    tree: any, 
-    state: EditorState, 
-    requestPos: number, 
-    blockFrom: number, 
+  private findRequestAndResponse(
+    state: EditorState,
+    requestPos: number,
+    blockFrom: number,
     blockTo: number
   ): {
     requestNode: SyntaxNode | null;
-    nextRequestPos: number | null;
-    oldResponse: { from: number; to: number } | null;
+    oldResponseNode: { node: SyntaxNode; from: number; to: number } | null;
   } {
+    const tree = syntaxTree(state);
+    
     let requestNode: SyntaxNode | null = null;
-    let nextRequestPos: number | null = null;
-    let responseStartNode: SyntaxNode | null = null;
-    let responseEndPos: number | null = null;
+    let requestNodeTo = -1;
+    let oldResponseNode: { node: SyntaxNode; from: number; to: number } | null = null;
+    let nextRequestFrom = -1;
     
-    // 第一步：向上查找当前请求节点
-    const cursor = tree.cursorAt(requestPos);
-    do {
-      if (cursor.name === NODE_TYPES.REQUEST_STATEMENT) {
-        if (cursor.from >= blockFrom && cursor.to <= blockTo) {
-          requestNode = cursor.node;
-          break;
+    // 遍历查找：请求节点、旧响应、下一个请求
+    tree.iterate({
+      from: blockFrom,
+      to: blockTo,
+      enter: (node) => {
+        // 1. 找到包含 requestPos 的 RequestStatement
+        if (node.name === 'RequestStatement' && 
+            node.from <= requestPos && 
+            node.to >= requestPos) {
+          requestNode = node.node;
+          requestNodeTo = node.to;
         }
-      }
-    } while (cursor.parent());
-    
-    // 如果向上查找失败，从块开始位置查找
-    if (!requestNode) {
-      const blockCursor = tree.cursorAt(blockFrom);
-      do {
-        if (blockCursor.name === NODE_TYPES.REQUEST_STATEMENT) {
-          if (blockCursor.from <= requestPos && requestPos <= blockCursor.to) {
-            requestNode = blockCursor.node;
-            break;
-          }
+        
+        // 2. 找到请求后的第一个 ResponseDeclaration
+        if (requestNode && !oldResponseNode && 
+            node.name === 'ResponseDeclaration' && 
+            node.from >= requestNodeTo) {
+          oldResponseNode = {
+            node: node.node,
+            from: node.from,
+            to: node.to
+          };
         }
-      } while (blockCursor.next() && blockCursor.from < blockTo);
-    }
-    
-    if (!requestNode) {
-      return { requestNode: null, nextRequestPos: null, oldResponse: null };
-    }
-    
-    const requestEnd = requestNode.to;
-    
-    // 第二步：从请求结束位置向后遍历，查找响应和下一个请求
-    const forwardCursor = tree.cursorAt(requestEnd);
-    let foundResponse = false;
-    
-    do {
-      if (forwardCursor.from <= requestEnd) continue;
-      if (forwardCursor.from >= blockTo) break;
-      
-      // 查找下一个请求
-      if (!nextRequestPos && forwardCursor.name === NODE_TYPES.REQUEST_STATEMENT) {
-        nextRequestPos = forwardCursor.from;
-        // 如果已经找到响应，可以提前退出
-        if (foundResponse) break;
-      }
-      
-      // 查找响应注释
-      if (!responseStartNode && forwardCursor.name === NODE_TYPES.LINE_COMMENT) {
-        const commentText = state.doc.sliceString(forwardCursor.from, forwardCursor.to);
-        // 避免不必要的 trim，同时识别普通响应和错误响应
-        if (commentText.startsWith('# Response') || commentText.startsWith(' # Response')) {
-          const startNode = forwardCursor.node;
-          responseStartNode = startNode;
-          foundResponse = true;
-          
-          // 检查是否为错误响应（只有一行）
-          if (commentText.includes('Error:')) {
-            // 错误响应只有一行，直接设置结束位置
-            responseEndPos = startNode.to;
-          } else {
-            // 继续查找 JSON 和结束分隔线（正常响应）
-            let nextNode = startNode.nextSibling;
-            while (nextNode && nextNode.from < (nextRequestPos || blockTo)) {
-              // 找到 JSON
-              if (nextNode.name === NODE_TYPES.JSON_OBJECT || nextNode.name === NODE_TYPES.JSON_ARRAY) {
-                responseEndPos = nextNode.to;
-                
-                // 查找结束分隔线
-                let afterJson = nextNode.nextSibling;
-                while (afterJson && afterJson.from < (nextRequestPos || blockTo)) {
-                  if (afterJson.name === NODE_TYPES.LINE_COMMENT) {
-                    const text = state.doc.sliceString(afterJson.from, afterJson.to);
-                    // 使用更快的正则匹配
-                    if (/^#?\s*-+$/.test(text)) {
-                      responseEndPos = afterJson.to;
-                      break;
-                    }
-                  }
-                  afterJson = afterJson.nextSibling;
-                }
-                break;
-              }
-              
-              // 遇到下一个请求，停止
-              if (nextNode.name === NODE_TYPES.REQUEST_STATEMENT) {
-                break;
-              }
-              
-              nextNode = nextNode.nextSibling;
-            }
+        
+        // 3. 记录下一个请求的起始位置（用于确定响应范围）
+        if (requestNode && nextRequestFrom === -1 && 
+            node.name === 'RequestStatement' && 
+            node.from > requestNodeTo) {
+          nextRequestFrom = node.from;
+        }
+        
+        // 4. 早期退出优化：如果已找到请求节点，且满足以下任一条件，则停止遍历
+        // - 找到了旧响应节点
+        // - 找到了下一个请求（说明当前请求没有响应）
+        if (requestNode !== null) {
+          if (oldResponseNode !== null || nextRequestFrom !== -1) {
+            return false; // 停止遍历
           }
         }
       }
-    } while (forwardCursor.next() && forwardCursor.from < blockTo);
+    });
     
-    // 构建旧响应信息
-    let oldResponse: { from: number; to: number } | null = null;
-    if (responseStartNode) {
-      const startLine = state.doc.lineAt(responseStartNode.from);
-      if (responseEndPos !== null) {
-        const endLine = state.doc.lineAt(responseEndPos);
-        oldResponse = { from: startLine.from, to: endLine.to };
-      } else {
-        const commentEndLine = state.doc.lineAt(responseStartNode.to);
-        oldResponse = { from: startLine.from, to: commentEndLine.to };
+    // 如果找到了下一个请求，且旧响应超出范围，则清除旧响应
+    if (oldResponseNode && nextRequestFrom !== -1) {
+      // TypeScript 类型收窄问题，使用非空断言
+      if ((oldResponseNode as { from: number; to: number; node: SyntaxNode }).from >= nextRequestFrom) {
+        oldResponseNode = null;
       }
     }
     
-    return { requestNode, nextRequestPos, oldResponse };
+    return { requestNode, oldResponseNode };
   }
 
-
   /**
-   * 格式化响应数据
+   * 格式化响应数据（新格式：@response）
+   * 格式：@response <status> <time>ms <timestamp> { <json> }
+   * 状态格式：200 或 200-OK（支持完整状态文本）
+   * 错误：@response error 0ms <timestamp> { "error": "..." }
    */
   private formatResponse(response: HttpResponse): string {
-    // 如果有错误，使用最简洁的错误格式
-    if (response.error) {
-      return `# Response Error: ${response.error}`;
-    }
-    // 正常响应格式
+    // 时间戳格式：ISO 8601（YYYY-MM-DDTHH:MM:SS）
     const timestamp = response.timestamp || new Date();
-    const dateStr = this.formatTimestamp(timestamp);
+    const timestampStr = this.formatTimestampISO(timestamp);
     
-    let headerLine = `# Response ${response.status} ${response.time}ms`;
-    if (response.requestSize) {
-      headerLine += ` ${response.requestSize}`;
-    }
-    headerLine += ` ${dateStr}`;
-    
-    // 完整的开头行（不添加前导换行符）
-    const header = `${headerLine}\n`;
-    
-    // 格式化响应体
-    let body: string;
-    if (typeof response.body === 'string') {
+    // 格式化响应体为 JSON
+    let bodyJson: string;
+    if (response.error) {
+      // 错误响应
+      bodyJson = JSON.stringify({ error: String(response.error) }, null, 2);
+    } else if (typeof response.body === 'string') {
       // 尝试解析 JSON 字符串
       try {
         const parsed = JSON.parse(response.body);
-        body = JSON.stringify(parsed, null, 2);
+        bodyJson = JSON.stringify(parsed, null, 2);
       } catch {
-        // 如果不是 JSON，直接使用字符串
-        body = response.body;
+        // 如果不是 JSON，包装为对象
+        bodyJson = JSON.stringify({ data: response.body }, null, 2);
       }
     } else if (response.body === null || response.body === undefined) {
-      // 空响应（只有响应头和结束分隔线）
-      const endLine = `# ${'-'.repeat(Math.max(16, headerLine.length - 2))}`; // 最小16个字符
-      return header + endLine;
+      // 空响应
+      bodyJson = '{}';
     } else {
       // 对象或数组
-      body = JSON.stringify(response.body, null, 2);
+      bodyJson = JSON.stringify(response.body, null, 2);
     }
     
-    // 结尾分隔线：和响应头行长度一致，最小16个字符
-    const endLine = `# ${'-'.repeat(Math.max(16, headerLine.length - 2))}`;
-    
-    return header + body + `\n${endLine}`;
+    // 构建响应
+    if (response.error) {
+      // 错误格式：@response error 0ms <timestamp> { ... }
+      return `@response error 0ms ${timestampStr} ${bodyJson}`;
+    } else {
+      // 成功格式：@response <status> <time>ms <timestamp> { ... }
+      // 支持完整状态：200-OK 或 200
+      const statusDisplay = this.formatStatus(response.status);
+      return `@response ${statusDisplay} ${response.time}ms ${timestampStr} ${bodyJson}`;
+    }
   }
-
+  
   /**
-   * 格式化时间戳
+   * 格式化状态码显示
+   * 输入："200 OK" 或 "404 Not Found" 或 "200"
+   * 输出："200-OK" 或 "404-Not-Found" 或 "200"
    */
-  private formatTimestamp(date: Date): string {
+  private formatStatus(status: string): string {
+    // 提取状态码和状态文本
+    const parts = status.trim().split(/\s+/);
+    
+    if (parts.length === 1) {
+      // 只有状态码：200
+      return parts[0];
+    } else {
+      // 有状态码和文本：200 OK -> 200-OK
+      const code = parts[0];
+      const text = parts.slice(1).join('-');
+      return `${code}-${text}`;
+    }
+  }
+  
+  /**
+   * 格式化时间戳为 ISO 8601 格式（YYYY-MM-DDTHH:MM:SS）
+   */
+  private formatTimestampISO(date: Date): string {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
@@ -402,7 +242,7 @@ export class HttpResponseInserter {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     const seconds = String(date.getSeconds()).padStart(2, '0');
     
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
 }
 
@@ -413,9 +253,3 @@ export function insertHttpResponse(view: EditorView, requestPos: number, respons
   const inserter = new HttpResponseInserter(view);
   inserter.insertResponse(requestPos, response);
 }
-
-/**
- * 导出StateField用于扩展配置
- */
-export { responseCacheField };
-

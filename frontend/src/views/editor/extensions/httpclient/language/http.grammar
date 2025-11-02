@@ -9,14 +9,25 @@
 //    @json        - JSON 格式（属性必须用逗号分隔）
 //    @formdata    - 表单数据（属性必须用逗号分隔）
 //    @urlencoded  - URL 编码格式（属性必须用逗号分隔）
-//    @text        - 纯文本内容（使用 content 字段）
+//    @text        - 纯文本内容
 //
-// 3. 响应数据：
+// 3. 变量定义：
+//    @var {
+//      baseUrl: "https://api.example.com",
+//      version: "v1",
+//      timeout: 30000
+//    }
+//
+// 4. 变量引用：
+//    {{variableName}}           - 简单引用
+//    {{variableName:default}}   - 带默认值引用
+//
+// 5. 响应数据：
 //    使用独立的 JSON 块
 //    # Response 200 OK 234ms
 //    { "code": 200, "message": "success" }
 //
-// 4. 注释：
+// 6. 注释：
 //    # 单行注释
 //
 // 示例 1 - JSON 请求：
@@ -83,10 +94,53 @@
 @top Document { item* }
 
 item {
+  VarDeclaration |
   RequestStatement |
+  ResponseDeclaration |
   AtRule |
   JsonObject |
   JsonArray
+}
+
+// 变量声明
+VarDeclaration {
+  @specialize[@name=VarKeyword]<AtKeyword, "@var">
+  JsonBlock
+}
+
+// 响应声明
+// 格式：@response <status> <time>ms <timestamp> { <json> }
+// 示例：@response 200 123ms 2025-10-31T10:30:31 { "data": "..." }
+// 错误：@response error 0ms 2025-10-31T10:30:31 { "error": "..." }
+ResponseDeclaration {
+  @specialize[@name=ResponseKeyword]<AtKeyword, "@response">
+  ResponseStatus
+  ResponseTime
+  ResponseTimestamp
+  ResponseBlock
+}
+
+// 响应状态：状态码（200 或 200-OK）或 "error" 关键字
+// 数字开头的状态码作为一个整体 token
+ResponseStatus {
+  StatusCode | 
+  @specialize[@name=ErrorStatus]<identifier, "error">
+}
+
+// 响应时间：数字 + "ms" 作为一个整体 token
+ResponseTime {
+  TimeValue
+}
+
+// 响应时间戳：ISO 8601 格式字符串
+// 格式：2025-10-31T10:30:31
+ResponseTimestamp {
+  Timestamp
+}
+
+// 响应块：标准 JSON 对象或数组（支持带引号的 key）
+ResponseBlock {
+  JsonObject | JsonArray
 }
 
 // HTTP 请求 - URL 必须是字符串
@@ -109,12 +163,12 @@ Method {
 // URL 必须是字符串
 Url { StringLiteral }
 
-// @ 规则（支持多种请求体格式）
+// @ 规则（支持多种请求体格式，后面可选逗号）
 AtRule { 
-  JsonRule |
+  (JsonRule |
   FormDataRule |
   UrlEncodedRule |
-  TextRule
+  TextRule) ","?
 }
 
 // @json 块：JSON 格式请求体（属性必须用逗号分隔）
@@ -141,13 +195,17 @@ TextRule {
   JsonBlock
 }
 
-// 普通块结构（属性逗号可选）
+// 普通块结构（属性逗号可选，最多一个请求体）
 Block { 
-  "{" blockContent "}" 
+  "{" blockContent? "}" 
 }
 
-blockContent { 
-  (Property | AtRule)*
+// 块内容：
+// - 选项1: 只有属性
+// - 选项2: 属性 + 请求体
+// - 选项3: 属性 + 请求体 + 属性
+blockContent {
+  Property+ | Property* AtRule Property*
 }
 
 // HTTP 属性（逗号可选）
@@ -176,18 +234,20 @@ NumberLiteral {
   numberLiteralInner Unit?
 }
 
-// HTTP 属性值（支持块嵌套）
+// HTTP 属性值（支持块嵌套和变量引用）
 value {
   StringLiteral |
   NumberLiteral |
+  VariableRef |
   Block |
   identifier
 }
 
-// JSON 属性值（严格的 JSON 语法：字符串必须用引号）
+// JSON 属性值（严格的 JSON 语法：字符串必须用引号，支持变量引用）
 jsonValue {
   StringLiteral |
   NumberLiteral |
+  VariableRef |
   JsonBlock |
   JsonTrue |
   JsonFalse |
@@ -221,10 +281,11 @@ jsonArrayContent {
   JsonValue ("," JsonValue)* ","?
 }
 
-// JSON 值（完整的 JSON 值类型）
+// JSON 值（完整的 JSON 值类型，支持变量引用）
 JsonValue {
   StringLiteral |
   NumberLiteral |
+  VariableRef |
   JsonObject |
   JsonArray |
   JsonTrue |
@@ -244,6 +305,14 @@ JsonNull { @specialize[@name=Null]<identifier, "null"> }
   
   AtKeyword { "@" "-"? @asciiLetter (@asciiLetter | @digit | "-")* }
   
+  // 变量引用: {{variableName}} 或 {{variableName:default}} 或 {{obj.nested.path}}
+  VariableRef[isolate] { 
+    "{{" 
+    (@asciiLetter | $[_$]) (@asciiLetter | @digit | $[-_$] | ".")* 
+    (":" (![\n}] | "}" ![}])*)? 
+    "}}" 
+  }
+  
   // 标识符（属性名，支持连字符）
   identifier { 
     (@asciiLetter | $[_$]) 
@@ -252,10 +321,26 @@ JsonNull { @specialize[@name=Null]<identifier, "null"> }
   
   // 单位（必须跟在数字后面，所以不单独匹配）
   Unit { @asciiLetter+ }
+  
+  // 时间戳：ISO 8601 格式（YYYY-MM-DDTHH:MM:SS）
+  Timestamp[isolate] {
+    @digit @digit @digit @digit "-" @digit @digit "-" @digit @digit 
+    "T" @digit @digit ":" @digit @digit ":" @digit @digit
+  }
+  
+  // 状态码：纯数字或数字-字母组合（200, 200-OK, 404-Not-Found）
+  StatusCode {
+    @digit+ ("-" @asciiLetter (@asciiLetter | "-")*)?
+  }
+  
+  // 时间值：数字 + ms（123ms）
+  TimeValue {
+    @digit+ "ms"
+  }
 
   whitespace { @whitespace+ }
   
-  @precedence { identifier, Unit }
+  @precedence { Timestamp, TimeValue, StatusCode, numberLiteralInner, VariableRef, identifier, Unit }
 
   numberLiteralInner { 
     ("+" | "-")? (@digit+ ("." @digit*)? | "." @digit+) 

@@ -62,7 +62,7 @@ function parseHttpRequests(state: any): Map<number, CachedHttpRequest> {
           if (hasError) return;
           
           // 直接解析请求
-          const request = parseHttpRequest(state, node.from);
+          const request = parseHttpRequest(state, node.from,{from: block.content.from, to: block.content.to});
           
           if (request) {
             const line = state.doc.lineAt(request.position.from);
@@ -109,7 +109,6 @@ class RunButtonMarker extends GutterMarker {
   private readonly debouncedExecute: ((view: EditorView) => void) | null = null;
 
   constructor(
-    private readonly lineNumber: number,
     private readonly cachedRequest: HttpRequest
   ) {
     super();
@@ -155,7 +154,6 @@ class RunButtonMarker extends GutterMarker {
     if (this.isLoading) return;
     
     this.setLoadingState(true);
-    
     try {
       const response = await ExecuteRequest(this.cachedRequest);
       if (!response) {
@@ -230,7 +228,7 @@ export const httpRunButtonGutter = gutter({
     }
 
     // 创建并返回运行按钮，传递缓存的解析结果
-    return new RunButtonMarker(cached.lineNumber, cached.request);
+    return new RunButtonMarker(cached.request);
   },
 });
 
