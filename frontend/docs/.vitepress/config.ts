@@ -2,6 +2,7 @@ import {defineConfig} from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+    base: "/voidraft/",
     title: "voidraft",
     description: "An elegant text snippet recording tool designed for developers.",
     srcDir: 'src',
@@ -11,15 +12,15 @@ export default defineConfig({
     srcExclude: [],
     ignoreDeadLinks: false,
     head: [
-        ["link", { rel: "icon", type: "image/png", href: "/static/icon/favicon-96x96.png", sizes: "96x96" }],
-        ["link", { rel: "icon", type: "image/svg+xml", href: "/static/icon/favicon.svg" }],
-        ["link", { rel: "shortcut icon", href: "/static/icon/favicon.ico" }],
-        ["link", { rel: "apple-touch-icon", sizes: "180x180", href: "/static/icon/apple-touch-icon.png" }],
-        ["meta", { name: "apple-mobile-web-app-title", content: "voidraft" }],
-        ["link", { rel: "manifest", href: "/static/icon/site.webmanifest" }],
-        ['meta', { name: 'viewport', content: 'width=device-width,initial-scale=1' }]
+        ["link", {rel: "icon", type: "image/png", href: "/static/icon/favicon-96x96.png", sizes: "96x96"}],
+        ["link", {rel: "icon", type: "image/svg+xml", href: "/static/icon/favicon.svg"}],
+        ["link", {rel: "shortcut icon", href: "/static/icon/favicon.ico"}],
+        ["link", {rel: "apple-touch-icon", sizes: "180x180", href: "/static/icon/apple-touch-icon.png"}],
+        ["meta", {name: "apple-mobile-web-app-title", content: "voidraft"}],
+        ["link", {rel: "manifest", href: "/static/icon/site.webmanifest"}],
+        ['meta', {name: 'viewport', content: 'width=device-width,initial-scale=1'}]
     ],
-    
+
     // 国际化配置
     locales: {
         root: {
