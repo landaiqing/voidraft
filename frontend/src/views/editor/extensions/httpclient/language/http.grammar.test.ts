@@ -88,7 +88,7 @@ describe('HTTP Grammar 解析测试', () => {
     return depth;
   }
 
-  it('应该正确解析标准的 GET 请求（包含 @json 和 @res）', () => {
+  it('应该正确解析标准的 GET 请求（包含 @json）', () => {
     const code = `GET  "http://127.0.0.1:80/api/create" {
   host: "https://api.example.com",
   content-type: "application/json",
@@ -98,17 +98,6 @@ describe('HTTP Grammar 解析测试', () => {
      name : "xxx",
      test: "xx"
   }
-  
- 	@res {
-     code: 200,
-	 status: "ok",
-	 size: "20kb",
-	 time: "2025-10-31 10:30:26",
-	 data: {
-         xxx:"xxx"
-		 
-	 }
- }
 }`;
 
     const tree = parseCode(code);
@@ -277,18 +266,13 @@ POST "http://test2.com" {
     expect(result.hasError).toBe(false);
   });
 
-  it('应该支持 @json/@res 块后面不加逗号（JSON块内部必须用逗号）', () => {
+  it('应该支持 @json 块后面不加逗号（JSON块内部必须用逗号）', () => {
     const code = `POST "http://test.com" {
   host: "test.com"
   
   @json {
     name: "xxx",
     test: "xx"
-  }
-  
-  @res {
-    code: 200,
-    status: "ok"
   }
 }`;
 
@@ -475,14 +459,6 @@ describe('HTTP 请求体格式测试', () => {
       level: "advanced"
     }
   }
-  
-  @res {
-    code: 200,
-    message: "success",
-    data: {
-      id: 12345
-    }
-  }
 }`;
 
     const tree = parseCode(code);
@@ -509,12 +485,6 @@ describe('HTTP 请求体格式测试', () => {
     age: 25,
     description: "用户头像上传"
   }
-  
-  @res {
-    code: 200,
-    message: "上传成功",
-    url: "https://cdn.example.com/avatar.png"
-  }
 }`;
 
     const tree = parseCode(code);
@@ -538,12 +508,6 @@ describe('HTTP 请求体格式测试', () => {
     username: "admin",
     password: "123456",
     remember: true
-  }
-  
-  @res {
-    code: 200,
-    message: "登录成功",
-    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
   }
 }`;
 
@@ -593,13 +557,6 @@ POST "http://api.example.com/login" {
     username: "admin",
     password: "123456"
   }
-  
-  # 期望的响应
-  @res {
-    code: 200,
-    # 用户token
-    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
-  }
 }`;
 
     const tree = parseCode(code);
@@ -615,7 +572,7 @@ POST "http://api.example.com/login" {
     expect(result.hasError).toBe(false);
   });
 
-  it('✅ 混合多种格式 - JSON + 响应', () => {
+  it('✅ 混合多种格式 - JSON 请求', () => {
     const code = `POST "http://api.example.com/login" {
   content-type: "application/json"
   user-agent: "Mozilla/5.0"
@@ -623,16 +580,6 @@ POST "http://api.example.com/login" {
   @json {
     username: "admin",
     password: "123456"
-  }
-  
-  @res {
-    code: 200,
-    message: "登录成功",
-    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9",
-    user: {
-      id: 1,
-      name: "管理员"
-    }
   }
 }`;
 
@@ -720,6 +667,445 @@ POST "http://api.example.com/login" {
     }
     
     expect(result.hasError).toBe(false);
+  });
+});
+
+describe('HTTP 新格式测试 - params/xml/html/javascript/binary', () => {
+  
+  function parseCode(code: string) {
+    const tree = parser.parse(code);
+    return tree;
+  }
+
+  function hasErrorNodes(tree: any): { hasError: boolean; errors: Array<{ name: string; from: number; to: number; text: string }> } {
+    const errors: Array<{ name: string; from: number; to: number; text: string }> = [];
+    
+    tree.iterate({
+      enter: (node: any) => {
+        if (node.name === '⚠') {
+          errors.push({
+            name: node.name,
+            from: node.from,
+            to: node.to,
+            text: tree.toString().substring(node.from, node.to)
+          });
+        }
+      }
+    });
+    
+    return {
+      hasError: errors.length > 0,
+      errors
+    };
+  }
+
+  it('✅ @params - URL 参数格式', () => {
+    const code = `GET "http://api.example.com/users" {
+  authorization: "Bearer token123"
+  
+  @params {
+    page: 1,
+    size: 20,
+    keyword: "张三",
+    status: "active"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @params 格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @xml - XML 格式', () => {
+    const code = `POST "http://api.example.com/soap" {
+  content-type: "application/xml"
+  
+  @xml {
+    xml: "<user><name>张三</name><age>25</age></user>"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @xml 格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @xml - 空块', () => {
+    const code = `POST "http://api.example.com/soap" {
+  @xml {}
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @xml 空块格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @html - HTML 格式', () => {
+    const code = `POST "http://api.example.com/render" {
+  content-type: "text/html"
+  
+  @html {
+    html: "<div><h1>标题</h1><p>内容</p></div>"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @html 格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @html - 空块', () => {
+    const code = `POST "http://api.example.com/render" {
+  @html {}
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @html 空块格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @javascript - JavaScript 格式', () => {
+    const code = `POST "http://api.example.com/execute" {
+  content-type: "application/javascript"
+  
+  @javascript {
+    javascript: "function hello() { return 'Hello World'; }"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @javascript 格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @javascript - 空块', () => {
+    const code = `POST "http://api.example.com/execute" {
+  @javascript {}
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @javascript 空块格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @binary - 二进制文件上传', () => {
+    const code = `POST "http://api.example.com/upload" {
+  content-type: "application/octet-stream"
+  
+  @binary {
+    binary: "@file E://Documents/avatar.png"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @binary 格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ @binary - 空块', () => {
+    const code = `POST "http://api.example.com/upload" {
+  @binary {}
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ @binary 空块格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ 复杂 XML - SOAP 请求', () => {
+    const code = `POST "http://api.example.com/soap" {
+  @xml {
+    xml: "<soap:Envelope xmlns:soap=\\"http://www.w3.org/2003/05/soap-envelope\\"><soap:Body><GetUser><UserId>123</UserId></GetUser></soap:Body></soap:Envelope>"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ 复杂 XML 格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ 混合使用 - params + headers', () => {
+    const code = `GET "http://api.example.com/search" {
+  authorization: "Bearer token123"
+  user-agent: "Mozilla/5.0"
+  
+  @params {
+    q: "搜索关键词",
+    page: 1,
+    limit: 50,
+    sort: "desc"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ 混合使用格式错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+  });
+
+  it('✅ 多个不同新格式的请求', () => {
+    const code = `# XML 请求
+POST "http://api.example.com/xml" {
+  @xml {
+    xml: "<user><name>张三</name></user>"
+  }
+}
+
+# HTML 请求
+POST "http://api.example.com/html" {
+  @html {
+    html: "<div>内容</div>"
+  }
+}
+
+# JavaScript 请求
+POST "http://api.example.com/js" {
+  @javascript {
+    javascript: "console.log('test');"
+  }
+}
+
+# Binary 请求
+POST "http://api.example.com/upload" {
+  @binary {
+    binary: "@file C:/test.bin"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ 多新格式请求错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+    
+    // 统计 RequestStatement 数量
+    let requestCount = 0;
+    tree.iterate({
+      enter: (node: any) => {
+        if (node.name === 'RequestStatement') requestCount++;
+      }
+    });
+    
+    expect(requestCount).toBe(4);
+  });
+
+  it('❌ @xml - 定义了 xml key 但没有值（应该报错）', () => {
+    const code = `POST "http://api.example.com/soap" {
+  @xml {
+    xml:
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    // 应该有错误
+    expect(result.hasError).toBe(true);
+  });
+
+  it('❌ @html - 定义了 html key 但没有值（应该报错）', () => {
+    const code = `POST "http://api.example.com/render" {
+  @html {
+    html:
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    // 应该有错误
+    expect(result.hasError).toBe(true);
+  });
+
+  it('❌ @xml - 使用错误的 key 名称（应该报错）', () => {
+    const code = `POST "http://api.example.com/soap" {
+  @xml {
+    data: "<user><name>张三</name></user>"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    // 应该有错误
+    expect(result.hasError).toBe(true);
+  });
+
+  it('✅ 所有格式组合测试', () => {
+    const code = `# 传统格式
+POST "http://api.example.com/json" {
+  @json {
+    name: "test",
+    age: 25
+  }
+}
+
+POST "http://api.example.com/form" {
+  @formdata {
+    file: "test.png",
+    desc: "description"
+  }
+}
+
+POST "http://api.example.com/login" {
+  @urlencoded {
+    username: "admin",
+    password: "123456"
+  }
+}
+
+POST "http://api.example.com/text" {
+  @text {
+    content: "纯文本内容"
+  }
+}
+
+# 新格式
+GET "http://api.example.com/search" {
+  @params {
+    q: "keyword",
+    page: 1
+  }
+}
+
+POST "http://api.example.com/xml" {
+  @xml {
+    xml: "<data>test</data>"
+  }
+}
+
+POST "http://api.example.com/html" {
+  @html {
+    html: "<div>test</div>"
+  }
+}
+
+POST "http://api.example.com/js" {
+  @javascript {
+    javascript: "alert('test');"
+  }
+}
+
+POST "http://api.example.com/upload" {
+  @binary {
+    binary: "@file C:/file.bin"
+  }
+}`;
+
+    const tree = parseCode(code);
+    const result = hasErrorNodes(tree);
+    
+    if (result.hasError) {
+      console.log('\n❌ 所有格式组合测试错误:');
+      result.errors.forEach(err => {
+        console.log(`  - ${err.name} at ${err.from}-${err.to}: "${err.text}"`);
+      });
+    }
+    
+    expect(result.hasError).toBe(false);
+    
+    // 统计 RequestStatement 数量（应该有9个）
+    let requestCount = 0;
+    tree.iterate({
+      enter: (node: any) => {
+        if (node.name === 'RequestStatement') requestCount++;
+      }
+    });
+    
+    expect(requestCount).toBe(9);
   });
 });
 

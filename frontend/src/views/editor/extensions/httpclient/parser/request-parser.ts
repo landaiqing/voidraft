@@ -17,7 +17,7 @@ export interface HttpRequest {
   headers: Record<string, string>;
   
   /** 请求体类型 */
-  bodyType?: 'json' | 'formdata' | 'urlencoded' | 'text';
+  bodyType?: 'json' | 'formdata' | 'urlencoded' | 'text' | 'params' | 'xml' | 'html' | 'javascript' | 'binary';
   
   /** 请求体内容 */
   body?: any;
@@ -48,12 +48,30 @@ const NODE_TYPES = {
   FORMDATA_RULE: 'FormDataRule',
   URLENCODED_RULE: 'UrlEncodedRule',
   TEXT_RULE: 'TextRule',
+  PARAMS_RULE: 'ParamsRule',
+  XML_RULE: 'XmlRule',
+  HTML_RULE: 'HtmlRule',
+  JAVASCRIPT_RULE: 'JavaScriptRule',
+  BINARY_RULE: 'BinaryRule',
   JSON_KEYWORD: 'JsonKeyword',
   FORMDATA_KEYWORD: 'FormDataKeyword',
   URLENCODED_KEYWORD: 'UrlEncodedKeyword',
   TEXT_KEYWORD: 'TextKeyword',
+  PARAMS_KEYWORD: 'ParamsKeyword',
+  XML_KEYWORD: 'XmlKeyword',
+  HTML_KEYWORD: 'HtmlKeyword',
+  JAVASCRIPT_KEYWORD: 'JavaScriptKeyword',
+  BINARY_KEYWORD: 'BinaryKeyword',
   JSON_BLOCK: 'JsonBlock',
   JSON_PROPERTY: 'JsonProperty',
+  XML_BLOCK: 'XmlBlock',
+  HTML_BLOCK: 'HtmlBlock',
+  JAVASCRIPT_BLOCK: 'JavaScriptBlock',
+  BINARY_BLOCK: 'BinaryBlock',
+  XML_KEY: 'XmlKey',
+  HTML_KEY: 'HtmlKey',
+  JAVASCRIPT_KEY: 'JavaScriptKey',
+  BINARY_KEY: 'BinaryKey',
   VARIABLE_REF: 'VariableRef',
 } as const;
 
@@ -220,15 +238,72 @@ export class HttpRequestParser {
       [NODE_TYPES.FORMDATA_RULE]: 'formdata',
       [NODE_TYPES.URLENCODED_RULE]: 'urlencoded',
       [NODE_TYPES.TEXT_RULE]: 'text',
+      [NODE_TYPES.PARAMS_RULE]: 'params',
+      [NODE_TYPES.XML_RULE]: 'xml',
+      [NODE_TYPES.HTML_RULE]: 'html',
+      [NODE_TYPES.JAVASCRIPT_RULE]: 'javascript',
+      [NODE_TYPES.BINARY_RULE]: 'binary',
     };
 
     const type = typeMap[node.name];
-    const blockNode = node.getChild(NODE_TYPES.JSON_BLOCK);
+    
+    // 根据不同的规则类型解析不同的块
+    let content: any = null;
+    
+    if (node.name === NODE_TYPES.XML_RULE) {
+      const blockNode = node.getChild(NODE_TYPES.XML_BLOCK);
+      content = blockNode ? this.parseFixedKeyBlock(blockNode, 'xml') : null;
+    } else if (node.name === NODE_TYPES.HTML_RULE) {
+      const blockNode = node.getChild(NODE_TYPES.HTML_BLOCK);
+      content = blockNode ? this.parseFixedKeyBlock(blockNode, 'html') : null;
+    } else if (node.name === NODE_TYPES.JAVASCRIPT_RULE) {
+      const blockNode = node.getChild(NODE_TYPES.JAVASCRIPT_BLOCK);
+      content = blockNode ? this.parseFixedKeyBlock(blockNode, 'javascript') : null;
+    } else if (node.name === NODE_TYPES.BINARY_RULE) {
+      const blockNode = node.getChild(NODE_TYPES.BINARY_BLOCK);
+      content = blockNode ? this.parseFixedKeyBlock(blockNode, 'binary') : null;
+    } else {
+      // json, formdata, urlencoded, text, params 使用 JsonBlock
+      const blockNode = node.getChild(NODE_TYPES.JSON_BLOCK);
+      content = blockNode ? this.parseJsonBlock(blockNode) : null;
+    }
 
     return {
       type,
-      content: blockNode ? this.parseJsonBlock(blockNode) : null
+      content
     };
+  }
+  
+  /**
+   * 解析固定 key 的块（xml, html, javascript, binary）
+   * 格式：{ key: "value" } 或 {}（空块）
+   */
+  private parseFixedKeyBlock(node: SyntaxNode, keyName: string): any {
+    // 查找固定的 key 节点
+    const keyNode = node.getChild(
+      keyName === 'xml' ? NODE_TYPES.XML_KEY :
+      keyName === 'html' ? NODE_TYPES.HTML_KEY :
+      keyName === 'javascript' ? NODE_TYPES.JAVASCRIPT_KEY :
+      NODE_TYPES.BINARY_KEY
+    );
+    
+    // 如果没有 key，返回空对象（支持空块）
+    if (!keyNode) {
+      return {};
+    }
+    
+    // 查找值节点（冒号后面的内容）
+    let value: any = null;
+    for (let child = node.firstChild; child; child = child.nextSibling) {
+      if (child.name === NODE_TYPES.STRING_LITERAL || 
+          child.name === NODE_TYPES.VARIABLE_REF) {
+        value = this.parseValue(child);
+        break;
+      }
+    }
+    
+    // 返回格式：{ xml: "value" } 或 { html: "value" } 等
+    return value !== null ? { [keyName]: value } : {};
   }
 
   /**

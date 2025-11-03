@@ -24,7 +24,7 @@ export class HttpRequest {
     "headers": { [_: string]: string };
 
     /**
-     * json, formdata, urlencoded, text
+     * json, formdata, urlencoded, text, params, xml, html, javascript, binary
      */
     "bodyType"?: string;
     "body"?: any;

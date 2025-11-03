@@ -10,6 +10,11 @@
 //    @formdata    - 表单数据（属性必须用逗号分隔）
 //    @urlencoded  - URL 编码格式（属性必须用逗号分隔）
 //    @text        - 纯文本内容
+//    @params      - URL 参数（用于 GET 请求）
+//    @xml         - XML 格式（固定 key: xml）
+//    @html        - HTML 格式（固定 key: html）
+//    @javascript  - JavaScript 格式（固定 key: javascript）
+//    @binary      - 二进制文件（固定 key: binary，值格式：@file 路径）
 //
 // 3. 变量定义：
 //    @var {
@@ -70,7 +75,52 @@
 //   }
 // }
 //
-// 示例 5 - 带响应数据：
+// 示例 5 - URL 参数请求：
+// GET "http://api.example.com/users" {
+//   @params {
+//     page: 1,
+//     size: 20,
+//     keyword: "张三"
+//   }
+// }
+//
+// 示例 6 - XML 请求：
+// POST "http://api.example.com/soap" {
+//   content-type: "application/xml"
+//   
+//   @xml {
+//     xml: "<user><name>张三</name><age>25</age></user>"
+//   }
+// }
+//
+// 示例 7 - HTML 请求：
+// POST "http://api.example.com/render" {
+//   content-type: "text/html"
+//   
+//   @html {
+//     html: "<div><h1>标题</h1><p>内容</p></div>"
+//   }
+// }
+//
+// 示例 8 - JavaScript 请求：
+// POST "http://api.example.com/execute" {
+//   content-type: "application/javascript"
+//   
+//   @javascript {
+//     javascript: "function hello() { return 'Hello World'; }"
+//   }
+// }
+//
+// 示例 9 - 二进制文件上传：
+// POST "http://api.example.com/upload" {
+//   content-type: "application/octet-stream"
+//   
+//   @binary {
+//     binary: "@file E://Documents/avatar.png"
+//   }
+// }
+//
+// 示例 10 - 带响应数据：
 // POST "http://api.example.com/login" {
 //   @json {
 //     username: "admin",
@@ -120,14 +170,13 @@ ResponseDeclaration {
   ResponseBlock
 }
 
-// 响应状态：状态码（200 或 200-OK）或 "error" 关键字
-// 数字开头的状态码作为一个整体 token
+// 响应状态：数字或数字-标识符组合（200 或 200-OK）或 "error" 关键字
 ResponseStatus {
-  StatusCode | 
+  (NumberLiteral ("-" identifier)?) |
   @specialize[@name=ErrorStatus]<identifier, "error">
 }
 
-// 响应时间：数字 + "ms" 作为一个整体 token
+// 响应时间：直接使用 TimeValue token
 ResponseTime {
   TimeValue
 }
@@ -168,7 +217,12 @@ AtRule {
   (JsonRule |
   FormDataRule |
   UrlEncodedRule |
-  TextRule) ","?
+  TextRule |
+  ParamsRule |
+  XmlRule |
+  HtmlRule |
+  JavaScriptRule |
+  BinaryRule) ","?
 }
 
 // @json 块：JSON 格式请求体（属性必须用逗号分隔）
@@ -193,6 +247,36 @@ UrlEncodedRule {
 TextRule {
   @specialize[@name=TextKeyword]<AtKeyword, "@text">
   JsonBlock
+}
+
+// @params 块：URL 参数（用于 GET 请求，属性必须用逗号分隔）
+ParamsRule {
+  @specialize[@name=ParamsKeyword]<AtKeyword, "@params">
+  JsonBlock
+}
+
+// @xml 块：XML 格式请求体（固定 key: xml）
+XmlRule {
+  @specialize[@name=XmlKeyword]<AtKeyword, "@xml">
+  XmlBlock
+}
+
+// @html 块：HTML 格式请求体（固定 key: html）
+HtmlRule {
+  @specialize[@name=HtmlKeyword]<AtKeyword, "@html">
+  HtmlBlock
+}
+
+// @javascript 块：JavaScript 格式请求体（固定 key: javascript）
+JavaScriptRule {
+  @specialize[@name=JavaScriptKeyword]<AtKeyword, "@javascript">
+  JavaScriptBlock
+}
+
+// @binary 块：二进制文件（固定 key: binary，值格式：@file 路径）
+BinaryRule {
+  @specialize[@name=BinaryKeyword]<AtKeyword, "@binary">
+  BinaryBlock
 }
 
 // 普通块结构（属性逗号可选，最多一个请求体）
@@ -227,6 +311,30 @@ jsonBlockContent {
 JsonProperty {
   PropertyName { identifier }
   ":" jsonValue
+}
+
+// XML 块结构（可为空 {} 或必须包含 xml: value）
+XmlBlock {
+  "{" (@specialize[@name=XmlKey]<identifier, "xml"> ":" jsonValue) "}" |
+  "{" "}"
+}
+
+// HTML 块结构（可为空 {} 或必须包含 html: value）
+HtmlBlock {
+  "{" (@specialize[@name=HtmlKey]<identifier, "html"> ":" jsonValue) "}" |
+  "{" "}"
+}
+
+// JavaScript 块结构（可为空 {} 或必须包含 javascript: value）
+JavaScriptBlock {
+  "{" (@specialize[@name=JavaScriptKey]<identifier, "javascript"> ":" jsonValue) "}" |
+  "{" "}"
+}
+
+// Binary 块结构（可为空 {} 或必须包含 binary: value）
+BinaryBlock {
+  "{" (@specialize[@name=BinaryKey]<identifier, "binary"> ":" jsonValue) "}" |
+  "{" "}"
 }
 
 // 值
@@ -328,19 +436,14 @@ JsonNull { @specialize[@name=Null]<identifier, "null"> }
     "T" @digit @digit ":" @digit @digit ":" @digit @digit
   }
   
-  // 状态码：纯数字或数字-字母组合（200, 200-OK, 404-Not-Found）
-  StatusCode {
-    @digit+ ("-" @asciiLetter (@asciiLetter | "-")*)?
-  }
-  
-  // 时间值：数字 + ms（123ms）
-  TimeValue {
+  // 时间值：数字 + ms，作为一个整体 token
+  TimeValue[isolate] {
     @digit+ "ms"
   }
-
+  
   whitespace { @whitespace+ }
   
-  @precedence { Timestamp, TimeValue, StatusCode, numberLiteralInner, VariableRef, identifier, Unit }
+  @precedence { Timestamp, TimeValue, numberLiteralInner, VariableRef, identifier, Unit }
 
   numberLiteralInner { 
     ("+" | "-")? (@digit+ ("." @digit*)? | "." @digit+) 
