@@ -23,7 +23,7 @@ type HttpRequest struct {
 	Method   string            `json:"method"`
 	URL      string            `json:"url"`
 	Headers  map[string]string `json:"headers"`
-	BodyType string            `json:"bodyType,omitempty"` // json, formdata, urlencoded, text
+	BodyType string            `json:"bodyType,omitempty"` // json, formdata, urlencoded, text, params, xml, html, javascript, binary
 	Body     interface{}       `json:"body,omitempty"`
 }
 
@@ -89,6 +89,7 @@ func (hcs *HttpClientService) setRequestBody(req *resty.Request, request *HttpRe
 	case "json":
 		req.SetHeader("Content-Type", "application/json")
 		req.SetBody(request.Body)
+
 	case "formdata":
 		if formData, ok := request.Body.(map[string]interface{}); ok {
 			for key, value := range formData {
@@ -104,6 +105,7 @@ func (hcs *HttpClientService) setRequestBody(req *resty.Request, request *HttpRe
 				}
 			}
 		}
+
 	case "urlencoded":
 		req.SetHeader("Content-Type", "application/x-www-form-urlencoded")
 		if formData, ok := request.Body.(map[string]interface{}); ok {
@@ -113,9 +115,79 @@ func (hcs *HttpClientService) setRequestBody(req *resty.Request, request *HttpRe
 			}
 			req.SetBody(values.Encode())
 		}
+
 	case "text":
 		req.SetHeader("Content-Type", "text/plain")
 		req.SetBody(fmt.Sprintf("%v", request.Body))
+
+	case "params":
+		// URL 参数：添加到查询字符串中
+		if params, ok := request.Body.(map[string]interface{}); ok {
+			for key, value := range params {
+				req.SetQueryParam(key, fmt.Sprintf("%v", value))
+			}
+		}
+
+	case "xml":
+		// XML 格式：从 Body 中提取 xml 字段
+		req.SetHeader("Content-Type", "application/xml")
+		if bodyMap, ok := request.Body.(map[string]interface{}); ok {
+			if xmlContent, exists := bodyMap["xml"]; exists {
+				req.SetBody(fmt.Sprintf("%v", xmlContent))
+			} else {
+				return fmt.Errorf("xml body type requires 'xml' field")
+			}
+		} else {
+			return fmt.Errorf("xml body must be an object with 'xml' field")
+		}
+
+	case "html":
+		// HTML 格式：从 Body 中提取 html 字段
+		req.SetHeader("Content-Type", "text/html")
+		if bodyMap, ok := request.Body.(map[string]interface{}); ok {
+			if htmlContent, exists := bodyMap["html"]; exists {
+				req.SetBody(fmt.Sprintf("%v", htmlContent))
+			} else {
+				return fmt.Errorf("html body type requires 'html' field")
+			}
+		} else {
+			return fmt.Errorf("html body must be an object with 'html' field")
+		}
+
+	case "javascript":
+		// JavaScript 格式：从 Body 中提取 javascript 字段
+		req.SetHeader("Content-Type", "application/javascript")
+		if bodyMap, ok := request.Body.(map[string]interface{}); ok {
+			if jsContent, exists := bodyMap["javascript"]; exists {
+				req.SetBody(fmt.Sprintf("%v", jsContent))
+			} else {
+				return fmt.Errorf("javascript body type requires 'javascript' field")
+			}
+		} else {
+			return fmt.Errorf("javascript body must be an object with 'javascript' field")
+		}
+
+	case "binary":
+		// Binary 格式：从 Body 中提取 binary 字段（文件路径）
+		req.SetHeader("Content-Type", "application/octet-stream")
+		if bodyMap, ok := request.Body.(map[string]interface{}); ok {
+			if binaryContent, exists := bodyMap["binary"]; exists {
+				binaryStr := fmt.Sprintf("%v", binaryContent)
+				// 检查是否是文件类型，使用 @file 关键词
+				if strings.HasPrefix(binaryStr, "@file ") {
+					// 提取文件路径（去掉 @file 前缀）
+					filePath := strings.TrimSpace(strings.TrimPrefix(binaryStr, "@file "))
+					req.SetFile("file", filePath)
+				} else {
+					return fmt.Errorf("binary body requires '@file path/to/file' format")
+				}
+			} else {
+				return fmt.Errorf("binary body type requires 'binary' field")
+			}
+		} else {
+			return fmt.Errorf("binary body must be an object with 'binary' field")
+		}
+
 	default:
 		return fmt.Errorf("unsupported body type: %s", request.BodyType)
 	}

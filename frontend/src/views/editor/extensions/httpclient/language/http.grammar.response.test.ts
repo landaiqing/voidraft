@@ -73,7 +73,7 @@ describe('HTTP Grammar - @response 响应语法', () => {
     
     expect(hasNode(state, 'ResponseDeclaration')).toBe(true);
     expect(hasNode(state, 'ErrorStatus')).toBe(true);
-    expect(hasNode(state, 'TimeUnit')).toBe(true);
+    expect(hasNode(state, 'TimeValue')).toBe(true);
   });
 
   it('✅ 响应与请求结合', () => {
@@ -145,8 +145,8 @@ POST "https://api.example.com/users" {
     
     const state = createTestState(content);
     
-    expect(hasNode(state, 'TimeUnit')).toBe(true);
-    expect(getNodeText(state, 'TimeUnit')).toBe('ms');
+    expect(hasNode(state, 'TimeValue')).toBe(true);
+    expect(getNodeText(state, 'TimeValue')).toBe('12345ms');
   });
 
   it('✅ 响应块包含复杂 JSON', () => {

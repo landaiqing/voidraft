@@ -18,11 +18,17 @@ export const httpHighlighting = styleTags({
   "TRACE CONNECT": t.modifier,
   
   // ========== @ 规则（请求体格式和变量声明）==========
-  // @json, @formdata, @urlencoded - 使用类型名
-  "JsonKeyword FormDataKeyword UrlEncodedKeyword": t.typeName,
+  // @json, @formdata, @urlencoded, @params - 使用类型名
+  "JsonKeyword FormDataKeyword UrlEncodedKeyword ParamsKeyword": t.typeName,
   
   // @text - 使用特殊类型
   "TextKeyword": t.special(t.typeName),
+  
+  // @xml, @html, @javascript - 使用类型名
+  "XmlKeyword HtmlKeyword JavaScriptKeyword": t.typeName,
+  
+  // @binary - 使用特殊类型
+  "BinaryKeyword": t.special(t.typeName),
   
   // @var - 变量声明关键字
   "VarKeyword": t.definitionKeyword,
@@ -60,15 +66,16 @@ export const httpHighlighting = styleTags({
   
   // ========== 响应相关 ==========
   // 响应状态码 - 数字颜色
-  "StatusCode": t.number,
-  "ResponseStatus/StatusCode": t.number,
+  "ResponseStatus/NumberLiteral": t.number,
+  "ResponseStatus/identifier": t.constant(t.variableName),
   
   // 响应错误状态 - 关键字
   "ErrorStatus": t.operatorKeyword,
   
-  // 响应时间 - 数字颜色
+  // 响应时间 - 数字和单位颜色
   "TimeValue": t.number,
-  "ResponseTime": t.number,
+  "ResponseTime/TimeValue": t.number,
+  "TimeUnit": t.unit,
   
   // 时间戳 - 字符串颜色
   "Timestamp": t.string,
@@ -98,6 +105,12 @@ export const httpHighlighting = styleTags({
   // JSON 值（确保字符串和数字正确高亮）
   "JsonValue/StringLiteral": t.string,
   "JsonValue/NumberLiteral": t.number,
+  
+  // ========== 固定 key 名称（xml、html、javascript、binary）==========
+  "XmlKey": t.constant(t.propertyName),
+  "HtmlKey": t.constant(t.propertyName),
+  "JavaScriptKey": t.constant(t.propertyName),
+  "BinaryKey": t.constant(t.propertyName),
   
   // ========== 标点符号 ==========
   // 冒号 - 分隔符
