@@ -104,7 +104,4 @@ Learn essential shortcuts:
 Now that you know the basics:
 
 - Explore [Features](/guide/features) in detail
-- Set up [Git Backup](/guide/backup) for your data
-- Learn about [Extensions](/guide/extensions)
-- Configure [Settings](/guide/settings)
 

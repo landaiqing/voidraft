@@ -104,7 +104,4 @@ POST "https://api.example.com/users" {
 现在你已经了解了基础知识：
 
 - 详细探索[功能特性](/zh/guide/features)
-- 为你的数据设置 [Git 备份](/zh/guide/backup)
-- 了解[扩展功能](/zh/guide/extensions)
-- 配置[设置](/zh/guide/settings)
 
