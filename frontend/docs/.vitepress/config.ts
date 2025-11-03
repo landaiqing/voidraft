@@ -2,7 +2,7 @@ import {defineConfig} from 'vitepress'
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
-    base: "/voidraft/",
+    base: "./",
     title: "voidraft",
     description: "An elegant text snippet recording tool designed for developers.",
     srcDir: 'src',
@@ -12,12 +12,12 @@ export default defineConfig({
     srcExclude: [],
     ignoreDeadLinks: false,
     head: [
-        ["link", {rel: "icon", type: "image/png", href: "/static/icon/favicon-96x96.png", sizes: "96x96"}],
-        ["link", {rel: "icon", type: "image/svg+xml", href: "/static/icon/favicon.svg"}],
-        ["link", {rel: "shortcut icon", href: "/static/icon/favicon.ico"}],
-        ["link", {rel: "apple-touch-icon", sizes: "180x180", href: "/static/icon/apple-touch-icon.png"}],
+        ["link", {rel: "icon", type: "image/png", href: "/icon/favicon-96x96.png", sizes: "96x96"}],
+        ["link", {rel: "icon", type: "image/svg+xml", href: "/icon/favicon.svg"}],
+        ["link", {rel: "shortcut icon", href: "/icon/favicon.ico"}],
+        ["link", {rel: "apple-touch-icon", sizes: "180x180", href: "/icon/apple-touch-icon.png"}],
         ["meta", {name: "apple-mobile-web-app-title", content: "voidraft"}],
-        ["link", {rel: "manifest", href: "/static/icon/site.webmanifest"}],
+        ["link", {rel: "manifest", href: "/icon/site.webmanifest"}],
         ['meta', {name: 'viewport', content: 'width=device-width,initial-scale=1'}]
     ],
 
@@ -28,7 +28,7 @@ export default defineConfig({
             lang: 'en-US',
             description: 'An elegant text snippet recording tool designed for developers.',
             themeConfig: {
-                logo: '/static/icon/logo.png',
+                logo: '/icon/logo.png',
                 siteTitle: 'voidraft',
                 nav: [
                     {text: 'Home', link: '/'},
@@ -80,7 +80,7 @@ export default defineConfig({
             link: '/zh/',
             description: '一个为开发者设计的优雅文本片段记录工具',
             themeConfig: {
-                logo: '/static/icon/logo.png',
+                logo: '/icon/logo.png',
                 siteTitle: 'voidraft',
                 nav: [
                     {text: '首页', link: '/zh/'},

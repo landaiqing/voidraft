@@ -6,7 +6,7 @@ hero:
   text: "An elegant text snippet recording tool"
   tagline: Designed for developers, built with modern technology
   image: 
-    src: /static/img/hero.png
+    src: /img/hero.png
     alt: "voidraft"
   actions:
     - theme: brand

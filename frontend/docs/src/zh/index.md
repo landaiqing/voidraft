@@ -6,7 +6,7 @@ hero:
   text: "优雅的文本片段记录工具"
   tagline: 为开发者设计，用现代技术打造
   image: 
-    src: /static/img/hero.png
+    src: /img/hero.png
     alt: "voidraft"
   actions:
     - theme: brand
