@@ -1,0 +1,40 @@
+/**
+ * Grid Background
+ * 网格背景样式 - 为文档页面添加简约的网格背景
+ * -------------------------------------------------------------------------- */
+
+.VPDoc,
+.VPHome {
+    position: relative;
+}
+
+.VPDoc::before,
+.VPHome::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+}
+
+/* 亮色模式网格 */
+:root:not(.dark) .VPDoc::before,
+:root:not(.dark) .VPHome::before {
+    background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+
+/* 暗色模式网格 */
+.dark .VPDoc::before,
+.dark .VPHome::before {
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
+

@@ -66,7 +66,11 @@ export default defineConfig({
                 },
                 darkModeSwitchLabel: 'Appearance',
                 sidebarMenuLabel: 'Menu',
-                returnToTopLabel: 'Return to top'
+                returnToTopLabel: 'Return to top',
+                footer: {
+                    message: 'Released under the MIT License.',
+                    copyright: 'Copyright © 2025-present landaiqing'
+                }
             }
         },
         zh: {
@@ -114,7 +118,11 @@ export default defineConfig({
                 },
                 darkModeSwitchLabel: '外观',
                 sidebarMenuLabel: '菜单',
-                returnToTopLabel: '返回顶部'
+                returnToTopLabel: '返回顶部',
+                footer: {
+                    message: 'Released under the MIT License.',
+                    copyright: 'Copyright © 2025-present landaiqing'
+                }
             }
         }
     }
