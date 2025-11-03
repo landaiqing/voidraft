@@ -1,5 +1,5 @@
 import {defineConfig} from 'vitepress'
-const base = '/voidraft/'
+const base = '/'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
     base: base,
@@ -12,12 +12,12 @@ export default defineConfig({
     srcExclude: [],
     ignoreDeadLinks: false,
     head: [
-        ["link", {rel: "icon", type: "image/png", href: `${base}/icon/favicon-96x96.png`, sizes: "96x96"}],
-        ["link", {rel: "icon", type: "image/svg+xml", href: `${base}/icon/favicon.svg`}],
-        ["link", {rel: "shortcut icon", href: `${base}/icon/favicon.ico`}],
-        ["link", {rel: "apple-touch-icon", sizes: "180x180", href: `${base}/icon/apple-touch-icon.png`}],
+        ["link", {rel: "icon", type: "image/png", href: "/icon/favicon-96x96.png", sizes: "96x96"}],
+        ["link", {rel: "icon", type: "image/svg+xml", href: "/icon/favicon.svg"}],
+        ["link", {rel: "shortcut icon", href: "/icon/favicon.ico"}],
+        ["link", {rel: "apple-touch-icon", sizes: "180x180", href: "/icon/apple-touch-icon.png"}],
         ["meta", {name: "apple-mobile-web-app-title", content: "voidraft"}],
-        ["link", {rel: "manifest", href: `${base}/icon/site.webmanifest`}],
+        ["link", {rel: "manifest", href: "/icon/site.webmanifest"}],
         ['meta', {name: 'viewport', content: 'width=device-width,initial-scale=1'}]
     ],
 
