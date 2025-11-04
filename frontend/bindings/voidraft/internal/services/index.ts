@@ -19,6 +19,7 @@ import * as ThemeService from "./themeservice.js";
 import * as TranslationService from "./translationservice.js";
 import * as TrayService from "./trayservice.js";
 import * as WindowService from "./windowservice.js";
+import * as WindowSnapService from "./windowsnapservice.js";
 export {
     BackupService,
     ConfigService,
@@ -37,7 +38,8 @@ export {
     ThemeService,
     TranslationService,
     TrayService,
-    WindowService
+    WindowService,
+    WindowSnapService
 };
 
 export * from "./models.js";

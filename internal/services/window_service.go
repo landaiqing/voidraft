@@ -3,7 +3,6 @@ package services
 import (
 	"fmt"
 	"strconv"
-	"sync"
 	"voidraft/internal/common/constant"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -11,20 +10,10 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
-// WindowInfo 窗口信息
-type WindowInfo struct {
-	Window     *application.WebviewWindow
-	DocumentID int64
-	Title      string
-}
-
-// WindowService 窗口管理服务（专注于窗口生命周期管理）
+// WindowService 窗口管理服务
 type WindowService struct {
 	logger          *log.LogService
 	documentService *DocumentService
-	windows         map[int64]*WindowInfo // documentID -> WindowInfo
-	mu              sync.RWMutex
-
 	// 吸附服务引用
 	windowSnapService *WindowSnapService
 }
@@ -38,7 +27,6 @@ func NewWindowService(logger *log.LogService, documentService *DocumentService) 
 	return &WindowService{
 		logger:          logger,
 		documentService: documentService,
-		windows:         make(map[int64]*WindowInfo),
 	}
 }
 
@@ -49,15 +37,14 @@ func (ws *WindowService) SetWindowSnapService(snapService *WindowSnapService) {
 
 // OpenDocumentWindow 为指定文档ID打开新窗口
 func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
+	app := application.Get()
+	windowName := strconv.FormatInt(documentID, 10)
 
-	// 检查窗口是否已经存在
-	if windowInfo, exists := ws.windows[documentID]; exists {
+	if existingWindow, exists := app.Window.GetByName(windowName); exists {
 		// 窗口已存在，显示并聚焦
-		windowInfo.Window.Show()
-		windowInfo.Window.Restore()
-		windowInfo.Window.Focus()
+		existingWindow.Show()
+		existingWindow.Restore()
+		existingWindow.Focus()
 		return nil
 	}
 
@@ -70,10 +57,9 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 		return fmt.Errorf("document not found: %d", documentID)
 	}
 
-	app := application.Get()
 	// 创建新窗口
 	newWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Name:                       strconv.FormatInt(doc.ID, 10),
+		Name:                       windowName,
 		Title:                      fmt.Sprintf("voidraft - %s", doc.Title),
 		Width:                      constant.VOIDRAFT_WINDOW_WIDTH,
 		Height:                     constant.VOIDRAFT_WINDOW_HEIGHT,
@@ -93,25 +79,16 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 		URL:              fmt.Sprintf("/?documentId=%d", documentID),
 	})
 
-	newWindow.Center()
-
-	app.Window.Add(newWindow)
-
-	// 保存窗口信息
-	windowInfo := &WindowInfo{
-		Window:     newWindow,
-		DocumentID: documentID,
-		Title:      doc.Title,
-	}
-	ws.windows[documentID] = windowInfo
-
 	// 注册窗口事件
 	ws.registerWindowEvents(newWindow, documentID)
 
 	// 向吸附服务注册新窗口
 	if ws.windowSnapService != nil {
-		ws.windowSnapService.RegisterWindow(documentID, newWindow, doc.Title)
+		ws.windowSnapService.RegisterWindow(documentID, newWindow)
 	}
+
+	// 最后才移动窗口到中心
+	newWindow.Center()
 
 	return nil
 }
@@ -126,53 +103,50 @@ func (ws *WindowService) registerWindowEvents(window *application.WebviewWindow,
 
 // onWindowClosing 处理窗口关闭事件
 func (ws *WindowService) onWindowClosing(documentID int64) {
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
-	windowInfo, exists := ws.windows[documentID]
-	if exists {
-		windowInfo.Window.Close()
-		delete(ws.windows, documentID)
-
-		// 从吸附服务中取消注册
-		if ws.windowSnapService != nil {
-			ws.windowSnapService.UnregisterWindow(documentID)
-		}
+	// 从吸附服务中取消注册
+	if ws.windowSnapService != nil {
+		ws.windowSnapService.UnregisterWindow(documentID)
 	}
 }
 
-// GetOpenWindows 获取所有打开的窗口信息
-func (ws *WindowService) GetOpenWindows() []WindowInfo {
-	ws.mu.RLock()
-	defer ws.mu.RUnlock()
+// GetOpenWindows 获取所有打开的文档窗口
+func (ws *WindowService) GetOpenWindows() []application.Window {
+	app := application.Get()
+	return app.Window.GetAll()
+}
 
-	var windows []WindowInfo
-	for _, windowInfo := range ws.windows {
-		windows = append(windows, *windowInfo)
+// GetOpenDocumentWindows 获取所有文档窗口
+func (ws *WindowService) GetOpenDocumentWindows() []application.Window {
+	app := application.Get()
+	allWindows := app.Window.GetAll()
+
+	var docWindows []application.Window
+	for _, window := range allWindows {
+		if window.Name() != constant.VOIDRAFT_MAIN_WINDOW_NAME {
+			docWindows = append(docWindows, window)
+		}
 	}
-	return windows
+	return docWindows
 }
 
 // IsDocumentWindowOpen 检查指定文档的窗口是否已打开
 func (ws *WindowService) IsDocumentWindowOpen(documentID int64) bool {
-	ws.mu.RLock()
-	defer ws.mu.RUnlock()
-
-	_, exists := ws.windows[documentID]
+	app := application.Get()
+	windowName := strconv.FormatInt(documentID, 10)
+	_, exists := app.Window.GetByName(windowName)
 	return exists
 }
 
 // ServiceShutdown 实现服务关闭接口
 func (ws *WindowService) ServiceShutdown() error {
-	// 关闭所有窗口
-	ws.mu.Lock()
-	defer ws.mu.Unlock()
-
-	for documentID := range ws.windows {
-		if ws.windowSnapService != nil {
-			ws.windowSnapService.UnregisterWindow(documentID)
+	// 从吸附服务中取消注册所有窗口
+	if ws.windowSnapService != nil {
+		windows := ws.GetOpenDocumentWindows()
+		for _, window := range windows {
+			if documentID, err := strconv.ParseInt(window.Name(), 10, 64); err == nil {
+				ws.windowSnapService.UnregisterWindow(documentID)
+			}
 		}
 	}
-
 	return nil
 }

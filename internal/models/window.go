@@ -32,7 +32,6 @@ type SnapPosition struct {
 // WindowInfo 窗口信息
 type WindowInfo struct {
 	DocumentID int64          `json:"documentID"` // 文档ID
-	Title      string         `json:"title"`      // 窗口标题
 	IsSnapped  bool           `json:"isSnapped"`  // 是否处于吸附状态
 	SnapOffset SnapPosition   `json:"snapOffset"` // 与主窗口的相对位置偏移
 	SnapEdge   SnapEdge       `json:"snapEdge"`   // 吸附的边缘类型

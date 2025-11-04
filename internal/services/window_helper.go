@@ -1,6 +1,8 @@
 package services
 
 import (
+	"strconv"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"voidraft/internal/common/constant"
 )
@@ -76,4 +78,46 @@ func (wh *WindowHelper) AutoShowMainWindow() {
 	} else {
 		window.Show()
 	}
+}
+
+// GetDocumentWindow 根据文档ID获取窗口（利用 Wails3 的 WindowManager）
+func (wh *WindowHelper) GetDocumentWindow(documentID int64) (application.Window, bool) {
+	app := application.Get()
+	windowName := strconv.FormatInt(documentID, 10)
+	return app.Window.GetByName(windowName)
+}
+
+// GetAllDocumentWindows 获取所有文档窗口（排除主窗口）
+func (wh *WindowHelper) GetAllDocumentWindows() []application.Window {
+	app := application.Get()
+	allWindows := app.Window.GetAll()
+
+	var docWindows []application.Window
+	for _, window := range allWindows {
+		// 跳过主窗口
+		if window.Name() != constant.VOIDRAFT_MAIN_WINDOW_NAME {
+			docWindows = append(docWindows, window)
+		}
+	}
+	return docWindows
+}
+
+// FocusDocumentWindow 聚焦指定文档的窗口
+func (wh *WindowHelper) FocusDocumentWindow(documentID int64) bool {
+	if window, exists := wh.GetDocumentWindow(documentID); exists {
+		window.Show()
+		window.Restore()
+		window.Focus()
+		return true
+	}
+	return false
+}
+
+// CloseDocumentWindow 关闭指定文档的窗口
+func (wh *WindowHelper) CloseDocumentWindow(documentID int64) bool {
+	if window, exists := wh.GetDocumentWindow(documentID); exists {
+		window.Close()
+		return true
+	}
+	return false
 }

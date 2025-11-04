@@ -7,9 +7,6 @@ import {Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
 import * as http$0 from "../../../net/http/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -395,42 +392,6 @@ export class SystemInfo {
 }
 
 /**
- * WindowInfo 窗口信息
- */
-export class WindowInfo {
-    "Window": application$0.WebviewWindow | null;
-    "DocumentID": number;
-    "Title": string;
-
-    /** Creates a new WindowInfo instance. */
-    constructor($$source: Partial<WindowInfo> = {}) {
-        if (!("Window" in $$source)) {
-            this["Window"] = null;
-        }
-        if (!("DocumentID" in $$source)) {
-            this["DocumentID"] = 0;
-        }
-        if (!("Title" in $$source)) {
-            this["Title"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new WindowInfo instance from a string or object.
-     */
-    static createFrom($$source: any = {}): WindowInfo {
-        const $$createField0_0 = $$createType8;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("Window" in $$parsedSource) {
-            $$parsedSource["Window"] = $$createField0_0($$parsedSource["Window"]);
-        }
-        return new WindowInfo($$parsedSource as Partial<WindowInfo>);
-    }
-}
-
-/**
  * WindowSnapService 窗口吸附服务
  */
 export class WindowSnapService {
@@ -463,5 +424,3 @@ const $$createType3 = $Create.Map($Create.Any, $$createType2);
 const $$createType4 = OSInfo.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
 const $$createType6 = $Create.Map($Create.Any, $Create.Any);
-const $$createType7 = application$0.WebviewWindow.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);

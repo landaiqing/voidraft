@@ -255,35 +255,26 @@ func (hs *HotkeyService) isWindowVisible(window *application.WebviewWindow) bool
 
 // hideAllWindows 隐藏所有窗口
 func (hs *HotkeyService) hideAllWindows() {
-	// 隐藏主窗口
-	hs.windowHelper.HideMainWindow()
-
 	// 隐藏所有子窗口
 	if hs.windowService != nil {
 		openWindows := hs.windowService.GetOpenWindows()
 		for _, windowInfo := range openWindows {
-			windowInfo.Window.Hide()
+			windowInfo.Hide()
 		}
 	}
 
-	hs.logger.Debug("all windows hidden")
 }
 
 // showAllWindows 显示所有窗口
 func (hs *HotkeyService) showAllWindows() {
-	// 显示主窗口
-	hs.windowHelper.FocusMainWindow()
-
 	// 显示所有子窗口
 	if hs.windowService != nil {
 		openWindows := hs.windowService.GetOpenWindows()
 		for _, windowInfo := range openWindows {
-			windowInfo.Window.Show()
-			windowInfo.Window.Restore()
+			windowInfo.Show()
+			windowInfo.Restore()
 		}
 	}
-
-	hs.logger.Debug("all windows shown")
 }
 
 // keyToVirtualKeyCode 键名转虚拟键码

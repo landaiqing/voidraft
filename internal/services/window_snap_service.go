@@ -74,16 +74,18 @@ func (wss *WindowSnapService) ServiceStartup(ctx context.Context, options applic
 }
 
 // RegisterWindow 注册需要吸附管理的窗口
-func (wss *WindowSnapService) RegisterWindow(documentID int64, window *application.WebviewWindow, title string) {
+func (wss *WindowSnapService) RegisterWindow(documentID int64, window *application.WebviewWindow) {
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
+	wss.logger.Info("[WindowSnap] RegisterWindow - DocumentID: %d, SnapEnabled: %v", documentID, wss.snapEnabled)
+
 	// 获取初始位置
 	x, y := window.Position()
+	wss.logger.Info("[WindowSnap] Initial position - X: %d, Y: %d", x, y)
 
 	windowInfo := &models.WindowInfo{
 		DocumentID: documentID,
-		Title:      title,
 		IsSnapped:  false,
 		SnapOffset: models.SnapPosition{X: 0, Y: 0},
 		SnapEdge:   models.SnapEdgeNone,
@@ -93,6 +95,8 @@ func (wss *WindowSnapService) RegisterWindow(documentID int64, window *applicati
 
 	wss.managedWindows[documentID] = windowInfo
 	wss.windowRefs[documentID] = window
+
+	wss.logger.Info("[WindowSnap] Managed windows count: %d", len(wss.managedWindows))
 
 	// 为窗口设置移动事件监听
 	wss.setupWindowEvents(window, windowInfo)

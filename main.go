@@ -91,7 +91,6 @@ func main() {
 	})
 	mainWindow.Center()
 	window = mainWindow
-
 	trayService := serviceManager.GetTrayService()
 	// 设置系统托盘
 	systray.SetupSystemTray(mainWindow, assets, trayService)

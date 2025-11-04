@@ -145,6 +145,7 @@ func NewServiceManager() *ServiceManager {
 		configService:       configService,
 		databaseService:     databaseService,
 		documentService:     documentService,
+		windowSnapService:   windowSnapService,
 		windowService:       windowService,
 		migrationService:    migrationService,
 		systemService:       systemService,
@@ -189,6 +190,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.testService),
 		application.NewService(sm.BackupService),
 		application.NewService(sm.httpClientService),
+		application.NewService(sm.windowSnapService),
 	}
 	return services
 }
