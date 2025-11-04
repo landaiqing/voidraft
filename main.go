@@ -3,7 +3,6 @@ package main
 import (
 	"embed"
 	_ "embed"
-	"log"
 	"log/slog"
 	"time"
 	"voidraft/internal/common/constant"
@@ -102,6 +101,6 @@ func main() {
 
 	// If an error occurred while running the application, log it and exit.
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
 }

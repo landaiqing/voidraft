@@ -3,6 +3,9 @@ package systray
 import (
 	"embed"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/icons"
+	"runtime"
+	"time"
 	"voidraft/internal/events"
 	"voidraft/internal/services"
 	"voidraft/internal/version"
@@ -18,8 +21,19 @@ func SetupSystemTray(mainWindow *application.WebviewWindow, assets embed.FS, tra
 	// 设置标签
 	systray.SetLabel("voidraft")
 	// 设置图标
-	iconBytes, _ := assets.ReadFile("appicon.png")
+	iconBytes, err := assets.ReadFile("frontend/dist/appicon.png")
+	if err != nil {
+		panic(err)
+	}
 	systray.SetIcon(iconBytes)
+	systray.SetDarkModeIcon(iconBytes)
+
+	// Use the template icon on macOS so the clock respects light/dark modes.
+	if runtime.GOOS == "darwin" {
+		systray.SetTemplateIcon(icons.SystrayMacTemplate)
+	}
+
+	systray.WindowDebounce(300 * time.Millisecond)
 
 	// 创建托盘菜单
 	menu := app.NewMenu()
@@ -30,5 +44,5 @@ func SetupSystemTray(mainWindow *application.WebviewWindow, assets embed.FS, tra
 	systray.SetMenu(menu)
 
 	// 注册托盘相关事件
-	events.RegisterTrayEvents(app, systray, mainWindow, trayService)
+	events.RegisterTrayEvents(systray, mainWindow, trayService)
 }

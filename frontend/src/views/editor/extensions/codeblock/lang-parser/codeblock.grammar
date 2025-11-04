@@ -18,7 +18,7 @@ BlockLanguage {
   "go" | "clj" | "ex" | "erl" | "js" | "ts" | "swift" | "kt" | "groovy" | 
   "ps1" | "dart" | "scala" | "math" | "dockerfile" | "lua" | "vue" | "lezer" |
   "liquid" | "wast" | "sass" | "less" | "angular" | "svelte" |
-  "http"
+  "http" | "mermaid"
 }
 
 @tokens {

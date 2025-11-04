@@ -9,7 +9,7 @@ import (
 )
 
 // RegisterTrayEvents 注册与系统托盘相关的所有事件
-func RegisterTrayEvents(app *application.App, systray *application.SystemTray, mainWindow *application.WebviewWindow, trayService *services.TrayService) {
+func RegisterTrayEvents(systray *application.SystemTray, mainWindow *application.WebviewWindow, trayService *services.TrayService) {
 	// 不附加窗口到系统托盘，避免失去焦点自动缩小
 	// systray.AttachWindow(mainWindow)
 
@@ -18,7 +18,7 @@ func RegisterTrayEvents(app *application.App, systray *application.SystemTray, m
 
 	// 设置点击托盘图标显示主窗口
 	systray.OnClick(func() {
-		trayService.ShowWindow()
+		trayService.AutoShowHide()
 	})
 
 	// 处理窗口关闭事件 - 根据配置决定是隐藏到托盘还是直接退出

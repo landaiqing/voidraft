@@ -11,10 +11,15 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "build:lang-parser": "node src/views/editor/extensions/codeblock/lang-parser/build-parser.js",
+    "build:mermaid-parser": "node src/views/editor/language/mermaid/build-parsers.js",
     "test": "vitest",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "app:dev": "cd .. &&wails3 dev",
+    "app:build": "cd .. && wails3 task build",
+    "app:package": "cd .. && wails3 package",
+    "app:generate": "cd .. && wails3 generate bindings -ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.19.1",

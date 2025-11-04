@@ -59,3 +59,8 @@ func (ts *TrayService) ShowWindow() {
 func (ts *TrayService) MinimizeButtonClicked() {
 	ts.windowHelper.MinimiseMainWindow()
 }
+
+// AutoShowHide 自动显示/隐藏主窗口
+func (ts *TrayService) AutoShowHide() {
+	ts.windowHelper.AutoShowMainWindow()
+}

@@ -11,6 +11,14 @@
 import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 /**
+ * AutoShowHide 自动显示/隐藏主窗口
+ */
+export function AutoShowHide(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4044219428) as any;
+    return $resultPromise;
+}
+
+/**
  * HandleWindowClose 处理窗口关闭事件
  */
 export function HandleWindowClose(): Promise<void> & { cancel(): void } {

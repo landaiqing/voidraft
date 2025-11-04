@@ -67,3 +67,13 @@ func (wh *WindowHelper) FocusMainWindow() bool {
 	}
 	return false
 }
+
+// AutoShowMainWindow 自动显示主窗口
+func (wh *WindowHelper) AutoShowMainWindow() {
+	window := wh.MustGetMainWindow()
+	if window.IsVisible() {
+		window.Hide()
+	} else {
+		window.Show()
+	}
+}

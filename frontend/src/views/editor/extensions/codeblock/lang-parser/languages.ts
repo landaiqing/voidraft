@@ -24,7 +24,7 @@ import {lessLanguage} from "@codemirror/lang-less";
 import {angularLanguage} from "@codemirror/lang-angular";
 import { svelteLanguage } from "@replit/codemirror-lang-svelte";
 import { httpLanguage } from "@/views/editor/extensions/httpclient/language/http-language";
-
+import { mermaidLanguage } from '@/views/editor/language/mermaid';
 import {StreamLanguage} from "@codemirror/language";
 import {ruby} from "@codemirror/legacy-modes/mode/ruby";
 import {shell} from "@codemirror/legacy-modes/mode/shell";
@@ -226,6 +226,7 @@ export const LANGUAGES: LanguageInfo[] = [
         }
     }),
     new LanguageInfo("http", "Http", httpLanguage.parser, ["http"]),
+    new LanguageInfo("mermaid", "Mermaid", mermaidLanguage.parser, ["mermaid"]),
 
 ];
 

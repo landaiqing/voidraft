@@ -66,6 +66,7 @@ export type SupportedLanguage =
     | 'angular'
     | 'svelte'
     | 'http'        // HTTP Client
+    | 'mermaid'
 
 /**
  * 创建块的选项
@@ -83,7 +84,6 @@ export interface EditorOptions {
     defaultBlockToken: string;
     defaultBlockAutoDetect: boolean;
 }
-
 
 
 // 分隔符格式常量
