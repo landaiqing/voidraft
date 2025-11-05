@@ -1,7 +1,6 @@
 package services
 
 import (
-	"context"
 	"math"
 	"sync"
 	"time"
@@ -10,6 +9,16 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+)
+
+// 防抖和检测常量
+const (
+	// 移动事件防抖阈值：连续移动事件间隔小于此值时忽略
+	debounceThreshold = 30 * time.Millisecond
+
+	// 用户拖拽检测阈值：快速移动被认为是用户主动拖拽
+	// 设置为稍大于防抖阈值，确保逻辑一致
+	dragDetectionThreshold = 40 * time.Millisecond
 )
 
 // WindowSnapService 窗口吸附服务
@@ -34,6 +43,16 @@ type WindowSnapService struct {
 	// 管理的窗口
 	managedWindows map[int64]*models.WindowInfo         // documentID -> WindowInfo
 	windowRefs     map[int64]*application.WebviewWindow // documentID -> Window引用
+
+	// 窗口尺寸缓存
+	windowSizeCache map[int64][2]int // documentID -> [width, height]
+
+	// 事件循环保护
+	isUpdatingPosition map[int64]bool // documentID -> 是否正在更新位置
+
+	// 事件监听器清理函数
+	mainMoveUnhook    func()           // 主窗口移动监听清理函数
+	windowMoveUnhooks map[int64]func() // documentID -> 子窗口移动监听清理函数
 }
 
 // NewWindowSnapService 创建新的窗口吸附服务实例
@@ -60,17 +79,10 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 		maxThreshold:       40,    // 最大40像素（大屏幕上限）
 		managedWindows:     make(map[int64]*models.WindowInfo),
 		windowRefs:         make(map[int64]*application.WebviewWindow),
+		windowSizeCache:    make(map[int64][2]int),
+		isUpdatingPosition: make(map[int64]bool),
+		windowMoveUnhooks:  make(map[int64]func()),
 	}
-}
-
-// ServiceStartup 服务启动时初始化
-func (wss *WindowSnapService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	// 初始化主窗口位置缓存
-	wss.updateMainWindowCache()
-
-	wss.setupMainWindowEvents()
-
-	return nil
 }
 
 // RegisterWindow 注册需要吸附管理的窗口
@@ -78,11 +90,8 @@ func (wss *WindowSnapService) RegisterWindow(documentID int64, window *applicati
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
-	wss.logger.Info("[WindowSnap] RegisterWindow - DocumentID: %d, SnapEnabled: %v", documentID, wss.snapEnabled)
-
 	// 获取初始位置
 	x, y := window.Position()
-	wss.logger.Info("[WindowSnap] Initial position - X: %d, Y: %d", x, y)
 
 	windowInfo := &models.WindowInfo{
 		DocumentID: documentID,
@@ -96,7 +105,13 @@ func (wss *WindowSnapService) RegisterWindow(documentID int64, window *applicati
 	wss.managedWindows[documentID] = windowInfo
 	wss.windowRefs[documentID] = window
 
-	wss.logger.Info("[WindowSnap] Managed windows count: %d", len(wss.managedWindows))
+	// 初始化窗口尺寸缓存
+	wss.updateWindowSizeCacheLocked(documentID, window)
+
+	// 如果这是第一个注册的窗口，启动主窗口事件监听
+	if len(wss.managedWindows) == 1 {
+		wss.setupMainWindowEvents()
+	}
 
 	// 为窗口设置移动事件监听
 	wss.setupWindowEvents(window, windowInfo)
@@ -107,8 +122,21 @@ func (wss *WindowSnapService) UnregisterWindow(documentID int64) {
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
+	// 清理子窗口事件监听
+	if unhook, exists := wss.windowMoveUnhooks[documentID]; exists {
+		unhook()
+		delete(wss.windowMoveUnhooks, documentID)
+	}
+
 	delete(wss.managedWindows, documentID)
 	delete(wss.windowRefs, documentID)
+	delete(wss.windowSizeCache, documentID)
+	delete(wss.isUpdatingPosition, documentID)
+
+	// 如果没有管理的窗口了，取消主窗口事件监听
+	if len(wss.managedWindows) == 0 {
+		wss.cleanupMainWindowEvents()
+	}
 }
 
 // SetSnapEnabled 设置是否启用窗口吸附
@@ -155,7 +183,7 @@ func (wss *WindowSnapService) calculateAdaptiveThreshold() int {
 	return adaptiveThreshold
 }
 
-// GetCurrentThreshold 获取当前自适应阈值（用于调试或显示）
+// GetCurrentThreshold 获取当前自适应阈值
 func (wss *WindowSnapService) GetCurrentThreshold() int {
 	wss.mu.RLock()
 	defer wss.mu.RUnlock()
@@ -170,40 +198,102 @@ func (wss *WindowSnapService) OnWindowSnapConfigChanged(enabled bool) error {
 	return nil
 }
 
-// setupMainWindowEvents 设置主窗口事件监听
+// setupMainWindowEventsLocked 设置主窗口事件监听
 func (wss *WindowSnapService) setupMainWindowEvents() {
-	// 获取主窗口
+	// 如果已经设置过，不重复设置
+	if wss.mainMoveUnhook != nil {
+		return
+	}
+
+	// 在锁外获取主窗口
+	wss.mu.Unlock()
 	mainWindow, ok := wss.windowHelper.GetMainWindow()
+	wss.mu.Lock()
+
 	if !ok {
 		return
 	}
 
 	// 监听主窗口移动事件
-	mainWindow.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
+	wss.mainMoveUnhook = mainWindow.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
 		wss.onMainWindowMoved()
 	})
+
+}
+
+// cleanupMainWindowEventsLocked 清理主窗口事件监听
+func (wss *WindowSnapService) cleanupMainWindowEvents() {
+	// 调用清理函数取消监听
+	if wss.mainMoveUnhook != nil {
+		wss.mainMoveUnhook()
+		wss.mainMoveUnhook = nil
+	}
 }
 
 // setupWindowEvents 为子窗口设置事件监听
 func (wss *WindowSnapService) setupWindowEvents(window *application.WebviewWindow, windowInfo *models.WindowInfo) {
-	// 监听子窗口移动事件
-	window.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
+	// 监听子窗口移动事件，保存清理函数
+	unhook := window.RegisterHook(events.Common.WindowDidMove, func(event *application.WindowEvent) {
 		wss.onChildWindowMoved(window, windowInfo)
 	})
+
+	// 保存清理函数以便后续取消监听
+	wss.windowMoveUnhooks[windowInfo.DocumentID] = unhook
 }
 
 // updateMainWindowCache 更新主窗口缓存
-func (wss *WindowSnapService) updateMainWindowCache() {
+func (wss *WindowSnapService) updateMainWindowCacheLocked() {
 	mainWindow := wss.windowHelper.MustGetMainWindow()
 	if mainWindow == nil {
 		return
 	}
 
+	// 在锁外获取窗口信息,避免死锁
+	wss.mu.Unlock()
 	x, y := mainWindow.Position()
 	w, h := mainWindow.Size()
+	wss.mu.Lock()
 
 	wss.lastMainWindowPos = models.WindowPosition{X: x, Y: y}
 	wss.lastMainWindowSize = [2]int{w, h}
+}
+
+// UpdateMainWindowCache 更新主窗口缓存
+func (wss *WindowSnapService) UpdateMainWindowCache() {
+	wss.mu.Lock()
+	defer wss.mu.Unlock()
+	wss.updateMainWindowCacheLocked()
+}
+
+// updateWindowSizeCacheLocked 更新窗口尺寸缓存
+func (wss *WindowSnapService) updateWindowSizeCacheLocked(documentID int64, window *application.WebviewWindow) {
+	// 在锁外获取窗口尺寸，避免死锁
+	wss.mu.Unlock()
+	w, h := window.Size()
+	wss.mu.Lock()
+
+	wss.windowSizeCache[documentID] = [2]int{w, h}
+}
+
+// getWindowSizeCached 获取缓存的窗口尺寸，如果不存在则实时获取并缓存
+func (wss *WindowSnapService) getWindowSizeCached(documentID int64, window *application.WebviewWindow) (int, int) {
+	// 先检查缓存
+	if size, exists := wss.windowSizeCache[documentID]; exists {
+		return size[0], size[1]
+	}
+
+	// 缓存不存在，实时获取并缓存
+	wss.updateWindowSizeCacheLocked(documentID, window)
+
+	if size, exists := wss.windowSizeCache[documentID]; exists {
+		return size[0], size[1]
+	}
+
+	// 直接返回实时尺寸
+	wss.mu.Unlock()
+	w, h := window.Size()
+	wss.mu.Lock()
+	return w, h
 }
 
 // onMainWindowMoved 主窗口移动事件处理
@@ -212,11 +302,21 @@ func (wss *WindowSnapService) onMainWindowMoved() {
 		return
 	}
 
+	// 先在锁外获取主窗口的位置和尺寸
+	mainWindow := wss.windowHelper.MustGetMainWindow()
+	if mainWindow == nil {
+		return
+	}
+
+	x, y := mainWindow.Position()
+	w, h := mainWindow.Size()
+
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
-	// 更新主窗口缓存
-	wss.updateMainWindowCache()
+	// 更新主窗口位置和尺寸缓存
+	wss.lastMainWindowPos = models.WindowPosition{X: x, Y: y}
+	wss.lastMainWindowSize = [2]int{w, h}
 
 	// 只更新已吸附窗口的位置，无需重新检测所有窗口
 	for _, windowInfo := range wss.managedWindows {
@@ -232,12 +332,19 @@ func (wss *WindowSnapService) onChildWindowMoved(window *application.WebviewWind
 		return
 	}
 
+	// 事件循环保护：如果正在更新位置，忽略此次事件
 	wss.mu.Lock()
-	defer wss.mu.Unlock()
+	if wss.isUpdatingPosition[windowInfo.DocumentID] {
+		wss.mu.Unlock()
+		return
+	}
+	wss.mu.Unlock()
 
-	// 获取当前位置
 	x, y := window.Position()
 	currentPos := models.WindowPosition{X: x, Y: y}
+
+	wss.mu.Lock()
+	defer wss.mu.Unlock()
 
 	// 检查是否真的移动了（避免无效触发）
 	if currentPos.X == windowInfo.LastPos.X && currentPos.Y == windowInfo.LastPos.Y {
@@ -270,10 +377,21 @@ func (wss *WindowSnapService) updateSnappedWindowPosition(windowInfo *models.Win
 	expectedX := wss.lastMainWindowPos.X + windowInfo.SnapOffset.X
 	expectedY := wss.lastMainWindowPos.Y + windowInfo.SnapOffset.Y
 
-	// 查找对应的window对象并移动
-	if window, exists := wss.windowRefs[windowInfo.DocumentID]; exists {
-		window.SetPosition(expectedX, expectedY)
+	// 查找对应的window对象
+	window, exists := wss.windowRefs[windowInfo.DocumentID]
+	if !exists {
+		return
 	}
+
+	// 设置更新标志，防止事件循环
+	wss.isUpdatingPosition[windowInfo.DocumentID] = true
+
+	wss.mu.Unlock()
+	window.SetPosition(expectedX, expectedY)
+	wss.mu.Lock()
+
+	// 清除更新标志
+	wss.isUpdatingPosition[windowInfo.DocumentID] = false
 
 	windowInfo.LastPos = models.WindowPosition{X: expectedX, Y: expectedY}
 }
@@ -289,9 +407,9 @@ func (wss *WindowSnapService) handleSnappedWindow(window *application.WebviewWin
 	distanceY := math.Abs(float64(currentPos.Y - expectedY))
 	maxDistance := math.Max(distanceX, distanceY)
 
-	// 用户拖拽检测：距离超过阈值且移动很快
+	// 用户拖拽检测：距离超过阈值且移动很快（使用统一的拖拽检测阈值）
 	userDragThreshold := float64(wss.calculateAdaptiveThreshold())
-	isUserDrag := maxDistance > userDragThreshold && time.Since(windowInfo.MoveTime) < 50*time.Millisecond
+	isUserDrag := maxDistance > userDragThreshold && time.Since(windowInfo.MoveTime) < dragDetectionThreshold
 
 	if isUserDrag {
 		// 用户主动拖拽，解除吸附
@@ -310,8 +428,17 @@ func (wss *WindowSnapService) handleUnsnappedWindow(window *application.WebviewW
 		windowInfo.SnapEdge = snapEdge
 
 		// 执行吸附移动
-		targetPos := wss.calculateSnapPosition(snapEdge, currentPos, window)
+		targetPos := wss.calculateSnapPosition(snapEdge, currentPos, windowInfo.DocumentID, window)
+
+		// 设置更新标志，防止事件循环
+		wss.isUpdatingPosition[windowInfo.DocumentID] = true
+
+		wss.mu.Unlock()
 		window.SetPosition(targetPos.X, targetPos.Y)
+		wss.mu.Lock()
+
+		// 清除更新标志
+		wss.isUpdatingPosition[windowInfo.DocumentID] = false
 
 		// 计算并保存偏移量
 		windowInfo.SnapOffset.X = targetPos.X - wss.lastMainWindowPos.X
@@ -326,32 +453,26 @@ func (wss *WindowSnapService) handleUnsnappedWindow(window *application.WebviewW
 	return false
 }
 
-// getWindowPosition 获取窗口的位置
-func (wss *WindowSnapService) getWindowPosition(window *application.WebviewWindow) (models.WindowPosition, bool) {
-	x, y := window.Position()
-	return models.WindowPosition{X: x, Y: y}, true
-}
-
-// shouldSnapToMainWindow 优化版吸附检测
+// shouldSnapToMainWindow 吸附检测
 func (wss *WindowSnapService) shouldSnapToMainWindow(window *application.WebviewWindow, windowInfo *models.WindowInfo, currentPos models.WindowPosition, lastMoveTime time.Time) (bool, models.SnapEdge) {
-	// 防抖：移动太快时不检测，
+	// 防抖：移动太快时不检测（使用统一的防抖阈值）
 	timeSinceLastMove := time.Since(lastMoveTime)
-	if timeSinceLastMove < 30*time.Millisecond && timeSinceLastMove > 0 {
+	if timeSinceLastMove < debounceThreshold {
 		return false, models.SnapEdgeNone
 	}
 
 	// 使用缓存的主窗口位置和尺寸
 	if wss.lastMainWindowSize[0] == 0 || wss.lastMainWindowSize[1] == 0 {
 		// 主窗口缓存未初始化，立即更新
-		wss.updateMainWindowCache()
+		wss.updateMainWindowCacheLocked()
 	}
 
 	mainPos := wss.lastMainWindowPos
 	mainWidth := wss.lastMainWindowSize[0]
 	mainHeight := wss.lastMainWindowSize[1]
 
-	// 获取子窗口尺寸
-	windowWidth, windowHeight := window.Size()
+	// 使用缓存的子窗口尺寸，减少系统调用
+	windowWidth, windowHeight := wss.getWindowSizeCached(windowInfo.DocumentID, window)
 
 	// 自适应阈值计算
 	threshold := float64(wss.calculateAdaptiveThreshold())
@@ -423,14 +544,14 @@ func (wss *WindowSnapService) shouldSnapToMainWindow(window *application.Webview
 }
 
 // calculateSnapPosition 计算吸附目标位置
-func (wss *WindowSnapService) calculateSnapPosition(snapEdge models.SnapEdge, currentPos models.WindowPosition, window *application.WebviewWindow) models.WindowPosition {
+func (wss *WindowSnapService) calculateSnapPosition(snapEdge models.SnapEdge, currentPos models.WindowPosition, documentID int64, window *application.WebviewWindow) models.WindowPosition {
 	// 使用缓存的主窗口信息
 	mainPos := wss.lastMainWindowPos
 	mainWidth := wss.lastMainWindowSize[0]
 	mainHeight := wss.lastMainWindowSize[1]
 
-	// 获取子窗口尺寸
-	windowWidth, windowHeight := window.Size()
+	// 使用缓存的子窗口尺寸，减少系统调用
+	windowWidth, windowHeight := wss.getWindowSizeCached(documentID, window)
 
 	switch snapEdge {
 	case models.SnapEdgeRight:
@@ -483,9 +604,23 @@ func (wss *WindowSnapService) Cleanup() {
 	wss.mu.Lock()
 	defer wss.mu.Unlock()
 
+	// 清理主窗口事件监听
+	wss.cleanupMainWindowEvents()
+
+	// 清理所有子窗口事件监听
+	for documentID, unhook := range wss.windowMoveUnhooks {
+		if unhook != nil {
+			unhook()
+		}
+		delete(wss.windowMoveUnhooks, documentID)
+	}
+
 	// 清空管理的窗口
 	wss.managedWindows = make(map[int64]*models.WindowInfo)
 	wss.windowRefs = make(map[int64]*application.WebviewWindow)
+	wss.windowSizeCache = make(map[int64][2]int)
+	wss.isUpdatingPosition = make(map[int64]bool)
+	wss.windowMoveUnhooks = make(map[int64]func())
 }
 
 // ServiceShutdown 实现服务关闭接口

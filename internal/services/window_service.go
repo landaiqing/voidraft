@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 	"voidraft/internal/common/constant"
@@ -19,20 +20,22 @@ type WindowService struct {
 }
 
 // NewWindowService 创建新的窗口服务实例
-func NewWindowService(logger *log.LogService, documentService *DocumentService) *WindowService {
+func NewWindowService(logger *log.LogService, documentService *DocumentService, windowSnapService *WindowSnapService) *WindowService {
 	if logger == nil {
 		logger = log.New()
 	}
 
 	return &WindowService{
-		logger:          logger,
-		documentService: documentService,
+		logger:            logger,
+		documentService:   documentService,
+		windowSnapService: windowSnapService,
 	}
 }
 
-// SetWindowSnapService 设置窗口吸附服务引用
-func (ws *WindowService) SetWindowSnapService(snapService *WindowSnapService) {
-	ws.windowSnapService = snapService
+// ServiceStartup 服务启动时初始化
+func (ws *WindowService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	ws.windowSnapService.UpdateMainWindowCache()
+	return nil
 }
 
 // OpenDocumentWindow 为指定文档ID打开新窗口
@@ -115,20 +118,6 @@ func (ws *WindowService) GetOpenWindows() []application.Window {
 	return app.Window.GetAll()
 }
 
-// GetOpenDocumentWindows 获取所有文档窗口
-func (ws *WindowService) GetOpenDocumentWindows() []application.Window {
-	app := application.Get()
-	allWindows := app.Window.GetAll()
-
-	var docWindows []application.Window
-	for _, window := range allWindows {
-		if window.Name() != constant.VOIDRAFT_MAIN_WINDOW_NAME {
-			docWindows = append(docWindows, window)
-		}
-	}
-	return docWindows
-}
-
 // IsDocumentWindowOpen 检查指定文档的窗口是否已打开
 func (ws *WindowService) IsDocumentWindowOpen(documentID int64) bool {
 	app := application.Get()
@@ -141,7 +130,7 @@ func (ws *WindowService) IsDocumentWindowOpen(documentID int64) bool {
 func (ws *WindowService) ServiceShutdown() error {
 	// 从吸附服务中取消注册所有窗口
 	if ws.windowSnapService != nil {
-		windows := ws.GetOpenDocumentWindows()
+		windows := ws.GetOpenWindows()
 		for _, window := range windows {
 			if documentID, err := strconv.ParseInt(window.Name(), 10, 64); err == nil {
 				ws.windowSnapService.UnregisterWindow(documentID)

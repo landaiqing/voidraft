@@ -58,14 +58,11 @@ func NewServiceManager() *ServiceManager {
 	// 初始化文档服务
 	documentService := NewDocumentService(databaseService, logger)
 
-	// 初始化窗口服务
-	windowService := NewWindowService(logger, documentService)
-
 	// 初始化窗口吸附服务
 	windowSnapService := NewWindowSnapService(logger, configService)
 
-	// 将吸附服务与窗口服务关联
-	windowService.SetWindowSnapService(windowSnapService)
+	// 初始化窗口服务
+	windowService := NewWindowService(logger, documentService, windowSnapService)
 
 	// 初始化系统服务
 	systemService := NewSystemService(logger)
@@ -89,10 +86,7 @@ func NewServiceManager() *ServiceManager {
 	startupService := NewStartupService(configService, logger)
 
 	// 初始化自我更新服务
-	selfUpdateService, err := NewSelfUpdateService(configService, badgeService, notificationService, logger)
-	if err != nil {
-		panic(err)
-	}
+	selfUpdateService := NewSelfUpdateService(configService, badgeService, notificationService, logger)
 
 	// 初始化翻译服务
 	translationService := NewTranslationService(logger)
@@ -110,7 +104,7 @@ func NewServiceManager() *ServiceManager {
 	testService := NewTestService(badgeService, notificationService, logger)
 
 	// 使用新的配置通知系统设置热键配置变更监听
-	err = configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
+	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
 		return hotkeyService.UpdateHotkey(enable, hotkey)
 	})
 	if err != nil {
@@ -190,7 +184,6 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.testService),
 		application.NewService(sm.BackupService),
 		application.NewService(sm.httpClientService),
-		application.NewService(sm.windowSnapService),
 	}
 	return services
 }

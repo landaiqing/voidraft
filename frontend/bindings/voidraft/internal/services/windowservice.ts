@@ -14,22 +14,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as $models from "./models.js";
-
-/**
- * GetOpenDocumentWindows 获取所有文档窗口
- */
-export function GetOpenDocumentWindows(): Promise<application$0.Window[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3057936408) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType0($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
 /**
  * GetOpenWindows 获取所有打开的文档窗口
  */
@@ -67,10 +51,10 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * SetWindowSnapService 设置窗口吸附服务引用
+ * ServiceStartup 服务启动时初始化
  */
-export function SetWindowSnapService(snapService: $models.WindowSnapService | null): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1105193745, snapService) as any;
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2432987694, options) as any;
     return $resultPromise;
 }
 

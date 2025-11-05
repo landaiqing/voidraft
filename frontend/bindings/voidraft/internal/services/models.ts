@@ -391,26 +391,6 @@ export class SystemInfo {
     }
 }
 
-/**
- * WindowSnapService 窗口吸附服务
- */
-export class WindowSnapService {
-
-    /** Creates a new WindowSnapService instance. */
-    constructor($$source: Partial<WindowSnapService> = {}) {
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new WindowSnapService instance from a string or object.
-     */
-    static createFrom($$source: any = {}): WindowSnapService {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new WindowSnapService($$parsedSource as Partial<WindowSnapService>);
-    }
-}
-
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
 var $$createType1 = (function $$initCreateType1(...args): any {

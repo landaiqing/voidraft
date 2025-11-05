@@ -39,11 +39,11 @@ type SelfUpdateService struct {
 }
 
 // NewSelfUpdateService 创建自我更新服务实例
-func NewSelfUpdateService(configService *ConfigService, badgeService *dock.DockService, notificationService *notifications.NotificationService, logger *log.LogService) (*SelfUpdateService, error) {
+func NewSelfUpdateService(configService *ConfigService, badgeService *dock.DockService, notificationService *notifications.NotificationService, logger *log.LogService) *SelfUpdateService {
 	// 获取配置
 	appConfig, err := configService.GetConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get config: %w", err)
+		panic(err)
 	}
 
 	service := &SelfUpdateService{
@@ -55,7 +55,7 @@ func NewSelfUpdateService(configService *ConfigService, badgeService *dock.DockS
 		isUpdating:          false,
 	}
 
-	return service, nil
+	return service
 }
 
 // CheckForUpdates 检查更新
