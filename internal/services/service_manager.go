@@ -68,7 +68,7 @@ func NewServiceManager() *ServiceManager {
 	systemService := NewSystemService(logger)
 
 	// 初始化热键服务
-	hotkeyService := NewHotkeyService(configService, windowService, logger)
+	hotkeyService := NewHotkeyService(configService, logger)
 
 	// 初始化对话服务
 	dialogService := NewDialogService(logger)

@@ -1,112 +1,65 @@
-//go:build windows
-
 package services
-
-/*
-#cgo CFLAGS: -I../lib
-#cgo LDFLAGS: -luser32
-#include "../lib/hotkey_windows.c"
-#include "../lib/hotkey_windows.h"
-*/
-import "C"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
+	"voidraft/internal/common/hotkey"
+	"voidraft/internal/common/hotkey/mainthread"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
-// HotkeyService Windows全局热键服务
+// HotkeyService 全局热键服务
 type HotkeyService struct {
 	logger        *log.LogService
 	configService *ConfigService
-	windowService *WindowService
 	windowHelper  *WindowHelper
 
 	mu            sync.RWMutex
 	currentHotkey *models.HotkeyCombo
-	isRegistered  atomic.Bool
+	app           *application.App
+	registered    atomic.Bool
 
-	ctx        context.Context
-	cancelFunc atomic.Value // 使用atomic.Value存储cancel函数，避免竞态条件
-	wg         sync.WaitGroup
-}
-
-// HotkeyError 热键错误
-type HotkeyError struct {
-	Operation string
-	Err       error
-}
-
-func (e *HotkeyError) Error() string {
-	return fmt.Sprintf("hotkey %s: %v", e.Operation, e.Err)
-}
-
-func (e *HotkeyError) Unwrap() error {
-	return e.Err
-}
-
-// setCancelFunc 原子地设置cancel函数
-func (hs *HotkeyService) setCancelFunc(cancel context.CancelFunc) {
-	hs.cancelFunc.Store(cancel)
-}
-
-// getCancelFunc 原子地获取cancel函数
-func (hs *HotkeyService) getCancelFunc() context.CancelFunc {
-	if cancel := hs.cancelFunc.Load(); cancel != nil {
-		if cancelFunc, ok := cancel.(context.CancelFunc); ok {
-			return cancelFunc
-		}
-	}
-	return nil
-}
-
-// clearCancelFunc 原子地清除cancel函数
-func (hs *HotkeyService) clearCancelFunc() {
-	hs.cancelFunc.Store((context.CancelFunc)(nil))
+	hk       *hotkey.Hotkey
+	stopChan chan struct{}
+	wg       sync.WaitGroup
 }
 
 // NewHotkeyService 创建热键服务实例
-func NewHotkeyService(configService *ConfigService, windowService *WindowService, logger *log.LogService) *HotkeyService {
+func NewHotkeyService(configService *ConfigService, logger *log.LogService) *HotkeyService {
 	if logger == nil {
 		logger = log.New()
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	service := &HotkeyService{
+	return &HotkeyService{
 		logger:        logger,
 		configService: configService,
-		windowService: windowService,
 		windowHelper:  NewWindowHelper(),
-		ctx:           ctx,
+		stopChan:      make(chan struct{}),
 	}
-	// 初始化时设置cancel函数
-	service.setCancelFunc(cancel)
-	return service
 }
 
-// ServiceStartup initializes the service when the application starts
-func (ds *HotkeyService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	ds.ctx = ctx
-	return ds.Initialize()
+// ServiceStartup 服务启动时初始化
+func (hs *HotkeyService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	hs.app = application.Get()
+	return hs.Initialize()
 }
 
 // Initialize 初始化热键服务
 func (hs *HotkeyService) Initialize() error {
 	config, err := hs.configService.GetConfig()
 	if err != nil {
-		return &HotkeyError{"load_config", err}
+		return fmt.Errorf("load config: %w", err)
 	}
 
 	if config.General.EnableGlobalHotkey {
 		if err := hs.RegisterHotkey(&config.General.GlobalHotkey); err != nil {
-			hs.logger.Error("failed to register startup hotkey", "error", err)
+			return err
 		}
 	}
 
@@ -114,41 +67,42 @@ func (hs *HotkeyService) Initialize() error {
 }
 
 // RegisterHotkey 注册全局热键
-func (hs *HotkeyService) RegisterHotkey(hotkey *models.HotkeyCombo) error {
-	if !hs.isValidHotkey(hotkey) {
-		return &HotkeyError{"validate", fmt.Errorf("invalid hotkey combination")}
+func (hs *HotkeyService) RegisterHotkey(combo *models.HotkeyCombo) error {
+	if !hs.isValidHotkey(combo) {
+		return errors.New("invalid hotkey combination")
 	}
 
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
 
-	// 取消现有热键
-	if hs.isRegistered.Load() {
+	// 如果已注册，先取消
+	if hs.registered.Load() {
 		hs.unregisterInternal()
 	}
 
-	// 启动监听器
-	ctx, cancel := context.WithCancel(hs.ctx)
-	hs.wg.Add(1)
-
-	ready := make(chan error, 1)
-	go hs.hotkeyListener(ctx, hotkey, ready)
-
-	// 等待启动完成
-	select {
-	case err := <-ready:
-		if err != nil {
-			cancel()
-			return &HotkeyError{"register", err}
-		}
-	case <-time.After(time.Second):
-		cancel()
-		return &HotkeyError{"register", fmt.Errorf("timeout")}
+	// 转换为 hotkey 库的格式
+	key, mods, err := hs.convertHotkey(combo)
+	if err != nil {
+		return fmt.Errorf("convert hotkey: %w", err)
 	}
 
-	hs.currentHotkey = hotkey
-	hs.isRegistered.Store(true)
-	hs.setCancelFunc(cancel)
+	// 在主线程中创建热键
+	var regErr error
+	mainthread.Init(func() {
+		hs.hk = hotkey.New(mods, key)
+		regErr = hs.hk.Register()
+	})
+
+	if regErr != nil {
+		return fmt.Errorf("register hotkey: %w", regErr)
+	}
+
+	hs.registered.Store(true)
+	hs.currentHotkey = combo
+
+	// 启动监听 goroutine
+	hs.wg.Add(1)
+	go hs.listenHotkey()
 
 	return nil
 }
@@ -160,151 +114,177 @@ func (hs *HotkeyService) UnregisterHotkey() error {
 	return hs.unregisterInternal()
 }
 
-// unregisterInternal 内部取消注册（无锁）
+// unregisterInternal 内部取消注册
 func (hs *HotkeyService) unregisterInternal() error {
-	if !hs.isRegistered.Load() {
+	if !hs.registered.Load() {
 		return nil
 	}
 
-	// 原子地获取并调用cancel函数
-	if cancel := hs.getCancelFunc(); cancel != nil {
-		cancel()
-		hs.wg.Wait()
+	// 停止监听
+	close(hs.stopChan)
+
+	// 取消注册热键
+	if hs.hk != nil {
+		if err := hs.hk.Unregister(); err != nil {
+			hs.logger.Error("failed to unregister hotkey", "error", err)
+		}
+		hs.hk = nil
 	}
 
+	// 等待 goroutine 结束
+	hs.wg.Wait()
+
 	hs.currentHotkey = nil
-	hs.isRegistered.Store(false)
-	hs.clearCancelFunc()
+	hs.registered.Store(false)
+
+	// 重新创建 stopChan
+	hs.stopChan = make(chan struct{})
+
 	return nil
 }
 
 // UpdateHotkey 更新热键配置
-func (hs *HotkeyService) UpdateHotkey(enable bool, hotkey *models.HotkeyCombo) error {
+func (hs *HotkeyService) UpdateHotkey(enable bool, combo *models.HotkeyCombo) error {
 	if enable {
-		return hs.RegisterHotkey(hotkey)
+		return hs.RegisterHotkey(combo)
 	}
 	return hs.UnregisterHotkey()
 }
 
-// hotkeyListener 热键监听器
-func (hs *HotkeyService) hotkeyListener(ctx context.Context, hotkey *models.HotkeyCombo, ready chan<- error) {
+// listenHotkey 监听热键事件
+func (hs *HotkeyService) listenHotkey() {
 	defer hs.wg.Done()
-
-	mainKeyVK := hs.keyToVirtualKeyCode(hotkey.Key)
-	if mainKeyVK == 0 {
-		ready <- fmt.Errorf("invalid key: %s", hotkey.Key)
-		return
-	}
-
-	ticker := time.NewTicker(50 * time.Millisecond)
-	defer ticker.Stop()
-
-	var wasPressed bool
-	ready <- nil // 标记准备就绪
 
 	for {
 		select {
-		case <-ctx.Done():
+		case <-hs.stopChan:
 			return
-		case <-ticker.C:
-			ctrl := cBool(hotkey.Ctrl)
-			shift := cBool(hotkey.Shift)
-			alt := cBool(hotkey.Alt)
-			win := cBool(hotkey.Win)
-
-			isPressed := C.isHotkeyPressed(ctrl, shift, alt, win, C.int(mainKeyVK)) == 1
-
-			if isPressed && !wasPressed {
-				hs.toggleWindow()
-			}
-			wasPressed = isPressed
+		case <-hs.hk.Keydown():
+			hs.toggleWindow()
 		}
 	}
 }
 
-// cBool 转换Go bool为C int
-func cBool(b bool) C.int {
-	if b {
-		return 1
+// convertHotkey 转换热键格式
+func (hs *HotkeyService) convertHotkey(combo *models.HotkeyCombo) (hotkey.Key, []hotkey.Modifier, error) {
+	// 转换主键
+	key, err := hs.convertKey(combo.Key)
+	if err != nil {
+		return 0, nil, err
 	}
-	return 0
+
+	// 转换修饰键
+	var mods []hotkey.Modifier
+	if combo.Ctrl {
+		mods = append(mods, hotkey.ModCtrl)
+	}
+	if combo.Shift {
+		mods = append(mods, hotkey.ModShift)
+	}
+	if combo.Alt {
+		mods = append(mods, hotkey.ModAlt)
+	}
+	if combo.Win {
+		mods = append(mods, hotkey.ModWin) // Win/Cmd 键
+	}
+
+	return key, mods, nil
+}
+
+// convertKey 转换键码
+func (hs *HotkeyService) convertKey(keyStr string) (hotkey.Key, error) {
+	// 字母键
+	keyMap := map[string]hotkey.Key{
+		"A": hotkey.KeyA, "B": hotkey.KeyB, "C": hotkey.KeyC, "D": hotkey.KeyD,
+		"E": hotkey.KeyE, "F": hotkey.KeyF, "G": hotkey.KeyG, "H": hotkey.KeyH,
+		"I": hotkey.KeyI, "J": hotkey.KeyJ, "K": hotkey.KeyK, "L": hotkey.KeyL,
+		"M": hotkey.KeyM, "N": hotkey.KeyN, "O": hotkey.KeyO, "P": hotkey.KeyP,
+		"Q": hotkey.KeyQ, "R": hotkey.KeyR, "S": hotkey.KeyS, "T": hotkey.KeyT,
+		"U": hotkey.KeyU, "V": hotkey.KeyV, "W": hotkey.KeyW, "X": hotkey.KeyX,
+		"Y": hotkey.KeyY, "Z": hotkey.KeyZ,
+
+		// 数字键
+		"0": hotkey.Key0, "1": hotkey.Key1, "2": hotkey.Key2, "3": hotkey.Key3,
+		"4": hotkey.Key4, "5": hotkey.Key5, "6": hotkey.Key6, "7": hotkey.Key7,
+		"8": hotkey.Key8, "9": hotkey.Key9,
+
+		// 功能键
+		"F1": hotkey.KeyF1, "F2": hotkey.KeyF2, "F3": hotkey.KeyF3, "F4": hotkey.KeyF4,
+		"F5": hotkey.KeyF5, "F6": hotkey.KeyF6, "F7": hotkey.KeyF7, "F8": hotkey.KeyF8,
+		"F9": hotkey.KeyF9, "F10": hotkey.KeyF10, "F11": hotkey.KeyF11, "F12": hotkey.KeyF12,
+
+		// 特殊键
+		"Space":      hotkey.KeySpace,
+		"Tab":        hotkey.KeyTab,
+		"Enter":      hotkey.KeyReturn,
+		"Escape":     hotkey.KeyEscape,
+		"Delete":     hotkey.KeyDelete,
+		"ArrowUp":    hotkey.KeyUp,
+		"ArrowDown":  hotkey.KeyDown,
+		"ArrowLeft":  hotkey.KeyLeft,
+		"ArrowRight": hotkey.KeyRight,
+	}
+
+	if key, ok := keyMap[keyStr]; ok {
+		return key, nil
+	}
+
+	return 0, fmt.Errorf("unsupported key: %s", keyStr)
 }
 
 // toggleWindow 切换窗口显示状态
 func (hs *HotkeyService) toggleWindow() {
 	mainWindow := hs.windowHelper.MustGetMainWindow()
 	if mainWindow == nil {
-		hs.logger.Error("main window not found")
 		return
 	}
 
 	// 检查主窗口是否可见
 	if mainWindow.IsVisible() {
-		// 如果主窗口可见，隐藏所有窗口
+		// 隐藏所有窗口
 		hs.hideAllWindows()
 	} else {
-		// 如果主窗口不可见，显示所有窗口
+		// 显示所有窗口
 		hs.showAllWindows()
 	}
 }
 
-// isWindowVisible 检查窗口是否可见
-func (hs *HotkeyService) isWindowVisible(window *application.WebviewWindow) bool {
-	return window.IsVisible()
-}
-
 // hideAllWindows 隐藏所有窗口
 func (hs *HotkeyService) hideAllWindows() {
-	// 隐藏所有子窗口
-	if hs.windowService != nil {
-		openWindows := hs.windowService.GetOpenWindows()
-		for _, windowInfo := range openWindows {
-			windowInfo.Hide()
-		}
+	if hs.app == nil {
+		return
 	}
 
+	openWindows := hs.app.Window.GetAll()
+	for _, window := range openWindows {
+		window.Hide()
+	}
 }
 
 // showAllWindows 显示所有窗口
 func (hs *HotkeyService) showAllWindows() {
-	// 显示所有子窗口
-	if hs.windowService != nil {
-		openWindows := hs.windowService.GetOpenWindows()
-		for _, windowInfo := range openWindows {
-			windowInfo.Show()
-			windowInfo.Restore()
-		}
+	if hs.app == nil {
+		return
 	}
-}
 
-// keyToVirtualKeyCode 键名转虚拟键码
-func (hs *HotkeyService) keyToVirtualKeyCode(key string) int {
-	keyMap := map[string]int{
-		// 字母键
-		"A": 0x41, "B": 0x42, "C": 0x43, "D": 0x44, "E": 0x45, "F": 0x46, "G": 0x47, "H": 0x48,
-		"I": 0x49, "J": 0x4A, "K": 0x4B, "L": 0x4C, "M": 0x4D, "N": 0x4E, "O": 0x4F, "P": 0x50,
-		"Q": 0x51, "R": 0x52, "S": 0x53, "T": 0x54, "U": 0x55, "V": 0x56, "W": 0x57, "X": 0x58,
-		"Y": 0x59, "Z": 0x5A,
-		// 数字键
-		"0": 0x30, "1": 0x31, "2": 0x32, "3": 0x33, "4": 0x34,
-		"5": 0x35, "6": 0x36, "7": 0x37, "8": 0x38, "9": 0x39,
-		// 功能键
-		"F1": 0x70, "F2": 0x71, "F3": 0x72, "F4": 0x73, "F5": 0x74, "F6": 0x75,
-		"F7": 0x76, "F8": 0x77, "F9": 0x78, "F10": 0x79, "F11": 0x7A, "F12": 0x7B,
+	openWindows := hs.app.Window.GetAll()
+	for _, window := range openWindows {
+		window.Show()
+		window.Restore()
+		window.Focus()
 	}
-	return keyMap[key]
 }
 
 // isValidHotkey 验证热键组合
-func (hs *HotkeyService) isValidHotkey(hotkey *models.HotkeyCombo) bool {
-	if hotkey == nil || hotkey.Key == "" {
+func (hs *HotkeyService) isValidHotkey(combo *models.HotkeyCombo) bool {
+	if combo == nil || combo.Key == "" {
 		return false
 	}
 	// 至少需要一个修饰键
-	if !hotkey.Ctrl && !hotkey.Shift && !hotkey.Alt && !hotkey.Win {
+	if !combo.Ctrl && !combo.Shift && !combo.Alt && !combo.Win {
 		return false
 	}
-	return hs.keyToVirtualKeyCode(hotkey.Key) != 0
+	return true
 }
 
 // GetCurrentHotkey 获取当前热键
@@ -327,15 +307,10 @@ func (hs *HotkeyService) GetCurrentHotkey() *models.HotkeyCombo {
 
 // IsRegistered 检查是否已注册
 func (hs *HotkeyService) IsRegistered() bool {
-	return hs.isRegistered.Load()
+	return hs.registered.Load()
 }
 
 // ServiceShutdown 关闭服务
 func (hs *HotkeyService) ServiceShutdown() error {
-	// 原子地获取并调用cancel函数
-	if cancel := hs.getCancelFunc(); cancel != nil {
-		cancel()
-	}
-	hs.wg.Wait()
-	return nil
+	return hs.UnregisterHotkey()
 }

@@ -80,14 +80,14 @@ func (wh *WindowHelper) AutoShowMainWindow() {
 	}
 }
 
-// GetDocumentWindow 根据文档ID获取窗口（利用 Wails3 的 WindowManager）
+// GetDocumentWindow 根据文档ID获取窗口
 func (wh *WindowHelper) GetDocumentWindow(documentID int64) (application.Window, bool) {
 	app := application.Get()
 	windowName := strconv.FormatInt(documentID, 10)
 	return app.Window.GetByName(windowName)
 }
 
-// GetAllDocumentWindows 获取所有文档窗口（排除主窗口）
+// GetAllDocumentWindows 获取所有文档窗口
 func (wh *WindowHelper) GetAllDocumentWindows() []application.Window {
 	app := application.Get()
 	allWindows := app.Window.GetAll()
