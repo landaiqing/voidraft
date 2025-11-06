@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 	"voidraft/internal/common/hotkey"
-	"voidraft/internal/common/hotkey/mainthread"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -28,6 +28,10 @@ type HotkeyService struct {
 	hk       *hotkey.Hotkey
 	stopChan chan struct{}
 	wg       sync.WaitGroup
+
+	// 防抖相关
+	lastTriggerTime  atomic.Int64  // 上次触发时间（Unix 纳秒）
+	debounceInterval time.Duration // 防抖间隔
 }
 
 // NewHotkeyService 创建热键服务实例
@@ -37,10 +41,11 @@ func NewHotkeyService(configService *ConfigService, logger *log.LogService) *Hot
 	}
 
 	return &HotkeyService{
-		logger:        logger,
-		configService: configService,
-		windowHelper:  NewWindowHelper(),
-		stopChan:      make(chan struct{}),
+		logger:           logger,
+		configService:    configService,
+		windowHelper:     NewWindowHelper(),
+		stopChan:         make(chan struct{}),
+		debounceInterval: 100 * time.Millisecond,
 	}
 }
 
@@ -72,31 +77,28 @@ func (hs *HotkeyService) RegisterHotkey(combo *models.HotkeyCombo) error {
 		return errors.New("invalid hotkey combination")
 	}
 
-	hs.mu.Lock()
-	defer hs.mu.Unlock()
-
-	// 如果已注册，先取消
-	if hs.registered.Load() {
-		hs.unregisterInternal()
-	}
-
 	// 转换为 hotkey 库的格式
 	key, mods, err := hs.convertHotkey(combo)
 	if err != nil {
 		return fmt.Errorf("convert hotkey: %w", err)
 	}
 
-	// 在主线程中创建热键
-	var regErr error
-	mainthread.Init(func() {
-		hs.hk = hotkey.New(mods, key)
-		regErr = hs.hk.Register()
-	})
-
-	if regErr != nil {
-		return fmt.Errorf("register hotkey: %w", regErr)
+	// 创建新热键（在锁外创建，避免持锁时间过长）
+	newHk := hotkey.New(mods, key)
+	if err := newHk.Register(); err != nil {
+		return fmt.Errorf("register hotkey: %w", err)
 	}
 
+	hs.mu.Lock()
+	defer hs.mu.Unlock()
+
+	// 如果已注册，先取消旧热键
+	if hs.registered.Load() {
+		hs.unregisterInternal()
+	}
+
+	// 设置新热键
+	hs.hk = newHk
 	hs.registered.Store(true)
 	hs.currentHotkey = combo
 
@@ -155,11 +157,25 @@ func (hs *HotkeyService) UpdateHotkey(enable bool, combo *models.HotkeyCombo) er
 func (hs *HotkeyService) listenHotkey() {
 	defer hs.wg.Done()
 
+	// 缓存 channel 引用，避免每次循环都访问 hs.hk
+	hs.mu.RLock()
+	keydownChan := hs.hk.Keydown()
+	hs.mu.RUnlock()
+
 	for {
 		select {
 		case <-hs.stopChan:
 			return
-		case <-hs.hk.Keydown():
+		case <-keydownChan:
+			now := time.Now().UnixNano()
+			lastTrigger := hs.lastTriggerTime.Load()
+
+			// 如果距离上次触发时间小于防抖间隔，忽略此次触发
+			if lastTrigger > 0 && time.Duration(now-lastTrigger) < hs.debounceInterval {
+				continue
+			}
+			// 更新最后触发时间
+			hs.lastTriggerTime.Store(now)
 			hs.toggleWindow()
 		}
 	}

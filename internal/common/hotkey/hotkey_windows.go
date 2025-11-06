@@ -1,224 +1,152 @@
-// Copyright 2021 The golang.design Initiative Authors.
-// All rights reserved. Use of this source code is governed
-// by a MIT license that can be found in the LICENSE file.
-//
-// Written by Changkun Ou <changkun.de>
-
 //go:build windows
 
 package hotkey
 
-import (
-	"errors"
-	"runtime"
-	"sync"
-	"sync/atomic"
-	"time"
-	"voidraft/internal/common/hotkey/internal/win"
-)
+import "voidraft/internal/common/hotkey/windows"
 
 type platformHotkey struct {
-	mu         sync.Mutex
-	hotkeyId   uint64
-	registered bool
-	funcs      chan func()
-	canceled   chan struct{}
-}
-
-var hotkeyId uint64 // atomic
-
-// register registers a system hotkey. It returns an error if
-// the registration is failed. This could be that the hotkey is
-// conflict with other hotkeys.
-func (hk *Hotkey) register() error {
-	hk.mu.Lock()
-	if hk.registered {
-		hk.mu.Unlock()
-		return errors.New("hotkey already registered")
-	}
-
-	mod := uint8(0)
-	for _, m := range hk.mods {
-		mod = mod | uint8(m)
-	}
-
-	hk.hotkeyId = atomic.AddUint64(&hotkeyId, 1)
-	hk.funcs = make(chan func())
-	hk.canceled = make(chan struct{})
-	go hk.handle()
-
-	var (
-		ok   bool
-		err  error
-		done = make(chan struct{})
-	)
-	hk.funcs <- func() {
-		ok, err = win.RegisterHotKey(0, uintptr(hk.hotkeyId), uintptr(mod), uintptr(hk.key))
-		done <- struct{}{}
-	}
-	<-done
-	if !ok {
-		close(hk.canceled)
-		hk.mu.Unlock()
-		return err
-	}
-	hk.registered = true
-	hk.mu.Unlock()
-	return nil
-}
-
-// unregister deregisteres a system hotkey.
-func (hk *Hotkey) unregister() error {
-	hk.mu.Lock()
-	defer hk.mu.Unlock()
-	if !hk.registered {
-		return errors.New("hotkey is not registered")
-	}
-
-	done := make(chan struct{})
-	hk.funcs <- func() {
-		win.UnregisterHotKey(0, uintptr(hk.hotkeyId))
-		done <- struct{}{}
-		close(hk.canceled)
-	}
-	<-done
-
-	<-hk.canceled
-	hk.registered = false
-	return nil
-}
-
-const (
-	// wmHotkey represents hotkey message
-	wmHotkey uint32 = 0x0312
-	wmQuit   uint32 = 0x0012
-)
-
-// handle handles the hotkey event loop.
-func (hk *Hotkey) handle() {
-	// We could optimize this. So far each hotkey is served in an
-	// individual thread. If we have too many hotkeys, then a program
-	// have to create too many threads to serve them.
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
-	isKeyDown := false
-	tk := time.NewTicker(time.Second / 100)
-	for range tk.C {
-		msg := win.MSG{}
-		if !win.PeekMessage(&msg, 0, 0, 0) {
-			select {
-			case f := <-hk.funcs:
-				f()
-			case <-hk.canceled:
-				return
-			default:
-				// If the latest status is KeyDown, and AsyncKeyState is 0, consider key is up.
-				if win.GetAsyncKeyState(int(hk.key)) == 0 && isKeyDown {
-					hk.keyupIn <- Event{}
-					isKeyDown = false
-				}
-			}
-			continue
-		}
-		if !win.GetMessage(&msg, 0, 0, 0) {
-			return
-		}
-
-		switch msg.Message {
-		case wmHotkey:
-			hk.keydownIn <- Event{}
-			isKeyDown = true
-		case wmQuit:
-			return
-		}
-	}
+	ph        windows.PlatformHotkey
+	keydownIn chan interface{}
+	keyupIn   chan interface{}
+	stopChans chan struct{} // 用于停止通道转换 goroutines
 }
 
 // Modifier represents a modifier.
-// https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-registerhotkey
-type Modifier uint8
+type Modifier = windows.Modifier
 
 // All kinds of Modifiers
 const (
-	ModAlt   Modifier = 0x1
-	ModCtrl  Modifier = 0x2
-	ModShift Modifier = 0x4
-	ModWin   Modifier = 0x8
+	ModAlt   = windows.ModAlt
+	ModCtrl  = windows.ModCtrl
+	ModShift = windows.ModShift
+	ModWin   = windows.ModWin
 )
 
 // Key represents a key.
-// https://docs.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
-type Key uint16
+type Key = windows.Key
 
 // All kinds of Keys
 const (
-	KeySpace Key = 0x20
-	Key0     Key = 0x30
-	Key1     Key = 0x31
-	Key2     Key = 0x32
-	Key3     Key = 0x33
-	Key4     Key = 0x34
-	Key5     Key = 0x35
-	Key6     Key = 0x36
-	Key7     Key = 0x37
-	Key8     Key = 0x38
-	Key9     Key = 0x39
-	KeyA     Key = 0x41
-	KeyB     Key = 0x42
-	KeyC     Key = 0x43
-	KeyD     Key = 0x44
-	KeyE     Key = 0x45
-	KeyF     Key = 0x46
-	KeyG     Key = 0x47
-	KeyH     Key = 0x48
-	KeyI     Key = 0x49
-	KeyJ     Key = 0x4A
-	KeyK     Key = 0x4B
-	KeyL     Key = 0x4C
-	KeyM     Key = 0x4D
-	KeyN     Key = 0x4E
-	KeyO     Key = 0x4F
-	KeyP     Key = 0x50
-	KeyQ     Key = 0x51
-	KeyR     Key = 0x52
-	KeyS     Key = 0x53
-	KeyT     Key = 0x54
-	KeyU     Key = 0x55
-	KeyV     Key = 0x56
-	KeyW     Key = 0x57
-	KeyX     Key = 0x58
-	KeyY     Key = 0x59
-	KeyZ     Key = 0x5A
+	KeySpace = windows.KeySpace
+	Key0     = windows.Key0
+	Key1     = windows.Key1
+	Key2     = windows.Key2
+	Key3     = windows.Key3
+	Key4     = windows.Key4
+	Key5     = windows.Key5
+	Key6     = windows.Key6
+	Key7     = windows.Key7
+	Key8     = windows.Key8
+	Key9     = windows.Key9
+	KeyA     = windows.KeyA
+	KeyB     = windows.KeyB
+	KeyC     = windows.KeyC
+	KeyD     = windows.KeyD
+	KeyE     = windows.KeyE
+	KeyF     = windows.KeyF
+	KeyG     = windows.KeyG
+	KeyH     = windows.KeyH
+	KeyI     = windows.KeyI
+	KeyJ     = windows.KeyJ
+	KeyK     = windows.KeyK
+	KeyL     = windows.KeyL
+	KeyM     = windows.KeyM
+	KeyN     = windows.KeyN
+	KeyO     = windows.KeyO
+	KeyP     = windows.KeyP
+	KeyQ     = windows.KeyQ
+	KeyR     = windows.KeyR
+	KeyS     = windows.KeyS
+	KeyT     = windows.KeyT
+	KeyU     = windows.KeyU
+	KeyV     = windows.KeyV
+	KeyW     = windows.KeyW
+	KeyX     = windows.KeyX
+	KeyY     = windows.KeyY
+	KeyZ     = windows.KeyZ
 
-	KeyReturn Key = 0x0D
-	KeyEscape Key = 0x1B
-	KeyDelete Key = 0x2E
-	KeyTab    Key = 0x09
+	KeyReturn = windows.KeyReturn
+	KeyEscape = windows.KeyEscape
+	KeyDelete = windows.KeyDelete
+	KeyTab    = windows.KeyTab
 
-	KeyLeft  Key = 0x25
-	KeyRight Key = 0x27
-	KeyUp    Key = 0x26
-	KeyDown  Key = 0x28
+	KeyLeft  = windows.KeyLeft
+	KeyRight = windows.KeyRight
+	KeyUp    = windows.KeyUp
+	KeyDown  = windows.KeyDown
 
-	KeyF1  Key = 0x70
-	KeyF2  Key = 0x71
-	KeyF3  Key = 0x72
-	KeyF4  Key = 0x73
-	KeyF5  Key = 0x74
-	KeyF6  Key = 0x75
-	KeyF7  Key = 0x76
-	KeyF8  Key = 0x77
-	KeyF9  Key = 0x78
-	KeyF10 Key = 0x79
-	KeyF11 Key = 0x7A
-	KeyF12 Key = 0x7B
-	KeyF13 Key = 0x7C
-	KeyF14 Key = 0x7D
-	KeyF15 Key = 0x7E
-	KeyF16 Key = 0x7F
-	KeyF17 Key = 0x80
-	KeyF18 Key = 0x81
-	KeyF19 Key = 0x82
-	KeyF20 Key = 0x83
+	KeyF1  = windows.KeyF1
+	KeyF2  = windows.KeyF2
+	KeyF3  = windows.KeyF3
+	KeyF4  = windows.KeyF4
+	KeyF5  = windows.KeyF5
+	KeyF6  = windows.KeyF6
+	KeyF7  = windows.KeyF7
+	KeyF8  = windows.KeyF8
+	KeyF9  = windows.KeyF9
+	KeyF10 = windows.KeyF10
+	KeyF11 = windows.KeyF11
+	KeyF12 = windows.KeyF12
+	KeyF13 = windows.KeyF13
+	KeyF14 = windows.KeyF14
+	KeyF15 = windows.KeyF15
+	KeyF16 = windows.KeyF16
+	KeyF17 = windows.KeyF17
+	KeyF18 = windows.KeyF18
+	KeyF19 = windows.KeyF19
+	KeyF20 = windows.KeyF20
 )
+
+func (hk *Hotkey) register() error {
+	// Convert channels
+	hk.platformHotkey.keydownIn = make(chan interface{}, 1)
+	hk.platformHotkey.keyupIn = make(chan interface{}, 1)
+	hk.platformHotkey.stopChans = make(chan struct{})
+
+	// Start goroutines to convert interface{} events to Event{}
+	go func() {
+		for {
+			select {
+			case <-hk.platformHotkey.stopChans:
+				return
+			case <-hk.platformHotkey.keydownIn:
+				hk.keydownIn <- Event{}
+			}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-hk.platformHotkey.stopChans:
+				return
+			case <-hk.platformHotkey.keyupIn:
+				hk.keyupIn <- Event{}
+			}
+		}
+	}()
+
+	return hk.platformHotkey.ph.Register(hk.mods, hk.key, hk.platformHotkey.keydownIn, hk.platformHotkey.keyupIn)
+}
+
+func (hk *Hotkey) unregister() error {
+	// Stop channel conversion goroutines first
+	if hk.platformHotkey.stopChans != nil {
+		select {
+		case <-hk.platformHotkey.stopChans:
+			// Already closed, do nothing
+		default:
+			close(hk.platformHotkey.stopChans)
+		}
+		hk.platformHotkey.stopChans = nil
+	}
+
+	// Then unregister the hotkey
+	err := hk.platformHotkey.ph.Unregister()
+
+	// Close conversion channels (don't close, just set to nil)
+	// The goroutines will drain them when stopChans is closed
+	hk.platformHotkey.keydownIn = nil
+	hk.platformHotkey.keyupIn = nil
+
+	return err
+}

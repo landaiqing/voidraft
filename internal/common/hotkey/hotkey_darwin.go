@@ -1,176 +1,152 @@
-// Copyright 2021 The golang.design Initiative Authors.
-// All rights reserved. Use of this source code is governed
-// by a MIT license that can be found in the LICENSE file.
-//
-// Written by Changkun Ou <changkun.de>
-
 //go:build darwin
 
 package hotkey
 
-/*
-#cgo CFLAGS: -x objective-c
-#cgo LDFLAGS: -framework Cocoa -framework Carbon
-#include <stdint.h>
-#import <Cocoa/Cocoa.h>
-#import <Carbon/Carbon.h>
+import "voidraft/internal/common/hotkey/darwin"
 
-extern void keydownCallback(uintptr_t handle);
-extern void keyupCallback(uintptr_t handle);
-int registerHotKey(int mod, int key, uintptr_t handle, EventHotKeyRef* ref);
-int unregisterHotKey(EventHotKeyRef ref);
-*/
-import "C"
-import (
-	"errors"
-	"runtime/cgo"
-	"sync"
-)
-
-// Hotkey is a combination of modifiers and key to trigger an event
 type platformHotkey struct {
-	mu         sync.Mutex
-	registered bool
-	hkref      C.EventHotKeyRef
-}
-
-func (hk *Hotkey) register() error {
-	hk.mu.Lock()
-	defer hk.mu.Unlock()
-	if hk.registered {
-		return errors.New("hotkey already registered")
-	}
-
-	// Note: we use handle number as hotkey id in the C side.
-	// A cgo handle could ran out of space, but since in hotkey purpose
-	// we won't have that much number of hotkeys. So this should be fine.
-
-	h := cgo.NewHandle(hk)
-	var mod Modifier
-	for _, m := range hk.mods {
-		mod += m
-	}
-
-	ret := C.registerHotKey(C.int(mod), C.int(hk.key), C.uintptr_t(h), &hk.hkref)
-	if ret == C.int(-1) {
-		return errors.New("failed to register the hotkey")
-	}
-
-	hk.registered = true
-	return nil
-}
-
-func (hk *Hotkey) unregister() error {
-	hk.mu.Lock()
-	defer hk.mu.Unlock()
-	if !hk.registered {
-		return errors.New("hotkey is not registered")
-	}
-
-	ret := C.unregisterHotKey(hk.hkref)
-	if ret == C.int(-1) {
-		return errors.New("failed to unregister the current hotkey")
-	}
-	hk.registered = false
-	return nil
-}
-
-//export keydownCallback
-func keydownCallback(h uintptr) {
-	hk := cgo.Handle(h).Value().(*Hotkey)
-	hk.keydownIn <- Event{}
-}
-
-//export keyupCallback
-func keyupCallback(h uintptr) {
-	hk := cgo.Handle(h).Value().(*Hotkey)
-	hk.keyupIn <- Event{}
+	ph        darwin.PlatformHotkey
+	keydownIn chan interface{}
+	keyupIn   chan interface{}
+	stopChans chan struct{} // 用于停止通道转换 goroutines
 }
 
 // Modifier represents a modifier.
-// See: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/Events.h
-type Modifier uint32
+type Modifier = darwin.Modifier
 
 // All kinds of Modifiers
 const (
-	ModCtrl   Modifier = 0x1000
-	ModShift  Modifier = 0x200
-	ModOption Modifier = 0x800
-	ModCmd    Modifier = 0x100
+	ModCtrl   = darwin.ModCtrl
+	ModShift  = darwin.ModShift
+	ModOption = darwin.ModOption
+	ModCmd    = darwin.ModCmd
 )
 
 // Key represents a key.
-// See: /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/Events.h
-type Key uint8
+type Key = darwin.Key
 
 // All kinds of keys
 const (
-	KeySpace Key = 49
-	Key1     Key = 18
-	Key2     Key = 19
-	Key3     Key = 20
-	Key4     Key = 21
-	Key5     Key = 23
-	Key6     Key = 22
-	Key7     Key = 26
-	Key8     Key = 28
-	Key9     Key = 25
-	Key0     Key = 29
-	KeyA     Key = 0
-	KeyB     Key = 11
-	KeyC     Key = 8
-	KeyD     Key = 2
-	KeyE     Key = 14
-	KeyF     Key = 3
-	KeyG     Key = 5
-	KeyH     Key = 4
-	KeyI     Key = 34
-	KeyJ     Key = 38
-	KeyK     Key = 40
-	KeyL     Key = 37
-	KeyM     Key = 46
-	KeyN     Key = 45
-	KeyO     Key = 31
-	KeyP     Key = 35
-	KeyQ     Key = 12
-	KeyR     Key = 15
-	KeyS     Key = 1
-	KeyT     Key = 17
-	KeyU     Key = 32
-	KeyV     Key = 9
-	KeyW     Key = 13
-	KeyX     Key = 7
-	KeyY     Key = 16
-	KeyZ     Key = 6
+	KeySpace = darwin.KeySpace
+	Key1     = darwin.Key1
+	Key2     = darwin.Key2
+	Key3     = darwin.Key3
+	Key4     = darwin.Key4
+	Key5     = darwin.Key5
+	Key6     = darwin.Key6
+	Key7     = darwin.Key7
+	Key8     = darwin.Key8
+	Key9     = darwin.Key9
+	Key0     = darwin.Key0
+	KeyA     = darwin.KeyA
+	KeyB     = darwin.KeyB
+	KeyC     = darwin.KeyC
+	KeyD     = darwin.KeyD
+	KeyE     = darwin.KeyE
+	KeyF     = darwin.KeyF
+	KeyG     = darwin.KeyG
+	KeyH     = darwin.KeyH
+	KeyI     = darwin.KeyI
+	KeyJ     = darwin.KeyJ
+	KeyK     = darwin.KeyK
+	KeyL     = darwin.KeyL
+	KeyM     = darwin.KeyM
+	KeyN     = darwin.KeyN
+	KeyO     = darwin.KeyO
+	KeyP     = darwin.KeyP
+	KeyQ     = darwin.KeyQ
+	KeyR     = darwin.KeyR
+	KeyS     = darwin.KeyS
+	KeyT     = darwin.KeyT
+	KeyU     = darwin.KeyU
+	KeyV     = darwin.KeyV
+	KeyW     = darwin.KeyW
+	KeyX     = darwin.KeyX
+	KeyY     = darwin.KeyY
+	KeyZ     = darwin.KeyZ
 
-	KeyReturn Key = 0x24
-	KeyEscape Key = 0x35
-	KeyDelete Key = 0x33
-	KeyTab    Key = 0x30
+	KeyReturn = darwin.KeyReturn
+	KeyEscape = darwin.KeyEscape
+	KeyDelete = darwin.KeyDelete
+	KeyTab    = darwin.KeyTab
 
-	KeyLeft  Key = 0x7B
-	KeyRight Key = 0x7C
-	KeyUp    Key = 0x7E
-	KeyDown  Key = 0x7D
+	KeyLeft  = darwin.KeyLeft
+	KeyRight = darwin.KeyRight
+	KeyUp    = darwin.KeyUp
+	KeyDown  = darwin.KeyDown
 
-	KeyF1  Key = 0x7A
-	KeyF2  Key = 0x78
-	KeyF3  Key = 0x63
-	KeyF4  Key = 0x76
-	KeyF5  Key = 0x60
-	KeyF6  Key = 0x61
-	KeyF7  Key = 0x62
-	KeyF8  Key = 0x64
-	KeyF9  Key = 0x65
-	KeyF10 Key = 0x6D
-	KeyF11 Key = 0x67
-	KeyF12 Key = 0x6F
-	KeyF13 Key = 0x69
-	KeyF14 Key = 0x6B
-	KeyF15 Key = 0x71
-	KeyF16 Key = 0x6A
-	KeyF17 Key = 0x40
-	KeyF18 Key = 0x4F
-	KeyF19 Key = 0x50
-	KeyF20 Key = 0x5A
+	KeyF1  = darwin.KeyF1
+	KeyF2  = darwin.KeyF2
+	KeyF3  = darwin.KeyF3
+	KeyF4  = darwin.KeyF4
+	KeyF5  = darwin.KeyF5
+	KeyF6  = darwin.KeyF6
+	KeyF7  = darwin.KeyF7
+	KeyF8  = darwin.KeyF8
+	KeyF9  = darwin.KeyF9
+	KeyF10 = darwin.KeyF10
+	KeyF11 = darwin.KeyF11
+	KeyF12 = darwin.KeyF12
+	KeyF13 = darwin.KeyF13
+	KeyF14 = darwin.KeyF14
+	KeyF15 = darwin.KeyF15
+	KeyF16 = darwin.KeyF16
+	KeyF17 = darwin.KeyF17
+	KeyF18 = darwin.KeyF18
+	KeyF19 = darwin.KeyF19
+	KeyF20 = darwin.KeyF20
 )
+
+func (hk *Hotkey) register() error {
+	// Convert channels
+	hk.platformHotkey.keydownIn = make(chan interface{}, 1)
+	hk.platformHotkey.keyupIn = make(chan interface{}, 1)
+	hk.platformHotkey.stopChans = make(chan struct{})
+
+	// Start goroutines to convert interface{} events to Event{}
+	go func() {
+		for {
+			select {
+			case <-hk.platformHotkey.stopChans:
+				return
+			case <-hk.platformHotkey.keydownIn:
+				hk.keydownIn <- Event{}
+			}
+		}
+	}()
+	go func() {
+		for {
+			select {
+			case <-hk.platformHotkey.stopChans:
+				return
+			case <-hk.platformHotkey.keyupIn:
+				hk.keyupIn <- Event{}
+			}
+		}
+	}()
+
+	return hk.platformHotkey.ph.Register(hk.mods, hk.key, hk.platformHotkey.keydownIn, hk.platformHotkey.keyupIn)
+}
+
+func (hk *Hotkey) unregister() error {
+	// Stop channel conversion goroutines first
+	if hk.platformHotkey.stopChans != nil {
+		select {
+		case <-hk.platformHotkey.stopChans:
+			// Already closed, do nothing
+		default:
+			close(hk.platformHotkey.stopChans)
+		}
+		hk.platformHotkey.stopChans = nil
+	}
+
+	// Then unregister the hotkey
+	err := hk.platformHotkey.ph.Unregister()
+
+	// Close conversion channels (don't close, just set to nil)
+	// The goroutines will drain them when stopChans is closed
+	hk.platformHotkey.keydownIn = nil
+	hk.platformHotkey.keyupIn = nil
+
+	return err
+}

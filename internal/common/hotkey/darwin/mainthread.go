@@ -1,12 +1,6 @@
-// Copyright 2022 The golang.design Initiative Authors.
-// All rights reserved. Use of this source code is governed
-// by a MIT license that can be found in the LICENSE file.
-//
-// Written by Changkun Ou <changkun.de>
-
 //go:build darwin
 
-package mainthread
+package darwin
 
 /*
 #cgo CFLAGS: -x objective-c
@@ -36,10 +30,15 @@ func Call(f func()) {
 		f()
 		return
 	}
+	done := make(chan struct{})
 	go func() {
-		mainFuncs <- f
+		mainFuncs <- func() {
+			f()
+			close(done)
+		}
 		C.wakeupMainThread()
 	}()
+	<-done
 }
 
 // Init initializes the functionality of running arbitrary subsequent functions be called on the main system thread.
