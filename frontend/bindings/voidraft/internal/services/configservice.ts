@@ -14,6 +14,10 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 // @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * Get 获取配置项
  */
@@ -83,34 +87,18 @@ export function Set(key: string, value: any): Promise<void> & { cancel(): void }
 }
 
 /**
- * SetBackupConfigChangeCallback 设置备份配置变更回调
+ * Watch 注册配置变更监听器
  */
-export function SetBackupConfigChangeCallback(callback: any): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3264871659, callback) as any;
+export function Watch(path: string, callback: $models.ObserverCallback): Promise<$models.CancelFunc> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1143583035, path, callback) as any;
     return $resultPromise;
 }
 
 /**
- * SetDataPathChangeCallback 设置数据路径配置变更回调
+ * WatchWithContext 使用 Context 注册监听器
  */
-export function SetDataPathChangeCallback(callback: any): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(393017412, callback) as any;
-    return $resultPromise;
-}
-
-/**
- * SetHotkeyChangeCallback 设置热键配置变更回调
- */
-export function SetHotkeyChangeCallback(callback: any): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(283872321, callback) as any;
-    return $resultPromise;
-}
-
-/**
- * SetWindowSnapConfigChangeCallback 设置窗口吸附配置变更回调
- */
-export function SetWindowSnapConfigChangeCallback(callback: any): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2324961653, callback) as any;
+export function WatchWithContext(path: string, callback: $models.ObserverCallback): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1454973098, path, callback) as any;
     return $resultPromise;
 }
 

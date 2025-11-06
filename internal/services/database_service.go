@@ -96,6 +96,9 @@ type DatabaseService struct {
 	mu            sync.RWMutex
 	ctx           context.Context
 	tableModels   []TableModel // 注册的表模型
+
+	// 配置观察者取消函数
+	cancelObserver CancelFunc
 }
 
 // NewDatabaseService creates a new database service
@@ -130,7 +133,27 @@ func (ds *DatabaseService) registerAllModels() {
 // ServiceStartup initializes the service when the application starts
 func (ds *DatabaseService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	ds.ctx = ctx
+
+	ds.cancelObserver = ds.configService.Watch("general.dataPath", ds.onDataPathChange)
+
 	return ds.initDatabase()
+}
+
+// onDataPathChange 数据路径配置变更回调
+func (ds *DatabaseService) onDataPathChange(oldValue, newValue interface{}) {
+	oldPath := ""
+	newPath := ""
+
+	if oldValue != nil {
+		oldPath = fmt.Sprintf("%v", oldValue)
+	}
+	if newValue != nil {
+		newPath = fmt.Sprintf("%v", newValue)
+	}
+
+	if oldPath != newPath {
+		_ = ds.OnDataPathChanged()
+	}
 }
 
 // initDatabase initializes the SQLite database
@@ -369,6 +392,11 @@ func getSQLTypeAndDefault(t reflect.Type) (string, string) {
 
 // ServiceShutdown shuts down the service when the application closes
 func (ds *DatabaseService) ServiceShutdown() error {
+	// 取消配置观察者
+	if ds.cancelObserver != nil {
+		ds.cancelObserver()
+	}
+
 	if ds.db != nil {
 		return ds.db.Close()
 	}

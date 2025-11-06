@@ -1,8 +1,6 @@
 package services
 
 import (
-	"voidraft/internal/models"
-
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
@@ -102,38 +100,6 @@ func NewServiceManager() *ServiceManager {
 
 	// 初始化测试服务（开发环境使用）
 	testService := NewTestService(badgeService, notificationService, logger)
-
-	// 使用新的配置通知系统设置热键配置变更监听
-	err := configService.SetHotkeyChangeCallback(func(enable bool, hotkey *models.HotkeyCombo) error {
-		return hotkeyService.UpdateHotkey(enable, hotkey)
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// 设置数据路径变更监听，处理配置重置和路径变更
-	err = configService.SetDataPathChangeCallback(func() error {
-		return databaseService.OnDataPathChanged()
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// 设置备份配置变更监听，处理备份配置变更
-	err = configService.SetBackupConfigChangeCallback(func(config *models.GitBackupConfig) error {
-		return backupService.HandleConfigChange(config)
-	})
-	if err != nil {
-		panic(err)
-	}
-
-	// 设置窗口吸附配置变更回调
-	err = configService.SetWindowSnapConfigChangeCallback(func(enabled bool) error {
-		return windowSnapService.OnWindowSnapConfigChanged(enabled)
-	})
-	if err != nil {
-		panic(err)
-	}
 
 	return &ServiceManager{
 		configService:       configService,

@@ -12,10 +12,9 @@ void wakeupMainThread(void) {
 }
 
 // The following three lines of code must run on the main thread.
-// For GUI applications (Wails, Cocoa), the framework handles this automatically.
-// For CLI applications, see README for manual event loop setup.
+// It must handle it using golang.design/x/mainthread.
 //
-// Inspired from: https://github.com/cehoffman/dotfiles/blob/4be8e893517e970d40746a9bdc67fe5832dd1c33/os/mac/iTerm2HotKey.m
+// inspired from here: https://github.com/cehoffman/dotfiles/blob/4be8e893517e970d40746a9bdc67fe5832dd1c33/os/mac/iTerm2HotKey.m
 void os_main(void) {
 	[NSApplication sharedApplication];
 	[NSApp disableRelaunchOnLogin];

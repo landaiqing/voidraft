@@ -25,13 +25,14 @@ type HotkeyService struct {
 	app           *application.App
 	registered    atomic.Bool
 
-	hk       *hotkey.Hotkey
-	stopChan chan struct{}
-	wg       sync.WaitGroup
+	hk         *hotkey.Hotkey
+	ctx        context.Context
+	cancel     context.CancelFunc
+	wg         sync.WaitGroup
+	isShutdown atomic.Bool
 
-	// 防抖相关
-	lastTriggerTime  atomic.Int64  // 上次触发时间（Unix 纳秒）
-	debounceInterval time.Duration // 防抖间隔
+	// 配置观察者取消函数
+	cancelObservers []CancelFunc
 }
 
 // NewHotkeyService 创建热键服务实例
@@ -40,12 +41,13 @@ func NewHotkeyService(configService *ConfigService, logger *log.LogService) *Hot
 		logger = log.New()
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
 	return &HotkeyService{
-		logger:           logger,
-		configService:    configService,
-		windowHelper:     NewWindowHelper(),
-		stopChan:         make(chan struct{}),
-		debounceInterval: 100 * time.Millisecond,
+		logger:        logger,
+		configService: configService,
+		windowHelper:  NewWindowHelper(),
+		ctx:           ctx,
+		cancel:        cancel,
 	}
 }
 
@@ -57,24 +59,50 @@ func (hs *HotkeyService) ServiceStartup(ctx context.Context, options application
 
 // Initialize 初始化热键服务
 func (hs *HotkeyService) Initialize() error {
+	// 注册配置监听
+	hs.cancelObservers = []CancelFunc{
+		hs.configService.Watch("general.enableGlobalHotkey", hs.onHotkeyConfigChange),
+		hs.configService.Watch("general.globalHotkey", hs.onHotkeyConfigChange),
+	}
+
+	// 加载初始配置
 	config, err := hs.configService.GetConfig()
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
 	}
 
 	if config.General.EnableGlobalHotkey {
-		if err := hs.RegisterHotkey(&config.General.GlobalHotkey); err != nil {
-			return err
-		}
+		_ = hs.RegisterHotkey(&config.General.GlobalHotkey)
 	}
 
 	return nil
 }
 
+// onHotkeyConfigChange 热键配置变更回调
+func (hs *HotkeyService) onHotkeyConfigChange(oldValue, newValue interface{}) {
+	// 重新加载配置
+	config, err := hs.configService.GetConfig()
+	if err != nil {
+		return
+	}
+
+	// 更新热键
+	_ = hs.UpdateHotkey(config.General.EnableGlobalHotkey, &config.General.GlobalHotkey)
+}
+
 // RegisterHotkey 注册全局热键
 func (hs *HotkeyService) RegisterHotkey(combo *models.HotkeyCombo) error {
+	if hs.isShutdown.Load() {
+		return errors.New("service is shutdown")
+	}
+
 	if !hs.isValidHotkey(combo) {
 		return errors.New("invalid hotkey combination")
+	}
+
+	// 如果已注册，先取消
+	if hs.registered.Load() {
+		_ = hs.UnregisterHotkey()
 	}
 
 	// 转换为 hotkey 库的格式
@@ -83,24 +111,17 @@ func (hs *HotkeyService) RegisterHotkey(combo *models.HotkeyCombo) error {
 		return fmt.Errorf("convert hotkey: %w", err)
 	}
 
-	// 创建新热键（在锁外创建，避免持锁时间过长）
-	newHk := hotkey.New(mods, key)
-	if err := newHk.Register(); err != nil {
+	hs.mu.Lock()
+	// 创建新的热键实例
+	hs.hk = hotkey.New(mods, key)
+	if err := hs.hk.Register(); err != nil {
+		hs.mu.Unlock()
 		return fmt.Errorf("register hotkey: %w", err)
 	}
 
-	hs.mu.Lock()
-	defer hs.mu.Unlock()
-
-	// 如果已注册，先取消旧热键
-	if hs.registered.Load() {
-		hs.unregisterInternal()
-	}
-
-	// 设置新热键
-	hs.hk = newHk
 	hs.registered.Store(true)
 	hs.currentHotkey = combo
+	hs.mu.Unlock()
 
 	// 启动监听 goroutine
 	hs.wg.Add(1)
@@ -111,36 +132,42 @@ func (hs *HotkeyService) RegisterHotkey(combo *models.HotkeyCombo) error {
 
 // UnregisterHotkey 取消注册全局热键
 func (hs *HotkeyService) UnregisterHotkey() error {
-	hs.mu.Lock()
-	defer hs.mu.Unlock()
-	return hs.unregisterInternal()
-}
-
-// unregisterInternal 内部取消注册
-func (hs *HotkeyService) unregisterInternal() error {
 	if !hs.registered.Load() {
 		return nil
 	}
 
-	// 停止监听
-	close(hs.stopChan)
-
-	// 取消注册热键
-	if hs.hk != nil {
-		if err := hs.hk.Unregister(); err != nil {
-			hs.logger.Error("failed to unregister hotkey", "error", err)
-		}
-		hs.hk = nil
-	}
-
-	// 等待 goroutine 结束
-	hs.wg.Wait()
-
-	hs.currentHotkey = nil
+	// 先标记为未注册
 	hs.registered.Store(false)
 
-	// 重新创建 stopChan
-	hs.stopChan = make(chan struct{})
+	// 获取热键实例的引用
+	hs.mu.RLock()
+	hk := hs.hk
+	hs.mu.RUnlock()
+
+	if hk == nil {
+		return nil
+	}
+
+	// 调用 Close() 确保完全清理
+	_ = hk.Close()
+
+	// 等待监听 goroutine 退出
+	done := make(chan struct{})
+	go func() {
+		hs.wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+	}
+
+	// 清理状态
+	hs.mu.Lock()
+	hs.hk = nil
+	hs.currentHotkey = nil
+	hs.mu.Unlock()
 
 	return nil
 }
@@ -157,26 +184,28 @@ func (hs *HotkeyService) UpdateHotkey(enable bool, combo *models.HotkeyCombo) er
 func (hs *HotkeyService) listenHotkey() {
 	defer hs.wg.Done()
 
-	// 缓存 channel 引用，避免每次循环都访问 hs.hk
+	// 获取热键实例和通道
 	hs.mu.RLock()
-	keydownChan := hs.hk.Keydown()
+	hk := hs.hk
 	hs.mu.RUnlock()
+
+	if hk == nil {
+		return
+	}
+
+	keydownChan := hk.Keydown()
 
 	for {
 		select {
-		case <-hs.stopChan:
+		case <-hs.ctx.Done():
 			return
-		case <-keydownChan:
-			now := time.Now().UnixNano()
-			lastTrigger := hs.lastTriggerTime.Load()
-
-			// 如果距离上次触发时间小于防抖间隔，忽略此次触发
-			if lastTrigger > 0 && time.Duration(now-lastTrigger) < hs.debounceInterval {
-				continue
+		case _, ok := <-keydownChan:
+			if !ok {
+				return
 			}
-			// 更新最后触发时间
-			hs.lastTriggerTime.Store(now)
-			hs.toggleWindow()
+			if hs.registered.Load() {
+				hs.toggleWindow()
+			}
 		}
 	}
 }
@@ -328,5 +357,18 @@ func (hs *HotkeyService) IsRegistered() bool {
 
 // ServiceShutdown 关闭服务
 func (hs *HotkeyService) ServiceShutdown() error {
+	hs.isShutdown.Store(true)
+
+	// 取消配置观察者
+	for _, cancel := range hs.cancelObservers {
+		if cancel != nil {
+			cancel()
+		}
+	}
+
+	// 取消 context
+	hs.cancel()
+
+	// 取消注册热键
 	return hs.UnregisterHotkey()
 }

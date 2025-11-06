@@ -53,6 +53,9 @@ type WindowSnapService struct {
 	// 事件监听器清理函数
 	mainMoveUnhook    func()           // 主窗口移动监听清理函数
 	windowMoveUnhooks map[int64]func() // documentID -> 子窗口移动监听清理函数
+
+	// 配置观察者取消函数
+	cancelObserver CancelFunc
 }
 
 // NewWindowSnapService 创建新的窗口吸附服务实例
@@ -69,7 +72,7 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 		snapEnabled = config.General.EnableWindowSnap
 	}
 
-	return &WindowSnapService{
+	wss := &WindowSnapService{
 		logger:             logger,
 		configService:      configService,
 		windowHelper:       NewWindowHelper(),
@@ -83,6 +86,23 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 		isUpdatingPosition: make(map[int64]bool),
 		windowMoveUnhooks:  make(map[int64]func()),
 	}
+
+	// 注册窗口吸附配置监听
+	wss.cancelObserver = configService.Watch("general.enableWindowSnap", wss.onWindowSnapConfigChange)
+
+	return wss
+}
+
+// onWindowSnapConfigChange 窗口吸附配置变更回调
+func (wss *WindowSnapService) onWindowSnapConfigChange(oldValue, newValue interface{}) {
+	enabled := false
+	if newValue != nil {
+		if val, ok := newValue.(bool); ok {
+			enabled = val
+		}
+	}
+
+	_ = wss.OnWindowSnapConfigChanged(enabled)
 }
 
 // RegisterWindow 注册需要吸附管理的窗口
@@ -194,7 +214,6 @@ func (wss *WindowSnapService) GetCurrentThreshold() int {
 // OnWindowSnapConfigChanged 处理窗口吸附配置变更
 func (wss *WindowSnapService) OnWindowSnapConfigChanged(enabled bool) error {
 	wss.SetSnapEnabled(enabled)
-	// 阈值现在是自适应的，无需手动设置
 	return nil
 }
 
@@ -625,6 +644,10 @@ func (wss *WindowSnapService) Cleanup() {
 
 // ServiceShutdown 实现服务关闭接口
 func (wss *WindowSnapService) ServiceShutdown() error {
+	// 取消配置观察者
+	if wss.cancelObserver != nil {
+		wss.cancelObserver()
+	}
 	wss.Cleanup()
 	return nil
 }

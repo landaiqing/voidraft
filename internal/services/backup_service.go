@@ -36,6 +36,9 @@ type BackupService struct {
 	isInitialized    bool
 	autoBackupTicker *time.Ticker
 	autoBackupStop   chan bool
+
+	// 配置观察者取消函数
+	cancelObserver CancelFunc
 }
 
 // NewBackupService 创建新的备份服务实例
@@ -48,10 +51,23 @@ func NewBackupService(configService *ConfigService, dbService *DatabaseService, 
 }
 
 func (ds *BackupService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	ds.cancelObserver = ds.configService.Watch("backup", ds.onBackupConfigChange)
+
 	if err := ds.Initialize(); err != nil {
 		return fmt.Errorf("initializing backup service: %w", err)
 	}
 	return nil
+}
+
+// onBackupConfigChange 备份配置变更回调
+func (ds *BackupService) onBackupConfigChange(oldValue, newValue interface{}) {
+	// 重新加载配置
+	config, err := ds.configService.GetConfig()
+	if err != nil {
+		return
+	}
+	// 处理配置变更
+	_ = ds.HandleConfigChange(&config.Backup)
 }
 
 // Initialize 初始化备份服务
@@ -393,5 +409,9 @@ func (s *BackupService) HandleConfigChange(config *models.GitBackupConfig) error
 
 // ServiceShutdown 服务关闭时的清理工作
 func (s *BackupService) ServiceShutdown() {
+	// 取消配置观察者
+	if s.cancelObserver != nil {
+		s.cancelObserver()
+	}
 	s.StopAutoBackup()
 }
