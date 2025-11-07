@@ -4,13 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"runtime"
+	"sync"
+	"time"
+
 	"github.com/creativeprojects/go-selfupdate"
 	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
-	"os"
-	"runtime"
-	"time"
 	"voidraft/internal/models"
 )
 
@@ -30,55 +32,57 @@ type SelfUpdateResult struct {
 type SelfUpdateService struct {
 	logger              *log.LogService
 	configService       *ConfigService
-	badgeService        *dock.DockService                  // 直接使用Wails原生badge服务
-	notificationService *notifications.NotificationService // 通知服务
-	config              *models.AppConfig
+	badgeService        *dock.DockService
+	notificationService *notifications.NotificationService
 
-	// 状态管理
+	mu         sync.Mutex // 保护更新状态
 	isUpdating bool
 }
 
 // NewSelfUpdateService 创建自我更新服务实例
 func NewSelfUpdateService(configService *ConfigService, badgeService *dock.DockService, notificationService *notifications.NotificationService, logger *log.LogService) *SelfUpdateService {
-	// 获取配置
-	appConfig, err := configService.GetConfig()
-	if err != nil {
-		panic(err)
-	}
-
-	service := &SelfUpdateService{
+	return &SelfUpdateService{
 		logger:              logger,
 		configService:       configService,
 		badgeService:        badgeService,
 		notificationService: notificationService,
-		config:              appConfig,
 		isUpdating:          false,
 	}
+}
 
-	return service
+// getConfig 获取最新配置
+func (s *SelfUpdateService) getConfig() (*models.AppConfig, error) {
+	config, err := s.configService.GetConfig()
+	if err != nil {
+		return nil, fmt.Errorf("get config failed: %w", err)
+	}
+	return config, nil
 }
 
 // CheckForUpdates 检查更新
 func (s *SelfUpdateService) CheckForUpdates(ctx context.Context) (*SelfUpdateResult, error) {
+	config, err := s.getConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	result := &SelfUpdateResult{
-		CurrentVersion: s.config.Updates.Version,
+		CurrentVersion: config.Updates.Version,
 		HasUpdate:      false,
 		UpdateApplied:  false,
 	}
 
-	// 首先尝试主要更新源
-	primaryResult, err := s.checkSourceForUpdates(ctx, s.config.Updates.PrimarySource)
+	// 尝试主要更新源
+	primaryResult, err := s.checkSourceForUpdates(ctx, config.Updates.PrimarySource, config)
 	if err == nil && primaryResult != nil {
 		s.handleUpdateBadge(primaryResult)
 		return primaryResult, nil
 	}
 
-	// 如果主要更新源失败，尝试备用更新源
-	backupResult, backupErr := s.checkSourceForUpdates(ctx, s.config.Updates.BackupSource)
+	// 尝试备用更新源
+	backupResult, backupErr := s.checkSourceForUpdates(ctx, config.Updates.BackupSource, config)
 	if backupErr != nil {
-		// 如果备用源也失败，返回主要源的错误信息
-		result.Error = fmt.Sprintf("Primary source error: %v; Backup source error: %v", err, backupErr)
-		// 确保在检查失败时也调用handleUpdateBadge来清除可能存在的badge
+		result.Error = fmt.Sprintf("both sources failed: %v; %v", err, backupErr)
 		s.handleUpdateBadge(result)
 		return result, errors.New(result.Error)
 	}
@@ -88,17 +92,16 @@ func (s *SelfUpdateService) CheckForUpdates(ctx context.Context) (*SelfUpdateRes
 }
 
 // checkSourceForUpdates 根据更新源类型检查更新
-func (s *SelfUpdateService) checkSourceForUpdates(ctx context.Context, sourceType models.UpdateSourceType) (*SelfUpdateResult, error) {
-	// 创建带超时的上下文
-	timeout := s.config.Updates.UpdateTimeout
+func (s *SelfUpdateService) checkSourceForUpdates(ctx context.Context, sourceType models.UpdateSourceType, config *models.AppConfig) (*SelfUpdateResult, error) {
+	timeout := config.Updates.UpdateTimeout
 	if timeout <= 0 {
-		timeout = 30 // 默认30秒
+		timeout = 30
 	}
 	timeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
 	result := &SelfUpdateResult{
-		CurrentVersion: s.config.Updates.Version,
+		CurrentVersion: config.Updates.Version,
 		HasUpdate:      false,
 		UpdateApplied:  false,
 		Source:         string(sourceType),
@@ -110,320 +113,164 @@ func (s *SelfUpdateService) checkSourceForUpdates(ctx context.Context, sourceTyp
 
 	switch sourceType {
 	case models.UpdateSourceGithub:
-		release, found, err = s.checkGithubUpdates(timeoutCtx)
+		release, found, err = s.checkGithubUpdates(timeoutCtx, config)
 	case models.UpdateSourceGitea:
-		release, found, err = s.checkGiteaUpdates(timeoutCtx)
+		release, found, err = s.checkGiteaUpdates(timeoutCtx, config)
 	default:
-		return nil, fmt.Errorf("unsupported update source type: %s", sourceType)
+		return nil, fmt.Errorf("unsupported source: %s", sourceType)
 	}
 
 	if err != nil {
-		result.Error = fmt.Sprintf("Failed to check for updates: %v", err)
-		return result, err
+		return result, fmt.Errorf("check failed: %w", err)
 	}
 
 	if !found {
-		result.Error = fmt.Sprintf("No release found for %s/%s on %s",
-			runtime.GOOS, runtime.GOARCH, s.getRepoName(sourceType))
-		return result, errors.New(result.Error)
+		return result, fmt.Errorf("no release for %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
 	result.LatestVersion = release.Version()
 	result.AssetURL = release.AssetURL
 	result.ReleaseNotes = release.ReleaseNotes
-
-	// 比较版本
-	if release.GreaterThan(s.config.Updates.Version) {
-		result.HasUpdate = true
-	} else {
-		s.logger.Info("Current version is up to date")
-	}
+	result.HasUpdate = release.GreaterThan(config.Updates.Version)
 
 	return result, nil
 }
 
 // createGithubUpdater 创建GitHub更新器
 func (s *SelfUpdateService) createGithubUpdater() (*selfupdate.Updater, error) {
-	// 使用默认的GitHub源
-	updaterConfig := selfupdate.Config{}
-
-	return selfupdate.NewUpdater(updaterConfig)
+	return selfupdate.NewUpdater(selfupdate.Config{})
 }
 
 // createGiteaUpdater 创建Gitea更新器
-func (s *SelfUpdateService) createGiteaUpdater() (*selfupdate.Updater, error) {
-	giteaConfig := s.config.Updates.Gitea
-
-	// 创建Gitea源
+func (s *SelfUpdateService) createGiteaUpdater(config *models.AppConfig) (*selfupdate.Updater, error) {
 	source, err := selfupdate.NewGiteaSource(selfupdate.GiteaConfig{
-		BaseURL: giteaConfig.BaseURL,
+		BaseURL: config.Updates.Gitea.BaseURL,
 	})
-
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Gitea source: %w", err)
+		return nil, fmt.Errorf("create gitea source failed: %w", err)
 	}
 
-	// 创建使用Gitea源的更新器
-	updaterConfig := selfupdate.Config{
-		Source: source,
-	}
-
-	return selfupdate.NewUpdater(updaterConfig)
+	return selfupdate.NewUpdater(selfupdate.Config{Source: source})
 }
 
 // checkGithubUpdates 检查GitHub更新
-func (s *SelfUpdateService) checkGithubUpdates(ctx context.Context) (*selfupdate.Release, bool, error) {
-	// 创建GitHub更新器
+func (s *SelfUpdateService) checkGithubUpdates(ctx context.Context, config *models.AppConfig) (*selfupdate.Release, bool, error) {
 	updater, err := s.createGithubUpdater()
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to create GitHub updater: %w", err)
+		return nil, false, err
 	}
 
-	githubConfig := s.config.Updates.Github
-	repository := selfupdate.NewRepositorySlug(githubConfig.Owner, githubConfig.Repo)
-
-	// 检测最新版本
-	return updater.DetectLatest(ctx, repository)
+	repo := selfupdate.NewRepositorySlug(config.Updates.Github.Owner, config.Updates.Github.Repo)
+	return updater.DetectLatest(ctx, repo)
 }
 
 // checkGiteaUpdates 检查Gitea更新
-func (s *SelfUpdateService) checkGiteaUpdates(ctx context.Context) (*selfupdate.Release, bool, error) {
-	// 创建Gitea更新器
-	updater, err := s.createGiteaUpdater()
+func (s *SelfUpdateService) checkGiteaUpdates(ctx context.Context, config *models.AppConfig) (*selfupdate.Release, bool, error) {
+	updater, err := s.createGiteaUpdater(config)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to create Gitea updater: %w", err)
+		return nil, false, err
 	}
 
-	giteaConfig := s.config.Updates.Gitea
-	repository := selfupdate.NewRepositorySlug(giteaConfig.Owner, giteaConfig.Repo)
-
-	// 检测最新版本
-	return updater.DetectLatest(ctx, repository)
-}
-
-// getRepoName 获取当前更新源的仓库名称
-func (s *SelfUpdateService) getRepoName(sourceType models.UpdateSourceType) string {
-	switch sourceType {
-	case models.UpdateSourceGithub:
-		return s.config.Updates.Github.Repo
-	case models.UpdateSourceGitea:
-		return s.config.Updates.Gitea.Repo
-	default:
-		return "unknown"
-	}
+	repo := selfupdate.NewRepositorySlug(config.Updates.Gitea.Owner, config.Updates.Gitea.Repo)
+	return updater.DetectLatest(ctx, repo)
 }
 
 // ApplyUpdate 应用更新
 func (s *SelfUpdateService) ApplyUpdate(ctx context.Context) (*SelfUpdateResult, error) {
+	s.mu.Lock()
 	if s.isUpdating {
-		return nil, errors.New("update is already in progress")
+		s.mu.Unlock()
+		return nil, errors.New("update in progress")
 	}
-
 	s.isUpdating = true
+	s.mu.Unlock()
+
 	defer func() {
+		s.mu.Lock()
 		s.isUpdating = false
+		s.mu.Unlock()
 	}()
 
-	// 获取可执行文件路径
+	config, err := s.getConfig()
+	if err != nil {
+		return nil, err
+	}
+
 	exe, err := selfupdate.ExecutablePath()
 	if err != nil {
-		return &SelfUpdateResult{
-			CurrentVersion: s.config.Updates.Version,
-			Error:          fmt.Sprintf("Could not locate executable path: %v", err),
-		}, err
+		return nil, fmt.Errorf("locate executable failed: %w", err)
 	}
 
-	// 创建带超时的上下文，仅用于检测最新版本
-	timeout := s.config.Updates.UpdateTimeout
-	if timeout <= 0 {
-		timeout = 30 // 默认30秒
-	}
-	checkTimeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-	defer cancel()
-
-	result := &SelfUpdateResult{
-		CurrentVersion: s.config.Updates.Version,
-	}
-
-	// 首先尝试从主要更新源获取更新信息
-	primarySourceType := s.config.Updates.PrimarySource
-	backupSourceType := s.config.Updates.BackupSource
-
-	result.Source = string(primarySourceType)
-
-	// 从主更新源获取更新信息
-	primaryUpdater, primaryRelease, primaryFound, err := s.getUpdateFromSource(checkTimeoutCtx, primarySourceType)
-
-	if err != nil || !primaryFound {
-		// 主更新源失败，直接尝试备用源
-		return s.updateFromSource(ctx, backupSourceType, exe)
-	}
-
-	// 检查是否有可用更新
-	if !primaryRelease.GreaterThan(s.config.Updates.Version) {
-		result.LatestVersion = primaryRelease.Version()
+	// 尝试主要源
+	result, err := s.performUpdate(ctx, config.Updates.PrimarySource, exe, config)
+	if err == nil {
 		return result, nil
 	}
 
-	// 更新结果信息
-	result.LatestVersion = primaryRelease.Version()
-	result.AssetURL = primaryRelease.AssetURL
-	result.ReleaseNotes = primaryRelease.ReleaseNotes
-	result.HasUpdate = true
-
-	// 备份当前可执行文件（如果启用）
-	var backupPath string
-	if s.config.Updates.BackupBeforeUpdate {
-		var err error
-		backupPath, err = s.createBackup(exe)
-		if err != nil {
-			result.Error = fmt.Sprintf("Failed to create backup: %v", err)
-			return result, err
-		}
-	}
-
-	// 从主要源尝试下载并应用更新，不设置超时
-	err = primaryUpdater.UpdateTo(ctx, primaryRelease, exe)
-
-	// 如果主要源下载失败，尝试备用源
+	// 尝试备用源
+	result, err = s.performUpdate(ctx, config.Updates.BackupSource, exe, config)
 	if err != nil {
-		// 尝试从备用源更新
-		backupResult, backupErr := s.updateFromSource(ctx, backupSourceType, exe)
-
-		// 如果备用源也失败，清理并返回错误
-		if backupErr != nil {
-			if backupPath != "" {
-				s.cleanupBackup(backupPath)
-			}
-
-			result.Error = fmt.Sprintf("Update failed from both sources: primary error: %v; backup error: %v", err, backupErr)
-			return result, errors.New(result.Error)
-		}
-
-		// 备用源成功
-		return backupResult, nil
-	}
-
-	// 主要源更新成功
-	result.UpdateApplied = true
-
-	// 更新成功后清理备份文件
-	if backupPath != "" {
-		if err := s.cleanupBackup(backupPath); err != nil {
-			s.logger.Error("Failed to cleanup backup", "error", err)
-		}
-	}
-
-	// 更新配置中的版本号
-	if err := s.updateConfigVersion(result.LatestVersion); err != nil {
-		s.logger.Error("Failed to update config version", "error", err)
-	}
-
-	// 执行配置迁移
-	if err := s.configService.MigrateConfig(); err != nil {
-		s.logger.Error("Failed to migrate config after update", "error", err)
-	}
-
-	// 更新成功，移除badge
-	if s.badgeService != nil {
-		if err := s.badgeService.RemoveBadge(); err != nil {
-			s.logger.Error("failed to remove update badge after successful update", "error", err)
-		}
+		return nil, fmt.Errorf("update failed from both sources: %w", err)
 	}
 
 	return result, nil
 }
 
-// updateFromSource 从指定源尝试下载并应用更新
-func (s *SelfUpdateService) updateFromSource(ctx context.Context, sourceType models.UpdateSourceType, exe string) (*SelfUpdateResult, error) {
-	// 创建带超时的上下文，仅用于检测最新版本
-	checkTimeoutCtx, cancel := context.WithTimeout(ctx, time.Duration(s.config.Updates.UpdateTimeout)*time.Second)
+// performUpdate 执行更新操作（包括检测、备份、下载、应用）
+func (s *SelfUpdateService) performUpdate(ctx context.Context, sourceType models.UpdateSourceType, exe string, config *models.AppConfig) (*SelfUpdateResult, error) {
+	timeout := config.Updates.UpdateTimeout
+	if timeout <= 0 {
+		timeout = 30
+	}
+	checkCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
+	// 获取更新器和版本信息
+	updater, release, found, err := s.getUpdateFromSource(checkCtx, sourceType, config)
+	if err != nil || !found {
+		return nil, fmt.Errorf("detect release failed: %w", err)
+	}
+
 	result := &SelfUpdateResult{
-		CurrentVersion: s.config.Updates.Version,
+		CurrentVersion: config.Updates.Version,
+		LatestVersion:  release.Version(),
+		AssetURL:       release.AssetURL,
+		ReleaseNotes:   release.ReleaseNotes,
 		Source:         string(sourceType),
+		HasUpdate:      release.GreaterThan(config.Updates.Version),
 	}
 
-	s.logger.Info("Attempting to update from source", "source", sourceType)
-
-	// 获取更新信息
-	updater, release, found, err := s.getUpdateFromSource(checkTimeoutCtx, sourceType)
-	if err != nil {
-		result.Error = fmt.Sprintf("Failed to detect latest release from %s: %v", sourceType, err)
-		return result, err
-	}
-
-	if !found {
-		result.Error = fmt.Sprintf("Latest release not found from %s", sourceType)
-		return result, errors.New(result.Error)
-	}
-
-	// 更新结果信息
-	result.LatestVersion = release.Version()
-	result.AssetURL = release.AssetURL
-	result.ReleaseNotes = release.ReleaseNotes
-
-	// 检查是否有更新
-	if !release.GreaterThan(s.config.Updates.Version) {
-		s.logger.Info("Current version is up to date, no need to apply update")
+	// 无更新
+	if !result.HasUpdate {
 		return result, nil
 	}
 
-	// 标记有更新可用
-	result.HasUpdate = true
-
-	// 备份当前可执行文件（如果启用且尚未备份）
+	// 创建备份
 	var backupPath string
-	if s.config.Updates.BackupBeforeUpdate {
-		s.logger.Info("Creating backup before update...")
-		var err error
+	if config.Updates.BackupBeforeUpdate {
 		backupPath, err = s.createBackup(exe)
 		if err != nil {
-			result.Error = fmt.Sprintf("Failed to create backup: %v", err)
-			return result, err
+			return nil, fmt.Errorf("backup failed: %w", err)
 		}
+		defer func() {
+			if backupPath != "" {
+				s.cleanupBackup(backupPath)
+			}
+		}()
 	}
 
-	// 尝试下载并应用更新，不设置超时
-	err = updater.UpdateTo(ctx, release, exe)
-
-	if err != nil {
-		result.Error = fmt.Sprintf("Failed to apply update from %s: %v", sourceType, err)
-
-		// 移除下载失败时恢复备份的逻辑，让用户手动处理
-		if backupPath != "" {
-			s.logger.Info("Update failed, backup is available at: " + backupPath)
-		}
-		return result, err
+	// 下载并应用更新
+	if err := updater.UpdateTo(ctx, release, exe); err != nil {
+		return nil, fmt.Errorf("apply update failed: %w", err)
 	}
 
 	result.UpdateApplied = true
-
-	// 更新成功后清理备份文件
-	if backupPath != "" {
-		if err := s.cleanupBackup(backupPath); err != nil {
-			s.logger.Error("Failed to cleanup backup", "error", err)
-		}
-	}
-
-	// 更新配置中的版本号
-	if err := s.updateConfigVersion(result.LatestVersion); err != nil {
-		s.logger.Error("Failed to update config version", "error", err)
-	}
-
-	// 更新成功，移除badge
-	if s.badgeService != nil {
-		if err := s.badgeService.RemoveBadge(); err != nil {
-			s.logger.Error("failed to remove update badge after successful update", "error", err)
-		}
-	}
-
+	s.handleUpdateSuccess(result)
 	return result, nil
 }
 
 // getUpdateFromSource 从指定源获取更新信息
-func (s *SelfUpdateService) getUpdateFromSource(ctx context.Context, sourceType models.UpdateSourceType) (*selfupdate.Updater, *selfupdate.Release, bool, error) {
+func (s *SelfUpdateService) getUpdateFromSource(ctx context.Context, sourceType models.UpdateSourceType, config *models.AppConfig) (*selfupdate.Updater, *selfupdate.Release, bool, error) {
 	var updater *selfupdate.Updater
 	var release *selfupdate.Release
 	var found bool
@@ -433,50 +280,50 @@ func (s *SelfUpdateService) getUpdateFromSource(ctx context.Context, sourceType 
 	case models.UpdateSourceGithub:
 		updater, err = s.createGithubUpdater()
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("failed to create GitHub updater: %w", err)
+			return nil, nil, false, err
 		}
-		release, found, err = s.checkGithubUpdates(ctx)
+		release, found, err = s.checkGithubUpdates(ctx, config)
 	case models.UpdateSourceGitea:
-		updater, err = s.createGiteaUpdater()
+		updater, err = s.createGiteaUpdater(config)
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("failed to create Gitea updater: %w", err)
+			return nil, nil, false, err
 		}
-		release, found, err = s.checkGiteaUpdates(ctx)
+		release, found, err = s.checkGiteaUpdates(ctx, config)
 	default:
-		return nil, nil, false, fmt.Errorf("unsupported update source type: %s", sourceType)
+		return nil, nil, false, fmt.Errorf("unsupported source: %s", sourceType)
 	}
 
 	return updater, release, found, err
 }
 
-// RestartApplication 重启应用程序
-func (s *SelfUpdateService) RestartApplication() error {
-	return s.restartApplication()
-}
-
-// updateConfigVersion 更新配置中的版本号
-func (s *SelfUpdateService) updateConfigVersion(version string) error {
-	// 使用configService更新配置中的版本号
-	if err := s.configService.Set("updates.version", version); err != nil {
-		return fmt.Errorf("failed to update config version: %w", err)
+// handleUpdateSuccess 处理更新成功后的操作
+func (s *SelfUpdateService) handleUpdateSuccess(result *SelfUpdateResult) {
+	// 更新配置版本
+	if err := s.configService.Set("updates.version", result.LatestVersion); err != nil {
+		s.logger.Error("update config version failed", "error", err)
 	}
-	return nil
+
+	// 执行配置迁移
+	if err := s.configService.MigrateConfig(); err != nil {
+		s.logger.Error("migrate config failed", "error", err)
+	}
+
+	// 移除badge
+	if s.badgeService != nil {
+		s.badgeService.RemoveBadge()
+	}
 }
 
-// createBackup 创建当前可执行文件的备份
+// createBackup 创建可执行文件备份
 func (s *SelfUpdateService) createBackup(executablePath string) (string, error) {
 	backupPath := executablePath + ".backup"
-
-	// 读取原文件
 	data, err := os.ReadFile(executablePath)
 	if err != nil {
-		return "", fmt.Errorf("failed to read executable: %w", err)
+		return "", fmt.Errorf("read executable failed: %w", err)
 	}
 
-	// 写入备份文件
-	err = os.WriteFile(backupPath, data, 0755)
-	if err != nil {
-		return "", fmt.Errorf("failed to create backup: %w", err)
+	if err := os.WriteFile(backupPath, data, 0755); err != nil {
+		return "", fmt.Errorf("write backup failed: %w", err)
 	}
 
 	return backupPath, nil
@@ -485,31 +332,34 @@ func (s *SelfUpdateService) createBackup(executablePath string) (string, error) 
 // cleanupBackup 清理备份文件
 func (s *SelfUpdateService) cleanupBackup(backupPath string) error {
 	if err := os.Remove(backupPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("failed to remove backup file: %w", err)
+		s.logger.Error("cleanup backup failed", "error", err)
 	}
 	return nil
 }
 
-// handleUpdateBadge 处理更新通知badge和通知
-func (s *SelfUpdateService) handleUpdateBadge(result *SelfUpdateResult) {
-	if result != nil && result.HasUpdate {
-		// 有更新时显示更新badge
-		if s.badgeService != nil {
-			if err := s.badgeService.SetBadge("●"); err != nil {
-				s.logger.Error("failed to set update badge", "error", err)
-			}
-		}
+// RestartApplication 重启应用程序
+func (s *SelfUpdateService) RestartApplication() error {
+	return s.restartApplication()
+}
 
-		// 发送简单通知
-		s.sendUpdateNotification(result)
-	} else {
-		// 没有更新或出错时移除badge
+// handleUpdateBadge 处理更新徽章和通知
+func (s *SelfUpdateService) handleUpdateBadge(result *SelfUpdateResult) {
+	if result == nil || !result.HasUpdate {
 		if s.badgeService != nil {
-			if err := s.badgeService.RemoveBadge(); err != nil {
-				s.logger.Error("failed to remove update badge", "error", err)
-			}
+			s.badgeService.RemoveBadge()
+		}
+		return
+	}
+
+	// 显示徽章
+	if s.badgeService != nil {
+		if err := s.badgeService.SetBadge("●"); err != nil {
+			s.logger.Error("set badge failed", "error", err)
 		}
 	}
+
+	// 发送通知
+	s.sendUpdateNotification(result)
 }
 
 // sendUpdateNotification 发送更新通知
@@ -518,34 +368,20 @@ func (s *SelfUpdateService) sendUpdateNotification(result *SelfUpdateResult) {
 		return
 	}
 
-	// 检查通知授权（macOS需要）
+	// 检查授权
 	authorized, err := s.notificationService.CheckNotificationAuthorization()
-	if err != nil {
-		s.logger.Error("Failed to check notification authorization", "error", err)
-		return
-	}
-
-	if !authorized {
+	if err != nil || !authorized {
 		authorized, err = s.notificationService.RequestNotificationAuthorization()
 		if err != nil || !authorized {
-			s.logger.Error("Failed to get notification authorization", "error", err)
 			return
 		}
 	}
 
-	// 构建简单通知内容
-	title := "Voidraft Update Available"
-	body := fmt.Sprintf("New version %s available (current: %s)", result.LatestVersion, result.CurrentVersion)
-
-	// 发送简单通知
-	err = s.notificationService.SendNotification(notifications.NotificationOptions{
+	// 发送通知
+	s.notificationService.SendNotification(notifications.NotificationOptions{
 		ID:       "update_available",
-		Title:    title,
+		Title:    "Voidraft Update Available",
 		Subtitle: "New version available",
-		Body:     body,
+		Body:     fmt.Sprintf("Version %s available (current: %s)", result.LatestVersion, result.CurrentVersion),
 	})
-	if err != nil {
-		s.logger.Error("Failed to send notification", "error", err)
-		return
-	}
 }

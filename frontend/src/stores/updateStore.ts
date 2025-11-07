@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { computed, readonly, ref, shallowRef, onScopeDispose } from 'vue';
+import { computed, readonly, ref, onScopeDispose } from 'vue';
 import { CheckForUpdates, ApplyUpdate, RestartApplication } from '@/../bindings/voidraft/internal/services/selfupdateservice';
 import { SelfUpdateResult } from '@/../bindings/voidraft/internal/services/models';
 import { useConfigStore } from './configStore';

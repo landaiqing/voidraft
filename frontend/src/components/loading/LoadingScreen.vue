@@ -80,7 +80,7 @@ function animationLoop() {
       // 等待一段时间后重置动画
       resetTimeoutId = window.setTimeout(() => {
         reset();
-      }, 750);
+      }, 500);
     }
   }
   
@@ -136,7 +136,8 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: var(--voidraft-bg-gradient, radial-gradient(#222922, #000500));
+  //background: var(--voidraft-bg-gradient, rgba(0, 5, 0, 0.15));
+  //backdrop-filter: blur(2px);
   z-index: 1000;
   display: flex;
   align-items: center;

@@ -55,9 +55,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="editor-container">
-    <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
     <div ref="editorElement" class="editor"></div>
     <Toolbar/>
+    <transition name="loading-fade">
+      <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
+    </transition>
   </div>
 </template>
 
@@ -84,5 +86,16 @@ onBeforeUnmount(() => {
 
 :deep(.cm-scroller) {
   overflow: auto;
+}
+
+// 加载动画过渡效果
+.loading-fade-enter-active,
+.loading-fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.loading-fade-enter-from,
+.loading-fade-leave-to {
+  opacity: 0;
 }
 </style>
