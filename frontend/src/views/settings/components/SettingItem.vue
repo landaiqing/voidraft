@@ -2,6 +2,7 @@
 defineProps<{
   title: string;
   description?: string;
+  descriptionType?: 'default' | 'success' | 'error';
 }>();
 </script>
 
@@ -9,7 +10,16 @@ defineProps<{
   <div class="setting-item">
     <div class="setting-info">
       <div class="setting-title">{{ title }}</div>
-      <div v-if="description" class="setting-description">{{ description }}</div>
+      <div 
+        v-if="description" 
+        class="setting-description"
+        :class="{
+          'description-success': descriptionType === 'success',
+          'description-error': descriptionType === 'error'
+        }"
+      >
+        {{ description }}
+      </div>
     </div>
     <div class="setting-control">
       <slot></slot>
@@ -48,6 +58,14 @@ defineProps<{
       font-size: 11px;
       color: var(--settings-text-secondary);
       line-height: 1.4;
+      
+      &.description-success {
+        color: #4caf50;
+      }
+      
+      &.description-error {
+        color: #f44336;
+      }
     }
   }
   

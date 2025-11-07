@@ -268,9 +268,6 @@ export class OSInfo {
 
 /**
  * ObserverCallback 观察者回调函数
- * 参数：
- *   - oldValue: 配置变更前的值
- *   - newValue: 配置变更后的值
  */
 export type ObserverCallback = any;
 

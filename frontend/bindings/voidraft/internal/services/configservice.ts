@@ -12,6 +12,9 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -39,22 +42,6 @@ export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): vo
 }
 
 /**
- * GetConfigDir 获取配置目录
- */
-export function GetConfigDir(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2275626561) as any;
-    return $resultPromise;
-}
-
-/**
- * GetSettingsPath 获取设置文件路径
- */
-export function GetSettingsPath(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2175583370) as any;
-    return $resultPromise;
-}
-
-/**
  * MigrateConfig 执行配置迁移
  */
 export function MigrateConfig(): Promise<void> & { cancel(): void } {
@@ -75,6 +62,14 @@ export function ResetConfig(): Promise<void> & { cancel(): void } {
  */
 export function ServiceShutdown(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3963562361) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup initializes the service when the application starts
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3311949428, options) as any;
     return $resultPromise;
 }
 

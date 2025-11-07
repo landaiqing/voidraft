@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"os"
 	"path/filepath"
 	"strings"
@@ -45,25 +46,29 @@ func NewConfigService(logger *log.LogService) *ConfigService {
 	configDir := filepath.Join(homeDir, ".voidraft", "config")
 	settingsPath := filepath.Join(configDir, "settings.json")
 
-	cs := &ConfigService{
-		logger:       logger,
-		configDir:    configDir,
-		settingsPath: settingsPath,
-		koanf:        koanf.New("."),
+	observerService := NewConfigObserver(logger)
+
+	configMigrator := NewConfigMigrator(logger, configDir, "settings", settingsPath)
+
+	return &ConfigService{
+		logger:         logger,
+		configDir:      configDir,
+		settingsPath:   settingsPath,
+		koanf:          koanf.New("."),
+		observer:       observerService,
+		configMigrator: configMigrator,
 	}
+}
 
-	// 初始化配置观察者系统
-	cs.observer = NewConfigObserver(logger)
-
-	// 初始化配置迁移器
-	cs.configMigrator = NewConfigMigrator(logger, configDir, "settings", settingsPath)
-
-	cs.initConfig()
-
+// ServiceStartup initializes the service when the application starts
+func (cs *ConfigService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	err := cs.initConfig()
+	if err != nil {
+		panic(err)
+	}
 	// 启动配置文件监听
 	cs.startWatching()
-
-	return cs
+	return nil
 }
 
 // setDefaults 设置默认配置
@@ -103,19 +108,10 @@ func (cs *ConfigService) MigrateConfig() error {
 	}
 
 	defaultConfig := models.NewDefaultAppConfig()
-	result, err := cs.configMigrator.AutoMigrate(defaultConfig, cs.koanf)
-
+	_, err := cs.configMigrator.AutoMigrate(defaultConfig, cs.koanf)
 	if err != nil {
-		cs.logger.Error("Failed to check config migration", "error", err)
 		return err
 	}
-
-	if result != nil && result.Migrated {
-		cs.logger.Info("Config migration performed",
-			"fields", result.MissingFields,
-			"backup", result.BackupPath)
-	}
-
 	return nil
 }
 
@@ -156,10 +152,11 @@ func (cs *ConfigService) startWatching() {
 		cs.mu.Lock()
 		oldSnapshot := cs.createConfigSnapshot()
 		cs.koanf.Load(cs.fileProvider, jsonparser.Parser())
+		newSnapshot := cs.createConfigSnapshot()
 		cs.mu.Unlock()
 
 		// 检测配置变更并通知观察者
-		cs.detectAndNotifyChanges(oldSnapshot)
+		cs.notifyChanges(oldSnapshot, newSnapshot)
 	})
 
 }
@@ -188,22 +185,31 @@ func (cs *ConfigService) GetConfig() (*models.AppConfig, error) {
 func (cs *ConfigService) Set(key string, value interface{}) error {
 	cs.mu.Lock()
 
-	// 获取旧值
+	// 获取旧值用于回滚
 	oldValue := cs.koanf.Get(key)
 
 	// 设置值到koanf
 	cs.koanf.Set(key, value)
 
 	// 更新时间戳
-	cs.koanf.Set("metadata.lastUpdated", time.Now().Format(time.RFC3339))
+	newTimestamp := time.Now().Format(time.RFC3339)
+	cs.koanf.Set("metadata.lastUpdated", newTimestamp)
 
 	// 将配置写回文件
 	err := cs.writeConfigToFile()
-	cs.mu.Unlock()
 
 	if err != nil {
+		// 写文件失败，回滚内存状态
+		if oldValue != nil {
+			cs.koanf.Set(key, oldValue)
+		} else {
+			cs.koanf.Delete(key)
+		}
+		cs.mu.Unlock()
 		return err
 	}
+
+	cs.mu.Unlock()
 
 	if cs.observer != nil {
 		cs.observer.Notify(key, oldValue, value)
@@ -262,13 +268,14 @@ func (cs *ConfigService) ResetConfig() error {
 		return err
 	}
 
+	newSnapshot := cs.createConfigSnapshot()
 	cs.mu.Unlock()
 
 	// 重新启动文件监听
 	cs.startWatching()
 
 	// 检测配置变更并通知观察者
-	cs.detectAndNotifyChanges(oldSnapshot)
+	cs.notifyChanges(oldSnapshot, newSnapshot)
 
 	return nil
 }
@@ -297,14 +304,10 @@ func (cs *ConfigService) WatchWithContext(ctx context.Context, path string, call
 	cs.observer.WatchWithContext(ctx, path, callback)
 }
 
-// createConfigSnapshot 创建当前配置的快照
+// createConfigSnapshot 创建当前配置的快照（调用者需确保已持有锁）
 func (cs *ConfigService) createConfigSnapshot() map[string]interface{} {
-	cs.mu.RLock()
-	defer cs.mu.RUnlock()
 	snapshot := make(map[string]interface{})
 	allKeys := cs.koanf.All()
-
-	// 递归展平配置
 	flattenMap("", allKeys, snapshot)
 	return snapshot
 }
@@ -331,11 +334,8 @@ func flattenMap(prefix string, data map[string]interface{}, result map[string]in
 	}
 }
 
-// detectAndNotifyChanges 检测配置变更并通知观察者
-func (cs *ConfigService) detectAndNotifyChanges(oldSnapshot map[string]interface{}) {
-	// 创建新快照
-	newSnapshot := cs.createConfigSnapshot()
-
+// notifyChanges 检测配置变更并通知观察者
+func (cs *ConfigService) notifyChanges(oldSnapshot, newSnapshot map[string]interface{}) {
 	// 检测变更
 	changes := make(map[string]struct {
 		OldValue interface{}

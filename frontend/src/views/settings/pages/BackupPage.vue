@@ -2,7 +2,7 @@
 import {useConfigStore} from '@/stores/configStore';
 import {useBackupStore} from '@/stores/backupStore';
 import {useI18n} from 'vue-i18n';
-import {computed, onUnmounted} from 'vue';
+import {computed} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
@@ -13,18 +13,12 @@ const {t} = useI18n();
 const configStore = useConfigStore();
 const backupStore = useBackupStore();
 
-onUnmounted(() => {
-  backupStore.clearStatus();
-});
-
-// 认证方式选项
 const authMethodOptions = computed(() => [
   {value: AuthMethod.Token, label: t('settings.backup.authMethods.token')},
   {value: AuthMethod.SSHKey, label: t('settings.backup.authMethods.sshKey')},
   {value: AuthMethod.UserPass, label: t('settings.backup.authMethods.userPass')}
 ]);
 
-// 备份间隔选项（分钟）
 const backupIntervalOptions = computed(() => [
   {value: 5, label: t('settings.backup.intervals.5min')},
   {value: 10, label: t('settings.backup.intervals.10min')},
@@ -33,124 +27,11 @@ const backupIntervalOptions = computed(() => [
   {value: 60, label: t('settings.backup.intervals.1hour')}
 ]);
 
-// 计算属性 - 启用备份
-const enableBackup = computed({
-  get: () => configStore.config.backup.enabled,
-  set: (value: boolean) => configStore.setEnableBackup(value)
-});
-
-// 计算属性 - 自动备份
-const autoBackup = computed({
-  get: () => configStore.config.backup.auto_backup,
-  set: (value: boolean) => configStore.setAutoBackup(value)
-});
-
-// 仓库URL
-const repoUrl = computed({
-  get: () => configStore.config.backup.repo_url,
-  set: (value: string) => configStore.setRepoUrl(value)
-});
-
-
-// 认证方式
-const authMethod = computed({
-  get: () => configStore.config.backup.auth_method,
-  set: (value: AuthMethod) => configStore.setAuthMethod(value)
-});
-
-// 备份间隔
-const backupInterval = computed({
-  get: () => configStore.config.backup.backup_interval,
-  set: (value: number) => configStore.setBackupInterval(value)
-});
-
-// 用户名
-const username = computed({
-  get: () => configStore.config.backup.username,
-  set: (value: string) => configStore.setUsername(value)
-});
-
-// 密码
-const password = computed({
-  get: () => configStore.config.backup.password,
-  set: (value: string) => configStore.setPassword(value)
-});
-
-// 访问令牌
-const token = computed({
-  get: () => configStore.config.backup.token,
-  set: (value: string) => configStore.setToken(value)
-});
-
-// SSH密钥路径
-const sshKeyPath = computed({
-  get: () => configStore.config.backup.ssh_key_path,
-  set: (value: string) => configStore.setSshKeyPath(value)
-});
-
-// SSH密钥密码
-const sshKeyPassphrase = computed({
-  get: () => configStore.config.backup.ssh_key_passphrase,
-  set: (value: string) => configStore.setSshKeyPassphrase(value)
-});
-
-// 处理输入变化
-const handleRepoUrlChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  repoUrl.value = target.value;
-};
-
-
-const handleUsernameChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  username.value = target.value;
-};
-
-const handlePasswordChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  password.value = target.value;
-};
-
-const handleTokenChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  token.value = target.value;
-};
-
-const handleSshKeyPassphraseChange = (event: Event) => {
-  const target = event.target as HTMLInputElement;
-  sshKeyPassphrase.value = target.value;
-};
-
-const handleAuthMethodChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  authMethod.value = target.value as AuthMethod;
-};
-
-const handleBackupIntervalChange = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  backupInterval.value = parseInt(target.value);
-};
-
-// 推送到远程
-const pushToRemote = async () => {
-  await backupStore.pushToRemote();
-};
-
-// 重试备份
-const retryBackup = async () => {
-  await backupStore.retryBackup();
-};
-
-// 选择SSH密钥文件
 const selectSshKeyFile = async () => {
-  // 使用DialogService选择文件
   const selectedPath = await DialogService.SelectFile();
-  // 检查用户是否取消了选择或路径为空
-  if (!selectedPath.trim()) {
-    return;
+  if (selectedPath.trim()) {
+    configStore.setSshKeyPath(selectedPath.trim());
   }
-  // 更新SSH密钥路径
-  sshKeyPath.value = selectedPath.trim();
 };
 </script>
 
@@ -158,34 +39,35 @@ const selectSshKeyFile = async () => {
   <div class="settings-page">
     <!-- 基本设置 -->
     <SettingSection :title="t('settings.backup.basicSettings')">
-      <SettingItem
-          :title="t('settings.backup.enableBackup')"
-      >
-        <ToggleSwitch v-model="enableBackup"/>
+      <SettingItem :title="t('settings.backup.enableBackup')">
+        <ToggleSwitch 
+          :modelValue="configStore.config.backup.enabled"
+          @update:modelValue="configStore.setEnableBackup"
+        />
       </SettingItem>
 
       <SettingItem
-          :title="t('settings.backup.autoBackup')"
-          :class="{ 'disabled-setting': !enableBackup }"
+        :title="t('settings.backup.autoBackup')"
+        :class="{ 'disabled-setting': !configStore.config.backup.enabled }"
       >
-        <ToggleSwitch v-model="autoBackup" :disabled="!enableBackup"/>
+        <ToggleSwitch 
+          :modelValue="configStore.config.backup.auto_backup"
+          @update:modelValue="configStore.setAutoBackup"
+          :disabled="!configStore.config.backup.enabled"
+        />
       </SettingItem>
 
       <SettingItem
-          :title="t('settings.backup.backupInterval')"
-          :class="{ 'disabled-setting': !enableBackup || !autoBackup }"
+        :title="t('settings.backup.backupInterval')"
+        :class="{ 'disabled-setting': !configStore.config.backup.enabled || !configStore.config.backup.auto_backup }"
       >
         <select
-            class="backup-interval-select"
-            :value="backupInterval"
-            @change="handleBackupIntervalChange"
-            :disabled="!enableBackup || !autoBackup"
+          class="backup-interval-select"
+          :value="configStore.config.backup.backup_interval"
+          @change="(e) => configStore.setBackupInterval(Number((e.target as HTMLSelectElement).value))"
+          :disabled="!configStore.config.backup.enabled || !configStore.config.backup.auto_backup"
         >
-          <option
-              v-for="option in backupIntervalOptions"
-              :key="option.value"
-              :value="option.value"
-          >
+          <option v-for="option in backupIntervalOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </option>
         </select>
@@ -194,110 +76,94 @@ const selectSshKeyFile = async () => {
 
     <!-- 仓库配置 -->
     <SettingSection :title="t('settings.backup.repositoryConfig')">
-      <SettingItem
-          :title="t('settings.backup.repoUrl')"
-      >
+      <SettingItem :title="t('settings.backup.repoUrl')">
         <input
-            type="text"
-            class="repo-url-input"
-            :value="repoUrl"
-            @input="handleRepoUrlChange"
-            :placeholder="t('settings.backup.repoUrlPlaceholder')"
-            :disabled="!enableBackup"
+          type="text"
+          class="repo-url-input"
+          :value="configStore.config.backup.repo_url"
+          @input="(e) => configStore.setRepoUrl((e.target as HTMLInputElement).value)"
+          :placeholder="t('settings.backup.repoUrlPlaceholder')"
+          :disabled="!configStore.config.backup.enabled"
         />
       </SettingItem>
-
-
     </SettingSection>
 
     <!-- 认证配置 -->
     <SettingSection :title="t('settings.backup.authConfig')">
-      <SettingItem
-          :title="t('settings.backup.authMethod')"
-      >
+      <SettingItem :title="t('settings.backup.authMethod')">
         <select
-            class="auth-method-select"
-            :value="authMethod"
-            @change="handleAuthMethodChange"
-            :disabled="!enableBackup"
+          class="auth-method-select"
+          :value="configStore.config.backup.auth_method"
+          @change="(e) => configStore.setAuthMethod((e.target as HTMLSelectElement).value as AuthMethod)"
+          :disabled="!configStore.config.backup.enabled"
         >
-          <option
-              v-for="option in authMethodOptions"
-              :key="option.value"
-              :value="option.value"
-          >
+          <option v-for="option in authMethodOptions" :key="option.value" :value="option.value">
             {{ option.label }}
           </option>
         </select>
       </SettingItem>
 
       <!-- 用户名密码认证 -->
-      <template v-if="authMethod === AuthMethod.UserPass">
+      <template v-if="configStore.config.backup.auth_method === AuthMethod.UserPass">
         <SettingItem :title="t('settings.backup.username')">
           <input
-              type="text"
-              class="username-input"
-              :value="username"
-              @input="handleUsernameChange"
-              :placeholder="t('settings.backup.usernamePlaceholder')"
-              :disabled="!enableBackup"
+            type="text"
+            class="username-input"
+            :value="configStore.config.backup.username"
+            @input="(e) => configStore.setUsername((e.target as HTMLInputElement).value)"
+            :placeholder="t('settings.backup.usernamePlaceholder')"
+            :disabled="!configStore.config.backup.enabled"
           />
         </SettingItem>
 
         <SettingItem :title="t('settings.backup.password')">
           <input
-              type="password"
-              class="password-input"
-              :value="password"
-              @input="handlePasswordChange"
-              :placeholder="t('settings.backup.passwordPlaceholder')"
-              :disabled="!enableBackup"
+            type="password"
+            class="password-input"
+            :value="configStore.config.backup.password"
+            @input="(e) => configStore.setPassword((e.target as HTMLInputElement).value)"
+            :placeholder="t('settings.backup.passwordPlaceholder')"
+            :disabled="!configStore.config.backup.enabled"
           />
         </SettingItem>
       </template>
 
       <!-- 访问令牌认证 -->
-      <template v-if="authMethod === AuthMethod.Token">
-        <SettingItem
-            :title="t('settings.backup.token')"
-        >
+      <template v-if="configStore.config.backup.auth_method === AuthMethod.Token">
+        <SettingItem :title="t('settings.backup.token')">
           <input
-              type="password"
-              class="token-input"
-              :value="token"
-              @input="handleTokenChange"
-              :placeholder="t('settings.backup.tokenPlaceholder')"
-              :disabled="!enableBackup"
+            type="password"
+            class="token-input"
+            :value="configStore.config.backup.token"
+            @input="(e) => configStore.setToken((e.target as HTMLInputElement).value)"
+            :placeholder="t('settings.backup.tokenPlaceholder')"
+            :disabled="!configStore.config.backup.enabled"
           />
         </SettingItem>
       </template>
 
       <!-- SSH密钥认证 -->
-      <template v-if="authMethod === AuthMethod.SSHKey">
-        <SettingItem
-            :title="t('settings.backup.sshKeyPath')"
-        >
+      <template v-if="configStore.config.backup.auth_method === AuthMethod.SSHKey">
+        <SettingItem :title="t('settings.backup.sshKeyPath')">
           <input
-              type="text"
-              class="ssh-key-path-input"
-              :value="sshKeyPath"
-              :placeholder="t('settings.backup.sshKeyPathPlaceholder')"
-              :disabled="!enableBackup"
-              readonly
-              @click="enableBackup && selectSshKeyFile()"
+            type="text"
+            class="ssh-key-path-input"
+            :value="configStore.config.backup.ssh_key_path"
+            :placeholder="t('settings.backup.sshKeyPathPlaceholder')"
+            :disabled="!configStore.config.backup.enabled"
+            readonly
+            @click="configStore.config.backup.enabled && selectSshKeyFile()"
           />
         </SettingItem>
 
-        <SettingItem
-            :title="t('settings.backup.sshKeyPassphrase')"
-        >
+        <SettingItem :title="t('settings.backup.sshKeyPassphrase')">
           <input
-              type="password"
-              class="ssh-passphrase-input"
-              :value="sshKeyPassphrase"
-              @input="handleSshKeyPassphraseChange"
-              :placeholder="t('settings.backup.sshKeyPassphrasePlaceholder')"
-              :disabled="!enableBackup"
+            type="password"
+            class="ssh-passphrase-input"
+            :value="configStore.config.backup.ssh_key_passphrase"
+            @input="(e) => configStore.setSshKeyPassphrase((e.target as HTMLInputElement).value)"
+            :placeholder="t('settings.backup.sshKeyPassphrasePlaceholder')"
+            :disabled="!configStore.config.backup.enabled"
           />
         </SettingItem>
       </template>
@@ -305,36 +171,21 @@ const selectSshKeyFile = async () => {
 
     <!-- 备份操作 -->
     <SettingSection :title="t('settings.backup.backupOperations')">
-      <SettingItem
-          :title="t('settings.backup.pushToRemote')"
+      <SettingItem 
+        :title="t('settings.backup.pushToRemote')"
+        :description="backupStore.message || undefined"
+        :descriptionType="backupStore.message ? (backupStore.isError ? 'error' : 'success') : 'default'"
       >
-        <div class="backup-operation-container">
-          <div class="backup-status-icons">
-            <span v-if="backupStore.isSuccess" class="success-icon">✓</span>
-            <span v-if="backupStore.isError" class="error-icon">✗</span>
-          </div>
-          <button
-              class="push-button"
-              @click="() => pushToRemote()"
-              :disabled="!enableBackup || !repoUrl || backupStore.isPushing"
-              :class="{ 'backing-up': backupStore.isPushing }"
-          >
-            <span v-if="backupStore.isPushing" class="loading-spinner"></span>
-            {{ backupStore.isPushing ? t('settings.backup.pushing') : t('settings.backup.actions.push') }}
-          </button>
-          <button
-              v-if="backupStore.isError"
-              class="retry-button"
-              @click="() => retryBackup()"
-              :disabled="backupStore.isPushing"
-          >
-            {{ t('settings.backup.actions.retry') }}
-          </button>
-        </div>
+        <button
+          class="push-button"
+          @click="backupStore.pushToRemote"
+          :disabled="!configStore.config.backup.enabled || !configStore.config.backup.repo_url || backupStore.isPushing"
+          :class="{ 'backing-up': backupStore.isPushing }"
+        >
+          <span v-if="backupStore.isPushing" class="loading-spinner"></span>
+          {{ backupStore.isPushing ? t('settings.backup.pushing') : t('settings.backup.actions.push') }}
+        </button>
       </SettingItem>
-      <div v-if="backupStore.errorMessage" class="error-message-row">
-        {{ backupStore.errorMessage }}
-      </div>
     </SettingSection>
   </div>
 </template>
@@ -405,38 +256,8 @@ const selectSshKeyFile = async () => {
   }
 }
 
-// 备份操作容器
-.backup-operation-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-// 备份状态图标
-.backup-status-icons {
-  width: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-right: 8px;
-}
-
-// 成功和错误图标
-.success-icon {
-  color: #4caf50;
-  font-size: 18px;
-  font-weight: bold;
-}
-
-.error-icon {
-  color: #f44336;
-  font-size: 18px;
-  font-weight: bold;
-}
-
 // 按钮样式
-.push-button,
-.retry-button {
+.push-button {
   padding: 8px 16px;
   background-color: var(--settings-input-bg);
   border: 1px solid var(--settings-input-border);
@@ -478,30 +299,6 @@ const selectSshKeyFile = async () => {
     border-color: #2196f3;
     color: white;
   }
-}
-
-.retry-button {
-  background-color: #ff9800;
-  border-color: #ff9800;
-  color: white;
-
-  &:hover:not(:disabled) {
-    background-color: #f57c00;
-    border-color: #f57c00;
-  }
-}
-
-// 错误信息行样式
-.error-message-row {
-  color: #f44336;
-  font-size: 11px;
-  line-height: 1.4;
-  word-wrap: break-word;
-  margin-top: 8px;
-  padding: 8px 16px;
-  background-color: rgba(244, 67, 54, 0.1);
-  border-left: 3px solid #f44336;
-  border-radius: 4px;
 }
 
 // 禁用状态

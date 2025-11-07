@@ -11,9 +11,6 @@ import (
 )
 
 // ObserverCallback 观察者回调函数
-// 参数：
-//   - oldValue: 配置变更前的值
-//   - newValue: 配置变更后的值
 type ObserverCallback func(oldValue, newValue interface{})
 
 // CancelFunc 取消订阅函数
@@ -28,7 +25,6 @@ type observer struct {
 }
 
 // ConfigObserver 配置观察者系统
-// 提供轻量级的配置变更监听机制
 type ConfigObserver struct {
 	observers      map[string][]*observer // 路径 -> 观察者列表
 	observerMu     sync.RWMutex           // 观察者锁
@@ -53,19 +49,6 @@ func NewConfigObserver(logger *log.LogService) *ConfigObserver {
 }
 
 // Watch 注册配置变更监听器
-// 参数：
-//   - path: 配置路径，如 "general.enableGlobalHotkey"
-//   - callback: 变更回调函数，接收旧值和新值
-//
-// 返回：
-//   - CancelFunc: 取消监听的函数，务必在不需要时调用以避免内存泄漏
-//
-// 示例：
-//
-//	cancel := observer.Watch("general.hotkey", func(old, new interface{}) {
-//	    fmt.Printf("配置从 %v 变更为 %v\n", old, new)
-//	})
-//	defer cancel() // 确保清理
 func (co *ConfigObserver) Watch(path string, callback ObserverCallback) CancelFunc {
 	// 生成唯一ID
 	id := fmt.Sprintf("obs_%d", co.nextObserverID.Add(1))
@@ -88,17 +71,6 @@ func (co *ConfigObserver) Watch(path string, callback ObserverCallback) CancelFu
 }
 
 // WatchWithContext 使用 Context 注册监听器，Context 取消时自动清理
-// 参数：
-//   - ctx: Context，取消时自动移除观察者
-//   - path: 配置路径
-//   - callback: 变更回调函数
-//
-// 示例：
-//
-//	ctx, cancel := context.WithCancel(context.Background())
-//	defer cancel()
-//	observer.WatchWithContext(ctx, "general.hotkey", callback)
-//	// Context 取消时自动清理
 func (co *ConfigObserver) WatchWithContext(ctx context.Context, path string, callback ObserverCallback) {
 	cancel := co.Watch(path, callback)
 	go func() {
@@ -132,12 +104,6 @@ func (co *ConfigObserver) removeObserver(path, id string) {
 }
 
 // Notify 通知指定路径的所有观察者
-// 参数：
-//   - path: 配置路径
-//   - oldValue: 旧值
-//   - newValue: 新值
-//
-// 注意：此方法会在独立的 goroutine 中异步执行回调，不会阻塞调用者
 func (co *ConfigObserver) Notify(path string, oldValue, newValue interface{}) {
 	// 获取该路径的所有观察者（拷贝以避免并发问题）
 	co.observerMu.RLock()
@@ -222,7 +188,6 @@ func (co *ConfigObserver) Clear() {
 }
 
 // Shutdown 关闭观察者系统
-// 等待所有正在执行的回调完成
 func (co *ConfigObserver) Shutdown() {
 	// 取消 context
 	co.cancel()

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-git/go-git/v5"
@@ -36,6 +37,8 @@ type BackupService struct {
 	isInitialized    bool
 	autoBackupTicker *time.Ticker
 	autoBackupStop   chan bool
+	autoBackupWg     sync.WaitGroup // 等待自动备份goroutine完成
+	mu               sync.Mutex     // 推送操作互斥锁
 
 	// 配置观察者取消函数
 	cancelObserver CancelFunc
@@ -84,6 +87,11 @@ func (s *BackupService) Initialize() error {
 	// 初始化仓库
 	if err := s.initializeRepository(config, repoPath); err != nil {
 		return fmt.Errorf("initializing repository: %w", err)
+	}
+
+	// 验证远程仓库连接
+	if err := s.verifyRemoteConnection(config); err != nil {
+		return fmt.Errorf("verifying remote connection: %w", err)
 	}
 
 	// 启动自动备份
@@ -161,6 +169,22 @@ func (s *BackupService) initializeRepository(config *models.GitBackupConfig, rep
 	return nil
 }
 
+// verifyRemoteConnection 验证远程仓库连接
+func (s *BackupService) verifyRemoteConnection(config *models.GitBackupConfig) error {
+	auth, err := s.getAuthMethod(config)
+	if err != nil {
+		return err
+	}
+
+	remote, err := s.repository.Remote("origin")
+	if err != nil {
+		return err
+	}
+
+	_, err = remote.List(&git.ListOptions{Auth: auth})
+	return err
+}
+
 // getAuthMethod 根据配置获取认证方法
 func (s *BackupService) getAuthMethod(config *models.GitBackupConfig) (transport.AuthMethod, error) {
 	switch config.AuthMethod {
@@ -203,31 +227,15 @@ func (s *BackupService) serializeDatabase(repoPath string) error {
 		return errors.New("database service not available")
 	}
 
-	// 获取数据库路径
-	dbPath, err := s.dbService.getDatabasePath()
-	if err != nil {
-		return fmt.Errorf("getting database path: %w", err)
-	}
-
-	// 关闭数据库连接以确保所有更改都写入磁盘
-	if err := s.dbService.ServiceShutdown(); err != nil {
-		s.logger.Error("Failed to close database connection", "error", err)
-	}
-
-	// 直接复制数据库文件到序列化文件
-	dbData, err := os.ReadFile(dbPath)
-	if err != nil {
-		return fmt.Errorf("reading database file: %w", err)
-	}
-
 	binFilePath := filepath.Join(repoPath, dbSerializeFile)
-	if err := os.WriteFile(binFilePath, dbData, 0644); err != nil {
-		return fmt.Errorf("writing serialized database to file: %w", err)
-	}
 
-	// 重新初始化数据库服务
-	if err := s.dbService.initDatabase(); err != nil {
-		return fmt.Errorf("reinitializing database: %w", err)
+	// 使用 VACUUM INTO 创建数据库副本，不影响现有连接
+	s.dbService.mu.RLock()
+	_, err := s.dbService.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", binFilePath))
+	s.dbService.mu.RUnlock()
+
+	if err != nil {
+		return fmt.Errorf("creating database backup: %w", err)
 	}
 
 	return nil
@@ -235,6 +243,10 @@ func (s *BackupService) serializeDatabase(repoPath string) error {
 
 // PushToRemote 推送本地更改到远程仓库
 func (s *BackupService) PushToRemote() error {
+	// 互斥锁防止并发推送
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if !s.isInitialized {
 		return errors.New("backup service not initialized")
 	}
@@ -248,56 +260,62 @@ func (s *BackupService) PushToRemote() error {
 		return errors.New("backup is disabled")
 	}
 
-	// 数据库序列化文件的路径
+	// 检查是否有未推送的commit
+	hasUnpushed, err := s.hasUnpushedCommits()
+	if err != nil {
+		return fmt.Errorf("checking unpushed commits: %w", err)
+	}
+
 	binFilePath := filepath.Join(repoPath, dbSerializeFile)
 
-	// 函数返回前都删除临时文件
-	defer func() {
-		if _, err := os.Stat(binFilePath); err == nil {
-			os.Remove(binFilePath)
+	// 只有在没有未推送commit时才创建新commit
+	if !hasUnpushed {
+		// 序列化数据库
+		if err := s.serializeDatabase(repoPath); err != nil {
+			return fmt.Errorf("serializing database: %w", err)
 		}
-	}()
 
-	// 序列化数据库
-	if err := s.serializeDatabase(repoPath); err != nil {
-		return fmt.Errorf("serializing database: %w", err)
-	}
+		// 获取工作树
+		w, err := s.repository.Worktree()
+		if err != nil {
+			os.Remove(binFilePath)
+			return fmt.Errorf("getting worktree: %w", err)
+		}
 
-	// 获取工作树
-	w, err := s.repository.Worktree()
-	if err != nil {
-		return fmt.Errorf("getting worktree: %w", err)
-	}
+		// 添加序列化的数据库文件
+		if _, err := w.Add(dbSerializeFile); err != nil {
+			os.Remove(binFilePath)
+			return fmt.Errorf("adding serialized database file: %w", err)
+		}
 
-	// 添加序列化的数据库文件
-	if _, err := w.Add(dbSerializeFile); err != nil {
-		return fmt.Errorf("adding serialized database file: %w", err)
-	}
+		// 检查是否有变化需要提交
+		status, err := w.Status()
+		if err != nil {
+			os.Remove(binFilePath)
+			return fmt.Errorf("getting worktree status: %w", err)
+		}
 
-	// 检查是否有变化需要提交
-	status, err := w.Status()
-	if err != nil {
-		return fmt.Errorf("getting worktree status: %w", err)
-	}
-
-	// 如果没有变化，直接返回
-	if status.IsClean() {
-		return errors.New("no changes to backup")
-	}
-
-	// 创建提交
-	_, err = w.Commit(fmt.Sprintf("Backup %s", time.Now().Format("2006-01-02 15:04:05")), &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  "voidraft",
-			Email: "backup@voidraft.app",
-			When:  time.Now(),
-		},
-	})
-	if err != nil {
-		if strings.Contains(err.Error(), "cannot create empty commit") {
+		// 如果没有变化，删除文件并返回
+		if status.IsClean() {
+			os.Remove(binFilePath)
 			return errors.New("no changes to backup")
 		}
-		return fmt.Errorf("creating commit: %w", err)
+
+		// 创建提交
+		_, err = w.Commit(fmt.Sprintf("Backup %s", time.Now().Format("2006-01-02 15:04:05")), &git.CommitOptions{
+			Author: &object.Signature{
+				Name:  "voidraft",
+				Email: "backup@voidraft.app",
+				When:  time.Now(),
+			},
+		})
+		if err != nil {
+			os.Remove(binFilePath)
+			if strings.Contains(err.Error(), "cannot create empty commit") {
+				return errors.New("no changes to backup")
+			}
+			return fmt.Errorf("creating commit: %w", err)
+		}
 	}
 
 	// 获取认证方法并推送到远程
@@ -306,23 +324,55 @@ func (s *BackupService) PushToRemote() error {
 		return fmt.Errorf("getting auth method: %w", err)
 	}
 
-	// 推送到远程仓库
+	// 推送到远程仓库（包括之前失败的commit）
 	if err := s.repository.Push(&git.PushOptions{
 		RemoteName: "origin",
 		Auth:       auth,
-	}); err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
-		// 忽略一些常见的非错误情况
-		if strings.Contains(err.Error(), "clean working tree") ||
-			strings.Contains(err.Error(), "already up-to-date") ||
-			strings.Contains(err.Error(), " clean working tree") ||
-			strings.Contains(err.Error(), "reference not found") {
-			// 更新最后推送时间
-			return errors.New("no changes to backup")
-		}
-		return fmt.Errorf("push failed: %w", err)
+	}); err != nil {
+		return err
 	}
 
+	// 只在推送成功后删除临时文件
+	os.Remove(binFilePath)
 	return nil
+}
+
+// hasUnpushedCommits 检查是否有未推送的commit
+func (s *BackupService) hasUnpushedCommits() (bool, error) {
+	localRef, err := s.repository.Head()
+	if err != nil {
+		return false, nil
+	}
+
+	config, _, err := s.getConfigAndPath()
+	if err != nil {
+		return false, err
+	}
+
+	auth, err := s.getAuthMethod(config)
+	if err != nil {
+		return false, err
+	}
+
+	remote, err := s.repository.Remote("origin")
+	if err != nil {
+		return false, err
+	}
+
+	refs, err := remote.List(&git.ListOptions{Auth: auth})
+	if err != nil {
+		return false, err
+	}
+
+	localHash := localRef.Hash()
+
+	for _, ref := range refs {
+		if ref.Name() == localRef.Name() {
+			return localHash != ref.Hash(), nil
+		}
+	}
+
+	return true, nil
 }
 
 // StartAutoBackup 启动自动备份定时器
@@ -342,14 +392,13 @@ func (s *BackupService) StartAutoBackup() error {
 	s.autoBackupTicker = time.NewTicker(time.Duration(config.BackupInterval) * time.Minute)
 	s.autoBackupStop = make(chan bool)
 
+	s.autoBackupWg.Add(1)
 	go func() {
+		defer s.autoBackupWg.Done()
 		for {
 			select {
 			case <-s.autoBackupTicker.C:
-				// 执行推送操作
-				if err := s.PushToRemote(); err != nil {
-					s.logger.Error("Auto backup failed", "error", err)
-				}
+				s.PushToRemote()
 			case <-s.autoBackupStop:
 				return
 			}
@@ -369,16 +418,18 @@ func (s *BackupService) StopAutoBackup() {
 	if s.autoBackupStop != nil {
 		close(s.autoBackupStop)
 		s.autoBackupStop = nil
+		s.autoBackupWg.Wait()
 	}
 }
 
 // Reinitialize 重新初始化备份服务，用于响应配置变更
 func (s *BackupService) Reinitialize() error {
-	// 停止自动备份
+	// 先停止自动备份，等待goroutine完成
 	s.StopAutoBackup()
 
-	// 重新设置标志
+	s.mu.Lock()
 	s.isInitialized = false
+	s.mu.Unlock()
 
 	// 重新初始化
 	return s.Initialize()
@@ -386,11 +437,12 @@ func (s *BackupService) Reinitialize() error {
 
 // HandleConfigChange 处理备份配置变更
 func (s *BackupService) HandleConfigChange(config *models.GitBackupConfig) error {
-
 	// 如果备份功能禁用，只需停止自动备份
 	if !config.Enabled {
 		s.StopAutoBackup()
+		s.mu.Lock()
 		s.isInitialized = false
+		s.mu.Unlock()
 		return nil
 	}
 
