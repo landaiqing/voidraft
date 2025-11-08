@@ -20,6 +20,8 @@ const (
 	ModShift  = darwin.ModShift
 	ModOption = darwin.ModOption
 	ModCmd    = darwin.ModCmd
+	ModAlt    = darwin.ModOption // Alias for ModOption (Alt key on macOS)
+	ModWin    = darwin.ModCmd    // Alias for ModCmd (Cmd key is like Win key)
 )
 
 // Key represents a key.

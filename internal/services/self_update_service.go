@@ -302,7 +302,9 @@ func (s *SelfUpdateService) handleUpdateSuccess(result *SelfUpdateResult) {
 	if err := s.configService.Set("updates.version", result.LatestVersion); err != nil {
 		s.logger.Error("update config version failed", "error", err)
 	}
-
+	if err := s.configService.Set("metadata.version", result.LatestVersion); err != nil {
+		s.logger.Error("update config version failed", "error", err)
+	}
 	// 执行配置迁移
 	if err := s.configService.MigrateConfig(); err != nil {
 		s.logger.Error("migrate config failed", "error", err)

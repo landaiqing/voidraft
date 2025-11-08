@@ -19,6 +19,7 @@ const (
 	ModCtrl  = linux.ModCtrl
 	ModShift = linux.ModShift
 	ModAlt   = linux.ModAlt // Alias for Mod1
+	ModWin   = linux.Mod4   // Super/Windows key is typically Mod4 on Linux
 	Mod1     = linux.Mod1
 	Mod2     = linux.Mod2
 	Mod3     = linux.Mod3
