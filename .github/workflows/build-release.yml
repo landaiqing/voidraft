@@ -174,20 +174,14 @@ jobs:
         working-directory: frontend
         run: npm run build
 
-      # 生成图标（构建前需要）
-      - name: 生成图标
-        run: wails3 task common:generate:icons
-        shell: bash
-
       # 使用 Wails Task 构建和打包应用
       - name: 构建和打包 Wails 应用
-        working-directory: build/${{ matrix.platform_dir }}
-        run: wails3 task package PRODUCTION=true ARCH=${{ matrix.arch }}
+        run: wails3 task ${{ matrix.id }}:package PRODUCTION=true ARCH=${{ matrix.arch }}
         env:
           CGO_ENABLED: 1
           APP_NAME: voidraft
-          BIN_DIR: ../../bin
-          ROOT_DIR: ../..
+          BIN_DIR: bin
+          ROOT_DIR: .
         shell: bash
 
       # 整理构建产物
