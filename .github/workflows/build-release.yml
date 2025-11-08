@@ -50,24 +50,27 @@ jobs:
           MATRIX='{"include":[]}'
           
           if [[ "$PLATFORMS" == *"windows"* ]]; then
-            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"windows-latest","os":"windows","arch":"amd64","output_name":"voidraft-windows-amd64.exe","id":"windows"}]')
+            MATRIX=$(echo "$MATRIX" | jq -c '.include += [{"platform":"windows-latest","os":"windows","arch":"amd64","output_name":"voidraft-windows-amd64.exe","id":"windows"}]')
           fi
           
           if [[ "$PLATFORMS" == *"linux"* ]]; then
-            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"ubuntu-22.04","os":"linux","arch":"amd64","output_name":"voidraft-linux-amd64","id":"linux"}]')
+            MATRIX=$(echo "$MATRIX" | jq -c '.include += [{"platform":"ubuntu-22.04","os":"linux","arch":"amd64","output_name":"voidraft-linux-amd64","id":"linux"}]')
           fi
           
           if [[ "$PLATFORMS" == *"macos-intel"* ]]; then
-            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"macos-latest","os":"darwin","arch":"amd64","output_name":"voidraft-darwin-amd64","id":"macos-intel"}]')
+            MATRIX=$(echo "$MATRIX" | jq -c '.include += [{"platform":"macos-latest","os":"darwin","arch":"amd64","output_name":"voidraft-darwin-amd64","id":"macos-intel"}]')
           fi
           
           if [[ "$PLATFORMS" == *"macos-arm"* ]]; then
-            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"macos-latest","os":"darwin","arch":"arm64","output_name":"voidraft-darwin-arm64","id":"macos-arm"}]')
+            MATRIX=$(echo "$MATRIX" | jq -c '.include += [{"platform":"macos-latest","os":"darwin","arch":"arm64","output_name":"voidraft-darwin-arm64","id":"macos-arm"}]')
           fi
           
-          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          # 使用 -c 确保输出紧凑的单行 JSON，符合 GitHub Actions 输出格式
+          echo "matrix=$(echo "$MATRIX" | jq -c .)" >> $GITHUB_OUTPUT
+          
+          # 输出美化的 JSON 用于日志查看
           echo "生成的矩阵:"
-          echo $MATRIX | jq .
+          echo "$MATRIX" | jq .
       
       - name: 检查是否创建 Release
         id: check-release
