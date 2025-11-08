@@ -1,0 +1,286 @@
+name: Build and Release Voidraft
+
+on:
+  # 推送标签时触发（用于正式发布）
+  push:
+    tags:
+      - 'v*'  # 触发条件：推送 v 开头的标签，如 v1.0.0
+    branches:
+      - main  # 仅当标签在 main 分支时触发
+  
+  # 手动触发（用于测试）
+  workflow_dispatch:
+    inputs:
+      release:
+        description: '是否创建 Release（测试时选 false）'
+        required: true
+        type: boolean
+        default: false
+      platforms:
+        description: '要构建的平台（用逗号分隔：windows,linux,macos-intel,macos-arm）'
+        required: true
+        type: string
+        default: 'windows,linux'
+
+env:
+  NODE_OPTIONS: "--max-old-space-size=4096"  # 防止 Node.js 内存溢出
+
+jobs:
+  # 准备构建配置
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      should_release: ${{ steps.check-release.outputs.should_release }}
+    steps:
+      - name: 确定构建平台
+        id: set-matrix
+        run: |
+          # 如果是手动触发，根据输入决定平台
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            PLATFORMS="${{ github.event.inputs.platforms }}"
+          else
+            # 标签触发，构建所有平台
+            PLATFORMS="windows,linux,macos-intel,macos-arm"
+          fi
+          
+          echo "构建平台: $PLATFORMS"
+          
+          # 构建矩阵 JSON
+          MATRIX='{"include":[]}'
+          
+          if [[ "$PLATFORMS" == *"windows"* ]]; then
+            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"windows-latest","os":"windows","arch":"amd64","output_name":"voidraft-windows-amd64.exe","id":"windows"}]')
+          fi
+          
+          if [[ "$PLATFORMS" == *"linux"* ]]; then
+            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"ubuntu-22.04","os":"linux","arch":"amd64","output_name":"voidraft-linux-amd64","id":"linux"}]')
+          fi
+          
+          if [[ "$PLATFORMS" == *"macos-intel"* ]]; then
+            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"macos-latest","os":"darwin","arch":"amd64","output_name":"voidraft-darwin-amd64","id":"macos-intel"}]')
+          fi
+          
+          if [[ "$PLATFORMS" == *"macos-arm"* ]]; then
+            MATRIX=$(echo $MATRIX | jq '.include += [{"platform":"macos-latest","os":"darwin","arch":"arm64","output_name":"voidraft-darwin-arm64","id":"macos-arm"}]')
+          fi
+          
+          echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+          echo "生成的矩阵:"
+          echo $MATRIX | jq .
+      
+      - name: 检查是否创建 Release
+        id: check-release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # 手动触发，根据输入决定
+            echo "should_release=${{ github.event.inputs.release }}" >> $GITHUB_OUTPUT
+          else
+            # 标签触发，自动创建 Release
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: prepare
+    if: ${{ fromJson(needs.prepare.outputs.matrix).include[0] != null }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
+
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: 设置 Go 环境
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      # Linux 平台依赖
+      - name: 安装 Linux 依赖
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            pkg-config
+
+      # Windows 平台依赖（GitHub Actions 的 Windows runner 已包含 MinGW）
+      - name: 设置 Windows 构建环境
+        if: matrix.os == 'windows'
+        run: |
+          echo "Windows runner 已包含构建工具"
+        shell: bash
+
+      # macOS 平台依赖
+      - name: 设置 macOS 构建环境
+        if: matrix.os == 'darwin'
+        run: |
+          # Xcode 命令行工具通常已安装
+          xcode-select --install 2>/dev/null || true
+
+      # 安装 Wails CLI
+      - name: 安装 Wails CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      # 安装前端依赖
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: npm ci
+
+      # 构建前端
+      - name: 构建前端
+        working-directory: frontend
+        run: npm run build
+
+      # 构建 Wails 应用
+      - name: 构建 Wails 应用
+        run: |
+          wails3 build -platform ${{ matrix.os }}/${{ matrix.arch }}
+        shell: bash
+
+      # 查找构建产物
+      - name: 查找构建产物
+        id: find_binary
+        shell: bash
+        run: |
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            BINARY=$(find build/bin -name "*.exe" -type f | head -n 1)
+          elif [ "${{ matrix.os }}" = "darwin" ]; then
+            # macOS 可能生成 .app 包或二进制文件
+            BINARY=$(find build/bin -type f \( -name "*.app" -o ! -name ".*" \) | head -n 1)
+          else
+            BINARY=$(find build/bin -type f ! -name ".*" | head -n 1)
+          fi
+          echo "binary_path=$BINARY" >> $GITHUB_OUTPUT
+          echo "找到的二进制文件: $BINARY"
+
+      # 重命名构建产物
+      - name: 重命名构建产物
+        shell: bash
+        run: |
+          BINARY_PATH="${{ steps.find_binary.outputs.binary_path }}"
+          if [ -n "$BINARY_PATH" ]; then
+            # 对于 macOS .app 包，打包为 zip
+            if [[ "$BINARY_PATH" == *.app ]]; then
+              cd "$(dirname "$BINARY_PATH")"
+              zip -r "${{ matrix.output_name }}.zip" "$(basename "$BINARY_PATH")"
+              echo "ARTIFACT_PATH=$(pwd)/${{ matrix.output_name }}.zip" >> $GITHUB_ENV
+            else
+              cp "$BINARY_PATH" "${{ matrix.output_name }}"
+              echo "ARTIFACT_PATH=$(pwd)/${{ matrix.output_name }}" >> $GITHUB_ENV
+            fi
+          fi
+
+      # 上传构建产物到 Artifacts
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ env.ARTIFACT_PATH }}
+          if-no-files-found: error
+
+  # 创建 GitHub Release 并上传所有构建产物
+  release:
+    needs: [prepare, build]
+    if: ${{ needs.prepare.outputs.should_release == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 显示下载的文件
+        run: |
+          echo "下载的构建产物："
+          ls -R artifacts/
+
+      - name: 准备 Release 文件
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp {} release/ \;
+          ls -lh release/
+
+      - name: 生成 Release 说明
+        id: release_notes
+        run: |
+          # 获取版本号
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.sha }}"
+            VERSION_NAME="测试构建 ${VERSION:0:7}"
+          else
+            VERSION="${{ github.ref_name }}"
+            VERSION_NAME="${VERSION}"
+          fi
+          
+          cat > release_notes.md << EOF
+          ## Voidraft ${VERSION_NAME}
+          
+          ### 📦 下载
+          
+          根据你的操作系统选择对应的版本：
+          
+          - **Windows (64位)**: \`voidraft-windows-amd64.exe\`
+          - **Linux (64位)**: \`voidraft-linux-amd64\`
+          - **macOS (Intel)**: \`voidraft-darwin-amd64.zip\`
+          - **macOS (Apple Silicon)**: \`voidraft-darwin-arm64.zip\`
+          
+          ### 📝 更新内容
+          
+          请查看 [提交历史](../../commits/${{ github.ref_name }}) 了解本次更新的详细内容。
+          
+          ### 💡 使用说明
+          
+          #### Windows
+          1. 下载 `voidraft-windows-amd64.exe`
+          2. 直接运行即可
+          
+          #### Linux
+          1. 下载 `voidraft-linux-amd64`
+          2. 添加执行权限：`chmod +x voidraft-linux-amd64`
+          3. 运行：`./voidraft-linux-amd64`
+          
+          #### macOS
+          1. 下载对应架构的 zip 文件
+          2. 解压后运行
+          3. 如果提示无法打开，请在 系统偏好设置 > 安全性与隐私 中允许运行
+          
+          ---
+          
+          构建时间: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          EOF
+
+      - name: 创建 GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*
+          body_path: release_notes.md
+          draft: false
+          prerelease: ${{ github.event_name == 'workflow_dispatch' }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && format('test-{0}', github.sha) || github.ref_name }}
+          name: ${{ github.event_name == 'workflow_dispatch' && format('测试构建 {0}', github.sha) || github.ref_name }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
