@@ -59,15 +59,14 @@ CREATE TABLE IF NOT EXISTS key_bindings (
     enabled INTEGER NOT NULL DEFAULT 1,
     is_default INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    UNIQUE(command, extension)
+    updated_at TEXT NOT NULL
 )`
 
 	// Themes table
 	sqlCreateThemesTable = `
 CREATE TABLE IF NOT EXISTS themes (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     type TEXT NOT NULL,
     colors TEXT NOT NULL,
     is_default INTEGER NOT NULL DEFAULT 0,
@@ -244,8 +243,6 @@ func (ds *DatabaseService) createIndexes() error {
 		// Themes indexes
 		`CREATE INDEX IF NOT EXISTS idx_themes_type ON themes(type)`,
 		`CREATE INDEX IF NOT EXISTS idx_themes_is_default ON themes(is_default)`,
-		// 条件唯一索引：确保每种类型只能有一个默认主题
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_themes_type_default ON themes(type) WHERE is_default = 1`,
 	}
 
 	for _, index := range indexes {
