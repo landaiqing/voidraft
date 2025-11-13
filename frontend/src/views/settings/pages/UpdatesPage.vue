@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { computed, onUnmounted } from 'vue';
+import { computed } from 'vue';
 import { useConfigStore } from '@/stores/configStore';
 import { useUpdateStore } from '@/stores/updateStore';
 import SettingSection from '../components/SettingSection.vue';
@@ -11,11 +11,6 @@ import { Remarkable } from 'remarkable';
 const { t } = useI18n();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
-
-// 清理状态
-onUnmounted(() => {
-  updateStore.clearStatus();
-});
 
 // 初始化Remarkable实例并配置
 const md = new Remarkable({
