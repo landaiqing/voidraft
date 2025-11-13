@@ -13,6 +13,12 @@ export const useDocumentStore = defineStore('document', () => {
     const currentDocumentId = ref<number | null>(null);
     const currentDocument = ref<Document | null>(null);
 
+    // === 编辑器状态持久化 ===
+    const documentStates = ref<Record<number, {
+        cursorPos: number;
+        scrollTop: number;
+    }>>({});
+
     // === UI状态 ===
     const showDocumentSelector = ref(false);
     const selectorError = ref<{ docId: number; message: string } | null>(null);
@@ -218,6 +224,7 @@ export const useDocumentStore = defineStore('document', () => {
         documentList,
         currentDocumentId,
         currentDocument,
+        documentStates,
         showDocumentSelector,
         selectorError,
         isLoading,
@@ -240,6 +247,6 @@ export const useDocumentStore = defineStore('document', () => {
     persist: {
         key: 'voidraft-document',
         storage: localStorage,
-        pick: ['currentDocumentId', 'documents']
+        pick: ['currentDocumentId', 'documents', 'documentStates']
     }
 });

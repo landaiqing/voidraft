@@ -4,8 +4,7 @@ import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
-import {useThemeStore} from './themeStore';
-import {ExtensionID, SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
+import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language";
 import {createBasicSetup} from '@/views/editor/basic/basicSetup';
@@ -15,7 +14,12 @@ import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/b
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
-import {createDynamicExtensions, getExtensionManager, setExtensionManagerView, removeExtensionManagerView} from '@/views/editor/manager';
+import {
+    createDynamicExtensions,
+    getExtensionManager,
+    removeExtensionManagerView,
+    setExtensionManagerView
+} from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
 import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
 import {LruCache} from '@/common/utils/lruCache';
@@ -43,13 +47,16 @@ interface EditorInstance {
         lastContentHash: string;
         lastParsed: Date;
     } | null;
+    editorState?: {
+        cursorPos: number;
+        scrollTop: number;
+    };
 }
 
 export const useEditorStore = defineStore('editor', () => {
     // === 依赖store ===
     const configStore = useConfigStore();
     const documentStore = useDocumentStore();
-    const themeStore = useThemeStore();
     const extensionStore = useExtensionStore();
 
     // === 核心状态 ===
@@ -198,19 +205,11 @@ export const useEditorStore = defineStore('editor', () => {
             extensions
         });
 
-        // 创建编辑器视图
-        const view = new EditorView({
+        // 不再强制定位到文档末尾，保持默认位置（开头）或恢复保存的位置
+
+        return new EditorView({
             state
         });
-
-        // 将光标定位到文档末尾并滚动到该位置
-        const docLength = view.state.doc.length;
-        view.dispatch({
-            selection: {anchor: docLength, head: docLength},
-            scrollIntoView: true
-        });
-
-        return view;
     };
 
     // 添加编辑器到缓存
@@ -278,6 +277,26 @@ export const useEditorStore = defineStore('editor', () => {
         if (!instance || !containerElement.value) return;
 
         try {
+            // 保存当前编辑器的状态
+            if (currentEditor.value) {
+                const currentDocId = documentStore.currentDocumentId;
+                const currentInstance = currentDocId ? editorCache.get(currentDocId) : null;
+                if (currentInstance) {
+                    // 保存到实例缓存
+                    currentInstance.editorState = {
+                        cursorPos: currentEditor.value.state.selection.main.head,
+                        scrollTop: currentEditor.value.scrollDOM.scrollTop
+                    };
+                    // 同时保存到 documentStore 用于持久化
+                    if (currentDocId) {
+                        documentStore.documentStates[currentDocId] = {
+                            cursorPos: currentEditor.value.state.selection.main.head,
+                            scrollTop: currentEditor.value.scrollDOM.scrollTop
+                        };
+                    }
+                }
+            }
+
             // 移除当前编辑器DOM
             if (currentEditor.value && currentEditor.value.dom && currentEditor.value.dom.parentElement) {
                 currentEditor.value.dom.remove();
@@ -295,14 +314,27 @@ export const useEditorStore = defineStore('editor', () => {
 
             // 重新测量和聚焦编辑器
             nextTick(() => {
-                // 将光标定位到文档末尾并滚动到该位置
-                const docLength = instance.view.state.doc.length;
-                instance.view.dispatch({
-                    selection: {anchor: docLength, head: docLength},
-                    scrollIntoView: true
-                });
+                // 恢复保存的状态
+                const savedState = instance.editorState || documentStore.documentStates[documentId];
+                if (savedState) {
+                    // 有保存的状态，恢复光标位置和滚动位置
+                    const pos = Math.min(savedState.cursorPos, instance.view.state.doc.length);
+                    instance.view.dispatch({
+                        selection: {anchor: pos, head: pos}
+                    });
+                    // 恢复滚动位置
+                    instance.view.scrollDOM.scrollTop = savedState.scrollTop;
+                    // 更新实例状态
+                    instance.editorState = savedState;
+                } else {
+                    // 首次打开或没有记录，光标在文档末尾
+                    const docLength = instance.view.state.doc.length;
+                    instance.view.dispatch({
+                        selection: {anchor: docLength, head: docLength},
+                        scrollIntoView: true
+                    });
+                }
                 
-                // 滚动到文档底部（将光标位置滚动到可见区域）
                 instance.view.focus();
                 
                 // 使用缓存的语法树确保方法
@@ -349,6 +381,19 @@ export const useEditorStore = defineStore('editor', () => {
         
         // 清理语法树缓存，下次访问时重新构建
         instance.syntaxTreeCache = null;
+
+        // 保存当前编辑器状态（光标位置和滚动位置）
+        if (instance.view) {
+            instance.editorState = {
+                cursorPos: instance.view.state.selection.main.head,
+                scrollTop: instance.view.scrollDOM.scrollTop
+            };
+            // 同时保存到 documentStore 用于持久化
+            documentStore.documentStates[documentId] = {
+                cursorPos: instance.view.state.selection.main.head,
+                scrollTop: instance.view.scrollDOM.scrollTop
+            };
+        }
 
         // 设置自动保存定时器
         instance.autoSaveTimer.set(() => {
@@ -538,6 +583,19 @@ export const useEditorStore = defineStore('editor', () => {
         operationManager.cancelAllOperations();
         
         editorCache.clear((_documentId, instance) => {
+            // 在销毁前保存编辑器状态
+            if (instance.view) {
+                instance.editorState = {
+                    cursorPos: instance.view.state.selection.main.head,
+                    scrollTop: instance.view.scrollDOM.scrollTop
+                };
+                // 保存到 documentStore 用于持久化
+                documentStore.documentStates[instance.documentId] = {
+                    cursorPos: instance.view.state.selection.main.head,
+                    scrollTop: instance.view.scrollDOM.scrollTop
+                };
+            }
+            
             // 清除自动保存定时器
             instance.autoSaveTimer.clear();
             
