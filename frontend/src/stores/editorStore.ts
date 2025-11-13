@@ -21,7 +21,7 @@ import {
     setExtensionManagerView
 } from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
-import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
+import createCodeBlockExtension, {blockState} from "@/views/editor/extensions/codeblock";
 import {LruCache} from '@/common/utils/lruCache';
 import {AsyncManager} from '@/common/utils/asyncManager';
 import {generateContentHash} from "@/common/utils/hashUtils";
@@ -80,6 +80,81 @@ export const useEditorStore = defineStore('editor', () => {
     const getAutoSaveDelay = () => configStore.config.editing.autoSaveDelay;
 
     // === 私有方法 ===
+
+    /**
+     * 检查位置是否在代码块分隔符区域内
+     */
+    const isPositionInDelimiter = (view: EditorView, pos: number): boolean => {
+        try {
+            const blocks = view.state.field(blockState, false);
+            if (!blocks) return false;
+            
+            for (const block of blocks) {
+                if (pos >= block.delimiter.from && pos < block.delimiter.to) {
+                    return true;
+                }
+            }
+            return false;
+        } catch {
+            return false;
+        }
+    };
+
+    /**
+     * 调整光标位置到有效的内容区域
+     * 如果位置在分隔符内，移动到该块的内容开始位置
+     */
+    const adjustCursorPosition = (view: EditorView, pos: number): number => {
+        try {
+            const blocks = view.state.field(blockState, false);
+            if (!blocks || blocks.length === 0) return pos;
+
+            // 如果位置在分隔符内，移动到该块的内容开始位置
+            for (const block of blocks) {
+                if (pos >= block.delimiter.from && pos < block.delimiter.to) {
+                    return block.content.from;
+                }
+            }
+            
+            return pos;
+        } catch {
+            return pos;
+        }
+    };
+
+    /**
+     * 恢复编辑器的光标和滚动位置
+     */
+    const restoreEditorState = (instance: EditorInstance, documentId: number): void => {
+        const savedState = instance.editorState || documentStore.documentStates[documentId];
+        
+        if (savedState) {
+            // 有保存的状态，恢复光标位置和滚动位置
+            let pos = Math.min(savedState.cursorPos, instance.view.state.doc.length);
+            
+            // 确保位置不在分隔符上
+            if (isPositionInDelimiter(instance.view, pos)) {
+                pos = adjustCursorPosition(instance.view, pos);
+            }
+            
+            instance.view.dispatch({
+                selection: {anchor: pos, head: pos}
+            });
+            
+            // 恢复滚动位置
+            instance.view.scrollDOM.scrollTop = savedState.scrollTop;
+            
+            // 更新实例状态
+            instance.editorState = savedState;
+        } else {
+            // 首次打开或没有记录，光标在文档末尾
+            const docLength = instance.view.state.doc.length;
+            instance.view.dispatch({
+                selection: {anchor: docLength, head: docLength},
+                scrollIntoView: true
+            });
+        }
+    };
 
     // 缓存化的语法树确保方法
     const ensureSyntaxTreeCached = (view: EditorView, documentId: number): void => {
@@ -205,8 +280,6 @@ export const useEditorStore = defineStore('editor', () => {
             extensions
         });
 
-        // 不再强制定位到文档末尾，保持默认位置（开头）或恢复保存的位置
-
         return new EditorView({
             state
         });
@@ -314,27 +387,10 @@ export const useEditorStore = defineStore('editor', () => {
 
             // 重新测量和聚焦编辑器
             nextTick(() => {
-                // 恢复保存的状态
-                const savedState = instance.editorState || documentStore.documentStates[documentId];
-                if (savedState) {
-                    // 有保存的状态，恢复光标位置和滚动位置
-                    const pos = Math.min(savedState.cursorPos, instance.view.state.doc.length);
-                    instance.view.dispatch({
-                        selection: {anchor: pos, head: pos}
-                    });
-                    // 恢复滚动位置
-                    instance.view.scrollDOM.scrollTop = savedState.scrollTop;
-                    // 更新实例状态
-                    instance.editorState = savedState;
-                } else {
-                    // 首次打开或没有记录，光标在文档末尾
-                    const docLength = instance.view.state.doc.length;
-                    instance.view.dispatch({
-                        selection: {anchor: docLength, head: docLength},
-                        scrollIntoView: true
-                    });
-                }
+                // 恢复编辑器状态（光标位置和滚动位置）
+                restoreEditorState(instance, documentId);
                 
+                // 聚焦编辑器
                 instance.view.focus();
                 
                 // 使用缓存的语法树确保方法

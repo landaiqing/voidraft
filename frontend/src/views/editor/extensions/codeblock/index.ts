@@ -25,6 +25,7 @@ import {getCodeBlockLanguageExtension} from './lang-parser';
 import {createLanguageDetection} from './lang-detect';
 import {SupportedLanguage} from './types';
 import {getMathBlockExtensions} from './mathBlock';
+import {createCursorProtection} from './cursorProtection';
 
 /**
  * 代码块扩展配置选项
@@ -107,6 +108,9 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         ...getBlockDecorationExtensions({
             showBackground
         }),
+
+        // 光标保护（防止方向键移动到分隔符上）
+        createCursorProtection(),
 
         // 块选择功能
         ...getBlockSelectExtensions(),
@@ -206,6 +210,11 @@ export {getBlockLineFromPos, blockLineNumbers};
 export {
     getMathBlockExtensions
 } from './mathBlock';
+
+// 光标保护功能
+export {
+    createCursorProtection
+} from './cursorProtection';
 
 /**
  * 默认导出
