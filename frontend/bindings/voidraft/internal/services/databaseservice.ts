@@ -15,14 +15,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
- * OnDataPathChanged handles data path changes
- */
-export function OnDataPathChanged(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3652863491) as any;
-    return $resultPromise;
-}
-
-/**
  * RegisterModel 注册模型与表的映射关系
  */
 export function RegisterModel(tableName: string, model: any): Promise<void> & { cancel(): void } {

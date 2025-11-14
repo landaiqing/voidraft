@@ -117,9 +117,22 @@ func (ms *MigrationService) MigrateDirectory(srcPath, dstPath string) error {
 			ms.logger.Error("Failed to close database connection", "error", err)
 		}
 	}
+
 	// 执行原子迁移
 	if err := ms.atomicMove(ctx, srcPath, dstPath); err != nil {
 		return ms.failWithError(err)
+	}
+
+	// 迁移完成后重新连接数据库
+	ms.updateProgress(MigrationProgress{
+		Status:   MigrationStatusMigrating,
+		Progress: 95,
+	})
+
+	if ms.dbService != nil {
+		if err := ms.dbService.initDatabase(); err != nil {
+			return ms.failWithError(fmt.Errorf("failed to reconnect database: %v", err))
+		}
 	}
 
 	// 迁移完成

@@ -132,27 +132,7 @@ func (ds *DatabaseService) registerAllModels() {
 // ServiceStartup initializes the service when the application starts
 func (ds *DatabaseService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	ds.ctx = ctx
-
-	ds.cancelObserver = ds.configService.Watch("general.dataPath", ds.onDataPathChange)
-
 	return ds.initDatabase()
-}
-
-// onDataPathChange 数据路径配置变更回调
-func (ds *DatabaseService) onDataPathChange(oldValue, newValue interface{}) {
-	oldPath := ""
-	newPath := ""
-
-	if oldValue != nil {
-		oldPath = fmt.Sprintf("%v", oldValue)
-	}
-	if newValue != nil {
-		newPath = fmt.Sprintf("%v", newValue)
-	}
-
-	if oldPath != newPath {
-		_ = ds.OnDataPathChanged()
-	}
 }
 
 // initDatabase initializes the SQLite database
@@ -398,17 +378,4 @@ func (ds *DatabaseService) ServiceShutdown() error {
 		return ds.db.Close()
 	}
 	return nil
-}
-
-// OnDataPathChanged handles data path changes
-func (ds *DatabaseService) OnDataPathChanged() error {
-	// 关闭当前连接
-	if ds.db != nil {
-		if err := ds.db.Close(); err != nil {
-			return err
-		}
-	}
-
-	// 用新路径重新初始化
-	return ds.initDatabase()
 }

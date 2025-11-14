@@ -133,6 +133,12 @@ export {
     type CreateBlockOptions,
 } from './types';
 
+// 导出解析器函数
+export {
+    getActiveBlock,
+    getBlockFromPos
+} from './parser';
+
 // 状态管理
 export {
     blockState,
