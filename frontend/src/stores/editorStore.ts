@@ -28,11 +28,18 @@ import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
+import {markdownPreviewExtension} from "@/views/editor/extensions/markdownPreview";
+import {createDebounce} from '@/common/utils/debounce';
 
 export interface DocumentStats {
     lines: number;
     characters: number;
     selectedCharacters: number;
+}
+
+// 修复：只保存光标位置，恢复时自动滚动到光标处（更简单可靠）
+export interface EditorViewState {
+    cursorPos: number;
 }
 
 interface EditorInstance {
@@ -47,10 +54,8 @@ interface EditorInstance {
         lastContentHash: string;
         lastParsed: Date;
     } | null;
-    editorState?: {
-        cursorPos: number;
-        scrollTop: number;
-    };
+    // 修复：使用统一的类型，可选但不是 undefined | {...}
+    editorState?: EditorViewState;
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -72,12 +77,21 @@ export const useEditorStore = defineStore('editor', () => {
     
     // 编辑器加载状态
     const isLoading = ref(false);
+    // 修复：使用操作计数器精确管理加载状态
+    const loadingOperations = ref(0);
 
     // 异步操作管理器
     const operationManager = new AsyncManager<number>();
 
     // 自动保存设置 - 从配置动态获取
     const getAutoSaveDelay = () => configStore.config.editing.autoSaveDelay;
+
+    // 创建防抖的语法树缓存清理函数
+    const debouncedClearSyntaxCache = createDebounce((instance) => {
+        if (instance) {
+            instance.syntaxTreeCache = null;
+        }
+    }, { delay: 500 }); // 500ms 内的多次输入只清理一次
 
     // === 私有方法 ===
 
@@ -123,13 +137,13 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     /**
-     * 恢复编辑器的光标和滚动位置
+     * 恢复编辑器的光标位置（自动滚动到光标处）
      */
     const restoreEditorState = (instance: EditorInstance, documentId: number): void => {
-        const savedState = instance.editorState || documentStore.documentStates[documentId];
+        const savedState = instance.editorState;
         
         if (savedState) {
-            // 有保存的状态，恢复光标位置和滚动位置
+            // 有保存的状态，恢复光标位置
             let pos = Math.min(savedState.cursorPos, instance.view.state.doc.length);
             
             // 确保位置不在分隔符上
@@ -137,21 +151,23 @@ export const useEditorStore = defineStore('editor', () => {
                 pos = adjustCursorPosition(instance.view, pos);
             }
             
+            // 修复：设置光标位置并居中滚动（更好的用户体验）
             instance.view.dispatch({
-                selection: {anchor: pos, head: pos}
+                selection: {anchor: pos, head: pos},
+                effects: EditorView.scrollIntoView(pos, {
+                    y: "center",  // 垂直居中显示
+                    yMargin: 100   // 上下留一些边距
+                })
             });
-            
-            // 恢复滚动位置
-            instance.view.scrollDOM.scrollTop = savedState.scrollTop;
-            
-            // 更新实例状态
-            instance.editorState = savedState;
         } else {
             // 首次打开或没有记录，光标在文档末尾
             const docLength = instance.view.state.doc.length;
             instance.view.dispatch({
                 selection: {anchor: docLength, head: docLength},
-                scrollIntoView: true
+                effects: EditorView.scrollIntoView(docLength, {
+                    y: "center",
+                    yMargin: 100
+                })
             });
         }
     };
@@ -239,6 +255,9 @@ export const useEditorStore = defineStore('editor', () => {
 
         const httpExtension = createHttpClientExtension();
 
+        // Markdown预览扩展
+        const previewExtension = markdownPreviewExtension();
+
         // 再次检查操作有效性
         if (!operationManager.isOperationValid(operationId, documentId)) {
             throw new Error('Operation cancelled');
@@ -271,7 +290,8 @@ export const useEditorStore = defineStore('editor', () => {
             contentChangeExtension,
             codeBlockExtension,
             ...dynamicExtensions,
-            ...httpExtension
+            ...httpExtension,
+            previewExtension
         ];
 
         // 创建编辑器状态
@@ -294,7 +314,9 @@ export const useEditorStore = defineStore('editor', () => {
             isDirty: false,
             lastModified: new Date(),
             autoSaveTimer: createTimerManager(),
-            syntaxTreeCache: null
+            syntaxTreeCache: null,
+            // 修复：创建实例时从 documentStore 读取持久化的编辑器状态
+            editorState: documentStore.documentStates[documentId]
         };
 
         // 使用LRU缓存的onEvict回调处理被驱逐的实例
@@ -332,10 +354,19 @@ export const useEditorStore = defineStore('editor', () => {
         // 创建新的编辑器实例
         const view = await createEditorInstance(content, operationId, documentId);
         
-        // 最终检查操作有效性
+        // 完善取消操作时的清理逻辑
         if (!operationManager.isOperationValid(operationId, documentId)) {
-            // 如果操作已取消，清理创建的实例
-            view.destroy();
+            // 如果操作已取消，彻底清理创建的实例
+            try {
+                // 移除 DOM 元素（如果已添加到文档）
+                if (view.dom && view.dom.parentElement) {
+                    view.dom.remove();
+                }
+                // 销毁编辑器视图
+                view.destroy();
+            } catch (error) {
+                console.error('Error cleaning up cancelled editor:', error);
+            }
             throw new Error('Operation cancelled');
         }
 
@@ -350,33 +381,10 @@ export const useEditorStore = defineStore('editor', () => {
         if (!instance || !containerElement.value) return;
 
         try {
-            // 保存当前编辑器的状态
-            if (currentEditor.value) {
-                const currentDocId = documentStore.currentDocumentId;
-                const currentInstance = currentDocId ? editorCache.get(currentDocId) : null;
-                if (currentInstance) {
-                    // 保存到实例缓存
-                    currentInstance.editorState = {
-                        cursorPos: currentEditor.value.state.selection.main.head,
-                        scrollTop: currentEditor.value.scrollDOM.scrollTop
-                    };
-                    // 同时保存到 documentStore 用于持久化
-                    if (currentDocId) {
-                        documentStore.documentStates[currentDocId] = {
-                            cursorPos: currentEditor.value.state.selection.main.head,
-                            scrollTop: currentEditor.value.scrollDOM.scrollTop
-                        };
-                    }
-                }
-            }
-
             // 移除当前编辑器DOM
             if (currentEditor.value && currentEditor.value.dom && currentEditor.value.dom.parentElement) {
                 currentEditor.value.dom.remove();
             }
-
-            // 确保容器为空
-            containerElement.value.innerHTML = '';
 
             // 将目标编辑器DOM添加到容器
             containerElement.value.appendChild(instance.view.dom);
@@ -385,16 +393,18 @@ export const useEditorStore = defineStore('editor', () => {
             // 设置扩展管理器视图
             setExtensionManagerView(instance.view, documentId);
 
-            // 重新测量和聚焦编辑器
+            //使用 nextTick + requestAnimationFrame 确保 DOM 完全渲染
             nextTick(() => {
-                // 恢复编辑器状态（光标位置和滚动位置）
-                restoreEditorState(instance, documentId);
-                
-                // 聚焦编辑器
-                instance.view.focus();
-                
-                // 使用缓存的语法树确保方法
-                ensureSyntaxTreeCached(instance.view, documentId);
+                requestAnimationFrame(() => {
+                    // 恢复编辑器状态（光标位置和滚动位置）
+                    restoreEditorState(instance, documentId);
+                    
+                    // 聚焦编辑器
+                    instance.view.focus();
+                    
+                    // 使用缓存的语法树确保方法
+                    ensureSyntaxTreeCached(instance.view, documentId);
+                });
             });
         } catch (error) {
             console.error('Error showing editor:', error);
@@ -428,30 +438,20 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 内容变化处理
-    const onContentChange = (documentId: number) => {
+    const onContentChange = () => {
+        const documentId = documentStore.currentDocumentId;
+        if (!documentId) return;
         const instance = editorCache.get(documentId);
         if (!instance) return;
 
+        // 立即设置脏标记和修改时间（切换文档时需要判断）
         instance.isDirty = true;
         instance.lastModified = new Date();
         
-        // 清理语法树缓存，下次访问时重新构建
-        instance.syntaxTreeCache = null;
+        // 优使用防抖清理语法树缓存
+        debouncedClearSyntaxCache.debouncedFn(instance);
 
-        // 保存当前编辑器状态（光标位置和滚动位置）
-        if (instance.view) {
-            instance.editorState = {
-                cursorPos: instance.view.state.selection.main.head,
-                scrollTop: instance.view.scrollDOM.scrollTop
-            };
-            // 同时保存到 documentStore 用于持久化
-            documentStore.documentStates[documentId] = {
-                cursorPos: instance.view.state.selection.main.head,
-                scrollTop: instance.view.scrollDOM.scrollTop
-            };
-        }
-
-        // 设置自动保存定时器
+        // 设置自动保存定时器（已经是防抖效果：每次重置定时器）
         instance.autoSaveTimer.set(() => {
             saveEditorContent(documentId);
         }, getAutoSaveDelay());
@@ -471,7 +471,8 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 加载编辑器
     const loadEditor = async (documentId: number, content: string) => {
-        // 设置加载状态
+        // 修复：使用计数器精确管理加载状态
+        loadingOperations.value++;
         isLoading.value = true;
         
         // 开始新的操作
@@ -520,6 +521,9 @@ export const useEditorStore = defineStore('editor', () => {
                     instance.isDirty = false;
                     // 清理语法树缓存，因为内容已更新
                     instance.syntaxTreeCache = null;
+                    // 修复：内容变了，清空光标位置，避免越界
+                    instance.editorState = undefined;
+                    delete documentStore.documentStates[documentId];
                 }
             }
 
@@ -541,21 +545,40 @@ export const useEditorStore = defineStore('editor', () => {
             // 完成操作
             operationManager.completeOperation(operationId);
             
-            // 延迟一段时间后再取消加载状态
+            // 修复：使用计数器精确管理加载状态，避免快速切换时状态不准确
+            loadingOperations.value--;
+            // 延迟一段时间后再取消加载状态，但要确保所有操作都完成了
             setTimeout(() => {
-                isLoading.value = false;
+                if (loadingOperations.value <= 0) {
+                    loadingOperations.value = 0;
+                    isLoading.value = false;
+                }
             }, EDITOR_CONFIG.LOADING_DELAY);
         }
     };
 
     // 移除编辑器
-    const removeEditor = (documentId: number) => {
+    const removeEditor = async (documentId: number) => {
         const instance = editorCache.get(documentId);
         if (instance) {
             try {
                 // 如果正在加载这个文档，取消操作
                 if (operationManager.getCurrentContext() === documentId) {
                     operationManager.cancelAllOperations();
+                }
+
+                // 修复：移除前先保存内容（如果有未保存的修改）
+                if (instance.isDirty) {
+                    await saveEditorContent(documentId);
+                }
+
+                // 保存光标位置
+                if (instance.view && instance.view.state) {
+                    const currentState: EditorViewState = {
+                        cursorPos: instance.view.state.selection.main.head
+                    };
+                    // 保存到 documentStore 用于持久化
+                    documentStore.documentStates[documentId] = currentState;
                 }
 
                 // 清除自动保存定时器
@@ -639,17 +662,14 @@ export const useEditorStore = defineStore('editor', () => {
         operationManager.cancelAllOperations();
         
         editorCache.clear((_documentId, instance) => {
-            // 在销毁前保存编辑器状态
+            // 修复：清空前只保存光标位置
             if (instance.view) {
-                instance.editorState = {
-                    cursorPos: instance.view.state.selection.main.head,
-                    scrollTop: instance.view.scrollDOM.scrollTop
+                const currentState: EditorViewState = {
+                    cursorPos: instance.view.state.selection.main.head
                 };
-                // 保存到 documentStore 用于持久化
-                documentStore.documentStates[instance.documentId] = {
-                    cursorPos: instance.view.state.selection.main.head,
-                    scrollTop: instance.view.scrollDOM.scrollTop
-                };
+                // 同时保存到实例和 documentStore
+                instance.editorState = currentState;
+                documentStore.documentStates[instance.documentId] = currentState;
             }
             
             // 清除自动保存定时器
@@ -693,12 +713,24 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 监听文档切换
-    watch(() => documentStore.currentDocument, async (newDoc) => {
+    watch(() => documentStore.currentDocument, async (newDoc, oldDoc) => {
         if (newDoc && containerElement.value) {
-            // 使用 nextTick 确保DOM更新完成后再加载编辑器
-            await nextTick(() => {
-                loadEditor(newDoc.id, newDoc.content);
-            });
+            // 修复：在切换到新文档前，只保存旧文档的光标位置
+            if (oldDoc && oldDoc.id !== newDoc.id && currentEditor.value) {
+                const oldInstance = editorCache.get(oldDoc.id);
+                if (oldInstance) {
+                    const currentState: EditorViewState = {
+                        cursorPos: currentEditor.value.state.selection.main.head
+                    };
+                    // 同时保存到实例和 documentStore
+                    oldInstance.editorState = currentState;
+                    documentStore.documentStates[oldDoc.id] = currentState;
+                }
+            }
+            
+            // 等待 DOM 更新完成，再加载新文档的编辑器
+            await nextTick();
+            loadEditor(newDoc.id, newDoc.content);
         }
     });
 

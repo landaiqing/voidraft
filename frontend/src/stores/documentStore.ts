@@ -4,6 +4,7 @@ import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/models';
 import {useTabStore} from "@/stores/tabStore";
+import type {EditorViewState} from '@/stores/editorStore';
 
 export const useDocumentStore = defineStore('document', () => {
     const DEFAULT_DOCUMENT_ID = ref<number>(1); // 默认草稿文档ID
@@ -14,10 +15,8 @@ export const useDocumentStore = defineStore('document', () => {
     const currentDocument = ref<Document | null>(null);
 
     // === 编辑器状态持久化 ===
-    const documentStates = ref<Record<number, {
-        cursorPos: number;
-        scrollTop: number;
-    }>>({});
+    // 修复：使用统一的 EditorViewState 类型定义
+    const documentStates = ref<Record<number, EditorViewState>>({});
 
     // === UI状态 ===
     const showDocumentSelector = ref(false);

@@ -13,16 +13,20 @@ import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/languages';
 import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode';
 import {createDebounce} from '@/common/utils/debounce';
+import {toggleMarkdownPreview} from '@/views/editor/extensions/markdownPreview';
+import {usePanelStore} from '@/stores/panelStore';
 
 const editorStore = readonly(useEditorStore());
 const configStore = readonly(useConfigStore());
 const updateStore = readonly(useUpdateStore());
 const windowStore = readonly(useWindowStore());
 const systemStore = readonly(useSystemStore());
+const panelStore = readonly(usePanelStore());
 const {t} = useI18n();
 const router = useRouter();
 
 const canFormatCurrentBlock = ref(false);
+const canPreviewMarkdown = ref(false);
 const isLoaded = shallowRef(false);
 
 const { documentStats } = toRefs(editorStore);
@@ -31,6 +35,11 @@ const { config } = toRefs(configStore);
 // 窗口置顶状态
 const isCurrentWindowOnTop = computed(() => {
   return config.value.general.alwaysOnTop || systemStore.isWindowOnTop;
+});
+
+// 当前文档的预览是否打开
+const isCurrentBlockPreviewing = computed(() => {
+  return panelStore.markdownPreview.isOpen && !panelStore.markdownPreview.isClosing;
 });
 
 // 切换窗口置顶状态
@@ -60,11 +69,22 @@ const formatCurrentBlock = () => {
   formatBlockContent(editorStore.editorView);
 };
 
-// 格式化按钮状态更新 - 使用更高效的检查逻辑
-const updateFormatButtonState = () => {
-  const view = editorStore.editorView;
+// 切换 Markdown 预览
+const { debouncedFn: debouncedTogglePreview } = createDebounce(() => {
+  if (!canPreviewMarkdown.value || !editorStore.editorView) return;
+  toggleMarkdownPreview(editorStore.editorView as any);
+}, { delay: 200 });
+
+const togglePreview = () => {
+  debouncedTogglePreview();
+};
+
+// 统一更新按钮状态
+const updateButtonStates = () => {
+  const view: any = editorStore.editorView;
   if (!view) {
     canFormatCurrentBlock.value = false;
+    canPreviewMarkdown.value = false;
     return;
   }
 
@@ -75,20 +95,25 @@ const updateFormatButtonState = () => {
     // 提前返回，减少不必要的计算
     if (!activeBlock) {
       canFormatCurrentBlock.value = false;
+      canPreviewMarkdown.value = false;
       return;
     }
 
-    const language = getLanguage(activeBlock.language.name as any);
+    const languageName = activeBlock.language.name;
+    const language = getLanguage(languageName as any);
+
     canFormatCurrentBlock.value = Boolean(language?.prettier);
+    canPreviewMarkdown.value = languageName.toLowerCase() === 'md';
   } catch (error) {
-    console.warn('Error checking format capability:', error);
+    console.warn('Error checking block capabilities:', error);
     canFormatCurrentBlock.value = false;
+    canPreviewMarkdown.value = false;
   }
 };
 
 // 创建带1s防抖的更新函数
-const { debouncedFn: debouncedUpdateFormat, cancel: cancelDebounce } = createDebounce(
-  updateFormatButtonState,
+const { debouncedFn: debouncedUpdateButtonStates, cancel: cancelDebounce } = createDebounce(
+  updateButtonStates,
   { delay: 1000 }
 );
 
@@ -102,9 +127,9 @@ const setupEditorListeners = (view: any) => {
 
   // 使用对象缓存事件处理器，避免重复创建
   const eventHandlers = {
-    click: updateFormatButtonState,
-    keyup: debouncedUpdateFormat,
-    focus: updateFormatButtonState
+    click: updateButtonStates,
+    keyup: debouncedUpdateButtonStates,
+    focus: updateButtonStates
   } as const;
 
   const events = Object.entries(eventHandlers).map(([type, handler]) => ({
@@ -131,11 +156,12 @@ watch(
 
         if (newView) {
           // 初始更新状态
-          updateFormatButtonState();
+          updateButtonStates();
           // 设置新监听器
           cleanupListeners = setupEditorListeners(newView);
         } else {
           canFormatCurrentBlock.value = false;
+          canPreviewMarkdown.value = false;
         }
       });
     },
@@ -145,8 +171,8 @@ watch(
 // 组件生命周期
 onMounted(async () => {
   isLoaded.value = true;
-  // 首次更新格式化状态
-  updateFormatButtonState();
+  // 首次更新按钮状态
+  updateButtonStates();
   await systemStore.setWindowOnTop(isCurrentWindowOnTop.value);
 });
 
@@ -228,6 +254,21 @@ const statsData = computed(() => ({
 
       <!-- 块语言选择器 -->
       <BlockLanguageSelector/>
+
+      <!-- Markdown预览按钮 -->
+      <div
+          v-if="canPreviewMarkdown"
+          class="preview-button"
+          :class="{ 'active': isCurrentBlockPreviewing }"
+          :title="isCurrentBlockPreviewing ? t('toolbar.closePreview') : t('toolbar.previewMarkdown')"
+          @click="togglePreview"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </div>
 
       <!-- 格式化按钮 - 支持点击操作 -->
       <div
@@ -498,6 +539,42 @@ const statsData = computed(() => ({
       &:hover {
         background-color: var(--border-color);
         opacity: 0.8;
+      }
+
+      svg {
+        width: 14px;
+        height: 14px;
+        stroke: var(--text-muted);
+        transition: stroke 0.2s ease;
+      }
+
+      &:hover svg {
+        stroke: var(--text-secondary);
+      }
+    }
+
+    .preview-button {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+      padding: 2px;
+      border-radius: 3px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: var(--border-color);
+        opacity: 0.8;
+      }
+
+      &.active {
+        background-color: rgba(100, 149, 237, 0.2);
+
+        svg {
+          stroke: #6495ed;
+        }
       }
 
       svg {

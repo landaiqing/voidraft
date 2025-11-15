@@ -7,6 +7,10 @@ import {nodePolyfills} from 'vite-plugin-node-polyfills';
 export default defineConfig(({mode}: { mode: string }): object => {
     const env: Record<string, string> = loadEnv(mode, process.cwd());
     return {
+        test: {
+            environment: 'happy-dom',
+            globals: true,
+        },
         publicDir: './public',
         base: './',
         resolve: {

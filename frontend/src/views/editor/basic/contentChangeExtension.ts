@@ -1,5 +1,4 @@
 import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { useDocumentStore } from '@/stores/documentStore';
 import { useEditorStore } from '@/stores/editorStore';
 
 /**
@@ -8,7 +7,6 @@ import { useEditorStore } from '@/stores/editorStore';
 export function createContentChangePlugin() {
   return ViewPlugin.fromClass(
     class ContentChangePlugin {
-      private documentStore = useDocumentStore();
       private editorStore = useEditorStore();
       private lastContent = '';
 
@@ -24,11 +22,8 @@ export function createContentChangePlugin() {
 
         this.lastContent = newContent;
         
-        // 通知编辑器管理器内容已变化
-        const currentDocId = this.documentStore.currentDocumentId;
-        if (currentDocId) {
-          this.editorStore.onContentChange(currentDocId);
-        }
+        this.editorStore.onContentChange();
+        
       }
 
       destroy() {

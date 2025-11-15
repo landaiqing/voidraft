@@ -6,14 +6,14 @@ import { useUpdateStore } from '@/stores/updateStore';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import { createMarkdownExit } from 'markdown-exit'
+import markdownit from 'markdown-it'
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
 
 // 初始化Remarkable实例并配置
-const md = createMarkdownExit({
+const md = markdownit({
   html: true,       // 允许HTML
   linkify: false,   // 不解析链接
   typographer: true, // 开启智能引号

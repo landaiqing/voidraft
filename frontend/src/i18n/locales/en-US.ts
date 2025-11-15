@@ -19,6 +19,8 @@ export default {
     searchLanguage: 'Search language...',
     noLanguageFound: 'No language found',
     formatHint: 'Click Format Block (Ctrl+Shift+F)',
+    previewMarkdown: 'Preview Markdown',
+    closePreview: 'Close Preview',
     // Document selector
     selectDocument: 'Select Document',
     searchOrCreateDocument: 'Search or enter new document name...',

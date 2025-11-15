@@ -19,6 +19,8 @@ export default {
     searchLanguage: '搜索语言...',
     noLanguageFound: '未找到匹配的语言',
     formatHint: '点击格式化区块（Ctrl+Shift+F）',
+    previewMarkdown: '预览 Markdown',
+    closePreview: '关闭预览',
     // 文档选择器
     selectDocument: '选择文档',
     searchOrCreateDocument: '搜索或输入新文档名...',

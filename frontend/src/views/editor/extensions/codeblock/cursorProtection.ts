@@ -6,6 +6,34 @@
 import { EditorView } from '@codemirror/view';
 import { EditorSelection } from '@codemirror/state';
 import { blockState } from './state';
+import { Block } from './types';
+
+/**
+ * 二分查找：找到包含指定位置的块
+ * blocks 数组按位置排序，使用二分查找 O(log n)
+ */
+function findBlockAtPos(blocks: Block[], pos: number): Block | null {
+    let left = 0;
+    let right = blocks.length - 1;
+
+    while (left <= right) {
+        const mid = Math.floor((left + right) / 2);
+        const block = blocks[mid];
+
+        if (pos < block.range.from) {
+            // 位置在当前块之前
+            right = mid - 1;
+        } else if (pos > block.range.to) {
+            // 位置在当前块之后
+            left = mid + 1;
+        } else {
+            // 位置在当前块范围内
+            return block;
+        }
+    }
+
+    return null;
+}
 
 /**
  * 检查位置是否在分隔符区域内
@@ -13,14 +41,13 @@ import { blockState } from './state';
 function isInDelimiter(view: EditorView, pos: number): boolean {
     try {
         const blocks = view.state.field(blockState, false);
-        if (!blocks) return false;
+        if (!blocks || blocks.length === 0) return false;
 
-        for (const block of blocks) {
-            if (pos >= block.delimiter.from && pos < block.delimiter.to) {
-                return true;
-            }
-        }
-        return false;
+        const block = findBlockAtPos(blocks, pos);
+        if (!block) return false;
+
+        // 检查是否在该块的分隔符区域内
+        return pos >= block.delimiter.from && pos < block.delimiter.to;
     } catch {
         return false;
     }
@@ -34,22 +61,23 @@ function adjustPosition(view: EditorView, pos: number, forward: boolean): number
         const blocks = view.state.field(blockState, false);
         if (!blocks || blocks.length === 0) return pos;
 
-        for (const block of blocks) {
-            // 如果位置在分隔符内
-            if (pos >= block.delimiter.from && pos < block.delimiter.to) {
-                // 向前移动：跳到该块内容的开始
-                // 向后移动：跳到前一个块的内容末尾
-                if (forward) {
-                    return block.content.from;
-                } else {
-                    // 找到前一个块
-                    const blockIndex = blocks.indexOf(block);
-                    if (blockIndex > 0) {
-                        const prevBlock = blocks[blockIndex - 1];
-                        return prevBlock.content.to;
-                    }
-                    return block.delimiter.from;
+        const block = findBlockAtPos(blocks, pos);
+        if (!block) return pos;
+
+        // 如果位置在分隔符内
+        if (pos >= block.delimiter.from && pos < block.delimiter.to) {
+            // 向前移动：跳到该块内容的开始
+            // 向后移动：跳到前一个块的内容末尾
+            if (forward) {
+                return block.content.from;
+            } else {
+                // 找到前一个块的索引
+                const blockIndex = blocks.indexOf(block);
+                if (blockIndex > 0) {
+                    const prevBlock = blocks[blockIndex - 1];
+                    return prevBlock.content.to;
                 }
+                return block.delimiter.from;
             }
         }
 
