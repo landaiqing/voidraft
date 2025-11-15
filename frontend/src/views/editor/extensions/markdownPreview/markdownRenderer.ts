@@ -7,7 +7,7 @@ import {katex} from "@mdit/plugin-katex";
 import markPlugin from "@/common/markdown-it/plugins/markdown-it-mark";
 import hljs from 'highlight.js';
 import 'highlight.js/styles/default.css';
-import {full as emoji} from '@/common/markdown-it/plugins/markdown-it-emoji/'
+import {full as emoji} from '@/common/markdown-it/plugins/markdown-it-emojis/'
 import footnote_plugin from "@/common/markdown-it/plugins/markdown-it-footnote"
 import sup_plugin from "@/common/markdown-it/plugins/markdown-it-sup"
 import ins_plugin from "@/common/markdown-it/plugins/markdown-it-ins"
