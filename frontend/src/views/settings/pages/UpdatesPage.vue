@@ -151,8 +151,7 @@ const currentVersion = computed(() => {
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 800px;
-  width: 100%; // 确保在小屏幕上也能占满可用空间
+  //max-width: 800px;
 }
 
 .check-button {

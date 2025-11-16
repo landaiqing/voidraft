@@ -319,7 +319,7 @@ const handlePickerClose = () => {
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 1000px;
+  //max-width: 1000px;
 }
 
 .select-input {

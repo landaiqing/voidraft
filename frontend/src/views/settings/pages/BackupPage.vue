@@ -192,7 +192,7 @@ const selectSshKeyFile = async () => {
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 800px;
+  //max-width: 800px;
 }
 
 // 统一的输入控件样式

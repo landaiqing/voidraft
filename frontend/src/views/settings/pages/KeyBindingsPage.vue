@@ -232,7 +232,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 800px;
+  //max-width: 800px;
 }
 
 .key-bindings-container {

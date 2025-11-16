@@ -176,7 +176,7 @@ const clearAll = async () => {
 
 <style scoped lang="scss">
 .settings-page {
-  padding: 20px 0 20px 0;
+  //padding: 20px 0 20px 0;
 }
 
 .dev-description {

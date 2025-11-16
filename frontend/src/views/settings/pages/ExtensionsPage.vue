@@ -265,7 +265,7 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string): SelectOp
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 1000px;
+  //max-width: 1000px;
 }
 
 .extension-item {

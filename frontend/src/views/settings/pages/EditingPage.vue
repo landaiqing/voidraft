@@ -222,7 +222,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
 
 <style scoped lang="scss">
 .settings-page {
-  max-width: 800px;
+  //max-width: 800px;
 }
 
 .number-control {
