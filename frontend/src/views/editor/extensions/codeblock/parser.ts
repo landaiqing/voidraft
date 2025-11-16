@@ -4,7 +4,7 @@
 
 import { EditorState } from '@codemirror/state';
 import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
-import { Block as BlockNode, BlockDelimiter, BlockContent, BlockLanguage, Document } from './lang-parser/parser.terms.js';
+import { Block as BlockNode, BlockDelimiter, BlockContent, BlockLanguage } from './lang-parser/parser.terms.js';
 import {
     SupportedLanguage,
     DELIMITER_REGEX,

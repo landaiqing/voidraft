@@ -27,10 +27,23 @@ interface CachedHttpRequest {
 }
 
 /**
+ * 快速检查节点是否包含错误
+ * 使用游标直接遍历子节点，避免创建迭代器的开销
+ */
+function hasErrorNode(node: any): boolean {
+  let child = node.firstChild;
+  while (child) {
+    if (child.name === '⚠') return true;
+    // 递归检查子节点
+    if (child.firstChild && hasErrorNode(child)) return true;
+    child = child.nextSibling;
+  }
+  return false;
+}
+
+/**
  * 预解析所有 HTTP 块中的请求
  * 只在文档改变时调用，结果缓存在 StateField 中
- * 
- * 优化：一次遍历完成验证和解析，避免重复工作
  */
 function parseHttpRequests(state: any): Map<number, CachedHttpRequest> {
   const requestsMap = new Map<number, CachedHttpRequest>();
@@ -38,28 +51,22 @@ function parseHttpRequests(state: any): Map<number, CachedHttpRequest> {
   
   if (!blocks) return requestsMap;
   
+  // 提前过滤出所有 HTTP 块
+  const httpBlocks = blocks.filter((block: any) => block.language.name === 'http');
+  if (httpBlocks.length === 0) return requestsMap;
+  
   const tree = syntaxTree(state);
   
   // 只遍历 HTTP 块
-  for (const block of blocks) {
-    if (block.language.name !== 'http') continue;
-    
+  for (const block of httpBlocks) {
     // 在块范围内查找所有 RequestStatement
     tree.iterate({
       from: block.content.from,
       to: block.content.to,
       enter: (node) => {
         if (node.name === NODE_TYPES.REQUEST_STATEMENT) {
-          // 检查是否包含错误节点
-          let hasError = false;
-          node.node.cursor().iterate((nodeRef) => {
-            if (nodeRef.name === '⚠') {
-              hasError = true;
-              return false;
-            }
-          });
-          
-          if (hasError) return;
+          // 使用快速错误检查
+          if (hasErrorNode(node.node)) return;
           
           // 直接解析请求
           const request = parseHttpRequest(state, node.from,{from: block.content.from, to: block.content.to});
