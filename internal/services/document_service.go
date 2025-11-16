@@ -175,18 +175,7 @@ func (ds *DocumentService) CreateDocument(title string) (*models.Document, error
 	if ds.databaseService == nil || ds.databaseService.db == nil {
 		return nil, errors.New("database service not available")
 	}
-
-	// Create document with default content
-	now := time.Now().Format("2006-01-02 15:04:05")
-	doc := &models.Document{
-		Title:     title,
-		Content:   "∞∞∞text-a\n",
-		CreatedAt: now,
-		UpdatedAt: now,
-		IsDeleted: false,
-		IsLocked:  false,
-	}
-
+	doc := models.NewDocument(title, "\n∞∞∞text-a\n")
 	// 执行插入操作
 	result, err := ds.databaseService.db.Exec(sqlInsertDocument,
 		doc.Title, doc.Content, doc.CreatedAt, doc.UpdatedAt)

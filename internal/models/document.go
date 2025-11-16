@@ -30,5 +30,5 @@ func NewDocument(title, content string) *Document {
 
 // NewDefaultDocument 创建默认文档
 func NewDefaultDocument() *Document {
-	return NewDocument("default", "∞∞∞text-a\n")
+	return NewDocument("default", "\n∞∞∞text-a\n")
 }
