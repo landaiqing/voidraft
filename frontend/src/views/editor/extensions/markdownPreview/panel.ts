@@ -6,6 +6,10 @@ import MarkdownIt from 'markdown-it';
 import * as runtime from "@wailsio/runtime";
 import {previewPanelState} from "./state";
 import {createMarkdownRenderer} from "./markdownRenderer";
+import {updateMermaidTheme} from "@/common/markdown-it/plugins/markdown-it-mermaid";
+import {useThemeStore} from "@/stores/themeStore";
+import {usePanelStore} from "@/stores/panelStore";
+import {watch} from "vue";
 import {createDebounce} from "@/common/utils/debounce";
 import {morphHTML} from "@/common/utils/domDiff";
 
@@ -18,6 +22,7 @@ export class MarkdownPreviewPanel {
   private readonly resizeHandle: HTMLDivElement;
   private readonly content: HTMLDivElement;
   private view: EditorView;
+  private themeUnwatch?: () => void;
   private lastRenderedContent: string = "";
   private readonly debouncedUpdate: ReturnType<typeof createDebounce>;
   private isDestroyed: boolean = false; // 标记面板是否已销毁
@@ -30,6 +35,14 @@ export class MarkdownPreviewPanel {
     this.debouncedUpdate = createDebounce(() => {
       this.updateContentInternal();
     }, { delay: 500 });
+
+    // 监听主题变化
+    const themeStore = useThemeStore();
+    this.themeUnwatch = watch(() => themeStore.isDarkMode, (isDark) => {
+      const newTheme = isDark ? "dark" : "default";
+      updateMermaidTheme(newTheme);
+      this.lastRenderedContent = ""; // 清空缓存，强制重新渲染
+    });
 
     // 创建 DOM 结构
     this.dom = document.createElement("div");
