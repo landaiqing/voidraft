@@ -6,9 +6,6 @@ import MarkdownIt from 'markdown-it';
 import * as runtime from "@wailsio/runtime";
 import {previewPanelState} from "./state";
 import {createMarkdownRenderer} from "./markdownRenderer";
-import {updateMermaidTheme} from "@/common/markdown-it/plugins/markdown-it-mermaid";
-import {useThemeStore} from "@/stores/themeStore";
-import {watch} from "vue";
 import {createDebounce} from "@/common/utils/debounce";
 import {morphHTML} from "@/common/utils/domDiff";
 
@@ -21,9 +18,8 @@ export class MarkdownPreviewPanel {
   private readonly resizeHandle: HTMLDivElement;
   private readonly content: HTMLDivElement;
   private view: EditorView;
-  private themeUnwatch?: () => void;
   private lastRenderedContent: string = "";
-  private debouncedUpdate: ReturnType<typeof createDebounce>;
+  private readonly debouncedUpdate: ReturnType<typeof createDebounce>;
   private isDestroyed: boolean = false; // 标记面板是否已销毁
 
   constructor(view: EditorView) {
@@ -33,16 +29,7 @@ export class MarkdownPreviewPanel {
     // 创建防抖更新函数
     this.debouncedUpdate = createDebounce(() => {
       this.updateContentInternal();
-    }, { delay: 1000 });
-
-    // 监听主题变化
-    const themeStore = useThemeStore();
-    this.themeUnwatch = watch(() => themeStore.isDarkMode, (isDark) => {
-      const newTheme = isDark ? "dark" : "default";
-      updateMermaidTheme(newTheme);
-      this.lastRenderedContent = ""; // 清空缓存，强制重新渲染
-      this.updateContentInternal();
-    });
+    }, { delay: 500 });
 
     // 创建 DOM 结构
     this.dom = document.createElement("div");
@@ -338,12 +325,6 @@ export class MarkdownPreviewPanel {
     // 清理防抖
     if (this.debouncedUpdate) {
       this.debouncedUpdate.cancel();
-    }
-    
-    // 清理主题监听
-    if (this.themeUnwatch) {
-      this.themeUnwatch();
-      this.themeUnwatch = undefined;
     }
     
     // 清空缓存

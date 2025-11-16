@@ -4,6 +4,7 @@ import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
+import {usePanelStore} from './panelStore';
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language";
@@ -685,6 +686,10 @@ export const useEditorStore = defineStore('editor', () => {
             // 销毁编辑器
             instance.view.destroy();
         });
+        
+        // 清理 panelStore 状态（导航离开编辑器页面时）
+        const panelStore = usePanelStore();
+        panelStore.reset();
 
         currentEditor.value = null;
     };

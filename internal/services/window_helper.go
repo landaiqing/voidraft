@@ -74,7 +74,7 @@ func (wh *WindowHelper) FocusMainWindow() bool {
 func (wh *WindowHelper) AutoShowMainWindow() {
 	window := wh.MustGetMainWindow()
 	if window.IsVisible() {
-		window.Hide()
+		window.Focus()
 	} else {
 		window.Show()
 	}

@@ -39,8 +39,8 @@ func main() {
 	// 'Bind' is a list of Go struct instances. The frontend has access to the methods of these instances.
 	// 'Mac' options tailor the application when running an macOS.
 	app := application.New(application.Options{
-		Name:        "voidraft",
-		Description: "voidraft",
+		Name:        constant.VOIDRAFT_APP_NAME,
+		Description: constant.VOIDRAFT_APP_DESCRIPTION,
 		Services:    serviceManager.GetServices(),
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
@@ -50,7 +50,7 @@ func main() {
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID:      "com.voidraft",
+			UniqueID:      constant.VOIDRAFT_APP_NAME,
 			EncryptionKey: encryptionKey,
 			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
 				if window != nil {
@@ -71,7 +71,7 @@ func main() {
 	// 'URL' is the URL that will be loaded into the webview.
 	mainWindow := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:                       constant.VOIDRAFT_MAIN_WINDOW_NAME,
-		Title:                      constant.VOIDRAFT_WINDOW_TITLE,
+		Title:                      constant.VOIDRAFT_APP_NAME,
 		Width:                      constant.VOIDRAFT_WINDOW_WIDTH,
 		Height:                     constant.VOIDRAFT_WINDOW_HEIGHT,
 		Hidden:                     false,
