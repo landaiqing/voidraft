@@ -13,6 +13,10 @@ export const FONT_OPTIONS = [
         label: 'Open Sans',
         value: '"Open Sans"'
     },
+    {
+        label: 'Monocraft',
+        value: 'Monocraft'
+    },
     // Common system fonts
     {
         label: 'Arial',
@@ -46,7 +50,7 @@ export const FONT_OPTIONS = [
         label: 'System UI',
         value: 'system-ui'
     },
-    
+
     // Chinese fonts
     {
         label: 'Microsoft YaHei',
@@ -56,7 +60,7 @@ export const FONT_OPTIONS = [
         label: 'PingFang SC',
         value: '"PingFang SC"'
     },
-    
+
     // Popular programming fonts
     {
         label: 'JetBrains Mono',

@@ -1,0 +1,202 @@
+/* 自动生成的字体文件 */
+/* 由 font_compressor.py 生成 */
+
+/* Monocraft 字体家族 */
+
+/* Monocraft ExtraLight Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-ExtraLight-Italic.woff2') format('woff2');
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft ExtraLight Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-ExtraLight-Italic.woff2') format('woff2');
+  font-weight: 200;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft ExtraLight */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-ExtraLight.woff2') format('woff2');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft ExtraLight */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-ExtraLight.woff2') format('woff2');
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Light Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Light-Italic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Light Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Light-Italic.woff2') format('woff2');
+  font-weight: 300;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Light */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Light */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Light.woff2') format('woff2');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Regular Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Regular Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft SemiBold Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-SemiBold-Italic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft SemiBold Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-SemiBold-Italic.woff2') format('woff2');
+  font-weight: 600;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft SemiBold */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft SemiBold */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Bold Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Bold-Italic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Bold Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Bold-Italic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Bold */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Bold */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Black Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Black-Italic.woff2') format('woff2');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Black Italic */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Black-Italic.woff2') format('woff2');
+  font-weight: 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Monocraft Black */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/otf/Monocraft-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Monocraft Black */
+@font-face {
+  font-family: 'Monocraft';
+  src: url('../fonts/Monocraft/ttf/Monocraft-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
