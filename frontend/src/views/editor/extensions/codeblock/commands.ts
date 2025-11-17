@@ -2,11 +2,12 @@
  * Block 命令
  */
 
-import { EditorSelection } from "@codemirror/state";
+import { EditorSelection, Transaction } from "@codemirror/state";
 import { Command } from "@codemirror/view";
 import { blockState, getActiveNoteBlock, getFirstNoteBlock, getLastNoteBlock, getNoteBlockFromPos } from "./state";
 import { Block, EditorOptions, DELIMITER_REGEX } from "./types";
 import { formatBlockContent } from "./formatCode";
+import { codeBlockEvent, LANGUAGE_CHANGE, ADD_NEW_BLOCK, MOVE_BLOCK, DELETE_BLOCK, CURRENCIES_LOADED, USER_EVENTS } from "./annotation";
 
 /**
  * 获取块分隔符
@@ -32,7 +33,7 @@ export const insertNewBlockAtCursor = (options: EditorOptions): Command => ({ st
     
     dispatch(state.replaceSelection(delimText), {
         scrollIntoView: true,
-        userEvent: "input",
+        userEvent: USER_EVENTS.INPUT,
     });
 
     return true;
@@ -49,15 +50,16 @@ export const addNewBlockBeforeCurrent = (options: EditorOptions): Command => ({ 
     
     const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-    dispatch(state.update({
+  dispatch(state.update({
         changes: {
             from: block.delimiter.from,
             insert: delimText,
         },
         selection: EditorSelection.cursor(block.delimiter.from + delimText.length),
+        annotations: [codeBlockEvent.of(ADD_NEW_BLOCK)],
     }, {
         scrollIntoView: true,
-        userEvent: "input",
+        userEvent: USER_EVENTS.INPUT,
     }));
     
     return true;
@@ -74,15 +76,16 @@ export const addNewBlockAfterCurrent = (options: EditorOptions): Command => ({ s
     
     const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-    dispatch(state.update({
+  dispatch(state.update({
         changes: {
             from: block.content.to,
             insert: delimText,
         },
-        selection: EditorSelection.cursor(block.content.to + delimText.length)
+        selection: EditorSelection.cursor(block.content.to + delimText.length),
+        annotations: [codeBlockEvent.of(ADD_NEW_BLOCK)],
     }, {
         scrollIntoView: true,
-        userEvent: "input",
+        userEvent: USER_EVENTS.INPUT,
     }));
     
     return true;
@@ -99,15 +102,16 @@ export const addNewBlockBeforeFirst = (options: EditorOptions): Command => ({ st
     
     const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-    dispatch(state.update({
+  dispatch(state.update({
         changes: {
             from: block.delimiter.from,
             insert: delimText,
         },
         selection: EditorSelection.cursor(delimText.length),
+        annotations: [codeBlockEvent.of(ADD_NEW_BLOCK)],
     }, {
         scrollIntoView: true,
-        userEvent: "input",
+        userEvent: USER_EVENTS.INPUT,
     }));
     
     return true;
@@ -124,15 +128,16 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
     
     const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-    dispatch(state.update({
+  dispatch(state.update({
         changes: {
             from: block.content.to,
             insert: delimText,
         },
-        selection: EditorSelection.cursor(block.content.to + delimText.length)
+        selection: EditorSelection.cursor(block.content.to + delimText.length),
+        annotations: [codeBlockEvent.of(ADD_NEW_BLOCK)],
     }, {
         scrollIntoView: true,
-        userEvent: "input",
+        userEvent: USER_EVENTS.INPUT,
     }));
     
     return true;
@@ -143,26 +148,19 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
  */
 export function changeLanguageTo(state: any, dispatch: any, block: Block, language: string, auto: boolean) {
     if (state.readOnly) return false;
-    
-    const currentDelimiter = state.doc.sliceString(block.delimiter.from, block.delimiter.to);
-    
-    // 重置正则表达式的 lastIndex
-    DELIMITER_REGEX.lastIndex = 0;
-    if (currentDelimiter.match(DELIMITER_REGEX)) {
-        const newDelimiter = `\n∞∞∞${language}${auto ? '-a' : ''}\n`;
-        
-        dispatch({
-            changes: {
-                from: block.delimiter.from,
-                to: block.delimiter.to,
-                insert: newDelimiter,
-            },
-        });
-        
-        return true;
-    } else {
-        return false;
-    }
+
+    const newDelimiter = `\n∞∞∞${language}${auto ? '-a' : ''}\n`;
+
+    dispatch({
+        changes: {
+            from: block.delimiter.from,
+            to: block.delimiter.to,
+            insert: newDelimiter,
+        },
+        annotations: [codeBlockEvent.of(LANGUAGE_CHANGE)],
+    });
+
+    return true;
 }
 
 /**
@@ -189,7 +187,7 @@ function updateSel(sel: EditorSelection, by: (range: any) => any): EditorSelecti
 }
 
 function setSel(state: any, selection: EditorSelection) {
-    return state.update({ selection, scrollIntoView: true, userEvent: "select" });
+    return state.update({ selection, scrollIntoView: true, userEvent: USER_EVENTS.SELECT });
 }
 
 function extendSel(state: any, dispatch: any, how: (range: any) => any) {
@@ -303,10 +301,11 @@ export const deleteBlock = (_options: EditorOptions): Command => ({ state, dispa
             to: block.range.to,
             insert: ""
         },
-        selection: EditorSelection.cursor(newCursorPos)
+        selection: EditorSelection.cursor(newCursorPos),
+        annotations: [codeBlockEvent.of(DELETE_BLOCK)]
     }, {
         scrollIntoView: true,
-        userEvent: "delete"
+        userEvent: USER_EVENTS.DELETE
     }));
     
     return true;
@@ -366,10 +365,11 @@ function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
     
     dispatch(state.update({
         changes,
-        selection: EditorSelection.cursor(newCursorPos)
+        selection: EditorSelection.cursor(newCursorPos),
+        annotations: [codeBlockEvent.of(MOVE_BLOCK)]
     }, {
         scrollIntoView: true,
-        userEvent: "move"
+        userEvent: USER_EVENTS.MOVE
     }));
     
     return true;
@@ -380,4 +380,21 @@ function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
  */
 export const formatCurrentBlock: Command = (view) => {
     return formatBlockContent(view);
-}; 
+};
+
+/**
+ * 触发一次货币数据刷新，让数学块重新计算
+ */
+export function triggerCurrenciesLoaded({ state, dispatch }: { state: any; dispatch: any }) {
+    if (!dispatch || state.readOnly) {
+        return false;
+    }
+    dispatch(state.update({
+        changes: { from: 0, to: 0, insert: "" },
+        annotations: [
+            codeBlockEvent.of(CURRENCIES_LOADED),
+            Transaction.addToHistory.of(false)
+        ],
+    }));
+    return true;
+}

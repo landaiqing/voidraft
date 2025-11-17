@@ -6,6 +6,7 @@
 import { EditorSelection, SelectionRange } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { getNoteBlockFromPos } from "./state";
+import { USER_EVENTS } from "./annotation";
 
 interface LineBlock {
   from: number;
@@ -87,7 +88,7 @@ export const deleteLine = (view: EditorView): boolean => {
     changes, 
     selection, 
     scrollIntoView: true, 
-    userEvent: "delete.line" 
+    userEvent: USER_EVENTS.DELETE_LINE 
   });
 
   return true;
@@ -127,7 +128,7 @@ export const deleteLineCommand = ({ state, dispatch }: { state: any; dispatch: a
     changes, 
     selection, 
     scrollIntoView: true, 
-    userEvent: "delete.line" 
+    userEvent: USER_EVENTS.DELETE_LINE 
   }));
 
   return true;

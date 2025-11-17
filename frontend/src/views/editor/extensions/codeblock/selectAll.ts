@@ -7,6 +7,7 @@ import { StateField, StateEffect, RangeSetBuilder, EditorSelection, EditorState,
 import { selectAll as defaultSelectAll } from "@codemirror/commands";
 import { Command } from "@codemirror/view";
 import { getActiveNoteBlock, blockState } from "./state";
+import { USER_EVENTS } from "./annotation";
 
 /**
  * 当用户按下 Ctrl+A 时，我们希望首先选择整个块。但如果整个块已经被选中，
@@ -115,7 +116,7 @@ export const selectAll: Command = ({ state, dispatch }) => {
   // 选择当前块的所有内容
   dispatch(state.update({
     selection: { anchor: block.content.from, head: block.content.to },
-    userEvent: "select"
+    userEvent: USER_EVENTS.SELECT
   }));
 
   return true;
@@ -127,7 +128,7 @@ export const selectAll: Command = ({ state, dispatch }) => {
  */
 export const blockAwareSelection = EditorState.transactionFilter.of((tr: any) => {
   // 只处理选择变化的事务，并且忽略我们自己生成的事务
-  if (!tr.selection || !tr.selection.ranges || tr.annotation?.(Transaction.userEvent) === "select.block-boundary") {
+  if (!tr.selection || !tr.selection.ranges || tr.annotation?.(Transaction.userEvent) === USER_EVENTS.SELECT_BLOCK_BOUNDARY) {
     return tr;
   }
 
@@ -181,7 +182,7 @@ export const blockAwareSelection = EditorState.transactionFilter.of((tr: any) =>
       return {
         ...tr,
         selection: EditorSelection.create(correctedRanges, tr.selection.mainIndex),
-        annotations: tr.annotations.concat(Transaction.userEvent.of("select.block-boundary"))
+        annotations: tr.annotations.concat(Transaction.userEvent.of(USER_EVENTS.SELECT_BLOCK_BOUNDARY))
       };
     }
   } catch (error) {

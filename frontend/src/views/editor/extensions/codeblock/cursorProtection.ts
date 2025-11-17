@@ -7,6 +7,7 @@ import { EditorView } from '@codemirror/view';
 import { EditorSelection } from '@codemirror/state';
 import { blockState } from './state';
 import { Block } from './types';
+import { USER_EVENTS } from './annotation';
 
 /**
  * 二分查找：找到包含指定位置的块
@@ -136,7 +137,7 @@ export function createCursorProtection() {
                 view.dispatch({
                     selection: EditorSelection.cursor(adjustedPos),
                     scrollIntoView: true,
-                    userEvent: 'select'
+                    userEvent: USER_EVENTS.SELECT
                 });
 
                 // 阻止默认行为
@@ -148,4 +149,3 @@ export function createCursorProtection() {
         }
     });
 }
-

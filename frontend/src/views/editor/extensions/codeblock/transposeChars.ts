@@ -5,6 +5,7 @@
 
 import { EditorSelection, findClusterBreak } from "@codemirror/state";
 import { getNoteBlockFromPos } from "./state";
+import { USER_EVENTS } from "./annotation";
 
 /**
  * 交换光标前后的字符
@@ -46,7 +47,7 @@ export const transposeChars = ({ state, dispatch }: { state: any; dispatch: any 
   
   dispatch(state.update(changes, { 
     scrollIntoView: true, 
-    userEvent: "move.character" 
+    userEvent: USER_EVENTS.MOVE_CHARACTER 
   }));
   
   return true;

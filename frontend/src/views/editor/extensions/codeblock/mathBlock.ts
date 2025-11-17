@@ -6,6 +6,7 @@
 import { ViewPlugin, Decoration, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import { getNoteBlockFromPos } from "./state";
+import { transactionsHasAnnotation, CURRENCIES_LOADED } from "./annotation";
 // 声明全局math对象
 declare global {
     interface Window {
@@ -75,6 +76,11 @@ function mathDeco(view: any): any {
                 // get math.js parser and cache it for this block
                 let { parser, prev } = mathParsers.get(block) || {};
                 if (!parser) {
+                    // 如果当前可见行不是该 math 块的第一行，为了正确累计 prev，需要从块头开始重新扫描
+                    if (line.from > block.content.from) {
+                        pos = block.content.from;
+                        continue;
+                    }
                     if (typeof window.math !== 'undefined') {
                         parser = window.math.parser();
                         mathParsers.set(block, { parser, prev });
@@ -148,8 +154,12 @@ export const mathBlock = ViewPlugin.fromClass(class {
     }
 
     update(update: any) {
-        // If the document changed, the viewport changed, update the decorations
-        if (update.docChanged || update.viewportChanged) {
+        // 需要在文档/视口变化或收到 CURRENCIES_LOADED 注解时重新渲染
+        if (
+            update.docChanged ||
+            update.viewportChanged ||
+            transactionsHasAnnotation(update.transactions, CURRENCIES_LOADED)
+        ) {
             this.decorations = mathDeco(update.view);
         }
     }

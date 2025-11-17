@@ -4,6 +4,7 @@ import * as prettier from "prettier/standalone";
 import { getActiveNoteBlock } from "./state";
 import { getLanguage } from "./lang-parser/languages";
 import { SupportedLanguage } from "./types";
+import { USER_EVENTS } from "./annotation";
 
 export const formatBlockContent = (view) => {
     if (!view || view.state.readOnly)
@@ -87,7 +88,7 @@ export const formatBlockContent = (view) => {
                 },
                 selection: EditorSelection.cursor(currentBlockFrom + Math.min(formattedContent.cursorOffset, formattedContent.formatted.length)),
                 scrollIntoView: true,
-                userEvent: "input"
+                userEvent: USER_EVENTS.INPUT
             });
             
             return true;

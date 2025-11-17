@@ -5,6 +5,7 @@
 import { ViewPlugin, EditorView, Decoration, WidgetType, layer, RectangleMarker } from "@codemirror/view";
 import { StateField, RangeSetBuilder, EditorState } from "@codemirror/state";
 import { blockState } from "./state";
+import { codeBlockEvent } from "./annotation";
 
 /**
  * 块开始装饰组件
@@ -180,10 +181,11 @@ const blockLayer = layer({
  */
 const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) => {
   const protect: number[] = [];
+  const internalEvent = tr.annotation(codeBlockEvent);
   
   // 获取块状态并获取第一个块的分隔符大小
   const blocks = tr.startState.field(blockState);
-  if (blocks && blocks.length > 0) {
+  if (!internalEvent && blocks && blocks.length > 0) {
     const firstBlock = blocks[0];
     const firstBlockDelimiterSize = firstBlock.delimiter.to;
     
@@ -195,22 +197,25 @@ const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) 
   
   // 如果是搜索替换操作，保护所有块分隔符
   if (tr.annotations.some((a: any) => a.value === "input.replace" || a.value === "input.replace.all")) {
-    blocks.forEach((block: any) => {
+    blocks?.forEach((block: any) => {
       if (block.delimiter) {
         protect.push(block.delimiter.from, block.delimiter.to);
       }
     });
   }
   
-  // 返回保护范围数组，如果没有需要保护的范围则返回 false
-  return protect.length > 0 ? protect : false;
-});
+  // 返回保护范围数组；若无需保护则返回 true 放行事务
+  return protect.length > 0 ? protect : true;
+})
 
 /**
  * 防止选择在第一个块之前
  * 使用 transactionFilter 来确保选择不会在第一个块之前
  */
 const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: any) => {
+  if (tr.annotation(codeBlockEvent)) {
+    return tr;
+  }
   // 获取块状态并获取第一个块的分隔符大小
   const blocks = tr.startState.field(blockState);
   if (!blocks || blocks.length === 0) {

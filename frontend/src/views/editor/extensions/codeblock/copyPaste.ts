@@ -7,6 +7,7 @@ import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { Command } from "@codemirror/view";
 import { LANGUAGES } from "./lang-parser/languages";
+import { USER_EVENTS } from "./annotation";
 
 /**
  * 构建块分隔符正则表达式
@@ -89,7 +90,7 @@ export const codeBlockCopyCut = EditorView.domEventHandlers({
       view.dispatch({
         changes: ranges,
         scrollIntoView: true,
-        userEvent: "delete.cut"
+        userEvent: USER_EVENTS.DELETE_CUT
       });
     }
   }
@@ -111,7 +112,7 @@ const copyCut = (view: EditorView, cut: boolean): boolean => {
     view.dispatch({
       changes: ranges,
       scrollIntoView: true,
-      userEvent: "delete.cut"
+      userEvent: USER_EVENTS.DELETE_CUT
     });
   }
 
@@ -142,7 +143,7 @@ function doPaste(view: EditorView, input: string) {
   }
   
   view.dispatch(changes, {
-    userEvent: "input.paste",
+    userEvent: USER_EVENTS.INPUT_PASTE,
     scrollIntoView: true
   });
 }
