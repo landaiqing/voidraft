@@ -10,9 +10,10 @@ export const ADD_NEW_BLOCK = "codeblock-add-new-block";
 export const MOVE_BLOCK = "codeblock-move-block";
 export const DELETE_BLOCK = "codeblock-delete-block";
 export const CURRENCIES_LOADED = "codeblock-currencies-loaded";
+export const CONTENT_EDIT = "codeblock-content-edit";
 
 /**
- * 统一管理的 userEvent 常量，方便复用与检索。
+ * 统一管理的 userEvent 常量。
  */
 export const USER_EVENTS = {
   INPUT: "input",
@@ -25,6 +26,8 @@ export const USER_EVENTS = {
   MOVE_LINE: "move.line",
   MOVE_CHARACTER: "move.character",
   SELECT_BLOCK_BOUNDARY: "select.block-boundary",
+  INPUT_REPLACE: "input.replace",
+  INPUT_REPLACE_ALL: "input.replace.all",
 } as const;
 
 /**

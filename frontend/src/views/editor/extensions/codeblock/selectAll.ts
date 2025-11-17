@@ -7,7 +7,7 @@ import { StateField, StateEffect, RangeSetBuilder, EditorSelection, EditorState,
 import { selectAll as defaultSelectAll } from "@codemirror/commands";
 import { Command } from "@codemirror/view";
 import { getActiveNoteBlock, blockState } from "./state";
-import { USER_EVENTS } from "./annotation";
+import { USER_EVENTS, codeBlockEvent, CONTENT_EDIT } from "./annotation";
 
 /**
  * 当用户按下 Ctrl+A 时，我们希望首先选择整个块。但如果整个块已经被选中，
@@ -116,7 +116,8 @@ export const selectAll: Command = ({ state, dispatch }) => {
   // 选择当前块的所有内容
   dispatch(state.update({
     selection: { anchor: block.content.from, head: block.content.to },
-    userEvent: USER_EVENTS.SELECT
+    userEvent: USER_EVENTS.SELECT,
+    annotations: [codeBlockEvent.of(CONTENT_EDIT)],
   }));
 
   return true;

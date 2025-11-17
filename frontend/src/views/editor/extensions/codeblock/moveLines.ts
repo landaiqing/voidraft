@@ -6,6 +6,7 @@
 import { EditorSelection, SelectionRange } from "@codemirror/state";
 import { blockState } from "./state";
 import { LANGUAGES } from "./lang-parser/languages";
+import { codeBlockEvent, CONTENT_EDIT } from "./annotation";
 import { USER_EVENTS } from "./annotation";
 
 interface LineBlock {
@@ -132,7 +133,8 @@ function moveLine(state: any, dispatch: any, forward: boolean): boolean {
     changes,
     scrollIntoView: true,
     selection: EditorSelection.create(ranges, state.selection.mainIndex),
-    userEvent: USER_EVENTS.MOVE_LINE
+    userEvent: USER_EVENTS.MOVE_LINE,
+    annotations: [codeBlockEvent.of(CONTENT_EDIT)],
   }));
   
   return true;

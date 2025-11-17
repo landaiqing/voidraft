@@ -3,7 +3,8 @@
  */
 
 import { EditorState } from '@codemirror/state';
-import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
+import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
+import type { Tree } from '@lezer/common';
 import { Block as BlockNode, BlockDelimiter, BlockContent, BlockLanguage } from './lang-parser/parser.terms.js';
 import {
     SupportedLanguage,
@@ -15,51 +16,47 @@ import {
 } from './types';
 import { LANGUAGES } from './lang-parser/languages';
 
+const DEFAULT_LANGUAGE = (LANGUAGES[0]?.token || 'text') as string;
+
 /**
  * 从语法树解析代码块
  */
 export function getBlocksFromSyntaxTree(state: EditorState): Block[] | null {
-    if (!syntaxTreeAvailable(state)) {
+    const tree = syntaxTree(state);
+    if (!tree) {
         return null;
     }
+    return collectBlocksFromTree(tree, state);
+}
 
-    const tree = syntaxTree(state);
+function collectBlocksFromTree(tree: Tree, state: EditorState): Block[] | null {
     const blocks: Block[] = [];
     const doc = state.doc;
 
-    // 遍历语法树中的所有块
     tree.iterate({
         enter(node) {
             if (node.type.id === BlockNode) {
-                // 查找块的分隔符和内容
                 let delimiter: { from: number; to: number } | null = null;
                 let content: { from: number; to: number } | null = null;
-                let language = 'text';
+                let language: string = DEFAULT_LANGUAGE;
                 let auto = false;
 
-                // 遍历块的子节点
                 const blockNode = node.node;
                 blockNode.firstChild?.cursor().iterate(child => {
                     if (child.type.id === BlockDelimiter) {
                         delimiter = { from: child.from, to: child.to };
-                        
-                        // 解析整个分隔符文本来获取语言和自动检测标记
                         const delimiterText = doc.sliceString(child.from, child.to);
-
-                        // 使用正则表达式解析分隔符
                         const match = delimiterText.match(/∞∞∞([a-zA-Z0-9_-]+)(-a)?\n/);
                         if (match) {
-                            language = match[1] || 'text';
+                            language = match[1] || DEFAULT_LANGUAGE;
                             auto = match[2] === '-a';
                         } else {
-                            // 回退到逐个解析子节点
                             child.node.firstChild?.cursor().iterate(langChild => {
                                 if (langChild.type.id === BlockLanguage) {
                                     const langText = doc.sliceString(langChild.from, langChild.to);
-                                    language = langText || 'text';
+                                    language = langText || DEFAULT_LANGUAGE;
                                 }
-                                // 检查是否有自动检测标记
-                                if (doc.sliceString(langChild.from, langChild.to) === '-a') {
+                                if (doc.sliceString(langChild.from, langChild.to) === AUTO_DETECT_SUFFIX) {
                                     auto = true;
                                 }
                             });
@@ -88,7 +85,6 @@ export function getBlocksFromSyntaxTree(state: EditorState): Block[] | null {
     });
 
     if (blocks.length > 0) {
-        // 设置第一个块分隔符的大小
         firstBlockDelimiterSize = blocks[0].delimiter.to;
         return blocks;
     }
@@ -104,203 +100,78 @@ export let firstBlockDelimiterSize: number | undefined;
  */
 export function getBlocksFromString(state: EditorState): Block[] {
   const blocks: Block[] = [];
-    const doc = state.doc;
+  const doc = state.doc;
 
   if (doc.length === 0) {
-    // 如果文档为空，创建一个默认的文本块
-        return [{
-      language: {
-        name: 'text',
-        auto: false,
-      },
-      content: {
-        from: 0,
-        to: 0,
-      },
-      delimiter: {
-        from: 0,
-        to: 0,
-      },
-      range: {
-        from: 0,
-        to: 0,
-      },
-        }];
-    }
+    return [createPlainTextBlock(0, 0)];
+  }
 
   const content = doc.sliceString(0, doc.length);
-  const delim = "\n∞∞∞";
-  let pos = 0;
+  const delimiter = DELIMITER_PREFIX;
+  const suffixLength = DELIMITER_SUFFIX.length;
 
-  // 检查文档是否以分隔符开始（不带前导换行符）
-  if (content.startsWith("∞∞∞")) {
-    // 文档直接以分隔符开始，调整为标准格式
-    pos = 0;
-  } else if (content.startsWith("\n∞∞∞")) {
-    // 文档以换行符+分隔符开始，这是标准格式，从位置0开始解析
-    pos = 0;
-  } else {
-    // 如果文档不以分隔符开始，查找第一个分隔符
-    const firstDelimPos = content.indexOf(delim);
-    
-    if (firstDelimPos === -1) {
-      // 如果没有找到分隔符，整个文档作为一个文本块
-      firstBlockDelimiterSize = 0;
-      return [{
-        language: {
-          name: 'text',
-          auto: false,
-        },
-        content: {
-          from: 0,
-          to: doc.length,
-        },
-        delimiter: {
-          from: 0,
-          to: 0,
-        },
-        range: {
-          from: 0,
-          to: doc.length,
-        },
-        }];
-    }
+  let pos = content.indexOf(delimiter);
 
-    // 创建第一个块（分隔符之前的内容）
+  if (pos === -1) {
+    firstBlockDelimiterSize = 0;
+    return [createPlainTextBlock(0, doc.length)];
+  }
+
+  if (pos > 0) {
+    blocks.push(createPlainTextBlock(0, pos));
+  }
+
+  while (pos !== -1 && pos < doc.length) {
+    const blockStart = pos;
+    const langStart = blockStart + delimiter.length;
+    const delimiterEnd = content.indexOf(DELIMITER_SUFFIX, langStart);
+    if (delimiterEnd === -1) break;
+
+    const delimiterText = content.slice(blockStart, delimiterEnd + suffixLength);
+    const delimiterInfo = parseDelimiter(delimiterText);
+    if (!delimiterInfo) break;
+
+    const contentStart = delimiterEnd + suffixLength;
+    const nextDelimiter = content.indexOf(delimiter, contentStart);
+    const contentEnd = nextDelimiter === -1 ? doc.length : nextDelimiter;
+
     blocks.push({
-      language: {
-        name: 'text',
-        auto: false,
-      },
-      content: {
-        from: 0,
-        to: firstDelimPos,
-      },
-      delimiter: {
-        from: 0,
-        to: 0,
-      },
-      range: {
-        from: 0,
-        to: firstDelimPos,
-      },
+      language: { name: delimiterInfo.language, auto: delimiterInfo.auto },
+      content: { from: contentStart, to: contentEnd },
+      delimiter: { from: blockStart, to: delimiterEnd + suffixLength },
+      range: { from: blockStart, to: contentEnd },
     });
-    
-    pos = firstDelimPos;
-    firstBlockDelimiterSize = 0;
+
+    pos = nextDelimiter;
   }
-  
-  while (pos < doc.length) {
-    let blockStart: number;
-    
-    if (pos === 0 && content.startsWith("∞∞∞")) {
-      // 处理文档开头直接是分隔符的情况（不带前导换行符）
-      blockStart = 0;
-    } else if (pos === 0 && content.startsWith("\n∞∞∞")) {
-      // 处理文档开头是换行符+分隔符的情况（标准格式）
-      blockStart = 0;
-    } else {
-      blockStart = content.indexOf(delim, pos);
-      if (blockStart !== pos) {
-        // 如果在当前位置没有找到分隔符，可能是文档结尾
-        break;
-      }
-    }
-    
-    // 确定语言开始位置
-    let langStart: number;
-    if (pos === 0 && content.startsWith("∞∞∞")) {
-      // 文档直接以分隔符开始，跳过 ∞∞∞
-      langStart = blockStart + 3;
-    } else {
-      // 标准情况，跳过 \n∞∞∞
-      langStart = blockStart + delim.length;
-    }
-    
-    const delimiterEnd = content.indexOf("\n", langStart);
-    if (delimiterEnd < 0) {
-      console.error("Error parsing blocks. Delimiter didn't end with newline");
-      break;
-    }
-    
-    const langFull = content.substring(langStart, delimiterEnd);
-    let auto = false;
-    let lang = langFull;
-    
-    if (langFull.endsWith("-a")) {
-      auto = true;
-      lang = langFull.substring(0, langFull.length - 2);
-    }
-    
-    const contentFrom = delimiterEnd + 1;
-    let blockEnd = content.indexOf(delim, contentFrom);
-    if (blockEnd < 0) {
-      blockEnd = doc.length;
-    }
-    
-    const block: Block = {
-      language: {
-        name: lang || 'text',
-        auto: auto,
-      },
-      content: {
-        from: contentFrom,
-        to: blockEnd,
-      },
-      delimiter: {
-        from: blockStart,
-        to: delimiterEnd + 1,
-      },
-      range: {
-        from: blockStart,
-        to: blockEnd,
-      },
-    };
-    
-    blocks.push(block);
-    pos = blockEnd;
-  }
-  
-  // 如果没有找到任何块，创建一个默认块
+
   if (blocks.length === 0) {
-        blocks.push({
-      language: {
-        name: 'text',
-        auto: false,
-      },
-      content: {
-        from: 0,
-        to: doc.length,
-      },
-      delimiter: {
-        from: 0,
-        to: 0,
-      },
-      range: {
-        from: 0,
-        to: doc.length,
-      },
-    });
+    blocks.push(createPlainTextBlock(0, doc.length));
     firstBlockDelimiterSize = 0;
   } else {
-    // 设置第一个块分隔符的大小
     firstBlockDelimiterSize = blocks[0].delimiter.to;
   }
 
-    return blocks;
+  return blocks;
 }
 
 /**
  * 获取文档中的所有块
  */
 export function getBlocks(state: EditorState): Block[] {
-    // 优先使用语法树解析
-    const syntaxTreeBlocks = getBlocksFromSyntaxTree(state);
-    if (syntaxTreeBlocks) {
-        return syntaxTreeBlocks;
+    let blocks = getBlocksFromSyntaxTree(state);
+    if (blocks) {
+        return blocks;
+    }
+
+    const ensuredTree = ensureSyntaxTree(state, state.doc.length, 200);
+    if (ensuredTree) {
+        blocks = collectBlocksFromTree(ensuredTree, state);
+        if (blocks) {
+            return blocks;
+        }
     }
     
-    // 如果语法树不可用，回退到字符串解析
     return getBlocksFromString(state);
 }
 
@@ -396,10 +267,21 @@ export function parseDelimiter(delimiterText: string): { language: SupportedLang
 
     const validLanguage = LANGUAGES.some(lang => lang.token === languageName)
         ? languageName as SupportedLanguage
-        : 'text';
+        : DEFAULT_LANGUAGE as SupportedLanguage;
 
     return {
         language: validLanguage,
         auto: isAuto
     };
 }
+
+function createPlainTextBlock(from: number, to: number): Block {
+  return {
+    language: { name: DEFAULT_LANGUAGE, auto: false },
+    content: { from, to },
+    delimiter: { from: 0, to: 0 },
+    range: { from, to },
+  };
+}
+
+

@@ -3,9 +3,9 @@
  */
 
 import { ViewPlugin, EditorView, Decoration, WidgetType, layer, RectangleMarker } from "@codemirror/view";
-import { StateField, RangeSetBuilder, EditorState } from "@codemirror/state";
+import { StateField, RangeSetBuilder, EditorState, Transaction } from "@codemirror/state";
 import { blockState } from "./state";
-import { codeBlockEvent } from "./annotation";
+import { codeBlockEvent, USER_EVENTS } from "./annotation";
 
 /**
  * 块开始装饰组件
@@ -196,7 +196,8 @@ const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) 
   }
   
   // 如果是搜索替换操作，保护所有块分隔符
-  if (tr.annotations.some((a: any) => a.value === "input.replace" || a.value === "input.replace.all")) {
+  const userEvent = tr.annotation(Transaction.userEvent);
+  if (userEvent && (userEvent === USER_EVENTS.INPUT_REPLACE || userEvent === USER_EVENTS.INPUT_REPLACE_ALL)) {
     blocks?.forEach((block: any) => {
       if (block.delimiter) {
         protect.push(block.delimiter.from, block.delimiter.to);

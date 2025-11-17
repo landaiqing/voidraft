@@ -7,6 +7,11 @@ import { ViewPlugin, Decoration, WidgetType } from "@codemirror/view";
 import { RangeSetBuilder } from "@codemirror/state";
 import { getNoteBlockFromPos } from "./state";
 import { transactionsHasAnnotation, CURRENCIES_LOADED } from "./annotation";
+
+type MathParserEntry = {
+    parser: any;
+    prev?: any;
+};
 // 声明全局math对象
 declare global {
     interface Window {
@@ -63,8 +68,7 @@ class MathResult extends WidgetType {
 /**
  * 数学装饰函数
  */
-function mathDeco(view: any): any {
-    const mathParsers = new WeakMap();
+function mathDeco(view: any, parserCache: WeakMap<any, MathParserEntry>): any {
     const builder = new RangeSetBuilder();
     
     for (const { from, to } of view.visibleRanges) {
@@ -73,17 +77,17 @@ function mathDeco(view: any): any {
             const block = getNoteBlockFromPos(view.state, pos);
 
             if (block && block.language.name === "math") {
-                // get math.js parser and cache it for this block
-                let { parser, prev } = mathParsers.get(block) || {};
+                let entry = parserCache.get(block);
+                let parser = entry?.parser;
                 if (!parser) {
-                    // 如果当前可见行不是该 math 块的第一行，为了正确累计 prev，需要从块头开始重新扫描
                     if (line.from > block.content.from) {
                         pos = block.content.from;
                         continue;
                     }
                     if (typeof window.math !== 'undefined') {
                         parser = window.math.parser();
-                        mathParsers.set(block, { parser, prev });
+                        entry = { parser, prev: undefined };
+                        parserCache.set(block, entry);
                     }
                 }
                 
@@ -91,10 +95,15 @@ function mathDeco(view: any): any {
                 let result: any;
                 try {
                     if (parser) {
-                        parser.set("prev", prev);
+                        if (entry && line.from === block.content.from && typeof parser.clear === "function") {
+                            parser.clear();
+                            entry.prev = undefined;
+                        }
+                        const prevValue = entry?.prev;
+                        parser.set("prev", prevValue);
                         result = parser.evaluate(line.text);
-                        if (result !== undefined) {
-                            mathParsers.set(block, { parser, prev: result });
+                        if (entry && result !== undefined) {
+                            entry.prev = result;
                         }
                     }
                 } catch (e) {
@@ -103,7 +112,7 @@ function mathDeco(view: any): any {
 
                 // if we got a result from math.js, add the result decoration
                 if (result !== undefined) {
-                    const format = parser?.get("format");
+                    const format = parser?.get?.("format");
 
                     let resultWidget: MathResult | undefined;
                     if (typeof(result) === "string") {
@@ -148,19 +157,25 @@ function mathDeco(view: any): any {
  */
 export const mathBlock = ViewPlugin.fromClass(class {
     decorations: any;
+    mathParsers: WeakMap<any, MathParserEntry>;
 
     constructor(view: any) {
-        this.decorations = mathDeco(view);
+        this.mathParsers = new WeakMap();
+        this.decorations = mathDeco(view, this.mathParsers);
     }
 
     update(update: any) {
-        // 需要在文档/视口变化或收到 CURRENCIES_LOADED 注解时重新渲染
+        const hasCurrencyUpdate = transactionsHasAnnotation(update.transactions, CURRENCIES_LOADED);
+        if (update.docChanged || hasCurrencyUpdate) {
+            // 文档结构或汇率变化时重置解析缓存
+            this.mathParsers = new WeakMap();
+        }
         if (
             update.docChanged ||
             update.viewportChanged ||
-            transactionsHasAnnotation(update.transactions, CURRENCIES_LOADED)
+            hasCurrencyUpdate
         ) {
-            this.decorations = mathDeco(update.view);
+            this.decorations = mathDeco(update.view, this.mathParsers);
         }
     }
 }, {
