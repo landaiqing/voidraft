@@ -93,13 +93,32 @@ export default defineConfig({
                             items: [
                                 {text: '简介', link: '/zh/guide/introduction'},
                                 {text: '安装', link: '/zh/guide/installation'},
-                                {text: '快速开始', link: '/zh/guide/getting-started'}
+                                {text: '快速开始', link: '/zh/guide/getting-started'},
+                                {text: '界面总览', link: '/zh/guide/ui-overview'},
+                                {text: '块语法与结构', link: '/zh/guide/block-syntax'}
                             ]
                         },
                         {
-                            text: '功能特性',
+                            text: '编辑与效率',
                             items: [
-                                {text: '功能概览', link: '/zh/guide/features'}
+                                {text: '键盘快捷键', link: '/zh/guide/keyboard-shortcuts'},
+                                {text: '多窗口与标签页', link: '/zh/guide/multiwindow-tabs'},
+                                {text: '扩展与插件', link: '/zh/guide/extensions'},
+                                {text: 'HTTP 客户端', link: '/zh/guide/http-client'}
+                            ]
+                        },
+                        {
+                            text: '个性化与数据',
+                            items: [
+                                {text: '设置与配置', link: '/zh/guide/settings'},
+                                {text: '主题与外观', link: '/zh/guide/themes'},
+                                {text: '备份与更新', link: '/zh/guide/backup-update'}
+                            ]
+                        },
+                        {
+                            text: '问题处理',
+                            items: [
+                                {text: '常见问题与故障排查', link: '/zh/guide/troubleshooting'}
                             ]
                         }
                     ]

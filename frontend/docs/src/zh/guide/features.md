@@ -1,163 +1,86 @@
 # 功能特性
 
-探索 voidraft 的强大功能，让它成为开发者的优秀工具。
+![扩展能力占位](/img/placeholder-extensions.png)
+> 替换为展示彩虹括号、小地图、搜索工具条等扩展组合的截图。
 
-## 块状编辑
+## 1. 编辑体验
+### 块状编辑全流程
+- `∞∞∞language[-a]` 语法由 `codeblock/lang-parser` 解析，支持自动检测、分隔符校验、块范围缓存。
+- `blockState` 暴露 API（`getActiveBlock/getFirstBlock/getLastBlock`），供格式化、重排、复制、HTTP 执行等插件共享。
+- `mathBlock` 可在块尾展示计算结果，点击可复制；`CURRENCIES_LOADED` 注解在汇率更新时刷新缓存。
 
-voidraft 的核心功能是其块状编辑系统：
+### 语言支持
+- 内建 30+ 语言模版（`lang-parser/languages.ts`），覆盖 JS/TS/HTML/CSS/Go/Rust/Python/SQL/YAML/HTTP/Markdown/Plain/Text/Math。
+- 语言切换下拉实时更新分隔符；支持自定义别名（例如 `∞∞∞shell`）。
 
-- 每个块可以有不同的编程语言
-- 块之间由分隔符分隔（`∞∞∞语言`）
-- 快速在块之间导航
-- 独立格式化每个块
+### 语法高亮与主题
+- `rainbowBracket`、`fold`、`hyperlink`、`colorSelector` 等扩展组合提供接近 VSCode 的体验。
+- `ThemeService` 预置 12+ 暗/亮主题，可在设置中克隆、修改 JSON 色板，并立即生效。
 
-## 语法高亮
+### 文本统计与滚轮缩放
+- `statsExtension` 实时统计行数、字符数和选区，展示在状态栏。
+- `wheelZoomExtension` 让 `Ctrl + 鼠标滚轮` 调整字体大小，同时同步 `configStore`。
 
-支持 30+ 种语言的专业语法高亮：
+## 2. 高效工具箱
+### VSCode 式搜索替换
+- `extensions/vscodeSearch` 提供悬浮面板，支持大小写/整词/正则、向上/向下跳转、批量替换。
+- 对应快捷键：`Ctrl+F`、`Ctrl+H`、`Alt+Enter`（替换全部）。
 
-- 自动语言检测
-- 可自定义配色方案
-- 支持嵌套语言
-- 代码折叠支持
+### Markdown 预览
+- `panelStore` 为每个文档维护预览状态，保证不同文档互不影响。
+- 选中 Markdown 块后点击工具栏预览按钮即可在右侧展开实时渲染面板。
 
-## HTTP 客户端
+### HTTP 客户端
+- Request DSL + 运行器在 [专章](/zh/guide/http-client) 详细说明。
+- 支持变量、响应插入、多种请求体、定制 header、复制 cURL。
 
-用于 API 测试的内置 HTTP 客户端：
+### 翻译助手
+- `translator` 扩展监听选区，符合长度阈值后显示按钮；由 `TranslationService` 调用 Bing/Google/Youdao/DeepL/TartuNLP。
+- 支持语种缓存、复制译文、切换译文方向。
 
-### 请求类型
-- GET、POST、PUT、DELETE、PATCH
-- 自定义请求头
-- 多种请求体格式：JSON、FormData、URL 编码、XML、文本
+### 颜色与高亮
+- `colorSelector` 识别 `#fff/rgba/hsl`、打开取色器；`textHighlight` 用 `Mod+Shift+H` 标记重要行。
 
-### 请求变量
-定义和重用变量：
+## 3. 复杂布局能力
+### 多窗口
+- `WindowService` 允许为任意文档创建独立 WebView，URL 自动携带 `?documentId=`。
+- `WindowSnapService` 根据主窗口位置吸附子窗口（上下左右+四角），并缓存尺寸、位置。
+- 支持全局热键（默认 `Alt+X`）一键显示或隐藏所有窗口。
 
-```http
-@var {
-  baseUrl: "https://api.example.com",
-  token: "your-api-token"
-}
+### 标签页
+- `tabStore` 通过 `enableTabs` 控制；支持拖拽排序、关闭其他/左侧/右侧标签。
+- 与多窗口互斥：当文档被新窗口接管后会从标签栏移除，避免重复。
 
-GET "{{baseUrl}}/users" {
-  authorization: "Bearer {{token}}"
-}
-```
+### 系统托盘与置顶
+- `TrayService` 控制关闭时隐藏到托盘或直接退出。
+- 工具栏提供图钉按钮，可即时切换 `AlwaysOnTop`（支持临时置顶和永久置顶）。
 
-### 响应处理
-- 查看格式化的 JSON 响应
-- 查看响应时间和大小
-- 检查响应头
-- 保存响应以供日后使用
+## 4. 数据守护
+### SQLite + 自动迁移
+- `DatabaseService` 启动时执行 PRAGMA + 表结构校验，缺失字段自动 `ALTER TABLE`。
+- 默认生成 `documents/extensions/key_bindings/themes` 等表，支持软删除与锁定。
 
-## 代码格式化
+### Git 备份
+- `BackupService` 将 `dataPath` 初始化为 Git 仓库，支持 Token/SSHKey/用户名密码三种方式。
+- 自动任务按分钟运行（`BackupInterval`），包括 add/commit/push；也可从 UI 触发一次性 push。
 
-集成 Prettier 支持：
+### 配置快照
+- 所有设置存于 `config.json`，包含 `metadata.version/lastUpdated`，方便手工回滚。
+- `ConfigService.Watch` 为窗口吸附、托盘、热键等服务提供实时响应。
 
-- 保存时格式化（可选）
-- 格式化选区或整个块
-- 支持 JavaScript、TypeScript、CSS、HTML、JSON 等
-- 可自定义格式化规则
+### 自动更新
+- `SelfUpdateService` 先检查主源（Gitea），失败再回退到 GitHub；下载完成后可一键「重启并更新」。
+- 更新前可选自动触发 Git 备份（`backupBeforeUpdate`）。
 
-## 编辑器扩展
+## 5. 自动化与集成
+- **启动时动作**：可开启开机自启（`StartupService`）、默认最小化至托盘。
+- **HTTP 运行挂钩**：`response-inserter` 可在响应块尾部插入 `// @timestamp` 等自定义标记。
+- **Math/汇率**：`mathBlock` 可引用上一次结果 (`prev`)，配合 `CURRENCIES_LOADED` 注解支撑货币换算。
+- **系统信息**：`SystemService` 暴露内存、GC、Goroutine 数量，可在调试面板查看。
 
-### VSCode 风格搜索
-- 查找和替换，支持正则表达式
-- 区分大小写和全字匹配选项
-- 跨所有块搜索
+## 6. 可配置的快捷键
+- 详见 [键盘快捷键](/zh/guide/keyboard-shortcuts)。默认绑定定义在 `internal/models/key_bindings.go`，前端设置页可逐项修改、禁用。
 
-### 小地图
-- 文档的鸟瞰图
-- 快速导航
-- 可自定义大小和位置
-
-### 彩虹括号
-- 彩色括号配对
-- 更容易匹配括号
-- 可自定义颜色
-
-### 颜色选择器
-- 可视化颜色选择
-- 支持 hex、RGB、HSL
-- 实时预览
-
-### 翻译工具
-- 翻译选定的文本
-- 支持多种语言
-- 快速键盘访问
-
-### 文本高亮
-- 高亮重要文本
-- 多种高亮颜色
-- 持久化高亮
-
-## 多窗口支持
-
-高效使用多个窗口：
-
-- 每个窗口都是独立的
-- 独立的文档
-- 同步的设置
-- 窗口状态持久化
-
-## 主题自定义
-
-完全控制编辑器外观：
-
-### 内置主题
-- 深色模式
-- 浅色模式
-- 根据系统自动切换
-
-### 自定义主题
-- 创建你自己的主题
-- 自定义每种颜色
-- 保存和分享主题
-- 导入社区主题
-
-## 自动更新系统
-
-通过自动更新保持最新：
-
-- 后台更新检查
-- 新版本通知
-- 一键更新
-- 更新历史
-- 支持多个更新源（GitHub、Gitea）
-
-## 数据备份
-
-使用基于 Git 的备份保护你的数据：
-
-- 自动备份
-- 手动触发备份
-- 支持 GitHub 和 Gitea
-- 多种认证方式（SSH、Token、密码）
-- 可配置备份间隔
-
-## 键盘快捷键
-
-广泛的键盘支持：
-
-- 可自定义快捷键
-- Vim/Emacs 按键绑定（计划中）
-- 快速命令面板
-- 上下文感知快捷键
-
-## 性能
-
-专为速度而构建：
-
-- 快速启动时间
-- 流畅滚动
-- 高效内存使用
-- 支持大文件
-
-## 隐私与安全
-
-你的数据是安全的：
-
-- 本地优先存储
-- 可选云备份
-- 无遥测或跟踪
-- 开源代码库
-
+## 7. 文档 & 帮助
+- 文档站以 VitePress 构建（`frontend/docs`），内置中英双语导航，可一键部署到 GitHub Pages。
+- `README` 与本文档同步介绍核心功能；建议将常用工作流截图补充到每个「图片占位」中。

@@ -1,50 +1,73 @@
 # 简介
 
-欢迎使用 voidraft —— 一个专为开发者设计的优雅文本片段记录工具。
+> voidraft 是一款面向开发者的「块式工作台」，用 CodeMirror 6 打造 Heynote 风格的体验，并结合 Wails3 + Go 后端提供系统托盘、全局热键、自动备份等桌面级能力。
 
-## 什么是 voidraft？
+![主界面总览占位](/img/placeholder-main-ui.png)
+> 将 `/img/placeholder-main-ui.png` 替换为真实的应用主界面截图，演示数据面板、工具栏和右侧小地图。
 
-voidraft 是一个现代化的桌面应用程序，帮助开发者管理文本片段、代码块、API 响应、会议笔记和日常待办事项。它为开发工作流程提供了流畅而优雅的编辑体验和强大的功能。
+## 产品定位
+- **核心诉求**：在一处快速记录代码/配置/API 响应/待办清单，并能随时重排、格式化、运行或搜索。
+- **目标用户**：需要跨项目管理零碎文本的开发者、DevOps、测试或产品技术写作者。
+- **设计理念**：所有内容都拆成可重排的块（`∞∞∞language`）；每个块拥有独立语言、格式化器与扩展；多窗口/多标签保证同一份数据的不同视角。
 
-## 核心特性
+## 面向场景
+1. **临时代码/脚本草稿**：支持 30+ 语言高亮、Prettier 格式化、彩虹括号、文本高亮。
+2. **API 调试台**：HTTP 块内置运行器、变量解析、响应插入；请求和响应始终和文档共存。
+3. **会议 & 需求记录**：Markdown 块 + Checkbox 扩展 + 颜色标注快速整理想法。
+4. **翻译与研究**：选中文本即可调 Bing/Google/DeepL/TartuNLP/有道翻译，结果内联呈现。
+5. **多窗口资料墙**：重要文档可弹出独立无边框窗口，依附（Snap）在主窗口侧边。
 
-### 块状编辑模式
+## 核心概念
+### 块式编辑器
+- 解析器位于 `frontend/src/views/editor/extensions/codeblock`，依赖自研 Lezer 语法树确保 `∞∞∞` 分隔符稳定。
+- 块结构（语言、是否自动检测、正文范围）存入 `blockState`，供格式化、移动、复制、HTTP 执行等扩展复用。
+- `math` 块使用 `math.js` 运行器，`http` 块调用 request parser + gutter run widget。
 
-voidraft 使用受 Heynote 启发的独特块状编辑系统。你可以将内容分割为独立的代码块，每个块具有：
-- 不同的编程语言设置
-- 语法高亮
-- 独立格式化
-- 轻松在块之间导航
+### 扩展驱动
+- 后端通过 `internal/models/extensions.go` 定义扩展 ID/配置，`ExtensionService` 负责持久化。
+- 前端 `ExtensionManager` 根据扩展配置动态拼装 CodeMirror Extension pipeline（小地图、VSCode Search、Translator、Color Picker 等）。
+- 所有扩展都可在设置页热切换，立即同步到当前与所有已打开的编辑器实例。
 
-### 开发者工具
+### 数据与安全
+- SQLite 数据保存在 `%USERPROFILE%/.voidraft/data/voidraft.db`（可在设置中自定义 dataPath）。
+- `DatabaseService` 自动迁移表结构，`DocumentService` 提供软删除/锁定机制避免误删默认草稿。
+- `BackupService` 基于 go-git（SSH/Token/用户名密码）把 dataPath git 化，可按分钟全量提交、推送到 GitHub/Gitea 等。
+- `SelfUpdateService` 同时轮询 GitHub/Gitea Release，支持自动下载 + 一键重启。
 
-- **HTTP 客户端**：直接在编辑器中测试 API
-- **代码格式化**：内置 Prettier 支持多种语言
-- **语法高亮**：支持 30+ 种编程语言
-- **自动语言检测**：自动识别代码块语言类型
+## 系统架构概览
+| 层级 | 说明 | 关键路径 |
+| --- | --- | --- |
+| 桌面容器 | Wails3 + Go 1.21，负责窗口、托盘、热键、服务注入 | `main.go`, `internal/services` |
+| 后端服务 | Config/Document/Extension/Theme/Backup/Window/Hotkey/Translation 等 | `internal/services/*.go` |
+| 数据模型 | Document、Theme、KeyBinding、GitBackup、Config | `internal/models` |
+| 前端应用 | Vue 3 + Vite + Pinia + vue-router | `frontend/src` |
+| 编辑器内核 | CodeMirror 6 扩展及自研块解析、HTTP DSL、Markdown 预览 | `frontend/src/views/editor` |
+| 文档站点 | VitePress，多语言导航 | `frontend/docs` |
 
-### 自定义
+## 模块速览
+- **文档存储**：`DocumentService` 支持创建/重命名/软删除/恢复、多窗口并发打开同一文档。
+- **编辑器实例管理**：`editorStore` 使用 LRU 缓存 + 自动保存计时器，确保在多文档切换时保留光标位置、未保存内容。
+- **HTTP 客户端**：`extensions/httpclient` 包括 Lezer 语法、变量解析、响应插入与运行 gutter；支持 JSON/FormData/GraphQL 等多体格式。
+- **Markdown 预览**：`panelStore` 管理逐文档的预览状态，可随块实时刷新。
+- **多窗口/吸附**：`WindowService` + `WindowSnapService` 根据主窗口位置智能吸附子窗口、自动记忆尺寸。
+- **全局热键**：`HotkeyService` 监听系统级组合键，切换窗口显隐（默认 Alt+X，可配置）。
+- **系统托盘**：`systray.SetupSystemTray` 注入显示/隐藏、退出、开机启动等操作。
+- **翻译生态**：`TranslationService` 聚合 Bing/Google/Youdao/DeepL/TartuNLP，前端 `translator` 扩展提供 Tooltip + 复制。
+- **主题与外观**：`ThemeService` 预置 12+ 主题，可重置/克隆；前端 `createThemeExtension` 即时应用。
 
-- **自定义主题**：创建并保存你自己的编辑器主题
-- **扩展功能**：丰富的编辑器扩展，包括小地图、彩虹括号、颜色选择器等
-- **多窗口**：同时处理多个文档
+## 数据流（从键盘到持久化）
+1. 用户按键 -> CodeMirror extensions 更新文档。
+2. `contentChangeExtension` 记录脏状态并刷新 `documentStats`（行数、字符数、选区字符数）。
+3. 触发自动保存计时器（默认 2s） -> `DocumentService.UpdateDocumentContent` 写入 SQLite。
+4. 若开启 Git 自动备份，每次 Commit 会序列化数据库 + 附带 `voidraft_data.bin`。
+5. 配置变更（Pinia store）通过 `ConfigService.Set` 传回 Go，并触发观察者（如 WindowSnap/Hotkey/Backup）。
 
-### 数据管理
+## 版本节奏与路线图
+- ✅ 当前实现：多窗口、标签页、HTTP 客户端、Markdown Preview、数学块、彩虹括号、翻译、Git 备份、自动更新。
+- 🚧 进行中：自定义扩展导入、键位模版、Linux/macOS 原生打包。
+- 🗺️ 规划中：剪贴板历史、团队同步、云端模板市场。
 
-- **Git 备份**：使用 Git 仓库自动备份
-- **云同步**：跨设备同步你的数据
-- **自动更新**：及时获取最新功能
-
-## 为什么选择 voidraft？
-
-- **专注开发者**：考虑开发者需求而构建
-- **现代技术栈**：使用前沿技术（Wails3、Vue 3、CodeMirror 6）
-- **跨平台**：支持 Windows（macOS 和 Linux 支持计划中）
-- **开源**：MIT 许可证，社区驱动开发
-
-## 开始使用
-
-准备好开始了吗？从我们的[发布页面](https://github.com/landaiqing/voidraft/releases)下载最新版本，或继续阅读文档了解更多。
-
-下一步：[安装 →](/zh/guide/installation)
-
+## 下一步
+- [安装 voidraft](/zh/guide/installation)
+- [界面总览](/zh/guide/ui-overview)
+- [快速开始](/zh/guide/getting-started)
