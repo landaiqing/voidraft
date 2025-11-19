@@ -8,7 +8,7 @@ import {getCommandHandler, isCommandRegistered} from './commands';
  * 快捷键管理器
  * 负责将后端配置转换为CodeMirror快捷键扩展
  */
-export class KeymapManager {
+export class Manager {
     private static compartment = new Compartment();
     
     /**

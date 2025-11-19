@@ -66,10 +66,12 @@ const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string
     if (!extension) return;
 
     // 更新配置
-    const updatedConfig = {...extension.config, [configKey]: value};
-
-    console.log(`[ExtensionsPage] 更新扩展 ${extensionId} 配置, ${configKey}=${value}`);
-    
+    const updatedConfig = {...extension.config};
+    if (value === undefined) {
+      delete updatedConfig[configKey];
+    } else {
+      updatedConfig[configKey] = value;
+    }
     // 使用editorStore的updateExtension方法更新，确保应用到所有编辑器实例
     await editorStore.updateExtension(extensionId, extension.enabled, updatedConfig);
 
@@ -81,7 +83,7 @@ const updateExtensionConfig = async (extensionId: ExtensionID, configKey: string
 // 重置扩展到默认配置
 const resetExtension = async (extensionId: ExtensionID) => {
   try {
-    // 重置到默认配置（后端）
+    // 重置到默认配置
     await ExtensionService.ResetExtensionToDefault(extensionId);
 
     // 重新加载扩展状态以获取最新配置
@@ -92,63 +94,65 @@ const resetExtension = async (extensionId: ExtensionID) => {
     if (extension) {
       // 通过editorStore更新，确保所有视图都能同步
       await editorStore.updateExtension(extensionId, extension.enabled, extension.config);
-      console.log(`[ExtensionsPage] 重置扩展 ${extensionId} 配置，同步应用到所有编辑器实例`);
     }
   } catch (error) {
     console.error('Failed to reset extension:', error);
   }
 };
 
-// 配置项类型定义
-type ConfigItemType = 'toggle' | 'number' | 'text' | 'select'
-
-interface SelectOption {
-  value: any
-  label: string
-}
-
-interface ConfigItemMeta {
-  type: ConfigItemType
-  options?: SelectOption[]
-}
-
-// 只保留 select 类型的配置项元数据
-const extensionConfigMeta: Partial<Record<ExtensionID, Record<string, ConfigItemMeta>>> = {
-  [ExtensionID.ExtensionMinimap]: {
-    displayText: {
-      type: 'select',
-      options: [
-        {value: 'characters', label: 'Characters'},
-        {value: 'blocks', label: 'Blocks'}
-      ]
-    },
-    showOverlay: {
-      type: 'select',
-      options: [
-        {value: 'always', label: 'Always'},
-        {value: 'mouse-over', label: 'Mouse Over'}
-      ]
-    }
+const getConfigValue = (
+    config: Record<string, any> | undefined,
+    configKey: string,
+    defaultValue: any
+) => {
+  if (config && Object.prototype.hasOwnProperty.call(config, configKey)) {
+    return config[configKey];
   }
+  return defaultValue;
+
 };
 
-// 获取配置项类型
-const getConfigItemType = (extensionId: ExtensionID, configKey: string, defaultValue: any): string => {
-  const meta = extensionConfigMeta[extensionId]?.[configKey];
-  if (meta?.type) {
-    return meta.type;
+
+const formatConfigValue = (value: any): string => {
+  if (value === undefined) return '';
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized ?? '';
+  } catch (error) {
+    console.warn('Failed to stringify config value', error);
+    return '';
   }
 
-  // 根据默认值类型自动推断
-  if (typeof defaultValue === 'boolean') return 'toggle';
-  if (typeof defaultValue === 'number') return 'number';
-  return 'text';
 };
 
-// 获取选择框的选项列表
-const getSelectOptions = (extensionId: ExtensionID, configKey: string): SelectOption[] => {
-  return extensionConfigMeta[extensionId]?.[configKey]?.options || [];
+
+const handleConfigInput = async (
+    extensionId: ExtensionID,
+    configKey: string,
+    defaultValue: any,
+    event: Event
+) => {
+  const target = event.target as HTMLInputElement | null;
+  if (!target) return;
+  const rawValue = target.value;
+  const trimmedValue = rawValue.trim();
+  if (!trimmedValue.length) {
+    await updateExtensionConfig(extensionId, configKey, undefined);
+    return;
+  }
+
+  try {
+    const parsedValue = JSON.parse(trimmedValue);
+    await updateExtensionConfig(extensionId, configKey, parsedValue);
+  } catch (_error) {
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
+    const fallbackValue = getConfigValue(extension?.config, configKey, defaultValue);
+    target.value = formatConfigValue(fallbackValue);
+
+  }
+
 };
+
 </script>
 
 <template>
@@ -204,58 +208,28 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string): SelectOp
             </button>
           </div>
 
-          <div
-              v-for="[configKey, configValue] in Object.entries(extension.defaultConfig)"
-              :key="configKey"
-              class="config-item"
-          >
-            <SettingItem
-                :title="configKey"
-            >
-              <!-- 布尔值切换开关 -->
-              <ToggleSwitch
-                  v-if="getConfigItemType(extension.id, configKey, configValue) === 'toggle'"
-                  :model-value="extension.config[configKey] ?? configValue"
-                  @update:model-value="updateExtensionConfig(extension.id, configKey, $event)"
-              />
-
-              <!-- 数字输入框 -->
-              <input
-                  v-else-if="getConfigItemType(extension.id, configKey, configValue) === 'number'"
-                  type="number"
-                  class="config-input"
-                  :value="extension.config[configKey] ?? configValue"
-                  :min="configKey === 'opacity' ? 0 : undefined"
-                  :max="configKey === 'opacity' ? 1 : undefined"
-                  :step="configKey === 'opacity' ? 0.1 : 1"
-                  @input="updateExtensionConfig(extension.id, configKey, parseFloat(($event.target as HTMLInputElement).value))"
-              />
-
-              <!-- 选择框 -->
-              <select
-                  v-else-if="getConfigItemType(extension.id, configKey, configValue) === 'select'"
-                  class="config-select"
-                  :value="extension.config[configKey] ?? configValue"
-                  @change="updateExtensionConfig(extension.id, configKey, ($event.target as HTMLSelectElement).value)"
+          <div class="config-table-wrapper">
+            <table class="config-table">
+              <tbody>
+              <tr
+                  v-for="[configKey, configValue] in Object.entries(extension.defaultConfig)"
+                  :key="configKey"
               >
-                <option
-                    v-for="option in getSelectOptions(extension.id, configKey)"
-                    :key="option.value"
-                    :value="option.value"
-                >
-                  {{ option.label }}
-                </option>
-              </select>
-
-              <!-- 文本输入框 -->
-              <input
-                  v-else
-                  type="text"
-                  class="config-input"
-                  :value="extension.config[configKey] ?? configValue"
-                  @input="updateExtensionConfig(extension.id, configKey, ($event.target as HTMLInputElement).value)"
-              />
-            </SettingItem>
+                <th scope="row" class="config-table-key">
+                  {{ configKey }}
+                </th>
+                <td class="config-table-value">
+                  <input
+                      class="config-value-input"
+                      type="text"
+                      :value="formatConfigValue(getConfigValue(extension.config, configKey, configValue))"
+                      @change="handleConfigInput(extension.id, configKey, configValue, $event)"
+                      @keyup.enter.prevent="handleConfigInput(extension.id, configKey, configValue, $event)"
+                  />
+                </td>
+              </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -361,37 +335,65 @@ const getSelectOptions = (extensionId: ExtensionID, configKey: string): SelectOp
   }
 }
 
-.config-item {
-  &:not(:last-child) {
-    margin-bottom: 12px;
-  }
-
-  /* 配置项标题和描述字体大小 */
-  :deep(.setting-item-title) {
-    font-size: 12px;
-  }
-
-  :deep(.setting-item-description) {
-    font-size: 11px;
-  }
-}
-
-.config-input, .config-select {
-  min-width: 120px;
-  padding: 4px 8px;
+.config-table-wrapper {
   border: 1px solid var(--settings-input-border);
-  border-radius: 3px;
-  background-color: var(--settings-input-bg);
-  color: var(--settings-text);
-  font-size: 11px;
-
-  &:focus {
-    outline: none;
-    border-color: var(--settings-accent);
-  }
+  border-radius: 6px;
+  margin-top: 8px;
+  overflow: hidden;
+  background-color: var(--settings-panel, var(--settings-input-bg));
 }
 
-.config-select {
-  cursor: pointer;
+.config-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.config-table tr + tr {
+  border-top: 1px solid var(--settings-input-border);
+}
+
+.config-table th,
+.config-table td {
+  padding: 10px 12px;
+  vertical-align: middle;
+}
+
+.config-table-key {
+  width: 36%;
+  text-align: left;
+  font-weight: 600;
+  color: var(--settings-text-secondary);
+  border-right: 1px solid var(--settings-input-border);
+  background-color: var(--settings-input-bg);
+}
+
+.config-table-value {
+  padding: 6px;
+}
+
+.config-value-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--settings-text);
+  font-size: 12px;
+  line-height: 1.4;
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.config-value-input:hover {
+  border-color: var(--settings-hover-border, var(--settings-input-border));
+  background-color: var(--settings-hover);
+}
+
+.config-value-input:focus {
+  outline: none;
+  border-color: var(--settings-accent);
+  background-color: var(--settings-input-bg);
 }
 </style> 
+

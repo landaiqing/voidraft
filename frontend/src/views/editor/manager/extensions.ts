@@ -1,301 +1,152 @@
-import {ExtensionManager} from './extensionManager';
+import {Manager} from './manager';
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import i18n from '@/i18n';
-import {ExtensionFactory} from './types'
+import {ExtensionDefinition} from './types';
 
-// 导入现有扩展的创建函数
 import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension';
 import {createTextHighlighter} from '../extensions/textHighlight/textHighlightExtension';
-
 import {color} from '../extensions/colorSelector';
 import {hyperLink} from '../extensions/hyperlink';
 import {minimap} from '../extensions/minimap';
 import {vscodeSearch} from '../extensions/vscodeSearch';
 import {createCheckboxExtension} from '../extensions/checkbox';
 import {createTranslatorExtension} from '../extensions/translator';
-
 import {foldingOnIndent} from '../extensions/fold/foldExtension';
 
-/**
- * 彩虹括号扩展工厂
- */
-export const rainbowBracketsFactory: ExtensionFactory = {
-    create(_config: any) {
-        return rainbowBracketsExtension();
-    },
-    getDefaultConfig() {
-        return {};
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object';
-    }
+type ExtensionEntry = {
+    definition: ExtensionDefinition
+    displayNameKey: string
+    descriptionKey: string
 };
 
-/**
- * 文本高亮扩展工厂
- */
-export const textHighlightFactory: ExtensionFactory = {
-    create(config: any) {
-        return createTextHighlighter({
-            backgroundColor: config.backgroundColor || '#FFD700',
-            opacity: config.opacity || 0.3
-        });
-    },
-    getDefaultConfig() {
-        return {
-            backgroundColor: '#FFD700', // 金黄色
-            opacity: 0.3 // 透明度
-        };
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object' &&
-            (!config.backgroundColor || typeof config.backgroundColor === 'string') &&
-            (!config.opacity || (typeof config.opacity === 'number' && config.opacity >= 0 && config.opacity <= 1));
-    }
-};
+type RegisteredExtensionID = Exclude<ExtensionID, ExtensionID.$zero | ExtensionID.ExtensionEditor>;
 
-/**
- * 小地图扩展工厂
- */
-export const minimapFactory: ExtensionFactory = {
-    create(config: any) {
-        const options = {
-            displayText: config.displayText || 'characters',
-            showOverlay: config.showOverlay || 'always',
-            autohide: config.autohide || false
-        };
-        return minimap(options);
-    },
-    getDefaultConfig() {
-        return {
-            displayText: 'characters',
-            showOverlay: 'always',
-            autohide: false
-        };
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object' &&
-            (!config.displayText || typeof config.displayText === 'string') &&
-            (!config.showOverlay || typeof config.showOverlay === 'string') &&
-            (!config.autohide || typeof config.autohide === 'boolean');
-    }
-};
+const defineExtension = (create: (config: any) => any, defaultConfig: Record<string, any> = {}): ExtensionDefinition => ({
+    create,
+    defaultConfig
+});
 
-/**
- * 超链接扩展工厂
- */
-export const hyperlinkFactory: ExtensionFactory = {
-    create(_config: any) {
-        return hyperLink;
-    },
-    getDefaultConfig() {
-        return {};
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object';
-    }
-};
-
-/**
- * 颜色选择器扩展工厂
- */
-export const colorSelectorFactory: ExtensionFactory = {
-    create(_config: any) {
-        return color;
-    },
-    getDefaultConfig() {
-        return {};
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object';
-    }
-};
-
-/**
- * 搜索扩展工厂
- */
-export const searchFactory: ExtensionFactory = {
-    create(_config: any) {
-        return vscodeSearch;
-    },
-    getDefaultConfig() {
-        return {};
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object';
-    }
-};
-
-export const foldFactory: ExtensionFactory = {
-    create(_config: any) {
-        return foldingOnIndent;
-    },
-    getDefaultConfig(): any {
-        return {};
-    },
-    validateConfig(config: any): boolean {
-        return typeof config === 'object';
-    }
-};
-
-/**
- * 选择框扩展工厂
- */
-export const checkboxFactory: ExtensionFactory = {
-    create(_config: any) {
-        return createCheckboxExtension();
-    },
-    getDefaultConfig() {
-        return {};
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object';
-    }
-};
-
-/**
- * 翻译扩展工厂
- */
-export const translatorFactory: ExtensionFactory = {
-    create(config: any) {
-        return createTranslatorExtension({
-            minSelectionLength: config.minSelectionLength || 2,
-            maxTranslationLength: config.maxTranslationLength || 5000,
-        });
-    },
-    getDefaultConfig() {
-        return {
-            minSelectionLength: 2,
-            maxTranslationLength: 5000,
-        };
-    },
-    validateConfig(config: any) {
-        return typeof config === 'object';
-    }
-};
-
-/**
- * 所有扩展的统一配置
- * 排除$zero值以避免TypeScript类型错误
- */
-const EXTENSION_CONFIGS = {
-
-    // 编辑增强扩展
+const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
     [ExtensionID.ExtensionRainbowBrackets]: {
-        factory: rainbowBracketsFactory,
+        definition: defineExtension(() => rainbowBracketsExtension()),
         displayNameKey: 'extensions.rainbowBrackets.name',
         descriptionKey: 'extensions.rainbowBrackets.description'
     },
     [ExtensionID.ExtensionHyperlink]: {
-        factory: hyperlinkFactory,
+        definition: defineExtension(() => hyperLink),
         displayNameKey: 'extensions.hyperlink.name',
         descriptionKey: 'extensions.hyperlink.description'
     },
     [ExtensionID.ExtensionColorSelector]: {
-        factory: colorSelectorFactory,
+        definition: defineExtension(() => color),
         displayNameKey: 'extensions.colorSelector.name',
         descriptionKey: 'extensions.colorSelector.description'
     },
     [ExtensionID.ExtensionTranslator]: {
-        factory: translatorFactory,
+        definition: defineExtension((config: any) => createTranslatorExtension({
+            minSelectionLength: config?.minSelectionLength ?? 2,
+            maxTranslationLength: config?.maxTranslationLength ?? 5000
+        }), {
+            minSelectionLength: 2,
+            maxTranslationLength: 5000
+        }),
         displayNameKey: 'extensions.translator.name',
         descriptionKey: 'extensions.translator.description'
     },
-
-    // UI增强扩展
     [ExtensionID.ExtensionMinimap]: {
-        factory: minimapFactory,
+        definition: defineExtension((config: any) => minimap({
+            displayText: config?.displayText ?? 'characters',
+            showOverlay: config?.showOverlay ?? 'always',
+            autohide: config?.autohide ?? false
+        }), {
+            displayText: 'characters',
+            showOverlay: 'always',
+            autohide: false
+        }),
         displayNameKey: 'extensions.minimap.name',
         descriptionKey: 'extensions.minimap.description'
     },
-
-    // 工具扩展
     [ExtensionID.ExtensionSearch]: {
-        factory: searchFactory,
+        definition: defineExtension(() => vscodeSearch),
         displayNameKey: 'extensions.search.name',
         descriptionKey: 'extensions.search.description'
     },
-
     [ExtensionID.ExtensionFold]: {
-        factory: foldFactory,
+        definition: defineExtension(() => foldingOnIndent),
         displayNameKey: 'extensions.fold.name',
         descriptionKey: 'extensions.fold.description'
     },
     [ExtensionID.ExtensionTextHighlight]: {
-        factory: textHighlightFactory,
+        definition: defineExtension((config: any) => createTextHighlighter({
+            backgroundColor: config?.backgroundColor ?? '#FFD700',
+            opacity: config?.opacity ?? 0.3
+        }), {
+            backgroundColor: '#FFD700',
+            opacity: 0.3
+        }),
         displayNameKey: 'extensions.textHighlight.name',
         descriptionKey: 'extensions.textHighlight.description'
     },
     [ExtensionID.ExtensionCheckbox]: {
-        factory: checkboxFactory,
+        definition: defineExtension(() => createCheckboxExtension()),
         displayNameKey: 'extensions.checkbox.name',
         descriptionKey: 'extensions.checkbox.description'
     }
+} as const;
+
+const isRegisteredExtension = (id: ExtensionID): id is RegisteredExtensionID =>
+    Object.prototype.hasOwnProperty.call(EXTENSION_REGISTRY, id);
+
+const getRegistryEntry = (id: ExtensionID): ExtensionEntry | undefined => {
+    if (!isRegisteredExtension(id)) {
+        return undefined;
+    }
+    return EXTENSION_REGISTRY[id];
 };
 
-/**
- * 注册所有扩展工厂到管理器
- * @param manager 扩展管理器实例
- */
-export function registerAllExtensions(manager: ExtensionManager): void {
-    Object.entries(EXTENSION_CONFIGS).forEach(([id, config]) => {
-        manager.registerExtension(id as ExtensionID, config.factory);
+export function registerAllExtensions(manager: Manager): void {
+    (Object.entries(EXTENSION_REGISTRY) as [RegisteredExtensionID, ExtensionEntry][]).forEach(([id, entry]) => {
+        manager.registerExtension(id, entry.definition);
     });
 }
 
-/**
- * 获取扩展工厂的显示名称
- * @param id 扩展ID
- * @returns 显示名称
- */
 export function getExtensionDisplayName(id: ExtensionID): string {
-    const config = EXTENSION_CONFIGS[id as ExtensionID];
-    return config?.displayNameKey ? i18n.global.t(config.displayNameKey) : id;
+    const entry = getRegistryEntry(id);
+    return entry?.displayNameKey ? i18n.global.t(entry.displayNameKey) : id;
 }
 
-/**
- * 获取扩展工厂的描述
- * @param id 扩展ID
- * @returns 描述
- */
 export function getExtensionDescription(id: ExtensionID): string {
-    const config = EXTENSION_CONFIGS[id as ExtensionID];
-    return config?.descriptionKey ? i18n.global.t(config.descriptionKey) : '';
+    const entry = getRegistryEntry(id);
+    return entry?.descriptionKey ? i18n.global.t(entry.descriptionKey) : '';
 }
 
-/**
- * 获取扩展工厂实例
- * @param id 扩展ID
- * @returns 扩展工厂实例
- */
-export function getExtensionFactory(id: ExtensionID): ExtensionFactory | undefined {
-    return EXTENSION_CONFIGS[id as ExtensionID]?.factory;
+function getExtensionDefinition(id: ExtensionID): ExtensionDefinition | undefined {
+    return getRegistryEntry(id)?.definition;
 }
 
-/**
- * 获取扩展的默认配置
- * @param id 扩展ID
- * @returns 默认配置对象
- */
 export function getExtensionDefaultConfig(id: ExtensionID): any {
-    const factory = getExtensionFactory(id);
-    return factory?.getDefaultConfig() || {};
+    const definition = getExtensionDefinition(id);
+    if (!definition) return {};
+    return cloneConfig(definition.defaultConfig);
 }
 
-/**
- * 检查扩展是否有配置项
- * @param id 扩展ID
- * @returns 是否有配置项
- */
 export function hasExtensionConfig(id: ExtensionID): boolean {
-    const defaultConfig = getExtensionDefaultConfig(id);
-    return Object.keys(defaultConfig).length > 0;
+    return Object.keys(getExtensionDefaultConfig(id)).length > 0;
 }
 
-/**
- * 获取所有可用扩展的ID列表
- * @returns 扩展ID数组
- */
 export function getAllExtensionIds(): ExtensionID[] {
-    return Object.keys(EXTENSION_CONFIGS) as ExtensionID[];
-} 
+    return Object.keys(EXTENSION_REGISTRY) as RegisteredExtensionID[];
+}
+
+const cloneConfig = (config: any) => {
+    if (Array.isArray(config)) {
+        return config.map(cloneConfig);
+    }
+    if (config && typeof config === 'object') {
+        return Object.keys(config).reduce((acc, key) => {
+            acc[key] = cloneConfig(config[key]);
+            return acc;
+        }, {} as Record<string, any>);
+    }
+    return config;
+};

@@ -1,22 +1,40 @@
-// 处理滚轮缩放字体的事件处理函数
-export const createWheelZoomHandler = (
-  increaseFontSize: () => void,
-  decreaseFontSize: () => void
-) => {
-  return (event: WheelEvent) => {
-    // 检查是否按住了Ctrl键
-    if (event.ctrlKey) {
-      // 阻止默认行为（防止页面缩放）
-      event.preventDefault();
-      
-      // 根据滚轮方向增大或减小字体
-      if (event.deltaY < 0) {
-        // 向上滚动，增大字体
-        increaseFontSize();
-      } else {
-        // 向下滚动，减小字体
-        decreaseFontSize();
-      }
+import {EditorView} from '@codemirror/view';
+import type {Extension} from '@codemirror/state';
+
+type FontAdjuster = () => Promise<void> | void;
+
+const runAdjuster = (adjuster: FontAdjuster) => {
+  try {
+    const result = adjuster();
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      (result as Promise<void>).catch((error) => {
+        console.error('Failed to adjust font size:', error);
+      });
     }
-  };
-}; 
+  } catch (error) {
+    console.error('Failed to adjust font size:', error);
+  }
+};
+
+export const createWheelZoomExtension = (
+  increaseFontSize: FontAdjuster,
+  decreaseFontSize: FontAdjuster
+): Extension => {
+  return EditorView.domEventHandlers({
+    wheel(event) {
+      if (!event.ctrlKey) {
+        return false;
+      }
+
+      event.preventDefault();
+
+      if (event.deltaY < 0) {
+        runAdjuster(increaseFontSize);
+      } else if (event.deltaY > 0) {
+        runAdjuster(decreaseFontSize);
+      }
+
+      return true;
+    }
+  });
+};

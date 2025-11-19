@@ -1,13 +1,13 @@
 import {Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {useExtensionStore} from '@/stores/extensionStore';
-import {ExtensionManager} from './extensionManager';
+import {Manager} from './manager';
 import {registerAllExtensions} from './extensions';
 
 /**
  * 全局扩展管理器实例
  */
-const extensionManager = new ExtensionManager();
+const extensionManager = new Manager();
 
 /**
  * 异步创建动态扩展
@@ -26,7 +26,7 @@ export const createDynamicExtensions = async (_documentId?: number): Promise<Ext
     }
 
     // 初始化扩展管理器配置
-    extensionManager.initializeExtensionsFromConfig(extensionStore.extensions);
+    extensionManager.initExtensions(extensionStore.extensions);
 
     // 获取初始扩展配置
     return extensionManager.getInitialExtensions();
@@ -36,7 +36,7 @@ export const createDynamicExtensions = async (_documentId?: number): Promise<Ext
  * 获取扩展管理器实例
  * @returns 扩展管理器
  */
-export const getExtensionManager = (): ExtensionManager => {
+export const getExtensionManager = (): Manager => {
     return extensionManager;
 };
 
@@ -58,5 +58,5 @@ export const removeExtensionManagerView = (documentId: number): void => {
 };
 
 // 导出相关模块
-export {ExtensionManager} from './extensionManager';
+export {Manager} from './manager';
 export {registerAllExtensions, getExtensionDisplayName, getExtensionDescription} from './extensions';

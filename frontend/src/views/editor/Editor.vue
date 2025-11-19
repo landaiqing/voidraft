@@ -3,7 +3,6 @@ import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
 import {useEditorStore} from '@/stores/editorStore';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useConfigStore} from '@/stores/configStore';
-import {createWheelZoomHandler} from './basic/wheelZoomExtension';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
 import {useWindowStore} from "@/stores/windowStore";
 import LoadingScreen from '@/components/loading/LoadingScreen.vue';
@@ -19,12 +18,6 @@ const editorElement = ref<HTMLElement | null>(null);
 
 const enableLoadingAnimation = computed(() => configStore.config.general.enableLoadingAnimation);
 
-// 创建滚轮缩放处理器
-const wheelHandler = createWheelZoomHandler(
-    configStore.increaseFontSize,
-    configStore.decreaseFontSize
-);
-
 onMounted(async () => {
   if (!editorElement.value) return;
 
@@ -38,16 +31,9 @@ onMounted(async () => {
   editorStore.setEditorContainer(editorElement.value);
 
   await tabStore.initializeTab();
-
-  // 添加滚轮事件监听
-  editorElement.value.addEventListener('wheel', wheelHandler, {passive: false});
 });
 
 onBeforeUnmount(() => {
-  // 移除滚轮事件监听
-  if (editorElement.value) {
-    editorElement.value.removeEventListener('wheel', wheelHandler);
-  }
   editorStore.clearAllEditors();
 
 });
@@ -88,7 +74,6 @@ onBeforeUnmount(() => {
   overflow: auto;
 }
 
-// 加载动画过渡效果
 .loading-fade-enter-active,
 .loading-fade-leave-active {
   transition: opacity 0.3s ease;
@@ -99,3 +84,4 @@ onBeforeUnmount(() => {
   opacity: 0;
 }
 </style>
+

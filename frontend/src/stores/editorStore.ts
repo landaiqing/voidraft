@@ -14,6 +14,7 @@ import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtensi
 import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/basic/fontExtension';
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
+import {createWheelZoomExtension} from '@/views/editor/basic/wheelZoomExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {
     createDynamicExtensions,
@@ -242,6 +243,11 @@ export const useEditorStore = defineStore('editor', () => {
             fontWeight: configStore.config.editing.fontWeight
         });
 
+        const wheelZoomExtension = createWheelZoomExtension(
+            () => configStore.increaseFontSize(),
+            () => configStore.decreaseFontSize()
+        );
+
         // 统计扩展
         const statsExtension = createStatsUpdateExtension(updateDocumentStats);
 
@@ -287,6 +293,7 @@ export const useEditorStore = defineStore('editor', () => {
             themeExtension,
             ...tabExtensions,
             fontExtension,
+            wheelZoomExtension,
             statsExtension,
             contentChangeExtension,
             codeBlockExtension,
@@ -707,12 +714,15 @@ export const useEditorStore = defineStore('editor', () => {
         // 更新前端编辑器扩展 - 应用于所有实例
         const manager = getExtensionManager();
         if (manager) {
-            // 使用立即更新模式，跳过防抖
-            manager.updateExtensionImmediate(id, enabled, config || {});
+            // 直接更新前端扩展至所有视图
+            manager.updateExtension(id, enabled, config);
         }
 
         // 重新加载扩展配置
         await extensionStore.loadExtensions();
+        if (manager) {
+            manager.initExtensions(extensionStore.extensions);
+        }
 
         await applyKeymapSettings();
     };
