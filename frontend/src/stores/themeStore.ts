@@ -69,7 +69,7 @@ export const useThemeStore = defineStore('theme', () => {
   };
 
   // 初始化主题颜色
-  const initializeThemeColors = async () => {
+  const initThemeColors = async () => {
     // 加载所有主题
     await loadAllThemes();
     
@@ -91,7 +91,7 @@ export const useThemeStore = defineStore('theme', () => {
   const initializeTheme = async () => {
     const theme = currentTheme.value;
     applyThemeToDOM(theme);
-    await initializeThemeColors();
+    await initThemeColors();
   };
 
   // 设置系统主题模式（深色/浅色/自动）
@@ -132,7 +132,7 @@ export const useThemeStore = defineStore('theme', () => {
       throw new Error('No theme selected');
     }
 
-    const theme = allThemes.value.find(t => t.name === currentColors.value!.name);
+    const theme = allThemes.value.find(t => t.name === currentColors.value!.themeName);
     if (!theme) {
       throw new Error('Theme not found');
     }
@@ -148,12 +148,12 @@ export const useThemeStore = defineStore('theme', () => {
     }
     
     // 调用后端重置
-    await ThemeService.ResetTheme(0, currentColors.value.name);
+    await ThemeService.ResetTheme(0, currentColors.value.themeName);
     
     // 重新加载所有主题
     await loadAllThemes();
 
-    const updatedTheme = allThemes.value.find(t => t.name === currentColors.value!.name);
+    const updatedTheme = allThemes.value.find(t => t.name === currentColors.value!.themeName);
     
     if (updatedTheme) {
       currentColors.value = updatedTheme.colors as ThemeColors;

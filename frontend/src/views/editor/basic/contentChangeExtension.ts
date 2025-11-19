@@ -1,34 +1,48 @@
-import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
-import { useEditorStore } from '@/stores/editorStore';
+import {EditorView, ViewPlugin, ViewUpdate} from '@codemirror/view';
+import type {Text} from '@codemirror/state';
+import {useEditorStore} from '@/stores/editorStore';
 
 /**
- * 内容变化监听插件 - 集成文档和编辑器管理
  */
 export function createContentChangePlugin() {
   return ViewPlugin.fromClass(
     class ContentChangePlugin {
-      private editorStore = useEditorStore();
-      private lastContent = '';
+      private readonly editorStore = useEditorStore();
+      private lastDoc: Text;
+      private rafId: number | null = null;
+      private pendingNotification = false;
 
       constructor(private view: EditorView) {
-        this.lastContent = view.state.doc.toString();
+        this.lastDoc = view.state.doc;
       }
 
       update(update: ViewUpdate) {
-        if (!update.docChanged) return;
+        if (!update.docChanged || update.state.doc === this.lastDoc) {
+          return;
+        }
 
-        const newContent = this.view.state.doc.toString();
-        if (newContent === this.lastContent) return;
-
-        this.lastContent = newContent;
-        
-        this.editorStore.onContentChange();
-        
+        this.lastDoc = update.state.doc;
+        this.scheduleNotification();
       }
 
       destroy() {
+        if (this.rafId !== null) {
+          cancelAnimationFrame(this.rafId);
+          this.rafId = null;
+        }
+        this.pendingNotification = false;
+      }
 
+      private scheduleNotification() {
+        if (this.pendingNotification) return;
+
+        this.pendingNotification = true;
+        this.rafId = requestAnimationFrame(() => {
+          this.pendingNotification = false;
+          this.rafId = null;
+          this.editorStore.onContentChange();
+        });
       }
     }
   );
-} 
+}

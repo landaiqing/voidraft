@@ -1,57 +1,117 @@
-import {Extension} from '@codemirror/state'
-import {createBaseTheme} from '../base'
-import type {ThemeColors} from '../types'
+import {Extension} from '@codemirror/state';
+import {createBaseTheme} from '../base';
+import type {ThemeColors} from '../types';
 
 export const config: ThemeColors = {
-  name: 'aura',
+  themeName: 'aura',
   dark: true,
-  
-  // 基础色调
+
   background: '#21202e',
-  backgroundSecondary: '#2B2A3BFF',
+  backgroundSecondary: '#2b2a3b',
   surface: '#21202e',
   dropdownBackground: '#21202e',
   dropdownBorder: '#3b334b',
-  
-  // 文本颜色
+
   foreground: '#edecee',
-  foregroundSecondary: '#edecee',
-  comment: '#6d6d6d',
-  
-  // 语法高亮色 - 核心
-  keyword: '#a277ff',
-  string: '#61ffca',
-  function: '#ffca85',
-  number: '#61ffca',
-  operator: '#a277ff',
-  variable: '#edecee',
-  type: '#82e2ff',
-  
-  // 语法高亮色 - 扩展
-  constant: '#61ffca',
-  storage: '#a277ff',
-  parameter: '#edecee',
-  class: '#82e2ff',
-  heading: '#a277ff',
-  invalid: '#ff6767',
-  regexp: '#61ffca',
-  
-  // 界面元素
+  foregroundSecondary: '#c9c5cf',
   cursor: '#a277ff',
   selection: '#3d375e7f',
   selectionBlur: '#3d375e7f',
   activeLine: '#4d4b6622',
   lineNumber: '#a394f033',
   activeLineNumber: '#cdccce',
-  
-  // 边框和分割线
+  diffInserted: '#61ffca',
+  diffDeleted: '#ff6767',
+  diffChanged: '#ffca85',
   borderColor: '#3b334b',
   borderLight: '#edecee19',
-  
-  // 搜索和匹配
   searchMatch: '#61ffca',
   matchingBracket: '#a394f033',
-}
 
-// 使用通用主题工厂函数创建 Aura 主题
-export const aura: Extension = createBaseTheme(config)
+  comment: '#6d6d6d',
+  lineComment: '#5c5c5c',
+  blockComment: '#5a5a5a',
+  docComment: '#747474',
+  name: '#edecee',
+  variableName: '#edecee',
+  typeName: '#82e2ff',
+  tagName: '#7cd4ff',
+  propertyName: '#d2d1f9',
+  attributeName: '#f6d1ff',
+  className: '#95dbff',
+  labelName: '#ffc285',
+  namespace: '#6fd0ff',
+  macroName: '#ffca85',
+  literal: '#82e2ff',
+  string: '#61ffca',
+  docString: '#61ffca',
+  character: '#73ffd7',
+  attributeValue: '#ffe3c4',
+  number: '#82e2ff',
+  integer: '#82e2ff',
+  float: '#82e2ff',
+  bool: '#ffd18b',
+  regexp: '#61ffca',
+  escape: '#4ff7c6',
+  color: '#ffc57c',
+  url: '#7cd4ff',
+  keyword: '#a277ff',
+  self: '#c89eff',
+  null: '#f69aff',
+  atom: '#61ffca',
+  unit: '#61ffca',
+  modifier: '#c094ff',
+  operatorKeyword: '#b98dff',
+  controlKeyword: '#c17aff',
+  definitionKeyword: '#bd8eff',
+  moduleKeyword: '#cfa2ff',
+  operator: '#a277ff',
+  derefOperator: '#c59bff',
+  arithmeticOperator: '#c78df5',
+  logicOperator: '#c088ff',
+  bitwiseOperator: '#ce8cff',
+  compareOperator: '#c786ff',
+  updateOperator: '#bb7cff',
+  definitionOperator: '#b070ff',
+  typeOperator: '#b98aff',
+  controlOperator: '#a867ff',
+  punctuation: '#d1a6ff',
+  separator: '#ceb1ff',
+  bracket: '#adabff',
+  angleBracket: '#ffc3ff',
+  squareBracket: '#ff9ddd',
+  paren: '#f39ddf',
+  brace: '#f589d6',
+  content: '#edecee',
+  heading: '#a277ff',
+  heading1: '#caa0ff',
+  heading2: '#c192ff',
+  heading3: '#b684ff',
+  heading4: '#aa76ff',
+  heading5: '#9f68ff',
+  heading6: '#955aff',
+  contentSeparator: '#a277ff',
+  list: '#c0c0c0',
+  quote: '#9280a3',
+  emphasis: '#edecee',
+  strong: '#f4f3f5',
+  link: '#79d3ff',
+  monospace: '#d5d0d8',
+  strikethrough: '#b9b3c0',
+  inserted: '#61ffca',
+  deleted: '#ff6767',
+  changed: '#ffca85',
+  invalid: '#ff6767',
+  meta: '#807d8c',
+  documentMeta: '#7b7886',
+  annotation: '#7df5d9',
+  processingInstruction: '#7b7490',
+  definition: '#d0cfe4',
+  constant: '#61ffca',
+  function: '#ffca85',
+  standard: '#c1c0cf',
+  local: '#c9c8d7',
+  special: '#ffd9a8',
+};
+
+export const aura: Extension = createBaseTheme(config);

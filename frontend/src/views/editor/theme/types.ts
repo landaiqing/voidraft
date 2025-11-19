@@ -1,52 +1,204 @@
-export interface ThemeColors {
-  // 主题基本信息
-  name: string;                     // 主题名称
-  dark: boolean;                    // 是否为深色主题标识
+export type SyntaxTag =
+  | 'comment'
+  | 'lineComment'
+  | 'blockComment'
+  | 'docComment'
+  | 'name'
+  | 'variableName'
+  | 'typeName'
+  | 'tagName'
+  | 'propertyName'
+  | 'attributeName'
+  | 'className'
+  | 'labelName'
+  | 'namespace'
+  | 'macroName'
+  | 'literal'
+  | 'string'
+  | 'docString'
+  | 'character'
+  | 'attributeValue'
+  | 'number'
+  | 'integer'
+  | 'float'
+  | 'bool'
+  | 'regexp'
+  | 'escape'
+  | 'color'
+  | 'url'
+  | 'keyword'
+  | 'self'
+  | 'null'
+  | 'atom'
+  | 'unit'
+  | 'modifier'
+  | 'operatorKeyword'
+  | 'controlKeyword'
+  | 'definitionKeyword'
+  | 'moduleKeyword'
+  | 'operator'
+  | 'derefOperator'
+  | 'arithmeticOperator'
+  | 'logicOperator'
+  | 'bitwiseOperator'
+  | 'compareOperator'
+  | 'updateOperator'
+  | 'definitionOperator'
+  | 'typeOperator'
+  | 'controlOperator'
+  | 'punctuation'
+  | 'separator'
+  | 'bracket'
+  | 'angleBracket'
+  | 'squareBracket'
+  | 'paren'
+  | 'brace'
+  | 'content'
+  | 'heading'
+  | 'heading1'
+  | 'heading2'
+  | 'heading3'
+  | 'heading4'
+  | 'heading5'
+  | 'heading6'
+  | 'contentSeparator'
+  | 'list'
+  | 'quote'
+  | 'emphasis'
+  | 'strong'
+  | 'link'
+  | 'monospace'
+  | 'strikethrough'
+  | 'inserted'
+  | 'deleted'
+  | 'changed'
+  | 'invalid'
+  | 'meta'
+  | 'documentMeta'
+  | 'annotation'
+  | 'processingInstruction'
+  | 'definition'
+  | 'constant'
+  | 'function'
+  | 'standard'
+  | 'local'
+  | 'special';
 
-  // 基础色调
-  background: string;               // 主背景色
-  backgroundSecondary: string;      // 次要背景色（用于代码块交替背景）
-  surface: string;                  // 面板背景
-  dropdownBackground: string;       // 下拉菜单背景
-  dropdownBorder: string;           // 下拉菜单边框
+export interface ThemeTagColors {
+  comment: string;
+  lineComment: string;
+  blockComment: string;
+  docComment: string;
+  name: string;
+  variableName: string;
+  typeName: string;
+  tagName: string;
+  propertyName: string;
+  attributeName: string;
+  className: string;
+  labelName: string;
+  namespace: string;
+  macroName: string;
+  literal: string;
+  string: string;
+  docString: string;
+  character: string;
+  attributeValue: string;
+  number: string;
+  integer: string;
+  float: string;
+  bool: string;
+  regexp: string;
+  escape: string;
+  color: string;
+  url: string;
+  keyword: string;
+  self: string;
+  null: string;
+  atom: string;
+  unit: string;
+  modifier: string;
+  operatorKeyword: string;
+  controlKeyword: string;
+  definitionKeyword: string;
+  moduleKeyword: string;
+  operator: string;
+  derefOperator: string;
+  arithmeticOperator: string;
+  logicOperator: string;
+  bitwiseOperator: string;
+  compareOperator: string;
+  updateOperator: string;
+  definitionOperator: string;
+  typeOperator: string;
+  controlOperator: string;
+  punctuation: string;
+  separator: string;
+  bracket: string;
+  angleBracket: string;
+  squareBracket: string;
+  paren: string;
+  brace: string;
+  content: string;
+  heading: string;
+  heading1: string;
+  heading2: string;
+  heading3: string;
+  heading4: string;
+  heading5: string;
+  heading6: string;
+  contentSeparator: string;
+  list: string;
+  quote: string;
+  emphasis: string;
+  strong: string;
+  link: string;
+  monospace: string;
+  strikethrough: string;
+  inserted: string;
+  deleted: string;
+  changed: string;
+  invalid: string;
+  meta: string;
+  documentMeta: string;
+  annotation: string;
+  processingInstruction: string;
+  definition: string;
+  constant: string;
+  function: string;
+  standard: string;
+  local: string;
+  special: string;
+}
 
-  // 文本颜色
-  foreground: string;               // 主文本色
-  foregroundSecondary: string;      // 次要文本色
-  comment: string;                  // 注释色
+export interface ThemeColors extends ThemeTagColors {
+  themeName: string;
+  dark: boolean;
 
-  // 语法高亮色 - 核心
-  keyword: string;                  // 关键字
-  string: string;                   // 字符串
-  function: string;                 // 函数名
-  number: string;                   // 数字
-  operator: string;                 // 操作符
-  variable: string;                 // 变量
-  type: string;                     // 类型
+  background: string;
+  backgroundSecondary: string;
+  surface: string;
+  dropdownBackground: string;
+  dropdownBorder: string;
 
-  // 语法高亮色 - 扩展
-  constant: string;                 // 常量
-  storage: string;                  // 存储类型（如 static, const）
-  parameter: string;                // 参数
-  class: string;                    // 类名
-  heading: string;                  // 标题（Markdown等）
-  invalid: string;                  // 无效内容/错误
-  regexp: string;                   // 正则表达式
+  foreground: string;
+  foregroundSecondary: string;
 
-  // 界面元素
-  cursor: string;                   // 光标
-  selection: string;                // 选中背景
-  selectionBlur: string;            // 失焦选中背景
-  activeLine: string;               // 当前行高亮
-  lineNumber: string;               // 行号
-  activeLineNumber: string;         // 活动行号颜色
+  cursor: string;
+  selection: string;
+  selectionBlur: string;
+  activeLine: string;
+  lineNumber: string;
+  activeLineNumber: string;
 
-  // 边框和分割线
-  borderColor: string;              // 边框色
-  borderLight: string;              // 浅色边框
+  diffInserted?: string;
+  diffDeleted?: string;
+  diffChanged?: string;
 
-  // 搜索和匹配
-  searchMatch: string;              // 搜索匹配
-  matchingBracket: string;          // 匹配括号
+  borderColor: string;
+    borderLight: string;
+
+  searchMatch: string;
+  matchingBracket: string;
 }
 

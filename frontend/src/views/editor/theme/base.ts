@@ -4,6 +4,8 @@ import {tags} from '@lezer/highlight';
 import {Extension} from '@codemirror/state';
 import type {ThemeColors} from './types';
 
+const MONO_FONT_FALLBACK = 'var(--voidraft-font-mono, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace)';
+
 /**
  * 创建通用主题
  * @param colors 主题颜色配置
@@ -12,27 +14,6 @@ import type {ThemeColors} from './types';
 export function createBaseTheme(colors: ThemeColors): Extension {
     // 编辑器主题样式
     const theme = EditorView.theme({
-        '&': {
-            color: colors.foreground,
-            backgroundColor: colors.background,
-        },
-
-        // 确保编辑器容器背景一致
-        '.cm-editor': {
-            backgroundColor: colors.background,
-        },
-
-        // 确保滚动区域背景一致
-        '.cm-scroller': {
-            backgroundColor: colors.background,
-            transition: 'height 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        },
-
-        // 编辑器内容
-        '.cm-content': {
-            caretColor: colors.cursor,
-            paddingTop: '4px',
-        },
 
         // 光标
         '.cm-cursor, .cm-dropCursor': {
@@ -42,19 +23,11 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             marginTop: '-2px',
         },
 
-        // 选择
-        '.cm-selectionBackground': {
-            backgroundColor: colors.selectionBlur,
-        },
+        // 选择背景
         '&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground': {
             backgroundColor: colors.selection,
         },
-        '.cm-content ::selection': {
-            backgroundColor: colors.selection,
-        },
-        '.cm-activeLine.code-empty-block-selected': {
-            backgroundColor: colors.selection,
-        },
+
 
         // 当前行高亮
         '.cm-activeLine': {
@@ -66,7 +39,6 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             backgroundColor: colors.dark ? 'rgba(0,0,0, 0.1)' : 'rgba(0,0,0, 0.04)',
             color: colors.lineNumber,
             border: 'none',
-            borderRight: colors.dark ? 'none' : `1px solid ${colors.borderLight}`,
             padding: '0 2px 0 4px',
             userSelect: 'none',
         },
@@ -75,28 +47,7 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             color: colors.activeLineNumber,
         },
 
-        // 折叠功能
-        '.cm-foldGutter': {
-            marginLeft: '0px',
-        },
-        '.cm-foldGutter .cm-gutterElement': {
-            opacity: 0,
-            transition: 'opacity 400ms',
-        },
-        '.cm-gutters:hover .cm-gutterElement': {
-            opacity: 1,
-        },
-        '.cm-foldPlaceholder': {
-            backgroundColor: 'transparent',
-            border: 'none',
-            color: colors.comment,
-        },
-
-        // 面板
-        '.cm-panels': {
-            // backgroundColor: colors.dropdownBackground,
-            // color: colors.foreground
-        },
+        // 面板动画效果
         '.cm-panels.cm-panels-top': {
             borderBottom: '2px solid black'
         },
@@ -124,57 +75,33 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             }
         },
 
-        // 搜索匹配
-        '.cm-searchMatch': {
-            backgroundColor: 'transparent',
-            outline: `1px solid ${colors.searchMatch}`,
-        },
-        '.cm-searchMatch.cm-searchMatch-selected': {
-            backgroundColor: colors.searchMatch,
-            color: colors.background,
-        },
-        '.cm-selectionMatch': {
-            backgroundColor: colors.dark ? '#50606D' : '#e6f3ff',
-        },
-
         // 括号匹配
         '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
             outline: `0.5px solid ${colors.searchMatch}`,
         },
-        '&.cm-focused .cm-matchingBracket': {
-            backgroundColor: colors.matchingBracket,
-            color: 'inherit',
-        },
-        '&.cm-focused .cm-nonmatchingBracket': {
-            outline: colors.dark ? '0.5px solid #bc8f8f' : '0.5px solid #d73a49',
-        },
 
-        // 编辑器焦点
-        '&.cm-editor.cm-focused': {
-            outline: 'none',
-        },
 
         // 工具提示
-        '.cm-tooltip': {
-            border: colors.dark ? 'none' : `1px solid ${colors.dropdownBorder}`,
-            backgroundColor: colors.surface,
-            color: colors.foreground,
-            boxShadow: colors.dark ? 'none' : '0 2px 8px rgba(0,0,0,0.1)',
-        },
-        '.cm-tooltip .cm-tooltip-arrow:before': {
-            borderTopColor: 'transparent',
-            borderBottomColor: 'transparent',
-        },
-        '.cm-tooltip .cm-tooltip-arrow:after': {
-            borderTopColor: colors.surface,
-            borderBottomColor: colors.surface,
-        },
-        '.cm-tooltip-autocomplete': {
-            '& > ul > li[aria-selected]': {
-                backgroundColor: colors.activeLine,
-                color: colors.foreground,
-            },
-        },
+        // '.cm-tooltip': {
+        //     border: colors.dark ? 'none' : `1px solid ${colors.dropdownBorder}`,
+        //     backgroundColor: colors.surface,
+        //     // color: colors.foreground,
+        //     boxShadow: colors.dark ? 'none' : '0 2px 8px rgba(0,0,0,0.1)',
+        // },
+        // '.cm-tooltip .cm-tooltip-arrow:before': {
+        //     borderTopColor: 'transparent',
+        //     borderBottomColor: 'transparent',
+        // },
+        // '.cm-tooltip .cm-tooltip-arrow:after': {
+        //     borderTopColor: colors.surface,
+        //     borderBottomColor: colors.surface,
+        // },
+        // '.cm-tooltip-autocomplete': {
+        //     '& > ul > li[aria-selected]': {
+        //         backgroundColor: colors.activeLine,
+        //         color: colors.foreground,
+        //     },
+        // },
 
         // 代码块层（自定义）
         '.code-blocks-layer': {
@@ -234,80 +161,114 @@ export function createBaseTheme(colors: ThemeColors): Extension {
         },
     }, {dark: colors.dark});
 
-    // 语法高亮样式
     const highlightStyle = HighlightStyle.define([
-        // 关键字
+        {tag: tags.comment, color: colors.comment, fontStyle: 'italic'},
+        {tag: tags.lineComment, color: colors.lineComment, fontStyle: 'italic'},
+        {tag: tags.blockComment, color: colors.blockComment, fontStyle: 'italic'},
+        {tag: tags.docComment, color: colors.docComment, fontStyle: 'italic'},
+
+        {tag: tags.name, color: colors.name},
+        {tag: tags.variableName, color: colors.variableName},
+        {tag: tags.typeName, color: colors.typeName},
+        {tag: tags.tagName, color: colors.tagName},
+        {tag: tags.propertyName, color: colors.propertyName},
+        {tag: tags.attributeName, color: colors.attributeName},
+        {tag: tags.className, color: colors.className},
+        {tag: tags.labelName, color: colors.labelName},
+        {tag: tags.namespace, color: colors.namespace},
+        {tag: tags.macroName, color: colors.macroName},
+
+        {tag: tags.literal, color: colors.literal},
+        {tag: tags.string, color: colors.string},
+        {tag: tags.docString, color: colors.docString},
+        {tag: tags.character, color: colors.character},
+        {tag: tags.attributeValue, color: colors.attributeValue},
+        {tag: tags.number, color: colors.number},
+        {tag: tags.integer, color: colors.integer},
+        {tag: tags.float, color: colors.float},
+        {tag: tags.bool, color: colors.bool},
+        {tag: tags.regexp, color: colors.regexp},
+        {tag: tags.escape, color: colors.escape},
+        {tag: tags.color, color: colors.color},
+        {tag: tags.url, color: colors.url},
+
         {tag: tags.keyword, color: colors.keyword},
+        {tag: tags.self, color: colors.self},
+        {tag: tags.null, color: colors.null},
+        {tag: tags.atom, color: colors.atom},
+        {tag: tags.unit, color: colors.unit},
+        {tag: tags.modifier, color: colors.modifier},
+        {tag: tags.operatorKeyword, color: colors.operatorKeyword},
+        {tag: tags.controlKeyword, color: colors.controlKeyword},
+        {tag: tags.definitionKeyword, color: colors.definitionKeyword},
+        {tag: tags.moduleKeyword, color: colors.moduleKeyword},
 
-        // 操作符
-        {tag: [tags.operator, tags.operatorKeyword], color: colors.operator},
+        {tag: tags.operator, color: colors.operator},
+        {tag: tags.derefOperator, color: colors.derefOperator},
+        {tag: tags.arithmeticOperator, color: colors.arithmeticOperator},
+        {tag: tags.logicOperator, color: colors.logicOperator},
+        {tag: tags.bitwiseOperator, color: colors.bitwiseOperator},
+        {tag: tags.compareOperator, color: colors.compareOperator},
+        {tag: tags.updateOperator, color: colors.updateOperator},
+        {tag: tags.definitionOperator, color: colors.definitionOperator},
+        {tag: tags.typeOperator, color: colors.typeOperator},
+        {tag: tags.controlOperator, color: colors.controlOperator},
 
-        // 名称、变量
-        {tag: [tags.name, tags.deleted, tags.character, tags.macroName], color: colors.variable},
-        {tag: [tags.variableName], color: colors.variable},
-        {tag: [tags.labelName], color: colors.operator},
-        {tag: [tags.atom, tags.bool, tags.special(tags.variableName)], color: colors.variable},
+        {tag: tags.punctuation, color: colors.punctuation},
+        {tag: tags.separator, color: colors.separator},
+        {tag: tags.bracket, color: colors.bracket},
+        {tag: tags.angleBracket, color: colors.angleBracket},
+        {tag: tags.squareBracket, color: colors.squareBracket},
+        {tag: tags.paren, color: colors.paren},
+        {tag: tags.brace, color: colors.brace},
 
-        // 函数
-        {tag: [tags.function(tags.variableName)], color: colors.function},
-        {tag: [tags.propertyName], color: colors.function},
+        {tag: tags.content, color: colors.content},
+        {tag: tags.heading, color: colors.heading, fontWeight: 'bold'},
+        {tag: tags.heading1, color: colors.heading1, fontWeight: 'bold', fontSize: '1.4em'},
+        {tag: tags.heading2, color: colors.heading2, fontWeight: 'bold', fontSize: '1.3em'},
+        {tag: tags.heading3, color: colors.heading3, fontWeight: 'bold', fontSize: '1.2em'},
+        {tag: tags.heading4, color: colors.heading4, fontWeight: 'bold', fontSize: '1.1em'},
+        {tag: tags.heading5, color: colors.heading5, fontWeight: 'bold'},
+        {tag: tags.heading6, color: colors.heading6, fontWeight: 'bold'},
+        {tag: tags.contentSeparator, color: colors.contentSeparator},
+        {tag: tags.list, color: colors.list},
+        {tag: tags.quote, color: colors.quote, fontStyle: 'italic'},
+        {tag: tags.emphasis, color: colors.emphasis, fontStyle: 'italic'},
+        {tag: tags.strong, color: colors.strong, fontWeight: 'bold'},
+        {tag: tags.link, color: colors.link, textDecoration: 'underline'},
+        {tag: tags.monospace, color: colors.monospace, fontFamily: MONO_FONT_FALLBACK},
+        {tag: tags.strikethrough, color: colors.strikethrough, textDecoration: 'line-through'},
 
-        // 类型、类
-        {tag: [tags.typeName], color: colors.type},
-        {tag: [tags.className], color: colors.class},
+        {tag: tags.inserted, color: colors.inserted},
+        {tag: tags.deleted, color: colors.deleted},
+        {tag: tags.changed, color: colors.changed},
 
-        // 常量
-        {tag: [tags.color, tags.constant(tags.name), tags.standard(tags.name)], color: colors.constant},
+        {tag: tags.meta, color: colors.meta, fontStyle: 'italic'},
+        {tag: tags.documentMeta, color: colors.documentMeta},
+        {tag: tags.annotation, color: colors.annotation},
+        {tag: tags.processingInstruction, color: colors.processingInstruction},
 
-        // 字符串
-        {tag: [tags.processingInstruction, tags.string, tags.inserted], color: colors.string},
-        {tag: [tags.special(tags.string)], color: colors.string},
-        {tag: [tags.quote], color: colors.comment},
+        {tag: tags.definition(tags.variableName), color: colors.definition},
+        {tag: tags.definition(tags.propertyName), color: colors.definition},
+        {tag: tags.definition(tags.name), color: colors.definition},
+        {tag: tags.constant(tags.variableName), color: colors.constant},
+        {tag: tags.constant(tags.propertyName), color: colors.constant},
+        {tag: tags.constant(tags.name), color: colors.constant},
+        {tag: tags.function(tags.variableName), color: colors.function},
+        {tag: tags.function(tags.propertyName), color: colors.function},
+        {tag: tags.function(tags.name), color: colors.function},
+        {tag: tags.standard(tags.variableName), color: colors.standard},
+        {tag: tags.standard(tags.name), color: colors.standard},
+        {tag: tags.local(tags.variableName), color: colors.local},
+        {tag: tags.local(tags.name), color: colors.local},
+        {tag: tags.special(tags.variableName), color: colors.special},
+        {tag: tags.special(tags.name), color: colors.special},
+        {tag: tags.special(tags.string), color: colors.special},
 
-        // 数字
-        {
-            tag: [tags.number, tags.changed, tags.annotation, tags.modifier, tags.self, tags.namespace],
-            color: colors.number
-        },
-
-        // 正则表达式
-        {tag: [tags.url, tags.escape, tags.regexp, tags.link], color: colors.regexp},
-
-        // 注释
-        {tag: [tags.meta, tags.comment], color: colors.comment, fontStyle: 'italic'},
-
-        // 分隔符、括号
-        {tag: [tags.definition(tags.name), tags.separator], color: colors.variable},
-        {tag: [tags.brace], color: colors.variable},
-        {tag: [tags.squareBracket], color: colors.dark ? '#bf616a' : colors.keyword},
-        {tag: [tags.angleBracket], color: colors.dark ? '#d08770' : colors.operator},
-        {tag: [tags.attributeName], color: colors.variable},
-
-        // 标签
-        {tag: [tags.tagName], color: colors.number},
-
-        // 注解
-        {tag: [tags.annotation], color: colors.invalid},
-
-        // 特殊样式
-        {tag: tags.strong, fontWeight: 'bold'},
-        {tag: tags.emphasis, fontStyle: 'italic'},
-        {tag: tags.strikethrough, textDecoration: 'line-through'},
-        {tag: tags.link, color: colors.variable, textDecoration: 'underline'},
-
-        // 标题
-        {tag: tags.heading, fontWeight: 'bold', color: colors.heading},
-        {tag: [tags.heading1, tags.heading2], fontSize: '1.4em'},
-        {tag: [tags.heading3, tags.heading4], fontSize: '1.2em'},
-        {tag: [tags.heading5, tags.heading6], fontSize: '1.1em'},
-
-        // 无效内容
         {tag: tags.invalid, color: colors.invalid},
     ]);
-
     return [
         theme,
         syntaxHighlighting(highlightStyle),
     ];
 }
-

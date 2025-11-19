@@ -1,57 +1,117 @@
-import {Extension} from '@codemirror/state'
-import {createBaseTheme} from '../base'
-import type {ThemeColors} from '../types'
+import {Extension} from '@codemirror/state';
+import {createBaseTheme} from '../base';
+import type {ThemeColors} from '../types';
 
 export const config: ThemeColors = {
-  name: 'tokyo-night',
+  themeName: 'tokyo-night',
   dark: true,
-  
-  // 基础色调
+
   background: '#1a1b26',
-  backgroundSecondary: '#272839FF',
+  backgroundSecondary: '#272839',
   surface: '#1a1b26',
   dropdownBackground: '#1a1b26',
   dropdownBorder: '#787c99',
-  
-  // 文本颜色
-  foreground: '#787c99',
+
+  foreground: '#c0caf5',
   foregroundSecondary: '#787c99',
-  comment: '#444b6a',
-  
-  // 语法高亮色 - 核心
-  keyword: '#bb9af7',
-  string: '#9ece6a',
-  function: '#7aa2f7',
-  number: '#ff9e64',
-  operator: '#bb9af7',
-  variable: '#c0caf5',
-  type: '#0db9d7',
-  
-  // 语法高亮色 - 扩展
-  constant: '#bb9af7',
-  storage: '#bb9af7',
-  parameter: '#c0caf5',
-  class: '#c0caf5',
-  heading: '#89ddff',
-  invalid: '#ff5370',
-  regexp: '#b4f9f8',
-  
-  // 界面元素
   cursor: '#c0caf5',
   selection: '#515c7e40',
   selectionBlur: '#515c7e40',
   activeLine: '#43455c22',
   lineNumber: '#363b54',
   activeLineNumber: '#737aa2',
-  
-  // 边框和分割线
+  diffInserted: '#9ece6a',
+  diffDeleted: '#f7768e',
+  diffChanged: '#ff9e64',
   borderColor: '#16161e',
   borderLight: '#787c9919',
-  
-  // 搜索和匹配
   searchMatch: '#7aa2f7',
   matchingBracket: '#16161e',
-}
 
-// 使用通用主题工厂函数创建 Tokyo Night 主题
-export const tokyoNight: Extension = createBaseTheme(config)
+  comment: '#444b6a',
+  lineComment: '#3d4360',
+  blockComment: '#373d55',
+  docComment: '#5a6084',
+  name: '#c0caf5',
+  variableName: '#c0caf5',
+  typeName: '#0db9d7',
+  tagName: '#68dce9',
+  propertyName: '#d0d5f0',
+  attributeName: '#f0b7d7',
+  className: '#7aa2f7',
+  labelName: '#ffbd82',
+  namespace: '#38c5d9',
+  macroName: '#7aa2f7',
+  literal: '#ff9e64',
+  string: '#9ece6a',
+  docString: '#adda7d',
+  character: '#d7f5a2',
+  attributeValue: '#f6c299',
+  number: '#ff9e64',
+  integer: '#ffae7d',
+  float: '#ffa467',
+  bool: '#ffb86c',
+  regexp: '#b4f9f8',
+  escape: '#8df0f0',
+  color: '#ff9e64',
+  url: '#7aa2f7',
+  keyword: '#bb9af7',
+  self: '#d0a0ff',
+  null: '#ff90b2',
+  atom: '#ff9e64',
+  unit: '#fbd38a',
+  modifier: '#d6b4ff',
+  operatorKeyword: '#ccabff',
+  controlKeyword: '#c89cff',
+  definitionKeyword: '#d6baff',
+  moduleKeyword: '#9fb3ff',
+  operator: '#bb9af7',
+  derefOperator: '#c7a3ff',
+  arithmeticOperator: '#c39aff',
+  logicOperator: '#b08eff',
+  bitwiseOperator: '#9b78f0',
+  compareOperator: '#ae9bf5',
+  updateOperator: '#9a82e7',
+  definitionOperator: '#8b75d7',
+  typeOperator: '#3fc4e2',
+  controlOperator: '#9266f2',
+  punctuation: '#98a1c3',
+  separator: '#8b93b4',
+  bracket: '#a4acc6',
+  angleBracket: '#c1c8df',
+  squareBracket: '#8e96b5',
+  paren: '#7a83a3',
+  brace: '#8f98b5',
+  content: '#c0caf5',
+  heading: '#89ddff',
+  heading1: '#9ce9ff',
+  heading2: '#88dfff',
+  heading3: '#74d5ff',
+  heading4: '#60cbff',
+  heading5: '#4cc1ff',
+  heading6: '#38b7ff',
+  contentSeparator: '#bb9af7',
+  list: '#7d849f',
+  quote: '#5d6382',
+  emphasis: '#c0caf5',
+  strong: '#e6e9ff',
+  link: '#7aa2f7',
+  monospace: '#a9aac0',
+  strikethrough: '#7f8399',
+  inserted: '#9ece6a',
+  deleted: '#f7768e',
+  changed: '#ff9e64',
+  invalid: '#ff5370',
+  meta: '#61678b',
+  documentMeta: '#585d7c',
+  annotation: '#8cf5ff',
+  processingInstruction: '#525670',
+  definition: '#bfc6e4',
+  constant: '#ff9e64',
+  function: '#7aa2f7',
+  standard: '#8490b3',
+  local: '#909abf',
+  special: '#ffb347',
+};
+
+export const tokyoNight: Extension = createBaseTheme(config);

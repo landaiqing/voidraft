@@ -1,63 +1,118 @@
 import {createBaseTheme} from '../base';
 import type {ThemeColors} from '../types';
 
-// 默认浅色主题颜色
 export const defaultLightColors: ThemeColors = {
-    // 主题信息
-    name: 'default-light',
+    themeName: 'default-light',
     dark: false,
 
-    // 基础色调
-    background: '#ffffff',        // 主背景色
-    backgroundSecondary: '#f1faf1', // 次要背景色
-    surface: '#f5f5f5',           // 面板背景
-    dropdownBackground: '#ffffff', // 下拉菜单背景
-    dropdownBorder: '#e1e4e8',    // 下拉菜单边框
+    background: '#ffffff',
+    backgroundSecondary: '#f4f7fb',
+    surface: '#f7f8f9',
+    dropdownBackground: '#ffffff',
+    dropdownBorder: '#e1e4e8',
 
-    // 文本颜色
-    foreground: '#444d56',        // 主文本色
-    foregroundSecondary: '#6a737d', // 次要文本色
-    comment: '#6a737d',           // 注释色
+    foreground: '#24292e',
+    foregroundSecondary: '#6a737d',
+    cursor: '#000000',
+    selection: '#77baff',
+    selectionBlur: '#c4d4df',
+    activeLine: '#0000000a',
+    lineNumber: '#00000040',
+    activeLineNumber: '#000000aa',
+    diffInserted: '#2da44e',
+    diffDeleted: '#d73a49',
+    diffChanged: '#c69026',
+    borderColor: '#d8dee4',
+    borderLight: '#0000000c',
+    searchMatch: '#1f6feb',
+    matchingBracket: '#00000019',
 
-    // 语法高亮色 - 核心
-    keyword: '#d73a49',           // 关键字
-    string: '#032f62',            // 字符串
-    function: '#005cc5',          // 函数名
-    number: '#005cc5',            // 数字
-    operator: '#d73a49',          // 操作符
-    variable: '#24292e',          // 变量
-    type: '#6f42c1',             // 类型
-
-    // 语法高亮色 - 扩展
-    constant: '#005cc5',          // 常量
-    storage: '#d73a49',           // 存储类型
-    parameter: '#24292e',         // 参数
-    class: '#6f42c1',             // 类名
-    heading: '#d73a49',           // 标题
-    invalid: '#cb2431',           // 无效内容
-    regexp: '#032f62',            // 正则表达式
-
-    // 界面元素
-    cursor: '#000000',            // 光标
-    selection: '#77baff',         // 选中背景
-    selectionBlur: '#b2c2ca',     // 失焦选中背景
-    activeLine: '#0000000a',      // 当前行高亮
-    lineNumber: '#00000040',      // 行号
-    activeLineNumber: '#000000aa', // 活动行号
-
-    // 边框和分割线
-    borderColor: '#dfdfdf',       // 边框色
-    borderLight: '#0000000c',     // 浅色边框
-
-    // 搜索和匹配
-    searchMatch: '#005cc5',       // 搜索匹配
-    matchingBracket: '#00000019', // 匹配括号
+    comment: '#6a737d',
+    lineComment: '#808a95',
+    blockComment: '#5c646f',
+    docComment: '#909ba8',
+    name: '#1f2329',
+    variableName: '#27313c',
+    typeName: '#5b32c2',
+    tagName: '#3d60c9',
+    propertyName: '#384252',
+    attributeName: '#7c3aed',
+    className: '#4c3ad7',
+    labelName: '#975400',
+    namespace: '#2f6f9f',
+    macroName: '#ae5f00',
+    literal: '#0b5cc5',
+    string: '#032f62',
+    docString: '#0a477f',
+    character: '#174f92',
+    attributeValue: '#8c4f00',
+    number: '#0f65c9',
+    integer: '#0075d6',
+    float: '#0086e6',
+    bool: '#b7410e',
+    regexp: '#2362a1',
+    escape: '#3383c5',
+    color: '#db6e00',
+    url: '#005cc5',
+    keyword: '#d73a49',
+    self: '#b92548',
+    null: '#be1347',
+    atom: '#8241c1',
+    unit: '#a75500',
+    modifier: '#c9245d',
+    operatorKeyword: '#c23143',
+    controlKeyword: '#bf213a',
+    definitionKeyword: '#d45563',
+    moduleKeyword: '#c2476a',
+    operator: '#c93a56',
+    derefOperator: '#cf4c67',
+    arithmeticOperator: '#c82a57',
+    logicOperator: '#c23a5e',
+    bitwiseOperator: '#c23f4d',
+    compareOperator: '#c9455b',
+    updateOperator: '#c2304d',
+    definitionOperator: '#ca3c6b',
+    typeOperator: '#a642d9',
+    controlOperator: '#bd3552',
+    punctuation: '#a37a00',
+    separator: '#a87700',
+    bracket: '#7c8ba1',
+    angleBracket: '#7a9fbd',
+    squareBracket: '#99a7c3',
+    paren: '#5c6e90',
+    brace: '#8d96a8',
+    content: '#1f2329',
+    heading: '#b35900',
+    heading1: '#b04a00',
+    heading2: '#b55e00',
+    heading3: '#b96f00',
+    heading4: '#bb7c00',
+    heading5: '#be8900',
+    heading6: '#c29500',
+    contentSeparator: '#c4b200',
+    list: '#566266',
+    quote: '#7c858f',
+    emphasis: '#1f2329',
+    strong: '#111217',
+    link: '#0a58ca',
+    monospace: '#3a434f',
+    strikethrough: '#5d6469',
+    inserted: '#2da44e',
+    deleted: '#d73a49',
+    changed: '#c69026',
+    invalid: '#cb2431',
+    meta: '#4c5a6b',
+    documentMeta: '#5e6977',
+    annotation: '#7f4cd6',
+    processingInstruction: '#4f5b63',
+    definition: '#30404d',
+    constant: '#0b5cc5',
+    function: '#005cc5',
+    standard: '#40566b',
+    local: '#2f3944',
+    special: '#a44500',
 };
 
-// 创建浅色主题
 export function createLightTheme(colors: ThemeColors = defaultLightColors) {
     return createBaseTheme({...colors, dark: false});
 }
-
-// 默认浅色主题
-export const defaultLight = createLightTheme(defaultLightColors);

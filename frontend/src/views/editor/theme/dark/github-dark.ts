@@ -1,57 +1,117 @@
-import {Extension} from '@codemirror/state'
-import {createBaseTheme} from '../base'
-import type {ThemeColors} from '../types'
+import {Extension} from '@codemirror/state';
+import {createBaseTheme} from '../base';
+import type {ThemeColors} from '../types';
 
 export const config: ThemeColors = {
-  name: 'github-dark',
+  themeName: 'github-dark',
   dark: true,
-  
-  // 基础色调
+
   background: '#24292e',
-  backgroundSecondary: '#2E343BFF',
+  backgroundSecondary: '#2e343b',
   surface: '#24292e',
   dropdownBackground: '#24292e',
   dropdownBorder: '#1b1f23',
-  
-  // 文本颜色
+
   foreground: '#d1d5da',
-  foregroundSecondary: '#d1d5da',
-  comment: '#6a737d',
-  
-  // 语法高亮色 - 核心
-  keyword: '#f97583',
-  string: '#9ecbff',
-  function: '#79b8ff',
-  number: '#79b8ff',
-  operator: '#f97583',
-  variable: '#ffab70',
-  type: '#79b8ff',
-  
-  // 语法高亮色 - 扩展
-  constant: '#79b8ff',
-  storage: '#f97583',
-  parameter: '#e1e4e8',
-  class: '#b392f0',
-  heading: '#79b8ff',
-  invalid: '#f97583',
-  regexp: '#9ecbff',
-  
-  // 界面元素
+  foregroundSecondary: '#b3bac2',
   cursor: '#c8e1ff',
-  selection: '#3392FF44',
-  selectionBlur: '#3392FF44',
+  selection: '#3392ff44',
+  selectionBlur: '#3392ff44',
   activeLine: '#4d566022',
   lineNumber: '#444d56',
   activeLineNumber: '#e1e4e8',
-  
-  // 边框和分割线
+  diffInserted: '#2ea043',
+  diffDeleted: '#d73a49',
+  diffChanged: '#c69026',
   borderColor: '#1b1f23',
   borderLight: '#d1d5da19',
-  
-  // 搜索和匹配
   searchMatch: '#79b8ff',
-  matchingBracket: '#17E5E650',
-}
+  matchingBracket: '#17e5e650',
 
-// 使用通用主题工厂函数创建 GitHub Dark 主题
-export const githubDark: Extension = createBaseTheme(config)
+  comment: '#6a737d',
+  lineComment: '#596068',
+  blockComment: '#4f555c',
+  docComment: '#7c858f',
+  name: '#d1d5da',
+  variableName: '#ffab70',
+  typeName: '#79b8ff',
+  tagName: '#8dd1ff',
+  propertyName: '#d9dee5',
+  attributeName: '#c0a7ff',
+  className: '#b392f0',
+  labelName: '#ffab70',
+  namespace: '#84c5ff',
+  macroName: '#79b8ff',
+  literal: '#79b8ff',
+  string: '#9ecbff',
+  docString: '#aed3ff',
+  character: '#ffe4b2',
+  attributeValue: '#ffcf9a',
+  number: '#79b8ff',
+  integer: '#6fb1ff',
+  float: '#62a7ff',
+  bool: '#ffa657',
+  regexp: '#9ecbff',
+  escape: '#8bc2ff',
+  color: '#ffc27c',
+  url: '#68b7ff',
+  keyword: '#f97583',
+  self: '#ffa5b1',
+  null: '#ff8b76',
+  atom: '#79b8ff',
+  unit: '#79b8ff',
+  modifier: '#ff9a8c',
+  operatorKeyword: '#ff8c80',
+  controlKeyword: '#ff7f73',
+  definitionKeyword: '#ff9aa1',
+  moduleKeyword: '#ffb1ae',
+  operator: '#f97583',
+  derefOperator: '#ff8a7d',
+  arithmeticOperator: '#ff7c6a',
+  logicOperator: '#ff8172',
+  bitwiseOperator: '#ff6958',
+  compareOperator: '#ff7c6c',
+  updateOperator: '#ff6d5e',
+  definitionOperator: '#ff5d54',
+  typeOperator: '#ff8ca5',
+  controlOperator: '#ff5b4f',
+  punctuation: '#d6a3c5',
+  separator: '#d2a9c9',
+  bracket: '#98a6c8',
+  angleBracket: '#c3d5ff',
+  squareBracket: '#b6c4e4',
+  paren: '#b0bace',
+  brace: '#a1aabf',
+  content: '#d1d5da',
+  heading: '#79b8ff',
+  heading1: '#9ac7ff',
+  heading2: '#8fbfff',
+  heading3: '#85b7ff',
+  heading4: '#7bafff',
+  heading5: '#70a7ff',
+  heading6: '#669eff',
+  contentSeparator: '#f97583',
+  list: '#b8bfc7',
+  quote: '#7d848c',
+  emphasis: '#d1d5da',
+  strong: '#f5f7f9',
+  link: '#79b8ff',
+  monospace: '#cfd6df',
+  strikethrough: '#acb4bd',
+  inserted: '#2ea043',
+  deleted: '#d73a49',
+  changed: '#c69026',
+  invalid: '#f97583',
+  meta: '#8591a1',
+  documentMeta: '#7b8593',
+  annotation: '#90d6ff',
+  processingInstruction: '#6a7380',
+  definition: '#cdd4de',
+  constant: '#79b8ff',
+  function: '#79b8ff',
+  standard: '#bac4d1',
+  local: '#c5ccd7',
+  special: '#ffd9a6',
+};
+
+export const githubDark: Extension = createBaseTheme(config);

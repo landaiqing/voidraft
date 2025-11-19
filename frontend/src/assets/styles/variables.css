@@ -1,255 +1,148 @@
 :root {
-  /* 编辑器区域 */
-  --text-primary: #9BB586; /* 内容区域字体颜色 */
-  
-  /* 深色主题颜色变量 */
-  --dark-toolbar-bg: #2d2d2d;
-  --dark-toolbar-border: #404040;
-  --dark-toolbar-text: #ffffff;
-  --dark-toolbar-text-secondary: #cccccc;
-  --dark-toolbar-button-hover: #404040;
-  --dark-tab-active-line: linear-gradient(90deg, #007acc 0%, #0099ff 100%);
-  --dark-bg-secondary: #0E1217;
-  --dark-text-secondary: #a0aec0;
-  --dark-text-muted: #666;
-  --dark-border-color: #2d3748;
-  --dark-settings-bg: #2a2a2a;
-  --dark-settings-card-bg: #333333;
-  --dark-settings-text: #ffffff;
-  --dark-settings-text-secondary: #cccccc;
-  --dark-settings-border: #444444;
-  --dark-settings-input-bg: #3a3a3a;
-  --dark-settings-input-border: #555555;
-  --dark-settings-hover: #404040;
-  --dark-scrollbar-track: #2a2a2a;
-  --dark-scrollbar-thumb: #555555;
-  --dark-scrollbar-thumb-hover: #666666;
-  --dark-selection-bg: rgba(181, 206, 168, 0.1);
-  --dark-selection-text: #b5cea8;
-  --dark-danger-color: #ff6b6b;
-  --dark-bg-primary: #1a1a1a;
-  --dark-bg-hover: #2a2a2a;
-  --dark-loading-bg-gradient: radial-gradient(#222922, #000500);
-  --dark-loading-color: #fff;
-  --dark-loading-glow: 0 0 10px rgba(50, 255, 50, 0.5), 0 0 5px rgba(100, 255, 100, 0.5);
-  --dark-loading-done-color: #6f6;
-  --dark-loading-overlay: linear-gradient(transparent 0%, rgba(10, 16, 10, 0.5) 50%);
-  
-  /* 浅色主题颜色变量 */
-  --light-toolbar-bg: #f8f9fa;
-  --light-toolbar-border: #e9ecef;
-  --light-toolbar-text: #212529;
-  --light-toolbar-text-secondary: #495057;
-  --light-toolbar-button-hover: #e9ecef;
-  --light-tab-active-line: linear-gradient(90deg, #0066cc 0%, #0088ff 100%);
-  --light-bg-secondary: #f7fef7;
-  --light-text-secondary: #374151;
-  --light-text-muted: #6b7280;
-  --light-border-color: #e5e7eb;
-  --light-settings-bg: #ffffff;
-  --light-settings-card-bg: #f8f9fa;
-  --light-settings-text: #212529;
-  --light-settings-text-secondary: #6c757d;
-  --light-settings-border: #dee2e6;
-  --light-settings-input-bg: #ffffff;
-  --light-settings-input-border: #ced4da;
-  --light-settings-hover: #e9ecef;
-  --light-scrollbar-track: #f1f3f4;
-  --light-scrollbar-thumb: #c1c1c1;
-  --light-scrollbar-thumb-hover: #a8a8a8;
-  --light-selection-bg: rgba(59, 130, 246, 0.15);
-  --light-selection-text: #2563eb;
-  --light-danger-color: #dc3545;
-  --light-bg-primary: #ffffff;
-  --light-bg-hover: #f1f3f4;
-  --light-loading-bg-gradient: radial-gradient(#f0f6f0, #e5efe5);
-  --light-loading-color: #1a3c1a;
-  --light-loading-glow: 0 0 10px rgba(0, 160, 0, 0.3), 0 0 5px rgba(0, 120, 0, 0.2);
-  --light-loading-done-color: #008800;
-  --light-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
-  
-  /* 默认使用深色主题 */
-  --toolbar-bg: var(--dark-toolbar-bg);
-  --toolbar-border: var(--dark-toolbar-border);
-  --toolbar-text: var(--dark-toolbar-text);
-  --toolbar-text-secondary: var(--dark-toolbar-text-secondary);
-  --toolbar-button-hover: var(--dark-toolbar-button-hover);
-  --toolbar-separator: var(--dark-toolbar-button-hover);
-  --tab-active-line: var(--dark-tab-active-line);
-  --bg-secondary: var(--dark-bg-secondary);
-  --text-secondary: var(--dark-text-secondary);
-  --text-muted: var(--dark-text-muted);
-  --border-color: var(--dark-border-color);
-  --settings-bg: var(--dark-settings-bg);
-  --settings-card-bg: var(--dark-settings-card-bg);
-  --settings-text: var(--dark-settings-text);
-  --settings-text-secondary: var(--dark-settings-text-secondary);
-  --settings-border: var(--dark-settings-border);
-  --settings-input-bg: var(--dark-settings-input-bg);
-  --settings-input-border: var(--dark-settings-input-border);
-  --settings-hover: var(--dark-settings-hover);
-  --scrollbar-track: var(--dark-scrollbar-track);
-  --scrollbar-thumb: var(--dark-scrollbar-thumb);
-  --scrollbar-thumb-hover: var(--dark-scrollbar-thumb-hover);
-  --selection-bg: var(--dark-selection-bg);
-  --selection-text: var(--dark-selection-text);
-  --text-danger: var(--dark-danger-color);
-  --bg-primary: var(--dark-bg-primary);
-  --bg-hover: var(--dark-bg-hover);
-  --voidraft-bg-gradient: var(--dark-loading-bg-gradient);
-  --voidraft-loading-color: var(--dark-loading-color);
-  --voidraft-loading-glow: var(--dark-loading-glow);
-  --voidraft-loading-done-color: var(--dark-loading-done-color);
-  --voidraft-loading-overlay: var(--dark-loading-overlay);
-  --voidraft-mono-font: "HarmonyOS Sans Mono", monospace;
-  
-  color-scheme: light dark;
+  --voidraft-font-mono: "HarmonyOS", SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-/* 监听系统深色主题 */
-@media (prefers-color-scheme: dark) {
-  :root[data-theme="auto"] {
-    --toolbar-bg: var(--dark-toolbar-bg);
-    --toolbar-border: var(--dark-toolbar-border);
-    --toolbar-text: var(--dark-toolbar-text);
-    --toolbar-text-secondary: var(--dark-toolbar-text-secondary);
-    --toolbar-button-hover: var(--dark-toolbar-button-hover);
-    --toolbar-separator: var(--dark-toolbar-button-hover);
-    --tab-active-line: var(--dark-tab-active-line);
-    --bg-secondary: var(--dark-bg-secondary);
-    --text-secondary: var(--dark-text-secondary);
-    --text-muted: var(--dark-text-muted);
-    --border-color: var(--dark-border-color);
-    --settings-bg: var(--dark-settings-bg);
-    --settings-card-bg: var(--dark-settings-card-bg);
-    --settings-text: var(--dark-settings-text);
-    --settings-text-secondary: var(--dark-settings-text-secondary);
-    --settings-border: var(--dark-settings-border);
-    --settings-input-bg: var(--dark-settings-input-bg);
-    --settings-input-border: var(--dark-settings-input-border);
-    --settings-hover: var(--dark-settings-hover);
-    --scrollbar-track: var(--dark-scrollbar-track);
-    --scrollbar-thumb: var(--dark-scrollbar-thumb);
-    --scrollbar-thumb-hover: var(--dark-scrollbar-thumb-hover);
-    --selection-bg: var(--dark-selection-bg);
-    --selection-text: var(--dark-selection-text);
-    --text-danger: var(--dark-danger-color);
-    --bg-primary: var(--dark-bg-primary);
-    --bg-hover: var(--dark-bg-hover);
-    --voidraft-bg-gradient: var(--dark-loading-bg-gradient);
-    --voidraft-loading-color: var(--dark-loading-color);
-    --voidraft-loading-glow: var(--dark-loading-glow);
-    --voidraft-loading-done-color: var(--dark-loading-done-color);
-    --voidraft-loading-overlay: var(--dark-loading-overlay);
-  }
+/* 默认/暗色主题 */
+:root,
+:root[data-theme="dark"],
+:root[data-theme="auto"] {
+  color-scheme: dark;
+
+  --text-primary: #ffffff;
+
+  --toolbar-bg: #2d2d2d;
+  --toolbar-border: #404040;
+  --toolbar-text: #ffffff;
+  --toolbar-text-secondary: #cccccc;
+  --toolbar-button-hover: #404040;
+  --toolbar-separator: #404040;
+
+  --tab-active-line: linear-gradient(90deg, #007acc 0%, #0099ff 100%);
+  --bg-secondary: #0e1217;
+  --bg-primary: #1a1a1a;
+  --bg-hover: #2a2a2a;
+
+  --text-secondary: #a0aec0;
+  --text-muted: #666666;
+  --text-danger: #ff6b6b;
+
+  --border-color: #2d3748;
+
+  --settings-bg: #2a2a2a;
+  --settings-card-bg: #333333;
+  --settings-text: #ffffff;
+  --settings-text-secondary: #cccccc;
+  --settings-border: #444444;
+  --settings-input-bg: #3a3a3a;
+  --settings-input-border: #555555;
+  --settings-hover: #404040;
+
+  --scrollbar-track: #2a2a2a;
+  --scrollbar-thumb: #555555;
+  --scrollbar-thumb-hover: #666666;
+
+  --selection-bg: rgba(181, 206, 168, 0.1);
+  --selection-text: #b5cea8;
+
+  --voidraft-bg-gradient: radial-gradient(#222922, #000500);
+  --voidraft-loading-color: #ffffff;
+  --voidraft-loading-glow: 0 0 10px rgba(50, 255, 50, 0.5), 0 0 5px rgba(100, 255, 100, 0.5);
+  --voidraft-loading-done-color: #66ff66;
+  --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(10, 16, 10, 0.5) 50%);
 }
 
-/* 监听系统浅色主题 */
+/* 亮色主题 */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --text-primary: #000000;
+
+  --toolbar-bg: #f8f9fa;
+  --toolbar-border: #e9ecef;
+  --toolbar-text: #212529;
+  --toolbar-text-secondary: #495057;
+  --toolbar-button-hover: #e9ecef;
+  --toolbar-separator: #e9ecef;
+
+  --tab-active-line: linear-gradient(90deg, #0066cc 0%, #0088ff 100%);
+  --bg-secondary: #f7fef7;
+  --bg-primary: #ffffff;
+  --bg-hover: #f1f3f4;
+
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+  --text-danger: #dc3545;
+
+  --border-color: #e5e7eb;
+
+  --settings-bg: #ffffff;
+  --settings-card-bg: #f8f9fa;
+  --settings-text: #212529;
+  --settings-text-secondary: #6c757d;
+  --settings-border: #dee2e6;
+  --settings-input-bg: #ffffff;
+  --settings-input-border: #ced4da;
+  --settings-hover: #e9ecef;
+
+  --scrollbar-track: #f1f3f4;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-thumb-hover: #a8a8a8;
+
+  --selection-bg: rgba(59, 130, 246, 0.15);
+  --selection-text: #2563eb;
+
+  --voidraft-bg-gradient: radial-gradient(#f0f6f0, #e5efe5);
+  --voidraft-loading-color: #1a3c1a;
+  --voidraft-loading-glow: 0 0 10px rgba(0, 160, 0, 0.3), 0 0 5px rgba(0, 120, 0, 0.2);
+  --voidraft-loading-done-color: #008800;
+  --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
+}
+
+/* 跟随系统的浅色偏好 */
 @media (prefers-color-scheme: light) {
   :root[data-theme="auto"] {
-    --toolbar-bg: var(--light-toolbar-bg);
-    --toolbar-border: var(--light-toolbar-border);
-    --toolbar-text: var(--light-toolbar-text);
-    --toolbar-text-secondary: var(--light-toolbar-text-secondary);
-    --toolbar-button-hover: var(--light-toolbar-button-hover);
-    --toolbar-separator: var(--light-toolbar-button-hover);
-    --tab-active-line: var(--light-tab-active-line);
-    --bg-secondary: var(--light-bg-secondary);
-    --text-secondary: var(--light-text-secondary);
-    --text-muted: var(--light-text-muted);
-    --border-color: var(--light-border-color);
-    --settings-bg: var(--light-settings-bg);
-    --settings-card-bg: var(--light-settings-card-bg);
-    --settings-text: var(--light-settings-text);
-    --settings-text-secondary: var(--light-settings-text-secondary);
-    --settings-border: var(--light-settings-border);
-    --settings-input-bg: var(--light-settings-input-bg);
-    --settings-input-border: var(--light-settings-input-border);
-    --settings-hover: var(--light-settings-hover);
-    --scrollbar-track: var(--light-scrollbar-track);
-    --scrollbar-thumb: var(--light-scrollbar-thumb);
-    --scrollbar-thumb-hover: var(--light-scrollbar-thumb-hover);
-    --selection-bg: var(--light-selection-bg);
-    --selection-text: var(--light-selection-text);
-    --text-danger: var(--light-danger-color);
-    --bg-primary: var(--light-bg-primary);
-    --bg-hover: var(--light-bg-hover);
-    --voidraft-bg-gradient: var(--light-loading-bg-gradient);
-    --voidraft-loading-color: var(--light-loading-color);
-    --voidraft-loading-glow: var(--light-loading-glow);
-    --voidraft-loading-done-color: var(--light-loading-done-color);
-    --voidraft-loading-overlay: var(--light-loading-overlay);
+    color-scheme: light;
+
+    --text-primary: #000000;
+
+    --toolbar-bg: #f8f9fa;
+    --toolbar-border: #e9ecef;
+    --toolbar-text: #212529;
+    --toolbar-text-secondary: #495057;
+    --toolbar-button-hover: #e9ecef;
+    --toolbar-separator: #e9ecef;
+
+    --tab-active-line: linear-gradient(90deg, #0066cc 0%, #0088ff 100%);
+    --bg-secondary: #f7fef7;
+    --bg-primary: #ffffff;
+    --bg-hover: #f1f3f4;
+
+    --text-secondary: #374151;
+    --text-muted: #6b7280;
+    --text-danger: #dc3545;
+
+    --border-color: #e5e7eb;
+
+    --settings-bg: #ffffff;
+    --settings-card-bg: #f8f9fa;
+    --settings-text: #212529;
+    --settings-text-secondary: #6c757d;
+    --settings-border: #dee2e6;
+    --settings-input-bg: #ffffff;
+    --settings-input-border: #ced4da;
+    --settings-hover: #e9ecef;
+
+    --scrollbar-track: #f1f3f4;
+    --scrollbar-thumb: #c1c1c1;
+    --scrollbar-thumb-hover: #a8a8a8;
+
+    --selection-bg: rgba(59, 130, 246, 0.15);
+    --selection-text: #2563eb;
+
+    --voidraft-bg-gradient: radial-gradient(#f0f6f0, #e5efe5);
+    --voidraft-loading-color: #1a3c1a;
+    --voidraft-loading-glow: 0 0 10px rgba(0, 160, 0, 0.3), 0 0 5px rgba(0, 120, 0, 0.2);
+    --voidraft-loading-done-color: #008800;
+    --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
   }
-}
-
-/* 手动选择浅色主题 */
-:root[data-theme="light"] {
-  --toolbar-bg: var(--light-toolbar-bg);
-  --toolbar-border: var(--light-toolbar-border);
-  --toolbar-text: var(--light-toolbar-text);
-  --toolbar-text-secondary: var(--light-toolbar-text-secondary);
-  --toolbar-button-hover: var(--light-toolbar-button-hover);
-  --toolbar-separator: var(--light-toolbar-button-hover);
-  --tab-active-line: var(--light-tab-active-line);
-  --bg-secondary: var(--light-bg-secondary);
-  --text-secondary: var(--light-text-secondary);
-  --text-muted: var(--light-text-muted);
-  --border-color: var(--light-border-color);
-  --settings-bg: var(--light-settings-bg);
-  --settings-card-bg: var(--light-settings-card-bg);
-  --settings-text: var(--light-settings-text);
-  --settings-text-secondary: var(--light-settings-text-secondary);
-  --settings-border: var(--light-settings-border);
-  --settings-input-bg: var(--light-settings-input-bg);
-  --settings-input-border: var(--light-settings-input-border);
-  --settings-hover: var(--light-settings-hover);
-  --scrollbar-track: var(--light-scrollbar-track);
-  --scrollbar-thumb: var(--light-scrollbar-thumb);
-  --scrollbar-thumb-hover: var(--light-scrollbar-thumb-hover);
-  --selection-bg: var(--light-selection-bg);
-  --selection-text: var(--light-selection-text);
-  --text-danger: var(--light-danger-color);
-  --bg-primary: var(--light-bg-primary);
-  --bg-hover: var(--light-bg-hover);
-  --voidraft-bg-gradient: var(--light-loading-bg-gradient);
-  --voidraft-loading-color: var(--light-loading-color);
-  --voidraft-loading-glow: var(--light-loading-glow);
-  --voidraft-loading-done-color: var(--light-loading-done-color);
-  --voidraft-loading-overlay: var(--light-loading-overlay);
-}
-
-/* 手动选择深色主题 */
-:root[data-theme="dark"] {
-  --toolbar-bg: var(--dark-toolbar-bg);
-  --toolbar-border: var(--dark-toolbar-border);
-  --toolbar-text: var(--dark-toolbar-text);
-  --toolbar-text-secondary: var(--dark-toolbar-text-secondary);
-  --toolbar-button-hover: var(--dark-toolbar-button-hover);
-  --toolbar-separator: var(--dark-toolbar-button-hover);
-  --tab-active-line: var(--dark-tab-active-line);
-  --bg-secondary: var(--dark-bg-secondary);
-  --text-secondary: var(--dark-text-secondary);
-  --text-muted: var(--dark-text-muted);
-  --border-color: var(--dark-border-color);
-  --settings-bg: var(--dark-settings-bg);
-  --settings-card-bg: var(--dark-settings-card-bg);
-  --settings-text: var(--dark-settings-text);
-  --settings-text-secondary: var(--dark-settings-text-secondary);
-  --settings-border: var(--dark-settings-border);
-  --settings-input-bg: var(--dark-settings-input-bg);
-  --settings-input-border: var(--dark-settings-input-border);
-  --settings-hover: var(--dark-settings-hover);
-  --scrollbar-track: var(--dark-scrollbar-track);
-  --scrollbar-thumb: var(--dark-scrollbar-thumb);
-  --scrollbar-thumb-hover: var(--dark-scrollbar-thumb-hover);
-  --selection-bg: var(--dark-selection-bg);
-  --selection-text: var(--dark-selection-text);
-  --text-danger: var(--dark-danger-color);
-  --bg-primary: var(--dark-bg-primary);
-  --bg-hover: var(--dark-bg-hover);
-  --voidraft-bg-gradient: var(--dark-loading-bg-gradient);
-  --voidraft-loading-color: var(--dark-loading-color);
-  --voidraft-loading-glow: var(--dark-loading-glow);
-  --voidraft-loading-done-color: var(--dark-loading-done-color);
-  --voidraft-loading-overlay: var(--dark-loading-overlay);
 }
