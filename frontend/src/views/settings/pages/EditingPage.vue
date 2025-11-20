@@ -19,16 +19,17 @@ onMounted(async () => {
 
 // 字体选择选项
 const fontFamilyOptions = computed(() => configStore.fontOptions);
-const currentFontFamily = computed(() => configStore.config.editing.fontFamily);
-
-// 字体选择
-const handleFontFamilyChange = async (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  const fontFamily = target.value;
-  if (fontFamily) {
-    await configStore.setFontFamily(fontFamily);
+const fontFamilyModel = computed({
+  get: () =>
+    configStore.config.editing.fontFamily ||
+    fontFamilyOptions.value[0]?.value ||
+    '',
+  set: async (fontFamily: string) => {
+    if (fontFamily) {
+      await configStore.setFontFamily(fontFamily);
+    }
   }
-};
+});
 
 // 字体粗细选项
 const fontWeightOptions = [
@@ -44,10 +45,14 @@ const fontWeightOptions = [
 ];
 
 // 字体粗细选择
-const handleFontWeightChange = async (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  await configStore.setFontWeight(target.value);
-};
+const fontWeightModel = computed({
+  get: () => configStore.config.editing.fontWeight || fontWeightOptions[0].value,
+  set: async (value: string) => {
+    if (value) {
+      await configStore.setFontWeight(value);
+    }
+  }
+});
 
 // 行高控制
 const increaseLineHeight = async () => {
@@ -118,8 +123,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
       >
         <select 
           class="font-family-select" 
-          :value="currentFontFamily"
-          @change="handleFontFamilyChange"
+          v-model="fontFamilyModel"
         >
           <option 
             v-for="option in fontFamilyOptions" 
@@ -146,8 +150,7 @@ const handleAutoSaveDelayChange = async (event: Event) => {
       >
         <select 
           class="font-weight-select" 
-          :value="configStore.config.editing.fontWeight"
-          @change="handleFontWeightChange"
+          v-model="fontWeightModel"
         >
           <option 
             v-for="option in fontWeightOptions" 

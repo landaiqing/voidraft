@@ -18,23 +18,10 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as models$0 from "../models/models.js";
 
 /**
- * GetAllThemes 获取所有主题
+ * GetThemeByName 通过名称获取主题覆盖，若不存在则返回 nil
  */
-export function GetAllThemes(): Promise<(models$0.Theme | null)[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2425053076) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType2($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetThemeByID 根据ID或名称获取主题
- * 如果 id > 0，按ID查询；如果 id = 0，按名称查询
- */
-export function GetThemeByIdOrName(id: number, ...name: string[]): Promise<models$0.Theme | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(127385338, id, name) as any;
+export function GetThemeByName(name: string): Promise<models$0.Theme | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1938954770, name) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;
@@ -43,10 +30,10 @@ export function GetThemeByIdOrName(id: number, ...name: string[]): Promise<model
 }
 
 /**
- * ResetTheme 重置主题为预设配置
+ * ResetTheme 删除指定主题的覆盖配置
  */
-export function ResetTheme(id: number, ...name: string[]): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1806334457, id, name) as any;
+export function ResetTheme(name: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1806334457, name) as any;
     return $resultPromise;
 }
 
@@ -59,7 +46,7 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * ServiceStartup 服务启动时初始化
+ * ServiceStartup 服务启动
  */
 export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(2915959937, options) as any;
@@ -67,14 +54,13 @@ export function ServiceStartup(options: application$0.ServiceOptions): Promise<v
 }
 
 /**
- * UpdateTheme 更新主题
+ * UpdateTheme 保存或更新主题覆盖
  */
-export function UpdateTheme(id: number, colors: models$0.ThemeColorConfig): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(70189749, id, colors) as any;
+export function UpdateTheme(name: string, colors: models$0.ThemeColorConfig): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(70189749, name, colors) as any;
     return $resultPromise;
 }
 
 // Private type creation functions
 const $$createType0 = models$0.Theme.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Array($$createType1);

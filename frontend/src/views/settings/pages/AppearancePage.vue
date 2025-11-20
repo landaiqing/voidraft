@@ -2,7 +2,7 @@
 import { useConfigStore } from '@/stores/configStore';
 import { useThemeStore } from '@/stores/themeStore';
 import { useI18n } from 'vue-i18n';
-import { computed, watch, onMounted, ref } from 'vue';
+import { computed, watch, onMounted, ref, nextTick } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import { SystemThemeType, LanguageType } from '@/../bindings/voidraft/internal/models/models';
@@ -50,7 +50,10 @@ const resetButtonState = ref({
 
 // 当前选中的主题名称
 const currentThemeName = computed({
-  get: () => themeStore.currentColors?.name || '',
+  get: () =>
+    themeStore.currentColors?.themeName ||
+    configStore.config.appearance.currentTheme ||
+    '',
   set: async (themeName: string) => {
     await themeStore.switchToTheme(themeName);
     syncTempColors();
@@ -89,20 +92,38 @@ onMounted(() => {
 // 从 ThemeColors 接口自动提取所有颜色字段
 const colorKeys = computed(() => {
   if (!tempColors.value) return [];
-  
-  // 获取所有字段，排除 name 和 dark（这两个是元数据）
-  return Object.keys(tempColors.value).filter(key => 
-    key !== 'name' && key !== 'dark'
-  );
+
+  return Object.keys(tempColors.value)
+    .filter(key => key !== 'themeName' && key !== 'dark')
+    .sort((a, b) => a.localeCompare(b));
 });
 
-// 颜色配置列表
-const colorList = computed(() => 
+const colorList = computed(() =>
   colorKeys.value.map(colorKey => ({
     key: colorKey,
-    label: t(`settings.themeColors.${colorKey}`)
+    label: colorKey
   }))
 );
+
+const colorSearch = ref('');
+const showSearch = ref(false);
+const searchInputRef = ref<HTMLInputElement | null>(null);
+
+const filteredColorList = computed(() => {
+  const keyword = colorSearch.value.trim().toLowerCase();
+  if (!keyword) return colorList.value;
+  return colorList.value.filter(color => color.key.toLowerCase().includes(keyword));
+});
+
+const toggleSearch = async () => {
+  showSearch.value = !showSearch.value;
+  if (showSearch.value) {
+    await nextTick();
+    searchInputRef.value?.focus();
+  } else {
+    colorSearch.value = '';
+  }
+};
 
 // 处理重置按钮点击
 const handleResetClick = () => {
@@ -193,7 +214,7 @@ const updateSystemTheme = async (event: Event) => {
   await themeStore.setTheme(selectedSystemTheme);
   
   const availableThemes = themeStore.availableThemes;
-  const currentThemeName = currentColors.value?.name;
+  const currentThemeName = currentColors.value?.themeName;
   const isCurrentThemeAvailable = availableThemes.some(t => t.name === currentThemeName);
   
   if (!isCurrentThemeAvailable && availableThemes.length > 0) {
@@ -242,7 +263,7 @@ const handlePickerClose = () => {
       <!-- 预设主题选择 -->
       <SettingItem :title="t('settings.presetTheme')">
         <select class="select-input" v-model="currentThemeName" :disabled="hasUnsavedChanges">
-          <option v-for="theme in themeStore.availableThemes" :key="theme.id" :value="theme.name">
+          <option v-for="theme in themeStore.availableThemes" :key="theme.name" :value="theme.name">
             {{ theme.name }}
           </option>
         </select>
@@ -251,14 +272,27 @@ const handlePickerClose = () => {
 
     <!-- 自定义主题颜色配置 -->
     <SettingSection :title="t('settings.customThemeColors')">
-      <template #title>
-        <div class="theme-section-title">
-          <span class="section-title-text">{{ t('settings.customThemeColors') }}</span>
-          <span v-if="currentColors.name" class="current-theme-name">{{ currentColors.name }}</span>
-        </div>
-      </template>
       <template #title-right>
         <div class="theme-controls">
+          <div :class="['theme-search-wrapper', showSearch ? 'active' : '']">
+            <input
+              ref="searchInputRef"
+              class="theme-search-input"
+              type="text"
+              v-model="colorSearch"
+              placeholder="Search..."
+            />
+          </div>
+          <button class="search-toggle-button" @click="toggleSearch" :title="showSearch ? '关闭搜索' : '搜索颜色'">
+            <svg v-if="!showSearch" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
           <button 
             v-if="!hasUnsavedChanges" 
             :class="['reset-button', resetButtonState.confirming ? 'reset-button-confirming' : '']" 
@@ -280,7 +314,7 @@ const handlePickerClose = () => {
       <!-- 颜色列表 -->
       <div class="color-list">
         <SettingItem 
-          v-for="color in colorList" 
+          v-for="color in filteredColorList" 
           :key="color.key" 
           :title="color.label"
           class="color-setting-item"
@@ -318,10 +352,6 @@ const handlePickerClose = () => {
 </template>
 
 <style scoped lang="scss">
-.settings-page {
-  //max-width: 1000px;
-}
-
 .select-input {
   min-width: 140px;
   padding: 6px 10px;
@@ -347,27 +377,6 @@ const handlePickerClose = () => {
     background-color: var(--settings-card-bg);
     color: var(--settings-text);
   }
-}
-
-// 主题部分标题
-.theme-section-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.section-title-text {
-  font-weight: 500;
-}
-
-.current-theme-name {
-  font-size: 13px;
-  color: var(--settings-text-secondary);
-  font-weight: normal;
-  padding: 2px 8px;
-  background-color: var(--settings-input-bg);
-  border: 1px solid var(--settings-input-border);
-  border-radius: 4px;
 }
 
 // 主题控制区域
@@ -439,6 +448,78 @@ const handlePickerClose = () => {
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 12px;
   margin-top: 12px;
+}
+
+.theme-search-wrapper {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.3s ease;
+  opacity: 0;
+}
+
+.theme-search-wrapper.active {
+  width: 150px;
+  margin-right: 8px;
+  opacity: 1;
+}
+
+.theme-search-input {
+  width: 100%;
+  padding: 6px 12px;
+  border: 1px solid var(--settings-input-border);
+  border-radius: 20px;
+  background-color: var(--settings-input-bg);
+  color: var(--settings-text);
+  font-size: 12px;
+  transition: all 0.2s ease;
+  height: 25px;
+  box-sizing: border-box;
+  
+  &:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background-color: var(--settings-card-bg);
+    box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+  }
+  
+  &::placeholder {
+    color: var(--settings-text-secondary);
+    opacity: 0.6;
+  }
+}
+
+.search-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  margin-right: 8px;
+  padding: 0;
+  border: 1px solid var(--settings-input-border);
+  border-radius: 50%;
+  background-color: var(--settings-button-bg);
+  color: var(--settings-button-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  svg {
+    transition: transform 0.2s ease;
+  }
+  
+  &:hover {
+    border-color: #4a9eff;
+    background-color: var(--settings-button-hover-bg);
+    transform: scale(1.05);
+    
+    svg {
+      transform: scale(1.1);
+    }
+  }
+  
+  &:active {
+    transform: scale(0.95);
+  }
 }
 
 .color-setting-item {
