@@ -175,30 +175,22 @@ export interface ThemeColors extends ThemeTagColors {
   themeName: string;
   dark: boolean;
 
-  background: string;
-  backgroundSecondary: string;
-  surface: string;
-  dropdownBackground: string;
-  dropdownBorder: string;
+  background: string;  // 背景
+  backgroundSecondary: string; // 第二背景块
 
-  foreground: string;
-  foregroundSecondary: string;
+  foreground: string;  // 背景文字颜色
 
-  cursor: string;
-  selection: string;
-  selectionBlur: string;
-  activeLine: string;
-  lineNumber: string;
-  activeLineNumber: string;
+  cursor: string; // 光标颜色
+  selection: string;  // 选中文字颜色
+  activeLine: string;  // 当前行颜色
+  lineNumber: string;  // 行号颜色
+  activeLineNumber: string;  // 当前行号颜色
 
-  diffInserted?: string;
-  diffDeleted?: string;
-  diffChanged?: string;
+  diffInserted?: string;  // 插入颜色
+  diffDeleted?: string;  // 删除颜色
+  diffChanged?: string;  // 变更颜色
 
-  borderColor: string;
-    borderLight: string;
-
-  searchMatch: string;
-  matchingBracket: string;
+  borderColor: string;  // 边框颜色
+  matchingBracket: string;  // 匹配括号颜色
 }
 

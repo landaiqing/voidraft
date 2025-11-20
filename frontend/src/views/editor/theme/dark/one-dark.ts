@@ -14,7 +14,6 @@ const violet = '#c678dd';
 const darkBackground = '#21252b';
 const highlightBackground = '#313949ff';
 const background = '#282c34';
-const tooltipBackground = '#353a42';
 const selection = '#3e4451';
 
 export const config: ThemeColors = {
@@ -23,15 +22,9 @@ export const config: ThemeColors = {
 
   background,
   backgroundSecondary: highlightBackground,
-  surface: tooltipBackground,
-  dropdownBackground: darkBackground,
-  dropdownBorder: stone,
-
   foreground: ivory,
-  foregroundSecondary: stone,
   cursor: '#528bff',
   selection,
-  selectionBlur: selection,
   activeLine: '#6699ff0b',
   lineNumber: stone,
   activeLineNumber: ivory,
@@ -39,8 +32,6 @@ export const config: ThemeColors = {
   diffDeleted: coral,
   diffChanged: whiskey,
   borderColor: darkBackground,
-  borderLight: `${ivory}19`,
-  searchMatch: malibu,
   matchingBracket: '#bad0f847',
 
   comment: stone,

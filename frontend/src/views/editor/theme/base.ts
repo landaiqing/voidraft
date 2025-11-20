@@ -15,6 +15,14 @@ export function createBaseTheme(colors: ThemeColors): Extension {
     // 编辑器主题样式
     const theme = EditorView.theme({
 
+        '&': {
+            backgroundColor: colors.background,
+        },
+
+        '.cm-editor': {
+            backgroundColor: colors.background,
+        },
+
         // 光标
         '.cm-cursor, .cm-dropCursor': {
             borderLeftColor: colors.cursor,
@@ -47,61 +55,12 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             color: colors.activeLineNumber,
         },
 
-        // 面板动画效果
-        '.cm-panels.cm-panels-top': {
-            borderBottom: '2px solid black'
-        },
-        '.cm-panels.cm-panels-bottom': {
-            animation: 'panelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-        },
-        '@keyframes panelSlideUp': {
-            from: {
-                transform: 'translateY(100%)',
-                opacity: '0'
-            },
-            to: {
-                transform: 'translateY(0)',
-                opacity: '1'
-            }
-        },
-        '@keyframes panelSlideDown': {
-            from: {
-                transform: 'translateY(0)',
-                opacity: '1'
-            },
-            to: {
-                transform: 'translateY(100%)',
-                opacity: '0'
-            }
-        },
+
 
         // 括号匹配
         '&.cm-focused .cm-matchingBracket, &.cm-focused .cm-nonmatchingBracket': {
-            outline: `0.5px solid ${colors.searchMatch}`,
+            outline: `0.5px solid ${colors.matchingBracket}`,
         },
-
-
-        // 工具提示
-        // '.cm-tooltip': {
-        //     border: colors.dark ? 'none' : `1px solid ${colors.dropdownBorder}`,
-        //     backgroundColor: colors.surface,
-        //     // color: colors.foreground,
-        //     boxShadow: colors.dark ? 'none' : '0 2px 8px rgba(0,0,0,0.1)',
-        // },
-        // '.cm-tooltip .cm-tooltip-arrow:before': {
-        //     borderTopColor: 'transparent',
-        //     borderBottomColor: 'transparent',
-        // },
-        // '.cm-tooltip .cm-tooltip-arrow:after': {
-        //     borderTopColor: colors.surface,
-        //     borderBottomColor: colors.surface,
-        // },
-        // '.cm-tooltip-autocomplete': {
-        //     '& > ul > li[aria-selected]': {
-        //         backgroundColor: colors.activeLine,
-        //         color: colors.foreground,
-        //     },
-        // },
 
         // 代码块层（自定义）
         '.code-blocks-layer': {
@@ -122,8 +81,19 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             background: colors.backgroundSecondary,
             borderTop: `1px solid ${colors.borderColor}`,
         },
+        '.code-block-empty-selected': {
+            backgroundColor: colors.selection,
+        },
+        // 代码块开始标记
+        '.code-block-start': {
+            height: '12px',
+            position: 'relative',
+        },
+        '.code-block-start.first': {
+            height: '0px',
+        },
 
-        // 数学计算结果（自定义）
+        // 数学计算结果
         '.code-blocks-math-result': {
             paddingLeft: "12px",
             position: "relative",
@@ -149,15 +119,6 @@ export function createBaseTheme(colors: ThemeColors): Extension {
         },
         '.code-blocks-math-result-copied.fade-out': {
             opacity: 0,
-        },
-
-        // 代码块开始标记（自定义）
-        '.code-block-start': {
-            height: '12px',
-            position: 'relative',
-        },
-        '.code-block-start.first': {
-            height: '0px',
         },
     }, {dark: colors.dark});
 

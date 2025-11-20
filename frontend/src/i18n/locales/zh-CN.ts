@@ -202,54 +202,6 @@ export default {
     customThemeColors: '自定义主题颜色',
     resetToDefault: '重置为默认',
     colorValue: '颜色值',
-    themeColors: {
-      basic: '基础色调',
-      text: '文本颜色',
-      syntax: '语法高亮',
-      interface: '界面元素',
-      border: '边框分割线',
-      search: '搜索匹配',
-      // 基础色调
-      background: '主背景色',
-      backgroundSecondary: '次要背景色',
-      surface: '面板背景',
-      dropdownBackground: '下拉菜单背景',
-      dropdownBorder: '下拉菜单边框',
-      // 文本颜色
-      foreground: '主文本色',
-      foregroundSecondary: '次要文本色',
-      comment: '注释色',
-      // 语法高亮 - 核心
-      keyword: '关键字',
-      string: '字符串',
-      function: '函数名',
-      number: '数字',
-      operator: '操作符',
-      variable: '变量',
-      type: '类型',
-      // 语法高亮 - 扩展
-      constant: '常量',
-      storage: '存储类型',
-      parameter: '参数',
-      class: '类名',
-      heading: '标题',
-      invalid: '无效内容',
-      regexp: '正则表达式',
-      // 界面元素
-      cursor: '光标',
-      selection: '选中背景',
-      selectionBlur: '失焦选中背景',
-      activeLine: '当前行高亮',
-      lineNumber: '行号',
-      activeLineNumber: '活动行号',
-      // 边框和分割线
-      borderColor: '边框色',
-      borderLight: '浅色边框',
-      // 搜索和匹配
-      searchMatch: '搜索匹配',
-      matchingBracket: '匹配括号'
-    },
-
     hotkeyPreview: '预览：',
     none: '无',
     backup: {

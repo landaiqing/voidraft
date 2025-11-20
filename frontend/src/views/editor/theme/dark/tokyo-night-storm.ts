@@ -8,15 +8,10 @@ export const config: ThemeColors = {
 
   background: '#24283b',
   backgroundSecondary: '#2b3151',
-  surface: '#24283b',
-  dropdownBackground: '#24283b',
-  dropdownBorder: '#7982a9',
 
   foreground: '#c0caf5',
-  foregroundSecondary: '#7982a9',
   cursor: '#c0caf5',
   selection: '#6f7bb630',
-  selectionBlur: '#6f7bb630',
   activeLine: '#4d547722',
   lineNumber: '#3b4261',
   activeLineNumber: '#737aa2',
@@ -24,8 +19,6 @@ export const config: ThemeColors = {
   diffDeleted: '#f7768e',
   diffChanged: '#ff9e64',
   borderColor: '#1f2335',
-  borderLight: '#7982a919',
-  searchMatch: '#7aa2f7',
   matchingBracket: '#1f2335',
 
   comment: '#565f89',

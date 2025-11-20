@@ -78,6 +78,34 @@ export function createMarkdownPreviewTheme(colors: ThemeColors) {
       }
     },
 
+      // 面板动画效果
+      '.cm-panels.cm-panels-top': {
+          borderBottom: '2px solid black'
+      },
+      '.cm-panels.cm-panels-bottom': {
+          animation: 'panelSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+      },
+      '@keyframes panelSlideUp': {
+          from: {
+              transform: 'translateY(100%)',
+              opacity: '0'
+          },
+          to: {
+              transform: 'translateY(0)',
+              opacity: '1'
+          }
+      },
+      '@keyframes panelSlideDown': {
+          from: {
+              transform: 'translateY(0)',
+              opacity: '1'
+          },
+          to: {
+              transform: 'translateY(100%)',
+              opacity: '0'
+          }
+      },
+
     // 内容区域
     ".cm-preview-content": {
       flex: 1,

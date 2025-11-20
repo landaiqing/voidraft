@@ -147,7 +147,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   cursor: pointer;
   font-size: 12px;
-  color: var(--text-muted);
+  color: var(--text-primary);
   transition: all 0.15s ease;
   gap: 8px;
   
@@ -165,7 +165,7 @@ onUnmounted(() => {
   flex-shrink: 0;
   width: 12px;
   height: 12px;
-  color: var(--text-muted);
+  color: var(--text-primary);
   transition: color 0.15s ease;
   
   .menu-item:hover & {

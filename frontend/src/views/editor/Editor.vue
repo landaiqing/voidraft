@@ -33,10 +33,10 @@ onMounted(async () => {
   await tabStore.initializeTab();
 });
 
-onBeforeUnmount(() => {
-  editorStore.clearAllEditors();
-
-});
+// onBeforeUnmount(() => {
+//   editorStore.clearAllEditors();
+//
+// });
 </script>
 
 <template>

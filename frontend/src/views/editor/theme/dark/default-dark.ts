@@ -8,16 +8,11 @@ export const defaultDarkColors: ThemeColors = {
   // 基础色调
   background: '#252B37',
   backgroundSecondary: '#213644',
-  surface: '#474747',
-  dropdownBackground: '#252B37',
-  dropdownBorder: '#ffffff19',
 
   // 文本与界面色
-  foreground: '#9BB586',
-  foregroundSecondary: '#9c9c9c',
+  foreground: '#ffffff',
   cursor: '#ffffff',
   selection: '#0865a9',
-  selectionBlur: '#225377',
   activeLine: '#ffffff0a',
   lineNumber: '#ffffff26',
   activeLineNumber: '#ffffff99',
@@ -25,8 +20,6 @@ export const defaultDarkColors: ThemeColors = {
   diffDeleted: '#ff6b6b',
   diffChanged: '#ffb86c',
   borderColor: '#1e222a',
-  borderLight: '#ffffff19',
-  searchMatch: '#8fbcbb',
   matchingBracket: '#ffffff19',
 
   // 语法标签色值

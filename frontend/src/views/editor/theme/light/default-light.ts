@@ -7,15 +7,10 @@ export const defaultLightColors: ThemeColors = {
 
     background: '#ffffff',
     backgroundSecondary: '#f4f7fb',
-    surface: '#f7f8f9',
-    dropdownBackground: '#ffffff',
-    dropdownBorder: '#e1e4e8',
 
     foreground: '#24292e',
-    foregroundSecondary: '#6a737d',
     cursor: '#000000',
     selection: '#77baff',
-    selectionBlur: '#c4d4df',
     activeLine: '#0000000a',
     lineNumber: '#00000040',
     activeLineNumber: '#000000aa',
@@ -23,8 +18,6 @@ export const defaultLightColors: ThemeColors = {
     diffDeleted: '#d73a49',
     diffChanged: '#c69026',
     borderColor: '#d8dee4',
-    borderLight: '#0000000c',
-    searchMatch: '#1f6feb',
     matchingBracket: '#00000019',
 
     comment: '#6a737d',
