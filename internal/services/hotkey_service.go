@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+	"voidraft/internal/common/helper"
 	"voidraft/internal/common/hotkey"
 	"voidraft/internal/models"
 
@@ -18,7 +19,7 @@ import (
 type HotkeyService struct {
 	logger        *log.LogService
 	configService *ConfigService
-	windowHelper  *WindowHelper
+	windowHelper  *helper.WindowHelper
 
 	mu            sync.RWMutex
 	currentHotkey *models.HotkeyCombo
@@ -45,7 +46,7 @@ func NewHotkeyService(configService *ConfigService, logger *log.LogService) *Hot
 	return &HotkeyService{
 		logger:        logger,
 		configService: configService,
-		windowHelper:  NewWindowHelper(),
+		windowHelper:  helper.NewWindowHelper(),
 		ctx:           ctx,
 		cancel:        cancel,
 	}

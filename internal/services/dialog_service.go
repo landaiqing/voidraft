@@ -3,12 +3,13 @@ package services
 import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+	"voidraft/internal/common/helper"
 )
 
 // DialogService 对话框服务，处理文件选择等对话框操作
 type DialogService struct {
 	logger       *log.LogService
-	windowHelper *WindowHelper
+	windowHelper *helper.WindowHelper
 }
 
 // NewDialogService 创建新的对话框服务实例
@@ -19,7 +20,7 @@ func NewDialogService(logger *log.LogService) *DialogService {
 
 	return &DialogService{
 		logger:       logger,
-		windowHelper: NewWindowHelper(),
+		windowHelper: helper.NewWindowHelper(),
 	}
 }
 

@@ -1,174 +1,141 @@
-/**
- * 编辑器上下文菜单实现
- * 提供基本的复制、剪切、粘贴等操作，支持动态快捷键显示
- */
+import { EditorView } from '@codemirror/view';
+import { Extension } from '@codemirror/state';
+import { copyCommand, cutCommand, pasteCommand } from '../extensions/codeblock/copyPaste';
+import { KeyBindingCommand } from '@/../bindings/voidraft/internal/models/models';
+import { useKeybindingStore } from '@/stores/keybindingStore';
+import { undo, redo } from '@codemirror/commands';
+import i18n from '@/i18n';
+import { useSystemStore } from '@/stores/systemStore';
+import { showContextMenu } from './manager';
+import {
+  buildRegisteredMenu,
+  createMenuContext,
+  registerMenuNodes
+} from './menuSchema';
+import type { MenuSchemaNode } from './menuSchema';
 
-import { EditorView } from "@codemirror/view";
-import { Extension } from "@codemirror/state";
-import { copyCommand, cutCommand, pasteCommand } from "../extensions/codeblock/copyPaste";
-import { KeyBindingCommand } from "@/../bindings/voidraft/internal/models/models";
-import { useKeybindingStore } from "@/stores/keybindingStore";
-import { 
-  undo, redo
-} from "@codemirror/commands";
-import i18n from "@/i18n";
-import {useSystemStore} from "@/stores/systemStore";
 
-/**
- * 菜单项类型定义
- */
-export interface MenuItem {
-  /** 菜单项显示文本 */
-  label: string;
-  
-  /** 点击时执行的命令 (如果有子菜单，可以为null) */
-  command?: (view: EditorView) => boolean;
-  
-  /** 快捷键提示文本 (可选) */
-  shortcut?: string;
-  
-  /** 子菜单项 (可选) */
-  submenu?: MenuItem[];
-}
-
-// 导入相关功能
-import { showContextMenu } from "./contextMenuView";
-
-/**
- * 获取翻译文本
- * @param key 翻译键
- * @returns 翻译后的文本
- */
 function t(key: string): string {
   return i18n.global.t(key);
 }
 
-/**
- * 获取快捷键显示文本
- * @param command 命令ID
- * @returns 快捷键显示文本
- */
-function getShortcutText(command: KeyBindingCommand): string {
+
+function formatKeyBinding(keyBinding: string): string {
+  const systemStore = useSystemStore();
+  const isMac = systemStore.isMacOS;
+
+  return keyBinding
+    .replace("Mod", isMac ? "Cmd" : "Ctrl")
+    .replace("Shift", "Shift")
+    .replace("Alt", isMac ? "Option" : "Alt")
+    .replace("Ctrl", isMac ? "Ctrl" : "Ctrl")
+    .replace(/-/g, " + ");
+}
+
+const shortcutCache = new Map<KeyBindingCommand, string>();
+
+
+function getShortcutText(command?: KeyBindingCommand): string {
+  if (command === undefined) {
+    return "";
+  }
+
+  const cached = shortcutCache.get(command);
+  if (cached !== undefined) {
+    return cached;
+  }
+
   try {
     const keybindingStore = useKeybindingStore();
-    
-    // 如果找到该命令的快捷键配置
-    const binding = keybindingStore.keyBindings.find(kb => 
-      kb.command === command && kb.enabled
+    const binding = keybindingStore.keyBindings.find(
+      (kb) => kb.command === command && kb.enabled
     );
-    
-    if (binding && binding.key) {
-      // 格式化快捷键显示
-      return formatKeyBinding(binding.key);
+
+    if (binding?.key) {
+      const formatted = formatKeyBinding(binding.key);
+      shortcutCache.set(command, formatted);
+      return formatted;
     }
   } catch (error) {
     console.warn("An error occurred while getting the shortcut:", error);
   }
-  
+
+  shortcutCache.set(command, "");
   return "";
 }
 
-/**
- * 格式化快捷键显示
- * @param keyBinding 快捷键字符串
- * @returns 格式化后的显示文本
- */
-function formatKeyBinding(keyBinding: string): string {
-  // 获取系统信息
-  const systemStore = useSystemStore();
-  const isMac = systemStore.isMacOS;
-  
-  // 替换修饰键名称为更友好的显示
-  return keyBinding
-    .replace("Mod", isMac ? "⌘" : "Ctrl")
-    .replace("Shift", isMac ? "⇧" : "Shift")
-    .replace("Alt", isMac ? "⌥" : "Alt")
-    .replace("Ctrl", isMac ? "⌃" : "Ctrl")
-    .replace(/-/g, " + ");
-}
 
-
-/**
- * 创建编辑菜单项
- */
-function createEditItems(): MenuItem[] {
+function getBuiltinMenuNodes(): MenuSchemaNode[] {
   return [
     {
-      label: t("keybindings.commands.blockCopy"),
+      id: "copy",
+      labelKey: "keybindings.commands.blockCopy",
       command: copyCommand,
-      shortcut: getShortcutText(KeyBindingCommand.BlockCopyCommand)
+      shortcutCommand: KeyBindingCommand.BlockCopyCommand,
+      enabled: (context) => context.hasSelection
     },
     {
-      label: t("keybindings.commands.blockCut"),
+      id: "cut",
+      labelKey: "keybindings.commands.blockCut",
       command: cutCommand,
-      shortcut: getShortcutText(KeyBindingCommand.BlockCutCommand)
+      shortcutCommand: KeyBindingCommand.BlockCutCommand,
+      visible: (context) => context.isEditable,
+      enabled: (context) => context.hasSelection && context.isEditable
     },
     {
-      label: t("keybindings.commands.blockPaste"),
+      id: "paste",
+      labelKey: "keybindings.commands.blockPaste",
       command: pasteCommand,
-      shortcut: getShortcutText(KeyBindingCommand.BlockPasteCommand)
-    }
-  ];
-}
-
-/**
- * 创建历史操作菜单项
- */
-function createHistoryItems(): MenuItem[] {
-  return [
-    {
-      label: t("keybindings.commands.historyUndo"),
-      command: undo,
-      shortcut: getShortcutText(KeyBindingCommand.HistoryUndoCommand)
+      shortcutCommand: KeyBindingCommand.BlockPasteCommand,
+      visible: (context) => context.isEditable
     },
     {
-      label: t("keybindings.commands.historyRedo"),
+      id: "undo",
+      labelKey: "keybindings.commands.historyUndo",
+      command: undo,
+      shortcutCommand: KeyBindingCommand.HistoryUndoCommand,
+      visible: (context) => context.isEditable
+    },
+    {
+      id: "redo",
+      labelKey: "keybindings.commands.historyRedo",
       command: redo,
-      shortcut: getShortcutText(KeyBindingCommand.HistoryRedoCommand)
+      shortcutCommand: KeyBindingCommand.HistoryRedoCommand,
+      visible: (context) => context.isEditable
     }
   ];
 }
 
+let builtinMenuRegistered = false;
 
-/**
- * 创建主菜单项
- */
-function createMainMenuItems(): MenuItem[] {
-  // 基本编辑操作放在主菜单
-  const basicItems = createEditItems();
-  
-  // 历史操作放在主菜单
-  const historyItems = createHistoryItems();
-  
-  // 构建主菜单
-  return [
-    ...basicItems,
-    ...historyItems
-  ];
+function ensureBuiltinMenuRegistered(): void {
+  if (builtinMenuRegistered) return;
+  registerMenuNodes(getBuiltinMenuNodes());
+  builtinMenuRegistered = true;
 }
 
-/**
- * 创建编辑器上下文菜单
- */
+
 export function createEditorContextMenu(): Extension {
-  // 为编辑器添加右键事件处理
+  ensureBuiltinMenuRegistered();
+
   return EditorView.domEventHandlers({
     contextmenu: (event, view) => {
-      // 阻止默认右键菜单
       event.preventDefault();
-      
-      // 获取菜单项
-      const menuItems = createMainMenuItems();
-      
-      // 显示上下文菜单
+
+      const context = createMenuContext(view, event as MouseEvent);
+      const menuItems = buildRegisteredMenu(context, {
+        translate: t,
+        formatShortcut: getShortcutText
+      });
+
+      if (menuItems.length === 0) {
+        return false;
+      }
+
       showContextMenu(view, event.clientX, event.clientY, menuItems);
-      
       return true;
     }
   });
 }
 
-/**
- * 默认导出
- */
-export default createEditorContextMenu; 
+export default createEditorContextMenu;

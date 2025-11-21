@@ -4,6 +4,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"voidraft/internal/common/helper"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -42,7 +43,7 @@ func createTestService() *WindowSnapService {
 	service := &WindowSnapService{
 		logger:             logger,
 		configService:      nil, // 测试中不需要实际的配置服务
-		windowHelper:       NewWindowHelper(),
+		windowHelper:       helper.NewWindowHelper(),
 		snapEnabled:        true,
 		baseThresholdRatio: 0.025,
 		minThreshold:       8,

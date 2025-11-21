@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
-import {useEditorStore} from '@/stores/editorStore';
-import {useDocumentStore} from '@/stores/documentStore';
-import {useConfigStore} from '@/stores/configStore';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { useEditorStore } from '@/stores/editorStore';
+import { useDocumentStore } from '@/stores/documentStore';
+import { useConfigStore } from '@/stores/configStore';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
-import {useWindowStore} from "@/stores/windowStore";
+import { useWindowStore } from '@/stores/windowStore';
 import LoadingScreen from '@/components/loading/LoadingScreen.vue';
-import {useTabStore} from "@/stores/tabStore";
+import { useTabStore } from '@/stores/tabStore';
+import ContextMenu from './contextMenu/ContextMenu.vue';
+import { contextMenuManager } from './contextMenu/manager';
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
@@ -21,30 +23,28 @@ const enableLoadingAnimation = computed(() => configStore.config.general.enableL
 onMounted(async () => {
   if (!editorElement.value) return;
 
-  // 从URL查询参数中获取documentId
   const urlDocumentId = windowStore.currentDocumentId ? parseInt(windowStore.currentDocumentId) : undefined;
 
-  // 初始化文档存储，优先使用URL参数中的文档ID
   await documentStore.initialize(urlDocumentId);
 
-  // 设置编辑器容器
   editorStore.setEditorContainer(editorElement.value);
 
   await tabStore.initializeTab();
 });
 
-// onBeforeUnmount(() => {
-//   editorStore.clearAllEditors();
-// });
+onBeforeUnmount(() => {
+  contextMenuManager.destroy();
+});
 </script>
 
 <template>
   <div class="editor-container">
     <transition name="loading-fade">
-      <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
+      <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT" />
     </transition>
     <div ref="editorElement" class="editor"></div>
-    <Toolbar/>
+    <Toolbar />
+    <ContextMenu :portal-target="editorElement" />
   </div>
 </template>
 
@@ -61,6 +61,7 @@ onMounted(async () => {
     width: 100%;
     flex: 1;
     overflow: hidden;
+    position: relative;
   }
 }
 
@@ -83,4 +84,3 @@ onMounted(async () => {
   opacity: 0;
 }
 </style>
-

@@ -4,6 +4,7 @@ import (
 	"math"
 	"sync"
 	"time"
+	"voidraft/internal/common/helper"
 	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -25,7 +26,7 @@ const (
 type WindowSnapService struct {
 	logger        *log.LogService
 	configService *ConfigService
-	windowHelper  *WindowHelper
+	windowHelper  *helper.WindowHelper
 	mu            sync.RWMutex
 
 	// 吸附配置
@@ -75,7 +76,7 @@ func NewWindowSnapService(logger *log.LogService, configService *ConfigService) 
 	wss := &WindowSnapService{
 		logger:             logger,
 		configService:      configService,
-		windowHelper:       NewWindowHelper(),
+		windowHelper:       helper.NewWindowHelper(),
 		snapEnabled:        snapEnabled,
 		baseThresholdRatio: 0.025, // 2.5%的主窗口宽度作为基础阈值
 		minThreshold:       8,     // 最小8像素（小屏幕保底）

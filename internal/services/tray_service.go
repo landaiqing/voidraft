@@ -3,13 +3,14 @@ package services
 import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
+	"voidraft/internal/common/helper"
 )
 
 // TrayService 系统托盘服务
 type TrayService struct {
 	logger        *log.LogService
 	configService *ConfigService
-	windowHelper  *WindowHelper
+	windowHelper  *helper.WindowHelper
 }
 
 // NewTrayService 创建新的系统托盘服务实例
@@ -17,7 +18,7 @@ func NewTrayService(logger *log.LogService, configService *ConfigService) *TrayS
 	return &TrayService{
 		logger:        logger,
 		configService: configService,
-		windowHelper:  NewWindowHelper(),
+		windowHelper:  helper.NewWindowHelper(),
 	}
 }
 
