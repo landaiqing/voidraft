@@ -142,7 +142,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--voidraft-font-mono, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace);
+  font-family: var(--voidraft-font-mono),serif;
 }
 
 .loading-word {

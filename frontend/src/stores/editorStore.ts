@@ -30,7 +30,7 @@ import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
-import {markdownPreviewExtension} from "@/views/editor/extensions/markdownPreview";
+import {markdownPreviewExtension, updateMarkdownPreviewTheme} from "@/views/editor/extensions/markdownPreview";
 import {createDebounce} from '@/common/utils/debounce';
 
 export interface DocumentStats {
@@ -642,6 +642,13 @@ export const useEditorStore = defineStore('editor', () => {
         });
     };
 
+    // 应用 Markdown 预览主题
+    const applyPreviewThemeSettings = () => {
+        editorCache.values().forEach(instance => {
+            updateMarkdownPreviewTheme(instance.view);
+        });
+    };
+
     // 应用Tab设置
     const applyTabSettings = () => {
         editorCache.values().forEach(instance => {
@@ -783,6 +790,7 @@ export const useEditorStore = defineStore('editor', () => {
         // 配置更新方法
         applyFontSettings,
         applyThemeSettings,
+        applyPreviewThemeSettings,
         applyTabSettings,
         applyKeymapSettings,
 

@@ -22,7 +22,7 @@ export class MarkdownPreviewPanel {
   private readonly resizeHandle: HTMLDivElement;
   private readonly content: HTMLDivElement;
   private view: EditorView;
-  private themeUnwatch?: () => void;
+  private themeUnwatchers: Array<() => void> = [];
   private lastRenderedContent: string = "";
   private readonly debouncedUpdate: ReturnType<typeof createDebounce>;
   private isDestroyed: boolean = false; // 标记面板是否已销毁
@@ -38,11 +38,22 @@ export class MarkdownPreviewPanel {
 
     // 监听主题变化
     const themeStore = useThemeStore();
-    this.themeUnwatch = watch(() => themeStore.isDarkMode, (isDark) => {
-      const newTheme = isDark ? "dark" : "default";
-      updateMermaidTheme(newTheme);
-      this.lastRenderedContent = ""; // 清空缓存，强制重新渲染
-    });
+    this.themeUnwatchers.push(
+      watch(() => themeStore.isDarkMode, (isDark) => {
+        const newTheme = isDark ? "dark" : "default";
+        updateMermaidTheme(newTheme);
+        this.resetPreviewContent();
+      })
+    );
+    this.themeUnwatchers.push(
+      watch(
+        () => themeStore.currentColors,
+        () => {
+          this.resetPreviewContent();
+        },
+        { deep: true }
+      )
+    );
 
     // 创建 DOM 结构
     this.dom = document.createElement("div");
@@ -315,6 +326,16 @@ export class MarkdownPreviewPanel {
     });
   }
 
+  private resetPreviewContent(): void {
+    if (this.isDestroyed) {
+      return;
+    }
+
+    this.md = createMarkdownRenderer();
+    this.lastRenderedContent = "";
+    this.updateContentInternal();
+  }
+
   /**
    * 响应编辑器更新
    */
@@ -339,9 +360,14 @@ export class MarkdownPreviewPanel {
     if (this.debouncedUpdate) {
       this.debouncedUpdate.cancel();
     }
-    
+
     // 清空缓存
     this.lastRenderedContent = "";
+
+    if (this.themeUnwatchers.length) {
+      this.themeUnwatchers.forEach(unwatch => unwatch());
+      this.themeUnwatchers = [];
+    }
   }
 
   /**

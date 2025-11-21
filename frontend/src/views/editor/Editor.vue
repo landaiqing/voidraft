@@ -35,17 +35,16 @@ onMounted(async () => {
 
 // onBeforeUnmount(() => {
 //   editorStore.clearAllEditors();
-//
 // });
 </script>
 
 <template>
   <div class="editor-container">
-    <div ref="editorElement" class="editor"></div>
-    <Toolbar/>
     <transition name="loading-fade">
       <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
     </transition>
+    <div ref="editorElement" class="editor"></div>
+    <Toolbar/>
   </div>
 </template>
 

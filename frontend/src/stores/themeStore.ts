@@ -141,6 +141,7 @@ export const useThemeStore = defineStore('theme', () => {
 
     const editorStore = useEditorStore();
     editorStore?.applyThemeSettings();
+    editorStore?.applyPreviewThemeSettings();
   };
 
   return {

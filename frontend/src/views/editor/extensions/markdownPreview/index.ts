@@ -2,6 +2,7 @@
  * Markdown 预览扩展主入口
  */
 import { EditorView } from "@codemirror/view";
+import { Compartment } from "@codemirror/state";
 import { useThemeStore } from "@/stores/themeStore";
 import { usePanelStore } from "@/stores/panelStore";
 import { useDocumentStore } from "@/stores/documentStore";
@@ -52,11 +53,30 @@ export function toggleMarkdownPreview(view: EditorView): boolean {
 /**
  * 导出 Markdown 预览扩展
  */
-export function markdownPreviewExtension() {
+const previewThemeCompartment = new Compartment();
+
+const buildPreviewTheme = () => {
   const themeStore = useThemeStore();
   const colors = themeStore.currentColors;
-  
-  const theme = colors ? createMarkdownPreviewTheme(colors) : EditorView.baseTheme({});
-  
-  return [previewPanelState, previewPanelPlugin, theme];
+  return colors ? createMarkdownPreviewTheme(colors) : EditorView.baseTheme({});
+};
+
+export function markdownPreviewExtension() {
+  return [
+    previewPanelState,
+    previewPanelPlugin,
+    previewThemeCompartment.of(buildPreviewTheme())
+  ];
+}
+
+export function updateMarkdownPreviewTheme(view: EditorView): void {
+  if (!view?.dispatch) return;
+
+  try {
+    view.dispatch({
+      effects: previewThemeCompartment.reconfigure(buildPreviewTheme())
+    });
+  } catch (error) {
+    console.error("Failed to update markdown preview theme", error);
+  }
 }
