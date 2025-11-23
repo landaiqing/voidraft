@@ -27,6 +27,26 @@ class ContextMenuManager {
   }
 
   show(view: EditorView, clientX: number, clientY: number, items: RenderMenuItem[]): void {
+    const currentState = this.state.value;
+    
+    // 如果菜单已经显示，且位置很接近（20px范围内），则只更新内容，避免闪烁
+    if (currentState.visible) {
+      const dx = Math.abs(currentState.position.x - clientX);
+      const dy = Math.abs(currentState.position.y - clientY);
+      const isSamePosition = dx < 20 && dy < 20;
+      
+      if (isSamePosition) {
+        // 只更新items和view，保持visible状态和位置
+        this.state.value = {
+          ...currentState,
+          items,
+          view
+        };
+        return;
+      }
+    }
+    
+    // 否则正常显示菜单
     this.state.value = {
       visible: true,
       position: { x: clientX, y: clientY },

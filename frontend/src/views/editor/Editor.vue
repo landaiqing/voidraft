@@ -9,6 +9,8 @@ import LoadingScreen from '@/components/loading/LoadingScreen.vue';
 import { useTabStore } from '@/stores/tabStore';
 import ContextMenu from './contextMenu/ContextMenu.vue';
 import { contextMenuManager } from './contextMenu/manager';
+import TranslatorDialog from './extensions/translator/TranslatorDialog.vue';
+import { translatorManager } from './extensions/translator/manager';
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
@@ -34,17 +36,24 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   contextMenuManager.destroy();
+  translatorManager.destroy();
 });
 </script>
 
 <template>
   <div class="editor-container">
+    <!-- 加载动画   -->
     <transition name="loading-fade">
       <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT" />
     </transition>
+    <!-- 编辑器区域 -->
     <div ref="editorElement" class="editor"></div>
+    <!-- 工具栏 -->
     <Toolbar />
+    <!-- 右键菜单 -->
     <ContextMenu :portal-target="editorElement" />
+    <!-- 翻译器弹窗 -->
+    <TranslatorDialog :portal-target="editorElement" />
   </div>
 </template>
 

@@ -1,7 +1,28 @@
 import {defineStore} from 'pinia';
 import {ref} from 'vue';
 import {TranslationService} from '@/../bindings/voidraft/internal/services';
-import {LanguageInfo, TRANSLATION_ERRORS, TranslationResult} from '@/common/constant/translation';
+/**
+ * 翻译结果接口
+ */
+export interface TranslationResult {
+    translatedText: string;
+    error?: string;
+}
+
+/**
+ * 语言信息接口
+ */
+export interface LanguageInfo {
+    Code: string; // 语言代码
+    Name: string; // 语言名称
+}
+/**
+ * 翻译相关的错误消息
+ */
+export const TRANSLATION_ERRORS = {
+    NO_TEXT: 'no text to translate',
+    TRANSLATION_FAILED: 'translation failed',
+} as const;
 
 export const useTranslationStore = defineStore('translation', () => {
     // 基础状态

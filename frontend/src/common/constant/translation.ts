@@ -1,46 +1,4 @@
 /**
- * 默认翻译配置
- */
-export const DEFAULT_TRANSLATION_CONFIG = {
-  minSelectionLength: 2,
-  maxTranslationLength: 5000,
-} as const;
-
-/**
- * 翻译相关的错误消息
- */
-export const TRANSLATION_ERRORS = {
-  NO_TEXT: 'no text to translate',
-  TRANSLATION_FAILED: 'translation failed',
-} as const;
-
-/**
- * 翻译结果接口
- */
-export interface TranslationResult {
-  translatedText: string;
-  error?: string;
-}
-
-/**
- * 语言信息接口
- */
-export interface LanguageInfo {
-  Code: string; // 语言代码
-  Name: string; // 语言名称
-}
-
-/**
- * 翻译器扩展配置
- */
-export interface TranslatorConfig {
-  /** 最小选择字符数才显示翻译按钮 */
-  minSelectionLength: number;
-  /** 最大翻译字符数 */
-  maxTranslationLength: number;
-}
-
-/**
  * 翻译图标SVG
  */
 export const TRANSLATION_ICON_SVG = `

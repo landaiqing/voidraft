@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
 import { contextMenuManager } from './manager';
 import type { RenderMenuItem } from './menuSchema';
 
@@ -30,7 +30,17 @@ watch(
 watch(isVisible, (visible) => {
   if (visible) {
     nextTick(adjustMenuWithinViewport);
+    // 显示时添加 outside 点击监听
+    document.addEventListener('mousedown', handleClickOutside);
+  } else {
+    // 隐藏时移除监听
+    document.removeEventListener('mousedown', handleClickOutside);
   }
+});
+
+// 清理
+onUnmounted(() => {
+  document.removeEventListener('mousedown', handleClickOutside);
 });
 
 const menuStyle = computed(() => ({
@@ -65,26 +75,24 @@ function handleItemClick(item: RenderMenuItem) {
   contextMenuManager.runCommand(item);
 }
 
-function handleOverlayMouseDown() {
+function handleClickOutside(event: MouseEvent) {
+  // 如果点击在菜单内部，不关闭
+  if (menuRef.value?.contains(event.target as Node)) {
+    return;
+  }
   contextMenuManager.hide();
-}
-
-function stopPropagation(event: MouseEvent) {
-  event.stopPropagation();
 }
 </script>
 
 <template>
   <Teleport :to="teleportTarget">
     <template v-if="isVisible">
-      <div class="cm-context-overlay" @mousedown="handleOverlayMouseDown" />
       <div
         ref="menuRef"
         class="cm-context-menu show"
         :style="menuStyle"
         role="menu"
         @contextmenu.prevent
-        @mousedown="stopPropagation"
       >
         <template v-for="item in items" :key="item.id">
           <div v-if="item.type === 'separator'" class="cm-context-menu-divider" />
@@ -110,13 +118,6 @@ function stopPropagation(event: MouseEvent) {
 </template>
 
 <style scoped lang="scss">
-.cm-context-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 9000;
-  background: transparent;
-}
-
 .cm-context-menu {
   position: fixed;
   min-width: 180px;

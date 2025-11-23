@@ -26,7 +26,7 @@ import {deleteLineCommand} from '../extensions/codeblock/deleteLine';
 import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines';
 import {transposeChars} from '../extensions/codeblock';
 import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste';
-import {textHighlightToggleCommand} from '../extensions/textHighlight/textHighlightExtension';
+import {textHighlightToggleCommand} from '../extensions/textHighlight';
 import {
     copyLineDown,
     copyLineUp,

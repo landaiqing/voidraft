@@ -4,7 +4,7 @@ import i18n from '@/i18n';
 import {ExtensionDefinition} from './types';
 
 import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension';
-import {createTextHighlighter} from '../extensions/textHighlight/textHighlightExtension';
+import {createTextHighlighter} from '../extensions/textHighlight';
 import {color} from '../extensions/colorSelector';
 import {hyperLink} from '../extensions/hyperlink';
 import {minimap} from '../extensions/minimap';
@@ -43,13 +43,7 @@ const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
         descriptionKey: 'extensions.colorSelector.description'
     },
     [ExtensionID.ExtensionTranslator]: {
-        definition: defineExtension((config: any) => createTranslatorExtension({
-            minSelectionLength: config?.minSelectionLength ?? 2,
-            maxTranslationLength: config?.maxTranslationLength ?? 5000
-        }), {
-            minSelectionLength: 2,
-            maxTranslationLength: 5000
-        }),
+        definition: defineExtension(() => createTranslatorExtension()),
         displayNameKey: 'extensions.translator.name',
         descriptionKey: 'extensions.translator.description'
     },
