@@ -3,7 +3,7 @@ import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import i18n from '@/i18n';
 import {ExtensionDefinition} from './types';
 
-import rainbowBracketsExtension from '../extensions/rainbowBracket/rainbowBracketsExtension';
+import index from '../extensions/rainbowBracket';
 import {createTextHighlighter} from '../extensions/textHighlight';
 import {color} from '../extensions/colorSelector';
 import {hyperLink} from '../extensions/hyperlink';
@@ -28,7 +28,7 @@ const defineExtension = (create: (config: any) => any, defaultConfig: Record<str
 
 const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
     [ExtensionID.ExtensionRainbowBrackets]: {
-        definition: defineExtension(() => rainbowBracketsExtension()),
+        definition: defineExtension(() => index()),
         displayNameKey: 'extensions.rainbowBrackets.name',
         descriptionKey: 'extensions.rainbowBrackets.description'
     },

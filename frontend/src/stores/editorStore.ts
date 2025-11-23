@@ -4,7 +4,6 @@ import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
-import {usePanelStore} from './panelStore';
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language";
@@ -30,7 +29,7 @@ import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
-import {markdownPreviewExtension, updateMarkdownPreviewTheme} from "@/views/editor/extensions/markdownPreview";
+import {markdownPreviewExtension} from "@/views/editor/extensions/markdownPreview";
 import {createDebounce} from '@/common/utils/debounce';
 
 export interface DocumentStats {
@@ -642,12 +641,6 @@ export const useEditorStore = defineStore('editor', () => {
         });
     };
 
-    // 应用 Markdown 预览主题
-    const applyPreviewThemeSettings = () => {
-        editorCache.values().forEach(instance => {
-            updateMarkdownPreviewTheme(instance.view);
-        });
-    };
 
     // 应用Tab设置
     const applyTabSettings = () => {
@@ -701,10 +694,6 @@ export const useEditorStore = defineStore('editor', () => {
             instance.view.destroy();
         });
         
-        // 清理 panelStore 状态（导航离开编辑器页面时）
-        const panelStore = usePanelStore();
-        panelStore.reset();
-
         currentEditor.value = null;
     };
 
@@ -790,7 +779,6 @@ export const useEditorStore = defineStore('editor', () => {
         // 配置更新方法
         applyFontSettings,
         applyThemeSettings,
-        applyPreviewThemeSettings,
         applyTabSettings,
         applyKeymapSettings,
 

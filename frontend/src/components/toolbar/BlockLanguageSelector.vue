@@ -8,7 +8,7 @@ import { getActiveNoteBlock } from '@/views/editor/extensions/codeblock/state';
 import { changeCurrentBlockLanguage } from '@/views/editor/extensions/codeblock/commands';
 
 const { t } = useI18n();
-const editorStore = readonly(useEditorStore());
+const editorStore = useEditorStore(); 
 
 // 组件状态
 const showLanguageMenu = shallowRef(false);

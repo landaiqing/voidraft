@@ -14,14 +14,13 @@ import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/langu
 import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode';
 import {createDebounce} from '@/common/utils/debounce';
 import {toggleMarkdownPreview} from '@/views/editor/extensions/markdownPreview';
-import {usePanelStore} from '@/stores/panelStore';
+import {markdownPreviewManager} from "@/views/editor/extensions/markdownPreview/manager";
 
-const editorStore = readonly(useEditorStore());
-const configStore = readonly(useConfigStore());
-const updateStore = readonly(useUpdateStore());
-const windowStore = readonly(useWindowStore());
-const systemStore = readonly(useSystemStore());
-const panelStore = readonly(usePanelStore());
+const editorStore = useEditorStore();
+const configStore = useConfigStore();
+const updateStore = useUpdateStore();
+const windowStore = useWindowStore();
+const systemStore = useSystemStore();
 const {t} = useI18n();
 const router = useRouter();
 
@@ -39,7 +38,7 @@ const isCurrentWindowOnTop = computed(() => {
 
 // 当前文档的预览是否打开
 const isCurrentBlockPreviewing = computed(() => {
-  return panelStore.markdownPreview.isOpen && !panelStore.markdownPreview.isClosing;
+  return markdownPreviewManager.isVisible();
 });
 
 // 切换窗口置顶状态

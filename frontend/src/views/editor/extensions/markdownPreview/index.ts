@@ -1,22 +1,14 @@
-/**
- * Markdown 预览扩展主入口
- */
-import { EditorView } from "@codemirror/view";
-import { Compartment } from "@codemirror/state";
-import { useThemeStore } from "@/stores/themeStore";
-import { usePanelStore } from "@/stores/panelStore";
+import { EditorView, ViewUpdate, ViewPlugin } from "@codemirror/view";
+import { Extension } from "@codemirror/state";
 import { useDocumentStore } from "@/stores/documentStore";
 import { getActiveNoteBlock } from "../codeblock/state";
-import { createMarkdownPreviewTheme } from "./styles";
-import { previewPanelState, previewPanelPlugin, togglePreview, closePreviewWithAnimation } from "./state";
+import { markdownPreviewManager } from "./manager";
 
 /**
  * 切换预览面板的命令
  */
 export function toggleMarkdownPreview(view: EditorView): boolean {
-  const panelStore = usePanelStore();
   const documentStore = useDocumentStore();
-  const currentState = view.state.field(previewPanelState, false);
   const activeBlock = getActiveNoteBlock(view.state as any);
   
   // 如果当前没有激活的 Markdown 块，不执行操作
@@ -30,53 +22,84 @@ export function toggleMarkdownPreview(view: EditorView): boolean {
     return false;
   }
   
-  // 如果预览面板已打开（无论预览的是不是当前块），关闭预览
-  if (panelStore.markdownPreview.isOpen && !panelStore.markdownPreview.isClosing) {
-    // 使用带动画的关闭函数
-    closePreviewWithAnimation(view);
+  // 切换预览状态
+  if (markdownPreviewManager.isVisible()) {
+    markdownPreviewManager.hide();
   } else {
-    // 否则，打开当前块的预览
-    view.dispatch({
-      effects: togglePreview.of({
-        documentId: currentDocumentId,
-        blockFrom: activeBlock.content.from,
-        blockTo: activeBlock.content.to
-      })
-    });
-    
-    // 注意：store 状态由 ViewPlugin 在面板创建成功后更新
+    markdownPreviewManager.show(
+      view,
+      currentDocumentId,
+      activeBlock.content.from,
+      activeBlock.content.to
+    );
   }
 
   return true;
 }
 
 /**
+ * 预览同步插件
+ */
+const previewSyncPlugin = ViewPlugin.fromClass(
+  class {
+    constructor(private view: EditorView) {}
+
+    update(update: ViewUpdate) {
+      // 只在预览可见时处理
+      if (!markdownPreviewManager.isVisible()) {
+        return;
+      }
+
+      const documentStore = useDocumentStore();
+      const currentDocumentId = documentStore.currentDocumentId;
+      const previewDocId = markdownPreviewManager.getCurrentDocumentId();
+
+      // 如果切换了文档，关闭预览
+      if (currentDocumentId !== previewDocId) {
+        markdownPreviewManager.hide();
+        return;
+      }
+
+      // 文档内容改变时，更新预览
+      if (update.docChanged) {
+        const activeBlock = getActiveNoteBlock(update.state as any);
+        
+        // 如果不再是 Markdown 块，关闭预览
+        if (!activeBlock || activeBlock.language.name.toLowerCase() !== 'md') {
+          markdownPreviewManager.hide();
+          return;
+        }
+
+        const range = markdownPreviewManager.getCurrentBlockRange();
+        
+        // 如果切换到其他块，关闭预览
+        if (range && activeBlock.content.from !== range.from) {
+          markdownPreviewManager.hide();
+          return;
+        }
+
+        // 更新预览内容
+        const newContent = update.state.doc.sliceString(
+          activeBlock.content.from,
+          activeBlock.content.to
+        );
+        markdownPreviewManager.updateContent(
+          newContent,
+          activeBlock.content.from,
+          activeBlock.content.to
+        );
+      }
+    }
+
+    destroy() {
+      markdownPreviewManager.destroy();
+    }
+  }
+);
+
+/**
  * 导出 Markdown 预览扩展
  */
-const previewThemeCompartment = new Compartment();
-
-const buildPreviewTheme = () => {
-  const themeStore = useThemeStore();
-  const colors = themeStore.currentColors;
-  return colors ? createMarkdownPreviewTheme(colors) : EditorView.baseTheme({});
-};
-
-export function markdownPreviewExtension() {
-  return [
-    previewPanelState,
-    previewPanelPlugin,
-    previewThemeCompartment.of(buildPreviewTheme())
-  ];
-}
-
-export function updateMarkdownPreviewTheme(view: EditorView): void {
-  if (!view?.dispatch) return;
-
-  try {
-    view.dispatch({
-      effects: previewThemeCompartment.reconfigure(buildPreviewTheme())
-    });
-  } catch (error) {
-    console.error("Failed to update markdown preview theme", error);
-  }
+export function markdownPreviewExtension(): Extension {
+  return [previewSyncPlugin];
 }

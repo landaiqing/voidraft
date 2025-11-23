@@ -69,7 +69,7 @@ const rainbowBracketsPlugin = ViewPlugin.fromClass(RainbowBracketsView, {
     decorations: (v) => v.decorations,
 });
 
-export default function rainbowBracketsExtension() {
+export default function index() {
     return [
         rainbowBracketsPlugin,
         EditorView.baseTheme({

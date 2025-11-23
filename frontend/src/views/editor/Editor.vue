@@ -11,6 +11,8 @@ import ContextMenu from './contextMenu/ContextMenu.vue';
 import { contextMenuManager } from './contextMenu/manager';
 import TranslatorDialog from './extensions/translator/TranslatorDialog.vue';
 import { translatorManager } from './extensions/translator/manager';
+import {markdownPreviewManager} from "@/views/editor/extensions/markdownPreview/manager";
+import PreviewPanel from "@/views/editor/extensions/markdownPreview/PreviewPanel.vue";
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
@@ -37,6 +39,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   contextMenuManager.destroy();
   translatorManager.destroy();
+  markdownPreviewManager.destroy();
 });
 </script>
 
@@ -46,8 +49,13 @@ onBeforeUnmount(() => {
     <transition name="loading-fade">
       <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT" />
     </transition>
-    <!-- 编辑器区域 -->
-    <div ref="editorElement" class="editor"></div>
+    <!-- 编辑器和预览面板的容器 -->
+    <div class="editor-wrapper">
+      <!-- 编辑器区域 -->
+      <div ref="editorElement" class="editor"></div>
+      <!-- Markdown 预览面板 -->
+      <PreviewPanel />
+    </div>
     <!-- 工具栏 -->
     <Toolbar />
     <!-- 右键菜单 -->
@@ -66,9 +74,18 @@ onBeforeUnmount(() => {
   flex-direction: column;
   position: relative;
 
-  .editor {
+  .editor-wrapper {
     width: 100%;
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .editor {
+    width: 100%;
+    height: 100%;
     overflow: hidden;
     position: relative;
   }
