@@ -54,7 +54,7 @@ class MarkdownPreviewManager {
     
     this.state.value = {
       visible: true,
-      position: { height: Math.max(100, defaultHeight) },
+      position: { height: Math.max(10, defaultHeight) },
       content,
       blockFrom,
       blockTo,
@@ -85,7 +85,7 @@ class MarkdownPreviewManager {
 
     this.state.value = {
       ...this.state.value,
-      position: { height: Math.max(100, height) }
+      position: { height: Math.max(10, height) }
     };
   }
 

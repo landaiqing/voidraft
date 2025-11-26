@@ -140,11 +140,11 @@ const onMouseMove = (e: MouseEvent) => {
   
   // 获取编辑器容器高度作为最大限制
   const editorView = state.value.view;
-  const maxHeight = editorView 
+  const maxHeight = editorView
     ? (editorView.dom.parentElement?.clientHeight || editorView.dom.clientHeight)
     : 9999;
   
-  const newHeight = Math.max(100, Math.min(maxHeight, startHeight + delta));
+  const newHeight = Math.max(10, Math.min(maxHeight, startHeight + delta));
   markdownPreviewManager.updateHeight(newHeight);
 };
 
@@ -337,7 +337,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   width: 100%;
-  min-height: 100px;
+  min-height: 10px;
   background: var(--bg-primary);
   border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   display: flex;
