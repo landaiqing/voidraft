@@ -13,8 +13,6 @@ import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/languages';
 import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode';
 import {createDebounce} from '@/common/utils/debounce';
-import {toggleMarkdownPreview} from '@/views/editor/extensions/markdownPreview';
-import {markdownPreviewManager} from "@/views/editor/extensions/markdownPreview/manager";
 
 const editorStore = useEditorStore();
 const configStore = useConfigStore();
@@ -25,7 +23,6 @@ const {t} = useI18n();
 const router = useRouter();
 
 const canFormatCurrentBlock = ref(false);
-const canPreviewMarkdown = ref(false);
 const isLoaded = shallowRef(false);
 
 const { documentStats } = toRefs(editorStore);
@@ -36,10 +33,6 @@ const isCurrentWindowOnTop = computed(() => {
   return config.value.general.alwaysOnTop || systemStore.isWindowOnTop;
 });
 
-// 当前文档的预览是否打开
-const isCurrentBlockPreviewing = computed(() => {
-  return markdownPreviewManager.isVisible();
-});
 
 // 切换窗口置顶状态
 const toggleAlwaysOnTop = async () => {
@@ -68,22 +61,12 @@ const formatCurrentBlock = () => {
   formatBlockContent(editorStore.editorView);
 };
 
-// 切换 Markdown 预览
-const { debouncedFn: debouncedTogglePreview } = createDebounce(() => {
-  if (!canPreviewMarkdown.value || !editorStore.editorView) return;
-  toggleMarkdownPreview(editorStore.editorView as any);
-}, { delay: 200 });
-
-const togglePreview = () => {
-  debouncedTogglePreview();
-};
 
 // 统一更新按钮状态
 const updateButtonStates = () => {
   const view: any = editorStore.editorView;
   if (!view) {
     canFormatCurrentBlock.value = false;
-    canPreviewMarkdown.value = false;
     return;
   }
 
@@ -94,7 +77,6 @@ const updateButtonStates = () => {
     // 提前返回，减少不必要的计算
     if (!activeBlock) {
       canFormatCurrentBlock.value = false;
-      canPreviewMarkdown.value = false;
       return;
     }
 
@@ -102,11 +84,9 @@ const updateButtonStates = () => {
     const language = getLanguage(languageName as any);
 
     canFormatCurrentBlock.value = Boolean(language?.prettier);
-    canPreviewMarkdown.value = languageName.toLowerCase() === 'md';
   } catch (error) {
     console.warn('Error checking block capabilities:', error);
     canFormatCurrentBlock.value = false;
-    canPreviewMarkdown.value = false;
   }
 };
 
@@ -160,7 +140,6 @@ watch(
           cleanupListeners = setupEditorListeners(newView);
         } else {
           canFormatCurrentBlock.value = false;
-          canPreviewMarkdown.value = false;
         }
       });
     },
@@ -253,21 +232,6 @@ const statsData = computed(() => ({
 
       <!-- 块语言选择器 -->
       <BlockLanguageSelector/>
-
-      <!-- Markdown预览按钮 -->
-      <div
-          v-if="canPreviewMarkdown"
-          class="preview-button"
-          :class="{ 'active': isCurrentBlockPreviewing }"
-          :title="isCurrentBlockPreviewing ? t('toolbar.closePreview') : t('toolbar.previewMarkdown')"
-          @click="togglePreview"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-      </div>
 
       <!-- 格式化按钮 - 支持点击操作 -->
       <div

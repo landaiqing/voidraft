@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { useEditorStore } from '@/stores/editorStore';
-import { useDocumentStore } from '@/stores/documentStore';
-import { useConfigStore } from '@/stores/configStore';
+import {computed, onBeforeUnmount, onMounted, ref} from 'vue';
+import {useEditorStore} from '@/stores/editorStore';
+import {useDocumentStore} from '@/stores/documentStore';
+import {useConfigStore} from '@/stores/configStore';
 import Toolbar from '@/components/toolbar/Toolbar.vue';
-import { useWindowStore } from '@/stores/windowStore';
+import {useWindowStore} from '@/stores/windowStore';
 import LoadingScreen from '@/components/loading/LoadingScreen.vue';
-import { useTabStore } from '@/stores/tabStore';
+import {useTabStore} from '@/stores/tabStore';
 import ContextMenu from './contextMenu/ContextMenu.vue';
-import { contextMenuManager } from './contextMenu/manager';
+import {contextMenuManager} from './contextMenu/manager';
 import TranslatorDialog from './extensions/translator/TranslatorDialog.vue';
-import { translatorManager } from './extensions/translator/manager';
-import {markdownPreviewManager} from "@/views/editor/extensions/markdownPreview/manager";
-import PreviewPanel from "@/views/editor/extensions/markdownPreview/PreviewPanel.vue";
+import {translatorManager} from './extensions/translator/manager';
+
 
 const editorStore = useEditorStore();
 const documentStore = useDocumentStore();
@@ -39,7 +38,6 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   contextMenuManager.destroy();
   translatorManager.destroy();
-  markdownPreviewManager.destroy();
 });
 </script>
 
@@ -47,21 +45,17 @@ onBeforeUnmount(() => {
   <div class="editor-container">
     <!-- 加载动画   -->
     <transition name="loading-fade">
-      <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT" />
+      <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
     </transition>
-    <!-- 编辑器和预览面板的容器 -->
-    <div class="editor-wrapper">
-      <!-- 编辑器区域 -->
-      <div ref="editorElement" class="editor"></div>
-      <!-- Markdown 预览面板 -->
-      <PreviewPanel />
-    </div>
+    <!-- 编辑器区域 -->
+    <div ref="editorElement" class="editor"></div>
+
     <!-- 工具栏 -->
-    <Toolbar />
+    <Toolbar/>
     <!-- 右键菜单 -->
-    <ContextMenu :portal-target="editorElement" />
+    <ContextMenu :portal-target="editorElement"/>
     <!-- 翻译器弹窗 -->
-    <TranslatorDialog :portal-target="editorElement" />
+    <TranslatorDialog :portal-target="editorElement"/>
   </div>
 </template>
 
@@ -73,15 +67,6 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   position: relative;
-
-  .editor-wrapper {
-    width: 100%;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-  }
 
   .editor {
     width: 100%;

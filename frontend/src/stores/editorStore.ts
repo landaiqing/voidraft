@@ -29,8 +29,8 @@ import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
-import {markdownPreviewExtension} from "@/views/editor/extensions/markdownPreview";
 import {createDebounce} from '@/common/utils/debounce';
+import markdownExtensions  from "@/views/editor/extensions/markdown";
 
 export interface DocumentStats {
     lines: number;
@@ -261,8 +261,6 @@ export const useEditorStore = defineStore('editor', () => {
 
         const httpExtension = createHttpClientExtension();
 
-        // Markdown预览扩展
-        const previewExtension = markdownPreviewExtension();
 
         // 再次检查操作有效性
         if (!operationManager.isOperationValid(operationId, documentId)) {
@@ -298,7 +296,7 @@ export const useEditorStore = defineStore('editor', () => {
             codeBlockExtension,
             ...dynamicExtensions,
             ...httpExtension,
-            previewExtension
+            markdownExtensions
         ];
 
         // 创建编辑器状态
