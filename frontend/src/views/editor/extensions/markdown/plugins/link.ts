@@ -1,4 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
+import { Range } from '@codemirror/state';
 import {
 	Decoration,
 	DecorationSet,
@@ -8,147 +9,207 @@ import {
 	WidgetType
 } from '@codemirror/view';
 import { headingSlugField } from '../state/heading-slug';
-import {
-	checkRangeOverlap,
-	invisibleDecoration,
-	isCursorInRange
-} from '../util';
+import { checkRangeOverlap, isCursorInRange, invisibleDecoration } from '../util';
 import { link as classes } from '../classes';
 
-const autoLinkMarkRE = /^<|>$/g;
+/**
+ * Pattern for auto-link markers (< and >).
+ */
+const AUTO_LINK_MARK_RE = /^<|>$/g;
 
 /**
- * Ixora Links plugin.
+ * Parent node types that should not have link widgets.
+ */
+const BLACKLISTED_PARENTS = new Set(['Image']);
+
+/**
+ * Links plugin.
  *
- * This plugin allows to:
- * - Add an interactive link icon to a URL which can navigate to the URL.
+ * Features:
+ * - Adds interactive link icon for navigation
+ * - Supports internal anchor links (#heading)
+ * - Hides link markup when cursor is outside
  */
 export const links = () => [goToLinkPlugin, baseTheme];
 
+/**
+ * Link widget for external/internal navigation.
+ */
 export class GoToLinkWidget extends WidgetType {
-	constructor(readonly link: string, readonly title?: string) {
+	constructor(
+		readonly link: string,
+		readonly title?: string
+	) {
 		super();
 	}
+
+	eq(other: GoToLinkWidget): boolean {
+		return other.link === this.link && other.title === this.title;
+	}
+
 	toDOM(view: EditorView): HTMLElement {
 		const anchor = document.createElement('a');
+		anchor.classList.add(classes.widget);
+		anchor.textContent = '🔗';
+
 		if (this.link.startsWith('#')) {
-			// Handle links within the markdown document.
-			const slugs = view.state.field(headingSlugField);
-			anchor.addEventListener('click', () => {
-				const pos = slugs.find(
-					(h) => h.slug === this.link.slice(1)
-				)?.pos;
-				// pos could be zero, so instead check if its undefined
+			// Handle internal anchor links
+			anchor.href = 'javascript:void(0)';
+			anchor.addEventListener('click', (e) => {
+				e.preventDefault();
+				const slugs = view.state.field(headingSlugField);
+				const targetSlug = this.link.slice(1);
+				const pos = slugs.find((h) => h.slug === targetSlug)?.pos;
+
 				if (typeof pos !== 'undefined') {
-					const tr = view.state.update({
+					view.dispatch({
 						selection: { anchor: pos },
 						scrollIntoView: true
 					});
-					view.dispatch(tr);
 				}
 			});
-		} else anchor.href = this.link;
-		anchor.target = '_blank';
-		anchor.classList.add(classes.widget);
-		anchor.textContent = '🔗';
-		if (this.title) anchor.title = this.title;
+		} else {
+			// External links
+			anchor.href = this.link;
+			anchor.target = '_blank';
+			anchor.rel = 'noopener noreferrer';
+		}
+
+		if (this.title) {
+			anchor.title = this.title;
+		}
+
 		return anchor;
+	}
+
+	ignoreEvent(): boolean {
+		return false;
 	}
 }
 
-function getLinkAnchor(view: EditorView) {
-	const widgets: Array<ReturnType<Decoration['range']>> = [];
+/**
+ * Build link decorations.
+ * Uses array + Decoration.set() for automatic sorting.
+ */
+function buildLinkDecorations(view: EditorView): DecorationSet {
+	const decorations: Range<Decoration>[] = [];
+	const selectionRanges = view.state.selection.ranges;
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
 			from,
 			to,
-			enter: ({ type, from, to, node }) => {
+			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
 				if (type.name !== 'URL') return;
-				const parent = node.parent;
-				// FIXME: make this configurable
-				const blackListedParents = ['Image'];
-				if (parent && !blackListedParents.includes(parent.name)) {
-					const marks = parent.getChildren('LinkMark');
-					const linkTitle = parent.getChild('LinkTitle');
-					const ranges = view.state.selection.ranges;
-					let cursorOverlaps = ranges.some(({ from, to }) =>
-						checkRangeOverlap([from, to], [parent.from, parent.to])
-					);
-					if (!cursorOverlaps && marks.length > 0) {
-						widgets.push(
-							...marks.map(({ from, to }) =>
-								invisibleDecoration.range(from, to)
-							),
-							invisibleDecoration.range(from, to)
-						);
-						if (linkTitle)
-							widgets.push(
-								invisibleDecoration.range(
-									linkTitle.from,
-									linkTitle.to
-								)
-							);
-					}
 
-					let linkContent = view.state.sliceDoc(from, to);
-					if (autoLinkMarkRE.test(linkContent)) {
-						// Remove '<' and '>' from link and content
-						linkContent = linkContent.replace(autoLinkMarkRE, '');
-						cursorOverlaps = isCursorInRange(view.state, [
-							node.from,
-							node.to
-						]);
-						if (!cursorOverlaps) {
-							widgets.push(
-								invisibleDecoration.range(from, from + 1),
-								invisibleDecoration.range(to - 1, to)
-							);
-						}
+				const parent = node.parent;
+				if (!parent || BLACKLISTED_PARENTS.has(parent.name)) return;
+
+				const marks = parent.getChildren('LinkMark');
+				const linkTitle = parent.getChild('LinkTitle');
+
+				// Check if cursor overlaps with the link
+				const cursorOverlaps = selectionRanges.some((range) =>
+					checkRangeOverlap([range.from, range.to], [parent.from, parent.to])
+				);
+
+				// Hide link marks and URL when cursor is outside
+				if (!cursorOverlaps && marks.length > 0) {
+					for (const mark of marks) {
+						decorations.push(invisibleDecoration.range(mark.from, mark.to));
 					}
+					decorations.push(invisibleDecoration.range(nodeFrom, nodeTo));
+
+					if (linkTitle) {
+						decorations.push(invisibleDecoration.range(linkTitle.from, linkTitle.to));
+					}
+				}
+
+				// Get link content
+				let linkContent = view.state.sliceDoc(nodeFrom, nodeTo);
+
+				// Handle auto-links with < > markers
+				if (AUTO_LINK_MARK_RE.test(linkContent)) {
+					linkContent = linkContent.replace(AUTO_LINK_MARK_RE, '');
+
+					if (!isCursorInRange(view.state, [node.from, node.to])) {
+						decorations.push(invisibleDecoration.range(nodeFrom, nodeFrom + 1));
+						decorations.push(invisibleDecoration.range(nodeTo - 1, nodeTo));
+					}
+				}
+
+				// Get link title content
 				const linkTitleContent = linkTitle
 					? view.state.sliceDoc(linkTitle.from, linkTitle.to)
 					: undefined;
-				const dec = Decoration.widget({
-					widget: new GoToLinkWidget(
-						linkContent,
-						linkTitleContent
-					),
+
+				// Add link widget
+				decorations.push(
+					Decoration.widget({
+						widget: new GoToLinkWidget(linkContent, linkTitleContent),
 						side: 1
-					});
-					widgets.push(dec.range(to, to));
-				}
+					}).range(nodeTo)
+				);
 			}
 		});
 	}
 
-	return Decoration.set(widgets, true);
+	// Use Decoration.set with sort=true to handle unsorted ranges
+	return Decoration.set(decorations, true);
 }
 
-export const goToLinkPlugin = ViewPlugin.fromClass(
-	class {
-		decorations: DecorationSet = Decoration.none;
-		constructor(view: EditorView) {
-			this.decorations = getLinkAnchor(view);
+/**
+ * Link plugin with optimized update detection.
+ */
+class LinkPlugin {
+	decorations: DecorationSet;
+	private lastSelectionRanges: string = '';
+
+	constructor(view: EditorView) {
+		this.decorations = buildLinkDecorations(view);
+		this.lastSelectionRanges = this.serializeSelection(view);
+	}
+
+	update(update: ViewUpdate) {
+		// Always rebuild on doc or viewport change
+		if (update.docChanged || update.viewportChanged) {
+			this.decorations = buildLinkDecorations(update.view);
+			this.lastSelectionRanges = this.serializeSelection(update.view);
+			return;
 		}
-		update(update: ViewUpdate) {
-			if (
-				update.docChanged ||
-				update.viewportChanged ||
-				update.selectionSet
-			)
-				this.decorations = getLinkAnchor(update.view);
+
+		// For selection changes, check if selection actually changed
+		if (update.selectionSet) {
+			const newRanges = this.serializeSelection(update.view);
+			if (newRanges !== this.lastSelectionRanges) {
+				this.decorations = buildLinkDecorations(update.view);
+				this.lastSelectionRanges = newRanges;
+			}
 		}
-	},
-	{ decorations: (v) => v.decorations }
-);
+	}
+
+	private serializeSelection(view: EditorView): string {
+		return view.state.selection.ranges
+			.map((r) => `${r.from}:${r.to}`)
+			.join(',');
+	}
+}
+
+export const goToLinkPlugin = ViewPlugin.fromClass(LinkPlugin, {
+	decorations: (v) => v.decorations
+});
 
 /**
- * Base theme for the links plugin.
+ * Base theme for links.
  */
 const baseTheme = EditorView.baseTheme({
-	['.' + classes.widget]: {
+	[`.${classes.widget}`]: {
 		cursor: 'pointer',
-		textDecoration: 'underline'
+		textDecoration: 'none',
+		opacity: '0.7',
+		transition: 'opacity 0.2s'
+	},
+	[`.${classes.widget}:hover`]: {
+		opacity: '1'
 	}
 });

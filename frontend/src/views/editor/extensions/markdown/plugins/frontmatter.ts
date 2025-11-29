@@ -53,8 +53,8 @@ export const frontmatter: MarkdownExtension = {
 						}
 					}
 					if (end > 0) {
-						children.push(cx.elt('FrontmatterMark', end - 4, end));
-						cx.addElement(cx.elt('Frontmatter', 0, end, children));
+					children.push(cx.elt('FrontmatterMark', end - 4, end));
+					cx.addElement(cx.elt('Frontmatter', 0, end, children));
 					}
 					return true;
 				} else {

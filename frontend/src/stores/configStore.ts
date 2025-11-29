@@ -3,29 +3,23 @@ import {computed, reactive} from 'vue';
 import {ConfigService, StartupService} from '@/../bindings/voidraft/internal/services';
 import {
     AppConfig,
-    AppearanceConfig,
     AuthMethod,
     EditingConfig,
-    GeneralConfig,
-    GitBackupConfig,
     LanguageType,
     SystemThemeType,
-    TabType,
-    UpdatesConfig
+    TabType
 } from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/common/utils/configUtils';
 import {FONT_OPTIONS} from '@/common/constant/fonts';
 import {SUPPORTED_LOCALES} from '@/common/constant/locales';
 import {
-    APPEARANCE_CONFIG_KEY_MAP,
-    BACKUP_CONFIG_KEY_MAP,
+    CONFIG_KEY_MAP,
     CONFIG_LIMITS,
+    ConfigKey,
+    ConfigSection,
     DEFAULT_CONFIG,
-    EDITING_CONFIG_KEY_MAP,
-    GENERAL_CONFIG_KEY_MAP,
-    NumberConfigKey,
-    UPDATES_CONFIG_KEY_MAP
+    NumberConfigKey
 } from '@/common/constant/config';
 import * as runtime from '@wailsio/runtime';
 
@@ -42,86 +36,42 @@ export const useConfigStore = defineStore('config', () => {
     // Font options (no longer localized)
     const fontOptions = computed(() => FONT_OPTIONS);
 
-    // 计算属性 - 使用工厂函数简化
+    // 计算属性
     const createLimitComputed = (key: NumberConfigKey) => computed(() => CONFIG_LIMITS[key]);
     const limits = Object.fromEntries(
         (['fontSize', 'tabSize', 'lineHeight'] as const).map(key => [key, createLimitComputed(key)])
     ) as Record<NumberConfigKey, ReturnType<typeof createLimitComputed>>;
 
-    // 通用配置更新方法
-    const updateGeneralConfig = async <K extends keyof GeneralConfig>(key: K, value: GeneralConfig[K]): Promise<void> => {
-        // 确保配置已加载
+    // 统一配置更新方法
+    const updateConfig = async <K extends ConfigKey>(key: K, value: any): Promise<void> => {
         if (!state.configLoaded && !state.isLoading) {
             await initConfig();
         }
 
-        const backendKey = GENERAL_CONFIG_KEY_MAP[key];
+        const backendKey = CONFIG_KEY_MAP[key];
         if (!backendKey) {
-            throw new Error(`No backend key mapping found for general.${key.toString()}`);
+            throw new Error(`No backend key mapping found for ${String(key)}`);
         }
 
+        // 从 backendKey 提取 section（例如 'general.alwaysOnTop' -> 'general'）
+        const section = backendKey.split('.')[0] as ConfigSection;
+
         await ConfigService.Set(backendKey, value);
-        state.config.general[key] = value;
+        (state.config[section] as any)[key] = value;
     };
 
-    const updateEditingConfig = async <K extends keyof EditingConfig>(key: K, value: EditingConfig[K]): Promise<void> => {
-        // 确保配置已加载
-        if (!state.configLoaded && !state.isLoading) {
-            await initConfig();
-        }
-
-        const backendKey = EDITING_CONFIG_KEY_MAP[key];
-        if (!backendKey) {
-            throw new Error(`No backend key mapping found for editing.${key.toString()}`);
-        }
-
-        await ConfigService.Set(backendKey, value);
-        state.config.editing[key] = value;
+    // 只更新本地状态，不保存到后端
+    const updateConfigLocal = <K extends ConfigKey>(key: K, value: any): void => {
+        const backendKey = CONFIG_KEY_MAP[key];
+        const section = backendKey.split('.')[0] as ConfigSection;
+        (state.config[section] as any)[key] = value;
     };
 
-    const updateAppearanceConfig = async <K extends keyof AppearanceConfig>(key: K, value: AppearanceConfig[K]): Promise<void> => {
-        // 确保配置已加载
-        if (!state.configLoaded && !state.isLoading) {
-            await initConfig();
-        }
-
-        const backendKey = APPEARANCE_CONFIG_KEY_MAP[key];
-        if (!backendKey) {
-            throw new Error(`No backend key mapping found for appearance.${key.toString()}`);
-        }
-
-        await ConfigService.Set(backendKey, value);
-        state.config.appearance[key] = value;
-    };
-
-    const updateUpdatesConfig = async <K extends keyof UpdatesConfig>(key: K, value: UpdatesConfig[K]): Promise<void> => {
-        // 确保配置已加载
-        if (!state.configLoaded && !state.isLoading) {
-            await initConfig();
-        }
-
-        const backendKey = UPDATES_CONFIG_KEY_MAP[key];
-        if (!backendKey) {
-            throw new Error(`No backend key mapping found for updates.${key.toString()}`);
-        }
-
-        await ConfigService.Set(backendKey, value);
-        state.config.updates[key] = value;
-    };
-
-    const updateBackupConfig = async <K extends keyof GitBackupConfig>(key: K, value: GitBackupConfig[K]): Promise<void> => {
-        // 确保配置已加载
-        if (!state.configLoaded && !state.isLoading) {
-            await initConfig();
-        }
-
-        const backendKey = BACKUP_CONFIG_KEY_MAP[key];
-        if (!backendKey) {
-            throw new Error(`No backend key mapping found for backup.${key.toString()}`);
-        }
-
-        await ConfigService.Set(backendKey, value);
-        state.config.backup[key] = value;
+    // 保存指定配置到后端
+    const saveConfig = async <K extends ConfigKey>(key: K): Promise<void> => {
+        const backendKey = CONFIG_KEY_MAP[key];
+        const section = backendKey.split('.')[0] as ConfigSection;
+        await ConfigService.Set(backendKey, (state.config[section] as any)[key]);
     };
 
     // 加载配置
@@ -155,22 +105,24 @@ export const useConfigStore = defineStore('config', () => {
         const clamp = (value: number) => ConfigUtils.clamp(value, limit.min, limit.max);
 
         return {
-            increase: async () => await updateEditingConfig(key, clamp(state.config.editing[key] + 1)),
-            decrease: async () => await updateEditingConfig(key, clamp(state.config.editing[key] - 1)),
-            set: async (value: number) => await updateEditingConfig(key, clamp(value)),
-            reset: async () => await updateEditingConfig(key, limit.default)
+            increase: async () => await updateConfig(key, clamp(state.config.editing[key] + 1)),
+            decrease: async () => await updateConfig(key, clamp(state.config.editing[key] - 1)),
+            set: async (value: number) => await updateConfig(key, clamp(value)),
+            reset: async () => await updateConfig(key, limit.default),
+            increaseLocal: () => updateConfigLocal(key, clamp(state.config.editing[key] + 1)),
+            decreaseLocal: () => updateConfigLocal(key, clamp(state.config.editing[key] - 1))
         };
     };
 
     const createEditingToggler = <T extends keyof EditingConfig>(key: T) =>
-        async () => await updateEditingConfig(key, !state.config.editing[key] as EditingConfig[T]);
+        async () => await updateConfig(key as ConfigKey, !state.config.editing[key] as EditingConfig[T]);
 
     // 枚举值切换器
     const createEnumToggler = <T extends TabType>(key: 'tabType', values: readonly T[]) =>
         async () => {
             const currentIndex = values.indexOf(state.config.editing[key] as T);
             const nextIndex = (currentIndex + 1) % values.length;
-            return await updateEditingConfig(key, values[nextIndex]);
+            return await updateConfig(key, values[nextIndex]);
         };
 
     // 重置配置
@@ -192,21 +144,19 @@ export const useConfigStore = defineStore('config', () => {
 
     // 语言设置方法
     const setLanguage = async (language: LanguageType): Promise<void> => {
-        await updateAppearanceConfig('language', language);
-
-        // 同步更新前端语言
+        await updateConfig('language', language);
         const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
         locale.value = frontendLocale as any;
     };
 
     // 系统主题设置方法
     const setSystemTheme = async (systemTheme: SystemThemeType): Promise<void> => {
-        await updateAppearanceConfig('systemTheme', systemTheme);
+        await updateConfig('systemTheme', systemTheme);
     };
 
     // 当前主题设置方法
     const setCurrentTheme = async (themeName: string): Promise<void> => {
-        await updateAppearanceConfig('currentTheme', themeName);
+        await updateConfig('currentTheme', themeName);
     };
 
 
@@ -238,19 +188,10 @@ export const useConfigStore = defineStore('config', () => {
     const togglers = {
         tabIndent: createEditingToggler('enableTabIndent'),
         alwaysOnTop: async () => {
-            await updateGeneralConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
-            // 立即应用窗口置顶状态
+            await updateConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
             await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
         },
         tabType: createEnumToggler('tabType', CONFIG_LIMITS.tabType.values)
-    };
-
-    // 字符串配置设置器
-    const setters = {
-        fontFamily: async (value: string) => await updateEditingConfig('fontFamily', value),
-        fontWeight: async (value: string) => await updateEditingConfig('fontWeight', value),
-        dataPath: async (value: string) => await updateGeneralConfig('dataPath', value),
-        autoSaveDelay: async (value: number) => await updateEditingConfig('autoSaveDelay', value)
     };
 
     return {
@@ -281,10 +222,14 @@ export const useConfigStore = defineStore('config', () => {
         decreaseFontSize: adjusters.fontSize.decrease,
         resetFontSize: adjusters.fontSize.reset,
         setFontSize: adjusters.fontSize.set,
+        // 字体大小操作
+        increaseFontSizeLocal: adjusters.fontSize.increaseLocal,
+        decreaseFontSizeLocal: adjusters.fontSize.decreaseLocal,
+        saveFontSize: () => saveConfig('fontSize'),
 
         // Tab操作
         toggleTabIndent: togglers.tabIndent,
-        setEnableTabIndent: (value: boolean) => updateEditingConfig('enableTabIndent', value),
+        setEnableTabIndent: (value: boolean) => updateConfig('enableTabIndent', value),
         ...adjusters.tabSize,
         increaseTabSize: adjusters.tabSize.increase,
         decreaseTabSize: adjusters.tabSize.decrease,
@@ -296,59 +241,53 @@ export const useConfigStore = defineStore('config', () => {
 
         // 窗口操作
         toggleAlwaysOnTop: togglers.alwaysOnTop,
-        setAlwaysOnTop: (value: boolean) => updateGeneralConfig('alwaysOnTop', value),
+        setAlwaysOnTop: (value: boolean) => updateConfig('alwaysOnTop', value),
 
         // 字体操作
-        setFontFamily: setters.fontFamily,
-        setFontWeight: setters.fontWeight,
+        setFontFamily: (value: string) => updateConfig('fontFamily', value),
+        setFontWeight: (value: string) => updateConfig('fontWeight', value),
 
         // 路径操作
-        setDataPath: setters.dataPath,
+        setDataPath: (value: string) => updateConfig('dataPath', value),
 
         // 保存配置相关方法
-        setAutoSaveDelay: setters.autoSaveDelay,
+        setAutoSaveDelay: (value: number) => updateConfig('autoSaveDelay', value),
 
         // 热键配置相关方法
-        setEnableGlobalHotkey: (value: boolean) => updateGeneralConfig('enableGlobalHotkey', value),
-        setGlobalHotkey: (hotkey: any) => updateGeneralConfig('globalHotkey', hotkey),
+        setEnableGlobalHotkey: (value: boolean) => updateConfig('enableGlobalHotkey', value),
+        setGlobalHotkey: (hotkey: any) => updateConfig('globalHotkey', hotkey),
 
         // 系统托盘配置相关方法
-        setEnableSystemTray: (value: boolean) => updateGeneralConfig('enableSystemTray', value),
+        setEnableSystemTray: (value: boolean) => updateConfig('enableSystemTray', value),
 
         // 开机启动配置相关方法
         setStartAtLogin: async (value: boolean) => {
-            // 先更新配置文件
-            await updateGeneralConfig('startAtLogin', value);
-            // 再调用系统设置API
+            await updateConfig('startAtLogin', value);
             await StartupService.SetEnabled(value);
         },
 
         // 窗口吸附配置相关方法
-        setEnableWindowSnap: async (value: boolean) => await updateGeneralConfig('enableWindowSnap', value),
+        setEnableWindowSnap: (value: boolean) => updateConfig('enableWindowSnap', value),
 
         // 加载动画配置相关方法
-        setEnableLoadingAnimation: async (value: boolean) => await updateGeneralConfig('enableLoadingAnimation', value),
+        setEnableLoadingAnimation: (value: boolean) => updateConfig('enableLoadingAnimation', value),
 
         // 标签页配置相关方法
-        setEnableTabs: async (value: boolean) => await updateGeneralConfig('enableTabs', value),
+        setEnableTabs: (value: boolean) => updateConfig('enableTabs', value),
 
         // 更新配置相关方法
-        setAutoUpdate: async (value: boolean) => await updateUpdatesConfig('autoUpdate', value),
+        setAutoUpdate: (value: boolean) => updateConfig('autoUpdate', value),
 
         // 备份配置相关方法
-        setEnableBackup: async (value: boolean) => {
-            await updateBackupConfig('enabled', value);
-        },
-        setAutoBackup: async (value: boolean) => {
-            await updateBackupConfig('auto_backup', value);
-        },
-        setRepoUrl: async (value: string) => await updateBackupConfig('repo_url', value),
-        setAuthMethod: async (value: AuthMethod) => await updateBackupConfig('auth_method', value),
-        setUsername: async (value: string) => await updateBackupConfig('username', value),
-        setPassword: async (value: string) => await updateBackupConfig('password', value),
-        setToken: async (value: string) => await updateBackupConfig('token', value),
-        setSshKeyPath: async (value: string) => await updateBackupConfig('ssh_key_path', value),
-        setSshKeyPassphrase: async (value: string) => await updateBackupConfig('ssh_key_passphrase', value),
-        setBackupInterval: async (value: number) => await updateBackupConfig('backup_interval', value),
+        setEnableBackup: (value: boolean) => updateConfig('enabled', value),
+        setAutoBackup: (value: boolean) => updateConfig('auto_backup', value),
+        setRepoUrl: (value: string) => updateConfig('repo_url', value),
+        setAuthMethod: (value: AuthMethod) => updateConfig('auth_method', value),
+        setUsername: (value: string) => updateConfig('username', value),
+        setPassword: (value: string) => updateConfig('password', value),
+        setToken: (value: string) => updateConfig('token', value),
+        setSshKeyPath: (value: string) => updateConfig('ssh_key_path', value),
+        setSshKeyPassphrase: (value: string) => updateConfig('ssh_key_passphrase', value),
+        setBackupInterval: (value: number) => updateConfig('backup_interval', value),
     };
 });

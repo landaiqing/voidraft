@@ -6,56 +6,28 @@ import {
 	ViewUpdate,
 	WidgetType
 } from '@codemirror/view';
-import { isCursorInRange, iterateTreeInVisibleRanges } from '../util';
-import { ChangeSpec, Range } from '@codemirror/state';
-import { NodeType, SyntaxNodeRef } from '@lezer/common';
+import { Range, StateField, Transaction } from '@codemirror/state';
+import { syntaxTree } from '@codemirror/language';
+import { isCursorInRange } from '../util';
 import { list as classes } from '../classes';
 
-const bulletListMarkerRE = /^[-+*]/;
+/**
+ * Pattern for bullet list markers.
+ */
+const BULLET_LIST_MARKER_RE = /^[-+*]$/;
 
 /**
- * Ixora Lists plugin.
+ * Lists plugin.
  *
- * This plugin allows to:
- * - Customize list mark
- * - Add an interactive checkbox for task lists
+ * Features:
+ * - Custom bullet mark rendering (- → •)
+ * - Interactive task list checkboxes
  */
-export const lists = () => [listBulletPlugin, taskListPlugin, baseTheme];
+export const lists = () => [listBulletPlugin, taskListField, baseTheme];
 
-/**
- * Plugin to add custom list bullet mark.
- */
-class ListBulletPlugin {
-	decorations: DecorationSet = Decoration.none;
-	constructor(view: EditorView) {
-		this.decorations = this.decorateLists(view);
-	}
-	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged || update.selectionSet)
-			this.decorations = this.decorateLists(update.view);
-	}
-	private decorateLists(view: EditorView) {
-		const widgets: Array<ReturnType<Decoration['range']>> = [];
-		iterateTreeInVisibleRanges(view, {
-			enter: ({ type, from, to }) => {
-				if (isCursorInRange(view.state, [from, to])) return;
-				if (type.name === 'ListMark') {
-					const listMark = view.state.sliceDoc(from, to);
-					if (bulletListMarkerRE.test(listMark)) {
-						const dec = Decoration.replace({
-							widget: new ListBulletWidget(listMark)
-						});
-						widgets.push(dec.range(from, to));
-					}
-				}
-			}
-		});
-		return Decoration.set(widgets, true);
-	}
-}
-const listBulletPlugin = ViewPlugin.fromClass(ListBulletPlugin, {
-	decorations: (v) => v.decorations
-});
+// ============================================================================
+// List Bullet Plugin
+// ============================================================================
 
 /**
  * Widget to render list bullet mark.
@@ -64,114 +36,244 @@ class ListBulletWidget extends WidgetType {
 	constructor(readonly bullet: string) {
 		super();
 	}
+
+	eq(other: ListBulletWidget): boolean {
+		return other.bullet === this.bullet;
+	}
+
 	toDOM(): HTMLElement {
-		const listBullet = document.createElement('span');
-		listBullet.textContent = this.bullet;
-		listBullet.className = 'cm-list-bullet';
-		return listBullet;
+		const span = document.createElement('span');
+		span.className = classes.bullet;
+		span.textContent = '•';
+		return span;
 	}
 }
 
 /**
- * Plugin to add checkboxes in task lists.
+ * Build list bullet decorations.
  */
-class TaskListsPlugin {
-	decorations: DecorationSet = Decoration.none;
-	constructor(view: EditorView) {
-		this.decorations = this.addCheckboxes(view);
-	}
-	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged || update.selectionSet)
-			this.decorations = this.addCheckboxes(update.view);
-	}
-	addCheckboxes(view: EditorView) {
-		const widgets: Range<Decoration>[] = [];
-		iterateTreeInVisibleRanges(view, {
-			enter: this.iterateTree(view, widgets)
-		});
-		return Decoration.set(widgets, true);
-	}
+function buildListBulletDecorations(view: EditorView): DecorationSet {
+	const decorations: Range<Decoration>[] = [];
 
-	private iterateTree(view: EditorView, widgets: Range<Decoration>[]) {
-		return ({ type, from, to, node }: SyntaxNodeRef) => {
-			if (type.name !== 'Task') return;
-			let checked = false;
-			// Iterate inside the task node to find the checkbox
-			node.toTree().iterate({
-				enter: (ref) => iterateInner(ref.type, ref.from, ref.to)
-			});
-			if (checked)
-				widgets.push(
-					Decoration.mark({
-						tagName: 'span',
-						class: 'cm-task-checked'
-					}).range(from, to)
-				);
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
+				if (type.name !== 'ListMark') return;
 
-			function iterateInner(type: NodeType, nfrom: number, nto: number) {
-				if (type.name !== 'TaskMarker') return;
-				if (isCursorInRange(view.state, [from + nfrom, from + nto]))
-					return;
-				const checkbox = view.state.sliceDoc(from + nfrom, from + nto);
-				// Checkbox is checked if it has a 'x' in between the []
-				if ('xX'.includes(checkbox[1])) checked = true;
-				const dec = Decoration.replace({
-					widget: new CheckboxWidget(checked, from + nfrom + 1)
-				});
-				widgets.push(dec.range(from + nfrom, from + nto));
+				// Skip if this is part of a task list (has Task sibling)
+				const parent = node.parent;
+				if (parent) {
+					const task = parent.getChild('Task');
+					if (task) return;
+				}
+
+				// Skip if cursor is in this range
+				if (isCursorInRange(view.state, [nodeFrom, nodeTo])) return;
+
+				const listMark = view.state.sliceDoc(nodeFrom, nodeTo);
+				if (BULLET_LIST_MARKER_RE.test(listMark)) {
+					decorations.push(
+						Decoration.replace({
+							widget: new ListBulletWidget(listMark)
+						}).range(nodeFrom, nodeTo)
+					);
+				}
 			}
-		};
+		});
+	}
+
+	return Decoration.set(decorations, true);
+}
+
+/**
+ * List bullet plugin.
+ */
+class ListBulletPlugin {
+	decorations: DecorationSet;
+	private lastSelectionHead: number = -1;
+
+	constructor(view: EditorView) {
+		this.decorations = buildListBulletDecorations(view);
+		this.lastSelectionHead = view.state.selection.main.head;
+	}
+
+	update(update: ViewUpdate) {
+		if (update.docChanged || update.viewportChanged) {
+			this.decorations = buildListBulletDecorations(update.view);
+			this.lastSelectionHead = update.state.selection.main.head;
+			return;
+		}
+
+		if (update.selectionSet) {
+			const newHead = update.state.selection.main.head;
+			const oldLine = update.startState.doc.lineAt(this.lastSelectionHead);
+			const newLine = update.state.doc.lineAt(newHead);
+
+			if (oldLine.number !== newLine.number) {
+				this.decorations = buildListBulletDecorations(update.view);
+			}
+			this.lastSelectionHead = newHead;
+		}
 	}
 }
+
+const listBulletPlugin = ViewPlugin.fromClass(ListBulletPlugin, {
+	decorations: (v) => v.decorations
+});
+
+// ============================================================================
+// Task List Plugin (using StateField to avoid flickering)
+// ============================================================================
 
 /**
  * Widget to render checkbox for a task list item.
  */
-class CheckboxWidget extends WidgetType {
-	constructor(public checked: boolean, readonly pos: number) {
+class TaskCheckboxWidget extends WidgetType {
+	constructor(
+		readonly checked: boolean,
+		readonly pos: number // Position of the checkbox character in document
+	) {
 		super();
 	}
+
+	eq(other: TaskCheckboxWidget): boolean {
+		return other.checked === this.checked && other.pos === this.pos;
+	}
+
 	toDOM(view: EditorView): HTMLElement {
 		const wrap = document.createElement('span');
-		wrap.classList.add(classes.taskCheckbox);
+		wrap.setAttribute('aria-hidden', 'true');
+		wrap.className = classes.taskCheckbox;
+
 		const checkbox = document.createElement('input');
 		checkbox.type = 'checkbox';
 		checkbox.checked = this.checked;
-		checkbox.addEventListener('click', ({ target }) => {
-			const change: ChangeSpec = {
-				from: this.pos,
-				to: this.pos + 1,
-				insert: this.checked ? ' ' : 'x'
-			};
-			view.dispatch({ changes: change });
-			this.checked = !this.checked;
-			(target as HTMLInputElement).checked = this.checked;
+		checkbox.tabIndex = -1;
+
+		// Handle click directly in the widget
+		checkbox.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+
+			const newValue = !this.checked;
+			view.dispatch({
+				changes: {
+					from: this.pos,
+					to: this.pos + 1,
+					insert: newValue ? 'x' : ' '
+				}
+			});
 		});
+
 		wrap.appendChild(checkbox);
 		return wrap;
 	}
+
+	ignoreEvent(): boolean {
+		return false;
+	}
 }
 
-const taskListPlugin = ViewPlugin.fromClass(TaskListsPlugin, {
-	decorations: (v) => v.decorations
-});
+/**
+ * Build task list decorations from state.
+ */
+function buildTaskListDecorations(state: import('@codemirror/state').EditorState): DecorationSet {
+	const decorations: Range<Decoration>[] = [];
+
+	syntaxTree(state).iterate({
+		enter: ({ type, from: taskFrom, to: taskTo, node }) => {
+			if (type.name !== 'Task') return;
+
+			const listItem = node.parent;
+			if (!listItem || listItem.type.name !== 'ListItem') return;
+
+			const listMark = listItem.getChild('ListMark');
+			const taskMarker = node.getChild('TaskMarker');
+
+			if (!listMark || !taskMarker) return;
+
+			const replaceFrom = listMark.from;
+			const replaceTo = taskMarker.to;
+
+			// Check if cursor is in this range
+			if (isCursorInRange(state, [replaceFrom, replaceTo])) return;
+
+			// Check if task is checked - position of x or space is taskMarker.from + 1
+			const markerText = state.sliceDoc(taskMarker.from, taskMarker.to);
+			const isChecked = markerText.length >= 2 && 'xX'.includes(markerText[1]);
+			const checkboxPos = taskMarker.from + 1; // Position of the x or space
+
+			// Add checked style to the entire task content
+			if (isChecked) {
+				decorations.push(
+					Decoration.mark({
+						class: classes.taskChecked
+					}).range(taskFrom, taskTo)
+				);
+			}
+
+			// Replace "- [x]" or "- [ ]" with checkbox widget
+			decorations.push(
+				Decoration.replace({
+					widget: new TaskCheckboxWidget(isChecked, checkboxPos)
+				}).range(replaceFrom, replaceTo)
+			);
+		}
+	});
+
+	return Decoration.set(decorations, true);
+}
 
 /**
- * Base theme for the lists plugin.
+ * Task list StateField - uses incremental updates to avoid flickering.
+ */
+const taskListField = StateField.define<DecorationSet>({
+	create(state) {
+		return buildTaskListDecorations(state);
+	},
+
+	update(value, tr: Transaction) {
+		// Only rebuild when document or selection changes
+		if (tr.docChanged || tr.selection) {
+			return buildTaskListDecorations(tr.state);
+		}
+		return value;
+	},
+
+	provide(field) {
+		return EditorView.decorations.from(field);
+	}
+});
+
+// ============================================================================
+// Theme
+// ============================================================================
+
+/**
+ * Base theme for lists.
  */
 const baseTheme = EditorView.baseTheme({
-	['.' + classes.bullet]: {
+	[`.${classes.bullet}`]: {
+		// No extra width - just replace the character
+		color: 'var(--cm-list-bullet-color, inherit)'
+	},
+	[`.${classes.taskChecked}`]: {
+		textDecoration: 'line-through',
+		opacity: '0.6'
+	},
+	[`.${classes.taskCheckbox}`]: {
+		display: 'inline-block',
+		verticalAlign: 'baseline'
+	},
+	[`.${classes.taskCheckbox} input`]: {
+		cursor: 'pointer',
+		margin: '0',
+		marginRight: '0.35em',
+		width: '1em',
+		height: '1em',
 		position: 'relative',
-		visibility: 'hidden'
-	},
-	['.' + classes.taskChecked]: {
-		textDecoration: 'line-through !important'
-	},
-	['.' + classes.bullet + ':after']: {
-		visibility: 'visible',
-		position: 'absolute',
-		top: 0,
-		left: 0,
-		content: "'\\2022'" /* U+2022 BULLET */
+		top: '0.1em'
 	}
 });

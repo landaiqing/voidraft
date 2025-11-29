@@ -48,11 +48,12 @@ export const imagePreview = StateField.define<DecorationSet>({
 	create(state) {
 		const images = extractImages(state);
 		const decorations = images.map((img) =>
-			// This does not need to be a block widget
+			// NOTE: NOT using block: true to avoid affecting codeblock boundaries
 			Decoration.widget({
 				widget: new ImagePreviewWidget(img, WidgetState.INITIAL),
 				info: img,
-				src: img.src
+				src: img.src,
+				side: 1
 			}).range(img.to)
 		);
 		return Decoration.set(decorations, true);
@@ -86,9 +87,8 @@ export const imagePreview = StateField.define<DecorationSet>({
 							? WidgetState.LOADED
 							: WidgetState.INITIAL
 					),
-					// Create returns a inline widget, return inline image
-					// if image is not loaded for consistency.
-					block: hasImageLoaded ? true : false,
+					// NOTE: NOT using block: true to avoid affecting codeblock boundaries
+					// Always use inline widget
 					src: img.src,
 					side: 1,
 					// This is important to keep track of loaded images
@@ -137,6 +137,9 @@ class ImagePreviewWidget extends WidgetType {
 	}
 
 	toDOM(view: EditorView): HTMLElement {
+		const wrapper = document.createElement('span');
+		wrapper.className = 'cm-image-preview-wrapper';
+
 		const img = new Image();
 		img.classList.add(classes.widget);
 		img.src = this.info.src;
@@ -157,9 +160,11 @@ class ImagePreviewWidget extends WidgetType {
 			view.dispatch(tx);
 		});
 
-		if (this.state === WidgetState.LOADED) return img;
-		// Render placeholder
-		else return new Image();
+		if (this.state === WidgetState.LOADED) {
+			wrapper.appendChild(img);
+		}
+		// Return wrapper (empty for initial state, with img for loaded state)
+		return wrapper;
 	}
 
 	eq(widget: ImagePreviewWidget): boolean {

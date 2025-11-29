@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import { EditorState, StateField } from '@codemirror/state';
+import { EditorState, StateField, Range } from '@codemirror/state';
 import {
 	Decoration,
 	DecorationSet,
@@ -36,11 +36,11 @@ function extractHTMLBlocks(state: EditorState) {
 	return blocks;
 }
 
-function blockToDecoration(blocks: EmbedBlockData[]) {
+function blockToDecoration(blocks: EmbedBlockData[]): Range<Decoration>[] {
 	return blocks.map((block) =>
 		Decoration.widget({
 			widget: new HTMLBlockWidget(block),
-			block: true,
+			// NOTE: NOT using block: true to avoid affecting codeblock boundaries
 			side: 1
 		}).range(block.to)
 	);
@@ -48,12 +48,13 @@ function blockToDecoration(blocks: EmbedBlockData[]) {
 
 export const htmlBlock = StateField.define<DecorationSet>({
 	create(state) {
-		return Decoration.set(blockToDecoration(extractHTMLBlocks(state)));
+		return Decoration.set(blockToDecoration(extractHTMLBlocks(state)), true);
 	},
 	update(value, tx) {
 		if (tx.docChanged || tx.selection) {
 			return Decoration.set(
-				blockToDecoration(extractHTMLBlocks(tx.state))
+				blockToDecoration(extractHTMLBlocks(tx.state)),
+				true
 			);
 		}
 		return value.map(tx.changes);
@@ -64,19 +65,33 @@ export const htmlBlock = StateField.define<DecorationSet>({
 });
 
 class HTMLBlockWidget extends WidgetType {
-	constructor(public data: EmbedBlockData, public isInline?: true) {
+	constructor(public data: EmbedBlockData) {
 		super();
 	}
+
 	toDOM(): HTMLElement {
-		const dom = document.createElement('div');
-		dom.style.display = this.isInline ? 'inline' : 'block';
-		// Contain child margins
-		dom.style.overflow = 'auto';
+		const dom = document.createElement('span');
+		dom.className = 'cm-html-block-widget';
 		// This is sanitized!
 		dom.innerHTML = this.data.content;
 		return dom;
 	}
+
 	eq(widget: HTMLBlockWidget): boolean {
 		return JSON.stringify(widget.data) === JSON.stringify(this.data);
 	}
 }
+
+/**
+ * Base theme for HTML blocks.
+ */
+const baseTheme = EditorView.baseTheme({
+	'.cm-html-block-widget': {
+		display: 'inline-block',
+		width: '100%',
+		overflow: 'auto'
+	}
+});
+
+// Export the extension with theme
+export const htmlBlockExtension = [htmlBlock, baseTheme];

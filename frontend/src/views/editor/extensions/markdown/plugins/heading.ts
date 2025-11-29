@@ -1,134 +1,96 @@
-import {
-	Decoration,
-	DecorationSet,
-	EditorView,
-	ViewPlugin,
-	ViewUpdate
-} from '@codemirror/view';
-import { checkRangeOverlap, iterateTreeInVisibleRanges } from '../util';
-import { headingSlugField } from '../state/heading-slug';
-import { heading as classes } from '../classes';
+import { syntaxTree } from '@codemirror/language';
+import { EditorState, StateField, Range } from '@codemirror/state';
+import { Decoration, DecorationSet, EditorView } from '@codemirror/view';
 
 /**
- * Ixora headings plugin.
- *
- * This plugin allows to:
- * - Size headings according to their heading level
- * - Add default styling to headings
+ * Hidden mark decoration - uses visibility: hidden to hide content
  */
-export const headings = () => [
-	headingDecorationsPlugin,
-	hideHeaderMarkPlugin,
-	baseTheme
-];
+const hiddenMarkDecoration = Decoration.mark({
+	class: 'cm-heading-mark-hidden'
+});
 
-class HideHeaderMarkPlugin {
-	decorations: DecorationSet;
-	constructor(view: EditorView) {
-		this.decorations = this.hideHeaderMark(view);
-	}
-	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged || update.selectionSet)
-			this.decorations = this.hideHeaderMark(update.view);
-	}
-	/**
-	 * Function to decide if to insert a decoration to hide the header mark
-	 * @param view - Editor view
-	 * @returns The `Decoration`s that hide the header marks
-	 */
-	private hideHeaderMark(view: EditorView) {
-		const widgets: Array<ReturnType<Decoration['range']>> = [];
-		const ranges = view.state.selection.ranges;
-		iterateTreeInVisibleRanges(view, {
-			enter: ({ type, from, to }) => {
-				// Get the active line
-				const line = view.lineBlockAt(from);
-				// If any cursor overlaps with the heading line, skip
-				const cursorOverlaps = ranges.some(({ from, to }) =>
-					checkRangeOverlap([from, to], [line.from, line.to])
-				);
-				if (cursorOverlaps) return;
-				if (
-					type.name === 'HeaderMark' &&
-					// Setext heading's horizontal lines are not hidden.
-					/[#]/.test(view.state.sliceDoc(from, to))
-				) {
-					const dec = Decoration.replace({});
-					widgets.push(dec.range(from, to + 1));
+/**
+ * Check if selection overlaps with a range.
+ */
+function isSelectionInRange(state: EditorState, from: number, to: number): boolean {
+	return state.selection.ranges.some(
+		(range) => from <= range.to && to >= range.from
+	);
+}
+
+/**
+ * Build heading decorations.
+ * Hides # marks when cursor is not on the heading line.
+ */
+function buildHeadingDecorations(state: EditorState): DecorationSet {
+	const decorations: Range<Decoration>[] = [];
+
+	syntaxTree(state).iterate({
+		enter(node) {
+			// Skip if cursor is in this node's range
+			if (isSelectionInRange(state, node.from, node.to)) return;
+
+			// Handle ATX headings (# Heading)
+			if (node.type.name.startsWith('ATXHeading')) {
+				const header = node.node.firstChild;
+				if (header && header.type.name === 'HeaderMark') {
+					const from = header.from;
+					// Include the space after #
+					const to = Math.min(header.to + 1, node.to);
+					decorations.push(hiddenMarkDecoration.range(from, to));
 				}
 			}
-		});
-		return Decoration.set(widgets, true);
-	}
-}
-
-/**
- * Plugin to hide the header mark.
- *
- * The header mark will not be hidden when:
- * - The cursor is on the active line
- * - The mark is on a line which is in the current selection
- */
-const hideHeaderMarkPlugin = ViewPlugin.fromClass(HideHeaderMarkPlugin, {
-	decorations: (v) => v.decorations
-});
-
-class HeadingDecorationsPlugin {
-	decorations: DecorationSet;
-	constructor(view: EditorView) {
-		this.decorations = this.decorateHeadings(view);
-	}
-	update(update: ViewUpdate) {
-		if (
-			update.docChanged ||
-			update.viewportChanged ||
-			update.selectionSet
-		) {
-			this.decorations = this.decorateHeadings(update.view);
-		}
-	}
-	private decorateHeadings(view: EditorView) {
-		const widgets: Array<ReturnType<Decoration['range']>> = [];
-		iterateTreeInVisibleRanges(view, {
-			enter: ({ name, from }) => {
-				// To capture ATXHeading and SetextHeading
-				if (!name.includes('Heading')) return;
-				const slug = view.state
-					.field(headingSlugField)
-					.find((s) => s.pos === from)?.slug;
-				const match = /[1-6]$/.exec(name);
-				if (!match) return;
-				const level = parseInt(match[0]);
-				const dec = Decoration.line({
-					class: [
-						classes.heading,
-						classes.level(level),
-						slug ? classes.slug(slug) : ''
-					].join(' ')
+			// Handle Setext headings (underline style)
+			else if (node.type.name.startsWith('SetextHeading')) {
+				// Hide the underline marks (=== or ---)
+				const cursor = node.node.cursor();
+				cursor.iterate((child) => {
+					if (child.type.name === 'HeaderMark') {
+						decorations.push(
+							hiddenMarkDecoration.range(child.from, child.to)
+						);
+					}
 				});
-				widgets.push(dec.range(view.state.doc.lineAt(from).from));
 			}
-		});
-		return Decoration.set(widgets, true);
-	}
+		}
+	});
+
+	return Decoration.set(decorations, true);
 }
 
-const headingDecorationsPlugin = ViewPlugin.fromClass(
-	HeadingDecorationsPlugin,
-	{ decorations: (v) => v.decorations }
-);
+/**
+ * Heading StateField - manages # mark visibility.
+ */
+const headingField = StateField.define<DecorationSet>({
+	create(state) {
+		return buildHeadingDecorations(state);
+	},
+
+	update(deco, tr) {
+		if (tr.docChanged || tr.selection) {
+			return buildHeadingDecorations(tr.state);
+		}
+		return deco.map(tr.changes);
+	},
+
+	provide: (f) => EditorView.decorations.from(f)
+});
 
 /**
- * Base theme for headings.
+ * Theme for hidden heading marks.
+ * 
+ * Uses fontSize: 0 to hide the # mark without leaving whitespace.
+ * This works correctly now because blockLayer uses lineBlockAt()
+ * which calculates coordinates based on the entire line, not
+ * individual characters, so fontSize: 0 doesn't affect boundaries.
  */
-const baseTheme = EditorView.baseTheme({
-	'.cm-heading': {
-		fontWeight: 'bold'
-	},
-	['.' + classes.level(1)]: { fontSize: '2.2rem' },
-	['.' + classes.level(2)]: { fontSize: '1.8rem' },
-	['.' + classes.level(3)]: { fontSize: '1.4rem' },
-	['.' + classes.level(4)]: { fontSize: '1.2rem' },
-	['.' + classes.level(5)]: { fontSize: '1rem' },
-	['.' + classes.level(6)]: { fontSize: '0.8rem' }
+const headingTheme = EditorView.baseTheme({
+	'.cm-heading-mark-hidden': {
+		fontSize: '0'
+	}
 });
+
+/**
+ * Headings plugin.
+ */
+export const headings = () => [headingField, headingTheme];

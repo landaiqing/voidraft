@@ -3,7 +3,7 @@ import { blockquote } from './plugins/blockquote';
 import { codeblock } from './plugins/code-block';
 import { headings } from './plugins/heading';
 import { hideMarks } from './plugins/hide-mark';
-import { htmlBlock } from './plugins/html';
+import { htmlBlockExtension } from './plugins/html';
 import { image } from './plugins/image';
 import { links } from './plugins/link';
 import { lists } from './plugins/list';
@@ -14,7 +14,6 @@ import { imagePreview } from './state/image';
 import { codeblockEnhanced } from './plugins/code-block-enhanced';
 import { emoji } from './plugins/emoji';
 import { horizontalRule } from './plugins/horizontal-rule';
-import { softIndent } from './plugins/soft-indent';
 import { revealOnArrow } from './plugins/reveal-on-arrow';
 import { pasteRichText } from './plugins/paste-rich-text';
 
@@ -29,7 +28,7 @@ export { frontmatter } from './plugins/frontmatter';
 export { headings } from './plugins/heading';
 export { hideMarks } from './plugins/hide-mark';
 export { image } from './plugins/image';
-export { htmlBlock } from './plugins/html';
+export { htmlBlock, htmlBlockExtension } from './plugins/html';
 export { links } from './plugins/link';
 export { lists } from './plugins/list';
 
@@ -37,7 +36,6 @@ export { lists } from './plugins/list';
 export { codeblockEnhanced } from './plugins/code-block-enhanced';
 export { emoji, addEmoji, getEmojiNames } from './plugins/emoji';
 export { horizontalRule } from './plugins/horizontal-rule';
-export { softIndent } from './plugins/soft-indent';
 export { revealOnArrow } from './plugins/reveal-on-arrow';
 export { pasteRichText } from './plugins/paste-rich-text';
 
@@ -47,6 +45,8 @@ export * as classes from './classes';
 
 /**
  * markdown extensions (includes all ProseMark-inspired features).
+ * NOTE: All decorations avoid using block: true to prevent interfering
+ * with the codeblock system's boundary calculations.
  */
 export const markdownExtensions: Extension = [
 	headingSlugField,
@@ -58,12 +58,11 @@ export const markdownExtensions: Extension = [
 	lists(),
 	links(),
 	image(),
-	htmlBlock,
+	htmlBlockExtension,
 	// Enhanced features
 	codeblockEnhanced(),
 	emoji(),
 	horizontalRule(),
-	softIndent(),
 	revealOnArrow(),
 	pasteRichText()
 ];

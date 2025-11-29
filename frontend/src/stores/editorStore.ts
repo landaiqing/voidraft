@@ -242,10 +242,12 @@ export const useEditorStore = defineStore('editor', () => {
             fontWeight: configStore.config.editing.fontWeight
         });
 
-        const wheelZoomExtension = createWheelZoomExtension(
-            () => configStore.increaseFontSize(),
-            () => configStore.decreaseFontSize()
-        );
+        const wheelZoomExtension = createWheelZoomExtension({
+            increaseFontSize: () => configStore.increaseFontSizeLocal(),
+            decreaseFontSize: () => configStore.decreaseFontSizeLocal(),
+            onSave: () => configStore.saveFontSize(),
+            saveDelay: 500
+        });
 
         // 统计扩展
         const statsExtension = createStatsUpdateExtension(updateDocumentStats);
