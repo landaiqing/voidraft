@@ -5,12 +5,9 @@ import {
 	DecorationSet,
 	EditorView,
 	ViewPlugin,
-	ViewUpdate,
-	WidgetType
+	ViewUpdate
 } from '@codemirror/view';
-import { headingSlugField } from '../state/heading-slug';
 import { checkRangeOverlap, isCursorInRange, invisibleDecoration } from '../util';
-import { link as classes } from '../classes';
 
 /**
  * Pattern for auto-link markers (< and >).
@@ -18,7 +15,7 @@ import { link as classes } from '../classes';
 const AUTO_LINK_MARK_RE = /^<|>$/g;
 
 /**
- * Parent node types that should not have link widgets.
+ * Parent node types that should not process.
  */
 const BLACKLISTED_PARENTS = new Set(['Image']);
 
@@ -26,69 +23,14 @@ const BLACKLISTED_PARENTS = new Set(['Image']);
  * Links plugin.
  *
  * Features:
- * - Adds interactive link icon for navigation
- * - Supports internal anchor links (#heading)
  * - Hides link markup when cursor is outside
+ * - Link icons and click events are handled by hyperlink extension
  */
-export const links = () => [goToLinkPlugin, baseTheme];
-
-/**
- * Link widget for external/internal navigation.
- */
-export class GoToLinkWidget extends WidgetType {
-	constructor(
-		readonly link: string,
-		readonly title?: string
-	) {
-		super();
-	}
-
-	eq(other: GoToLinkWidget): boolean {
-		return other.link === this.link && other.title === this.title;
-	}
-
-	toDOM(view: EditorView): HTMLElement {
-		const anchor = document.createElement('a');
-		anchor.classList.add(classes.widget);
-		anchor.textContent = '🔗';
-
-		if (this.link.startsWith('#')) {
-			// Handle internal anchor links
-			anchor.href = 'javascript:void(0)';
-			anchor.addEventListener('click', (e) => {
-				e.preventDefault();
-				const slugs = view.state.field(headingSlugField);
-				const targetSlug = this.link.slice(1);
-				const pos = slugs.find((h) => h.slug === targetSlug)?.pos;
-
-				if (typeof pos !== 'undefined') {
-					view.dispatch({
-						selection: { anchor: pos },
-						scrollIntoView: true
-					});
-				}
-			});
-		} else {
-			// External links
-			anchor.href = this.link;
-			anchor.target = '_blank';
-			anchor.rel = 'noopener noreferrer';
-		}
-
-		if (this.title) {
-			anchor.title = this.title;
-		}
-
-		return anchor;
-	}
-
-	ignoreEvent(): boolean {
-		return false;
-	}
-}
+export const links = () => [goToLinkPlugin];
 
 /**
  * Build link decorations.
+ * Only hides markdown syntax marks, no icons added.
  * Uses array + Decoration.set() for automatic sorting.
  */
 function buildLinkDecorations(view: EditorView): DecorationSet {
@@ -126,30 +68,15 @@ function buildLinkDecorations(view: EditorView): DecorationSet {
 				}
 
 				// Get link content
-				let linkContent = view.state.sliceDoc(nodeFrom, nodeTo);
+				const linkContent = view.state.sliceDoc(nodeFrom, nodeTo);
 
 				// Handle auto-links with < > markers
 				if (AUTO_LINK_MARK_RE.test(linkContent)) {
-					linkContent = linkContent.replace(AUTO_LINK_MARK_RE, '');
-
 					if (!isCursorInRange(view.state, [node.from, node.to])) {
 						decorations.push(invisibleDecoration.range(nodeFrom, nodeFrom + 1));
 						decorations.push(invisibleDecoration.range(nodeTo - 1, nodeTo));
 					}
 				}
-
-				// Get link title content
-				const linkTitleContent = linkTitle
-					? view.state.sliceDoc(linkTitle.from, linkTitle.to)
-					: undefined;
-
-				// Add link widget
-				decorations.push(
-					Decoration.widget({
-						widget: new GoToLinkWidget(linkContent, linkTitleContent),
-						side: 1
-					}).range(nodeTo)
-				);
 			}
 		});
 	}
@@ -197,19 +124,4 @@ class LinkPlugin {
 
 export const goToLinkPlugin = ViewPlugin.fromClass(LinkPlugin, {
 	decorations: (v) => v.decorations
-});
-
-/**
- * Base theme for links.
- */
-const baseTheme = EditorView.baseTheme({
-	[`.${classes.widget}`]: {
-		cursor: 'pointer',
-		textDecoration: 'none',
-		opacity: '0.7',
-		transition: 'opacity 0.2s'
-	},
-	[`.${classes.widget}:hover`]: {
-		opacity: '1'
-	}
 });

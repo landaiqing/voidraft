@@ -14,7 +14,11 @@ import {
 	invisibleDecoration
 } from '../util';
 
-function hideNodes(view: EditorView) {
+/**
+ * Build decorations to hide image markdown syntax.
+ * Only hides when cursor is outside the image range.
+ */
+function hideImageNodes(view: EditorView) {
 	const widgets = new Array<Range<Decoration>>();
 	iterateTreeInVisibleRanges(view, {
 		enter(node) {
@@ -29,32 +33,31 @@ function hideNodes(view: EditorView) {
 	return Decoration.set(widgets, true);
 }
 
+/**
+ * Plugin to hide image markdown syntax when cursor is outside.
+ */
 const hideImageNodePlugin = ViewPlugin.fromClass(
 	class {
 		decorations: DecorationSet;
 
 		constructor(view: EditorView) {
-			this.decorations = hideNodes(view);
+			this.decorations = hideImageNodes(view);
 		}
 
 		update(update: ViewUpdate) {
-			if (update.docChanged || update.selectionSet)
-				this.decorations = hideNodes(update.view);
+			if (update.docChanged || update.selectionSet || update.viewportChanged) {
+				this.decorations = hideImageNodes(update.view);
+			}
 		}
 	},
 	{ decorations: (v) => v.decorations }
 );
 
 /**
- * Ixora Image plugin.
- *
- * This plugin allows to
- * - Add a preview of an image in the document.
- *
- * @returns The image plugin.
+ * Image plugin.
  */
 export const image = (): Extension => [
-	imagePreview,
+	imagePreview(),
 	hideImageNodePlugin,
 	baseTheme
 ];
@@ -64,7 +67,6 @@ const baseTheme = EditorView.baseTheme({
 		display: 'block',
 		objectFit: 'contain',
 		maxWidth: '100%',
-		paddingLeft: '4px',
 		maxHeight: '100%',
 		userSelect: 'none'
 	}

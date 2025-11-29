@@ -53,7 +53,7 @@ class CodeBlockInfoWidget extends WidgetType {
 		// Copy button
 		const copyButton = document.createElement('button');
 		copyButton.className = 'cm-code-block-copy-btn';
-		copyButton.title = '复制代码';
+		copyButton.title = 'Copy';
 		copyButton.innerHTML = `
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" 
 				fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -162,46 +162,46 @@ const codeBlockEnhancedPlugin = ViewPlugin.fromClass(CodeBlockEnhancedPlugin, {
 
 /**
  * Enhanced theme for code blocks.
+ * Uses CSS variables from variables.css for consistent theming.
  */
 const enhancedTheme = EditorView.baseTheme({
 	'.cm-code-block-info': {
 		float: 'right',
 		display: 'flex',
 		alignItems: 'center',
-		gap: '0.5rem',
-		padding: '0.2rem 0.4rem',
-		fontSize: '0.75rem',
-		opacity: '0.7',
-		transition: 'opacity 0.2s'
+		gap: '0.4rem',
+		padding: '0.15rem 0.3rem',
+		opacity: '0.6',
+		transition: 'opacity 0.15s ease'
 	},
 	'.cm-code-block-info:hover': {
 		opacity: '1'
 	},
 	'.cm-code-block-lang': {
-		fontFamily: 'monospace',
+		fontFamily: 'var(--voidraft-font-mono)',
 		fontSize: '0.7rem',
-		fontWeight: '600',
-		color: 'var(--cm-fg-muted, #888)'
+		fontWeight: '500',
+		letterSpacing: '0.02em',
+		color: 'var(--cm-codeblock-lang-color)'
 	},
 	'.cm-code-block-copy-btn': {
 		display: 'flex',
 		alignItems: 'center',
 		justifyContent: 'center',
 		border: 'none',
-		background: 'transparent',
-		padding: '0.2rem',
-		borderRadius: '0.25rem',
+		backgroundColor: 'transparent',
+		borderRadius: '0.2rem',
 		cursor: 'pointer',
-		color: 'var(--cm-fg-muted, #888)',
-		transition: 'background-color 0.2s, color 0.2s'
+		color: 'var(--cm-codeblock-btn-color)',
+		transition: 'background-color 0.15s ease, color 0.15s ease'
 	},
 	'.cm-code-block-copy-btn:hover': {
-		backgroundColor: 'var(--cm-bg-hover, rgba(0, 0, 0, 0.1))',
-		color: 'var(--cm-fg, inherit)'
+		// backgroundColor: 'var(--cm-codeblock-btn-hover-bg)',
+		color: 'var(--cm-codeblock-btn-hover-color)'
 	},
 	'.cm-code-block-copy-btn svg': {
-		width: '16px',
-		height: '16px'
+		width: '14px',
+		height: '14px'
 	}
 });
 

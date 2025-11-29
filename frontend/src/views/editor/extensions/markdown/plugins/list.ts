@@ -270,7 +270,6 @@ const baseTheme = EditorView.baseTheme({
 	[`.${classes.taskCheckbox} input`]: {
 		cursor: 'pointer',
 		margin: '0',
-		marginRight: '0.35em',
 		width: '1em',
 		height: '1em',
 		position: 'relative',

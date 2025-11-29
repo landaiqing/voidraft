@@ -247,19 +247,7 @@ export function stateWORDAt(
  */
 export const invisibleDecoration = Decoration.replace({});
 
-/**
- * Decoration to hide inline content (font-size: 0).
- */
-export const hideInlineDecoration = Decoration.mark({
-	class: 'cm-hidden-token'
-});
 
-/**
- * Decoration to make content transparent but preserve space.
- */
-export const hideInlineKeepSpaceDecoration = Decoration.mark({
-	class: 'cm-transparent-token'
-});
 
 // ============================================================================
 // Slug Generation
@@ -301,52 +289,4 @@ export class Slugger {
 	}
 }
 
-// ============================================================================
-// Performance Utilities
-// ============================================================================
 
-/**
- * Create a debounced version of a function.
- *
- * @param fn - Function to debounce
- * @param delay - Delay in milliseconds
- * @returns Debounced function
- */
-export function debounce<T extends (...args: unknown[]) => void>(
-	fn: T,
-	delay: number
-): T {
-	let timeoutId: ReturnType<typeof setTimeout> | null = null;
-
-	return ((...args: unknown[]) => {
-		if (timeoutId) {
-			clearTimeout(timeoutId);
-		}
-		timeoutId = setTimeout(() => {
-			fn(...args);
-			timeoutId = null;
-		}, delay);
-	}) as T;
-}
-
-/**
- * Create a throttled version of a function.
- *
- * @param fn - Function to throttle
- * @param limit - Minimum time between calls in milliseconds
- * @returns Throttled function
- */
-export function throttle<T extends (...args: unknown[]) => void>(
-	fn: T,
-	limit: number
-): T {
-	let lastCall = 0;
-
-	return ((...args: unknown[]) => {
-		const now = Date.now();
-		if (now - lastCall >= limit) {
-			lastCall = now;
-			fn(...args);
-		}
-	}) as T;
-}

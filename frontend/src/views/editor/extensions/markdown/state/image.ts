@@ -1,23 +1,21 @@
 import { syntaxTree } from '@codemirror/language';
-import {
-	StateField,
-	EditorState,
-	StateEffect,
-	TransactionSpec
-} from '@codemirror/state';
+import { Extension, Range } from '@codemirror/state';
 import {
 	DecorationSet,
 	Decoration,
 	WidgetType,
-	EditorView
+	EditorView,
+	ViewPlugin,
+	ViewUpdate
 } from '@codemirror/view';
+import { isCursorInRange } from '../util';
 import { image as classes } from '../classes';
 
 /**
- * Representation of the data held by the image URL state field.
+ * Representation of image data extracted from the syntax tree.
  */
 export interface ImageInfo {
-	/** The source of the image. */
+	/** The source URL of the image. */
 	src: string;
 	/** The starting position of the image element in the document. */
 	from: number;
@@ -25,113 +23,74 @@ export interface ImageInfo {
 	to: number;
 	/** The alt text of the image. */
 	alt: string;
-	/** If image has already loaded. */
-	loaded?: true;
 }
-
-/**
- * The current state of the image preview widget.
- * Used to indicate to render a placeholder or the actual image.
- */
-export enum WidgetState {
-	INITIAL,
-	LOADED
-}
-
-/**
- * The state effect to dispatch when a image loads, regardless of the result.
- */
-export const imageLoadedEffect = StateEffect.define<ImageInfo>();
-
-/** State field to store image preview decorations. */
-export const imagePreview = StateField.define<DecorationSet>({
-	create(state) {
-		const images = extractImages(state);
-		const decorations = images.map((img) =>
-			// NOTE: NOT using block: true to avoid affecting codeblock boundaries
-			Decoration.widget({
-				widget: new ImagePreviewWidget(img, WidgetState.INITIAL),
-				info: img,
-				src: img.src,
-				side: 1
-			}).range(img.to)
-		);
-		return Decoration.set(decorations, true);
-	},
-
-	update(value, tx) {
-		const loadedImages = tx.effects.filter((effect) =>
-			effect.is(imageLoadedEffect)
-		) as StateEffect<ImageInfo>[];
-
-		if (tx.docChanged || loadedImages.length > 0) {
-			const images = extractImages(tx.state);
-			const previous = value.iter();
-			const previousSpecs = new Array<ImageInfo>();
-			while (previous.value !== null) {
-				previousSpecs.push(previous.value.spec.info);
-				previous.next();
-			}
-			const decorations = images.map((img) => {
-				const hasImageLoaded = Boolean(
-					loadedImages.find(
-						(effect) => effect.value.src === img.src
-					) ||
-						previousSpecs.find((spec) => spec.src === img.src)
-							?.loaded
-				);
-				return Decoration.widget({
-					widget: new ImagePreviewWidget(
-						img,
-						hasImageLoaded
-							? WidgetState.LOADED
-							: WidgetState.INITIAL
-					),
-					// NOTE: NOT using block: true to avoid affecting codeblock boundaries
-					// Always use inline widget
-					src: img.src,
-					side: 1,
-					// This is important to keep track of loaded images
-					info: { ...img, loaded: hasImageLoaded }
-				}).range(img.to);
-			});
-			return Decoration.set(decorations, true);
-		}
-		return value.map(tx.changes);
-	},
-
-	provide(field) {
-		return EditorView.decorations.from(field);
-	}
-});
 
 /**
  * Capture everything in square brackets of a markdown image, after
  * the exclamation mark.
  */
-const imageTextRE = /(?:!\[)(.*?)(?:\])/;
+const IMAGE_TEXT_RE = /(?:!\[)(.*?)(?:\])/;
 
-function extractImages(state: EditorState): ImageInfo[] {
-	const imageUrls: ImageInfo[] = [];
-	syntaxTree(state).iterate({
-		enter: ({ name, node, from, to }) => {
-			if (name !== 'Image') return;
-			const altMatch = state.sliceDoc(from, to).match(imageTextRE);
-			const alt: string = altMatch?.pop() ?? '';
-			const urlNode = node.getChild('URL');
-			if (urlNode) {
-				const url: string = state.sliceDoc(urlNode.from, urlNode.to);
-				imageUrls.push({ src: url, from, to, alt });
+/**
+ * Extract images from the syntax tree.
+ */
+function extractImages(view: EditorView): ImageInfo[] {
+	const images: ImageInfo[] = [];
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ name, node, from: nodeFrom, to: nodeTo }) => {
+				if (name !== 'Image') return;
+				const altMatch = view.state.sliceDoc(nodeFrom, nodeTo).match(IMAGE_TEXT_RE);
+				const alt: string = altMatch?.pop() ?? '';
+				const urlNode = node.getChild('URL');
+				if (urlNode) {
+					const url: string = view.state.sliceDoc(urlNode.from, urlNode.to);
+					images.push({ src: url, from: nodeFrom, to: nodeTo, alt });
+				}
 			}
-		}
-	});
-	return imageUrls;
+		});
+	}
+
+	return images;
 }
 
+/**
+ * Build image preview decorations.
+ * Only shows preview when cursor is outside the image syntax.
+ */
+function buildImageDecorations(view: EditorView, loadedImages: Set<string>): DecorationSet {
+	const decorations: Range<Decoration>[] = [];
+	const images = extractImages(view);
+
+	for (const img of images) {
+		const cursorInImage = isCursorInRange(view.state, [img.from, img.to]);
+
+		// Only show preview when cursor is outside
+		if (!cursorInImage) {
+			const isLoaded = loadedImages.has(img.src);
+			decorations.push(
+				Decoration.widget({
+					widget: new ImagePreviewWidget(img, isLoaded, loadedImages),
+					side: 1
+				}).range(img.to)
+			);
+		}
+	}
+
+	return Decoration.set(decorations, true);
+}
+
+/**
+ * Image preview widget that displays the actual image.
+ */
 class ImagePreviewWidget extends WidgetType {
 	constructor(
-		public readonly info: ImageInfo,
-		public readonly state: WidgetState
+		private readonly info: ImageInfo,
+		private readonly isLoaded: boolean,
+		private readonly loadedImages: Set<string>
 	) {
 		super();
 	}
@@ -145,32 +104,106 @@ class ImagePreviewWidget extends WidgetType {
 		img.src = this.info.src;
 		img.alt = this.info.alt;
 
-		img.addEventListener('load', () => {
-			const tx: TransactionSpec = {};
-			if (this.state === WidgetState.INITIAL) {
-				tx.effects = [
-					// Indicate image has loaded by setting the loaded value
-					imageLoadedEffect.of({ ...this.info, loaded: true })
-				];
-			}
-			// After this is dispatched, this widget will be updated,
-			// and since the image is already loaded, this will not change
-			// its height dynamically, hence prevent all sorts of weird
-			// mess related to other parts of the editor.
-			view.dispatch(tx);
-		});
+		if (!this.isLoaded) {
+			img.addEventListener('load', () => {
+				this.loadedImages.add(this.info.src);
+				view.dispatch({});
+			});
+		}
 
-		if (this.state === WidgetState.LOADED) {
+		if (this.isLoaded) {
+			wrapper.appendChild(img);
+		} else {
+			const placeholder = document.createElement('span');
+			placeholder.className = 'cm-image-loading';
+			placeholder.textContent = '🖼️';
+			wrapper.appendChild(placeholder);
+			img.style.display = 'none';
 			wrapper.appendChild(img);
 		}
-		// Return wrapper (empty for initial state, with img for loaded state)
+
 		return wrapper;
 	}
 
 	eq(widget: ImagePreviewWidget): boolean {
 		return (
-			JSON.stringify(widget.info) === JSON.stringify(this.info) &&
-			widget.state === this.state
+			widget.info.src === this.info.src &&
+			widget.info.from === this.info.from &&
+			widget.info.to === this.info.to &&
+			widget.isLoaded === this.isLoaded
 		);
 	}
+
+	ignoreEvent(): boolean {
+		return false;
+	}
 }
+
+/**
+ * Image preview plugin class.
+ */
+class ImagePreviewPlugin {
+	decorations: DecorationSet;
+	private loadedImages: Set<string> = new Set();
+	private lastSelectionRanges: string = '';
+
+	constructor(view: EditorView) {
+		this.decorations = buildImageDecorations(view, this.loadedImages);
+		this.lastSelectionRanges = this.serializeSelection(view);
+	}
+
+	update(update: ViewUpdate) {
+		if (update.docChanged || update.viewportChanged) {
+			this.decorations = buildImageDecorations(update.view, this.loadedImages);
+			this.lastSelectionRanges = this.serializeSelection(update.view);
+			return;
+		}
+
+		if (update.selectionSet) {
+			const newRanges = this.serializeSelection(update.view);
+			if (newRanges !== this.lastSelectionRanges) {
+				this.decorations = buildImageDecorations(update.view, this.loadedImages);
+				this.lastSelectionRanges = newRanges;
+			}
+			return;
+		}
+
+		if (!update.docChanged && !update.selectionSet && !update.viewportChanged) {
+			this.decorations = buildImageDecorations(update.view, this.loadedImages);
+		}
+	}
+
+	private serializeSelection(view: EditorView): string {
+		return view.state.selection.ranges
+			.map((r) => `${r.from}:${r.to}`)
+			.join(',');
+	}
+}
+
+/**
+ * Image preview extension.
+ * Only handles displaying image preview widget.
+ */
+export const imagePreview = (): Extension => [
+	ViewPlugin.fromClass(ImagePreviewPlugin, {
+		decorations: (v) => v.decorations
+	}),
+	baseTheme
+];
+
+const baseTheme = EditorView.baseTheme({
+	'.cm-image-preview-wrapper': {
+		display: 'block',
+		margin: '0.5rem 0'
+	},
+	[`.${classes.widget}`]: {
+		maxWidth: '100%',
+		height: 'auto',
+		borderRadius: '0.25rem'
+	},
+	'.cm-image-loading': {
+		display: 'inline-block',
+		color: 'var(--cm-foreground)',
+		opacity: '0.6'
+	}
+});

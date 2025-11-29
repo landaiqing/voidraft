@@ -64,11 +64,5 @@ export const blockquote = {
 	emoji = {
 		/** Emoji widget */
 		widget: 'cm-emoji'
-	},
-	/** Classes for horizontal rule decorations. */
-	horizontalRule = {
-		/** Horizontal rule container */
-		container: 'cm-horizontal-rule-container',
-		/** Horizontal rule element */
-		rule: 'cm-horizontal-rule'
-	};
+	}
+

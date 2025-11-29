@@ -56,25 +56,26 @@ function buildCodeBlockDecorations(view: EditorView): DecorationSet {
 				for (let lineNum = startLine.number; lineNum <= endLine.number; lineNum++) {
 					const line = view.state.doc.line(lineNum);
 
-					// Determine line position class
-					let positionClass = '';
-					if (lineNum === startLine.number) {
-						positionClass = classes.widgetBegin;
-					} else if (lineNum === endLine.number) {
-						positionClass = classes.widgetEnd;
-					}
+					// Determine line position class(es)
+					const isFirst = lineNum === startLine.number;
+					const isLast = lineNum === endLine.number;
+					
+					// Build class list - a single line block needs both begin and end classes
+					const positionClasses: string[] = [];
+					if (isFirst) positionClasses.push(classes.widgetBegin);
+					if (isLast) positionClasses.push(classes.widgetEnd);
 
 					decorations.push(
 						Decoration.line({
-							class: `${classes.widget} ${positionClass}`.trim()
+							class: `${classes.widget} ${positionClasses.join(' ')}`.trim()
 						}).range(line.from)
 					);
 				}
 
 				// Hide code markers when cursor is outside the block
 				if (!cursorInBlock) {
-					const codeBlock = node.toTree();
-					codeBlock.iterate({
+			const codeBlock = node.toTree();
+			codeBlock.iterate({
 						enter: ({ type: childType, from: childFrom, to: childTo }) => {
 							if (childType.name === 'CodeInfo' || childType.name === 'CodeMark') {
 								decorations.push(
@@ -83,12 +84,12 @@ function buildCodeBlockDecorations(view: EditorView): DecorationSet {
 										nodeFrom + childTo
 									)
 								);
-							}
-						}
-					});
+					}
 				}
+			});
+		}
 			}
-		});
+	});
 	}
 
 	// Use Decoration.set with sort=true to handle unsorted ranges
@@ -139,15 +140,18 @@ const codeBlockPlugin = ViewPlugin.fromClass(CodeBlockPlugin, {
 
 /**
  * Base theme for code blocks.
+ * Uses CSS variables from variables.css for consistent theming.
  */
 const baseTheme = EditorView.baseTheme({
 	[`.${classes.widget}`]: {
-		backgroundColor: 'var(--cm-codeblock-bg, rgba(128, 128, 128, 0.1))'
+		backgroundColor: 'var(--cm-codeblock-bg)',
 	},
 	[`.${classes.widgetBegin}`]: {
-		borderRadius: '5px 5px 0 0'
+		borderTopLeftRadius: 'var(--cm-codeblock-radius)',
+		borderTopRightRadius: 'var(--cm-codeblock-radius)'
 	},
 	[`.${classes.widgetEnd}`]: {
-		borderRadius: '0 0 5px 5px'
+		borderBottomLeftRadius: 'var(--cm-codeblock-radius)',
+		borderBottomRightRadius: 'var(--cm-codeblock-radius)'
 	}
 });

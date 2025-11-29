@@ -49,6 +49,18 @@
   --voidraft-loading-glow: 0 0 10px rgba(50, 255, 50, 0.5), 0 0 5px rgba(100, 255, 100, 0.5);
   --voidraft-loading-done-color: #66ff66;
   --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(10, 16, 10, 0.5) 50%);
+
+  /* Markdown 代码块样式 - 暗色主题  */
+  --cm-codeblock-bg: rgba(46, 51, 69, 0.8);
+  --cm-codeblock-radius: 0.4rem;
+  --cm-codeblock-lang-color: oklch(65% 0.03 257);
+  --cm-codeblock-btn-bg: oklch(28% 0.02 253);
+  --cm-codeblock-btn-hover-bg: oklch(38% 0.035 257);
+  --cm-codeblock-btn-color: oklch(65% 0.03 257);
+  --cm-codeblock-btn-hover-color: oklch(85% 0.015 255);
+
+  /* Markdown 内联代码样式 */
+  --cm-inline-code-bg: oklch(28% 0.02 255);
 }
 
 /* 亮色主题 */
@@ -96,6 +108,18 @@
   --voidraft-loading-glow: 0 0 10px rgba(0, 160, 0, 0.3), 0 0 5px rgba(0, 120, 0, 0.2);
   --voidraft-loading-done-color: #008800;
   --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
+
+  /* Markdown 代码块样式 - 亮色主题 */
+  --cm-codeblock-bg: oklch(92.9% 0.013 255.508);
+  --cm-codeblock-radius: 0.4rem;
+  --cm-codeblock-lang-color: oklch(37.2% 0.044 257.287);
+  --cm-codeblock-btn-bg: oklch(86.9% 0.022 252.894);
+  --cm-codeblock-btn-hover-bg: oklch(70.4% 0.04 256.788);
+  --cm-codeblock-btn-color: oklch(37.2% 0.044 257.287);
+  --cm-codeblock-btn-hover-color: oklch(20% 0.044 257);
+
+  /* Markdown 内联代码样式 */
+  --cm-inline-code-bg: oklch(92.9% 0.013 255.508);
 }
 
 /* 跟随系统的浅色偏好 */
@@ -144,5 +168,17 @@
     --voidraft-loading-glow: 0 0 10px rgba(0, 160, 0, 0.3), 0 0 5px rgba(0, 120, 0, 0.2);
     --voidraft-loading-done-color: #008800;
     --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
+
+    /* Markdown 代码块样式 - 亮色主题 */
+    --cm-codeblock-bg: oklch(92.9% 0.013 255.508);
+    --cm-codeblock-radius: 0.4rem;
+    --cm-codeblock-lang-color: oklch(37.2% 0.044 257.287);
+    --cm-codeblock-btn-bg: oklch(86.9% 0.022 252.894);
+    --cm-codeblock-btn-hover-bg: oklch(70.4% 0.04 256.788);
+    --cm-codeblock-btn-color: oklch(37.2% 0.044 257.287);
+    --cm-codeblock-btn-hover-color: oklch(20% 0.044 257);
+
+    /* Markdown 内联代码样式 */
+    --cm-inline-code-bg: oklch(92.9% 0.013 255.508);
   }
 }

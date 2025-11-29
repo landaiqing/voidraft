@@ -16,9 +16,9 @@ function isSelectionInRange(state: EditorState, from: number, to: number): boole
 	return state.selection.ranges.some(
 		(range) => from <= range.to && to >= range.from
 	);
-}
+	}
 
-/**
+	/**
  * Build heading decorations.
  * Hides # marks when cursor is not on the heading line.
  */
