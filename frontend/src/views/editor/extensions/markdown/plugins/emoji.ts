@@ -8,6 +8,7 @@ import {
 	WidgetType
 } from '@codemirror/view';
 import { isCursorInRange } from '../util';
+import { emojies } from '@/common/constant/emojies';
 
 /**
  * Emoji plugin that converts :emoji_name: to actual emoji characters.
@@ -17,133 +18,14 @@ import { isCursorInRange } from '../util';
  * - Replaces them with actual emoji characters
  * - Shows the original text when cursor is nearby
  * - Uses RangeSetBuilder for optimal performance
+ * - Supports 1900+ emojis from the comprehensive emoji dictionary
  */
 export const emoji = (): Extension => [emojiPlugin, baseTheme];
 
 /**
  * Emoji regex pattern for matching :emoji_name: syntax.
  */
-const EMOJI_REGEX = /:([a-z0-9_+\-]+):/g;
-
-/**
- * Common emoji mappings.
- */
-const EMOJI_MAP: Map<string, string> = new Map([
-	// Smileys & Emotion
-	['smile', '😄'],
-	['smiley', '😃'],
-	['grin', '😁'],
-	['laughing', '😆'],
-	['satisfied', '😆'],
-	['sweat_smile', '😅'],
-	['rofl', '🤣'],
-	['joy', '😂'],
-	['slightly_smiling_face', '🙂'],
-	['upside_down_face', '🙃'],
-	['wink', '😉'],
-	['blush', '😊'],
-	['innocent', '😇'],
-	['smiling_face_with_three_hearts', '🥰'],
-	['heart_eyes', '😍'],
-	['star_struck', '🤩'],
-	['kissing_heart', '😘'],
-	['kissing', '😗'],
-	['relaxed', '☺️'],
-	['kissing_closed_eyes', '😚'],
-	['kissing_smiling_eyes', '😙'],
-	['smiling_face_with_tear', '🥲'],
-	['yum', '😋'],
-	['stuck_out_tongue', '😛'],
-	['stuck_out_tongue_winking_eye', '😜'],
-	['zany_face', '🤪'],
-	['stuck_out_tongue_closed_eyes', '😝'],
-	['money_mouth_face', '🤑'],
-	['hugs', '🤗'],
-	['hand_over_mouth', '🤭'],
-	['shushing_face', '🤫'],
-	['thinking', '🤔'],
-	['zipper_mouth_face', '🤐'],
-	['raised_eyebrow', '🤨'],
-	['neutral_face', '😐'],
-	['expressionless', '😑'],
-	['no_mouth', '😶'],
-	['smirk', '😏'],
-	['unamused', '😒'],
-	['roll_eyes', '🙄'],
-	['grimacing', '😬'],
-	['lying_face', '🤥'],
-	['relieved', '😌'],
-	['pensive', '😔'],
-	['sleepy', '😪'],
-	['drooling_face', '🤤'],
-	['sleeping', '😴'],
-
-	// Hearts
-	['heart', '❤️'],
-	['orange_heart', '🧡'],
-	['yellow_heart', '💛'],
-	['green_heart', '💚'],
-	['blue_heart', '💙'],
-	['purple_heart', '💜'],
-	['brown_heart', '🤎'],
-	['black_heart', '🖤'],
-	['white_heart', '🤍'],
-
-	// Gestures
-	['+1', '👍'],
-	['thumbsup', '👍'],
-	['-1', '👎'],
-	['thumbsdown', '👎'],
-	['fist', '✊'],
-	['facepunch', '👊'],
-	['punch', '👊'],
-	['wave', '👋'],
-	['clap', '👏'],
-	['raised_hands', '🙌'],
-	['pray', '🙏'],
-	['handshake', '🤝'],
-
-	// Nature
-	['sun', '☀️'],
-	['moon', '🌙'],
-	['star', '⭐'],
-	['fire', '🔥'],
-	['zap', '⚡'],
-	['sparkles', '✨'],
-	['tada', '🎉'],
-	['rocket', '🚀'],
-	['trophy', '🏆'],
-
-	// Symbols
-	['check', '✔️'],
-	['x', '❌'],
-	['warning', '⚠️'],
-	['bulb', '💡'],
-	['question', '❓'],
-	['exclamation', '❗'],
-	['heavy_check_mark', '✔️'],
-
-	// Common
-	['eyes', '👀'],
-	['eye', '👁️'],
-	['brain', '🧠'],
-	['muscle', '💪'],
-	['ok_hand', '👌'],
-	['point_right', '👉'],
-	['point_left', '👈'],
-	['point_up', '☝️'],
-	['point_down', '👇'],
-]);
-
-/**
- * Reverse lookup map for emoji to name.
- */
-const EMOJI_REVERSE_MAP = new Map<string, string>();
-EMOJI_MAP.forEach((emoji, name) => {
-	if (!EMOJI_REVERSE_MAP.has(emoji)) {
-		EMOJI_REVERSE_MAP.set(emoji, name);
-	}
-});
+const EMOJI_REGEX = /:([a-z0-9_+\-]+):/gi;
 
 /**
  * Emoji widget with optimized rendering.
@@ -190,8 +72,8 @@ function findEmojiMatches(text: string, offset: number): EmojiMatch[] {
 	EMOJI_REGEX.lastIndex = 0;
 
 	while ((match = EMOJI_REGEX.exec(text)) !== null) {
-		const name = match[1];
-		const emoji = EMOJI_MAP.get(name);
+		const name = match[1].toLowerCase();
+		const emoji = emojies[name];
 
 		if (emoji) {
 			matches.push({
@@ -286,25 +168,15 @@ const baseTheme = EditorView.baseTheme({
 });
 
 /**
- * Add custom emoji to the map.
- * @param name - Emoji name (without colons)
- * @param emoji - Emoji character
- */
-export function addEmoji(name: string, emoji: string): void {
-	EMOJI_MAP.set(name, emoji);
-	EMOJI_REVERSE_MAP.set(emoji, name);
-}
-
-/**
  * Get all available emoji names.
  */
 export function getEmojiNames(): string[] {
-	return Array.from(EMOJI_MAP.keys());
+	return Object.keys(emojies);
 }
 
 /**
  * Get emoji by name.
  */
 export function getEmoji(name: string): string | undefined {
-	return EMOJI_MAP.get(name);
+	return emojies[name.toLowerCase()];
 }

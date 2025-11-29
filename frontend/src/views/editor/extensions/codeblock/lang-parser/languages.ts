@@ -8,6 +8,8 @@ import {javascriptLanguage, typescriptLanguage} from "@codemirror/lang-javascrip
 import {html, htmlLanguage} from "@codemirror/lang-html";
 import {StandardSQL} from "@codemirror/lang-sql";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
+import {Subscript, Superscript} from "@lezer/markdown";
+import {Highlight} from "@/views/editor/extensions/markdown/syntax/highlight";
 import {javaLanguage} from "@codemirror/lang-java";
 import {phpLanguage} from "@codemirror/lang-php";
 import {cssLanguage} from "@codemirror/lang-css";
@@ -113,7 +115,7 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("md", "Markdown", markdown({
         base: markdownLanguage,
-        extensions: [],
+        extensions: [Subscript, Superscript, Highlight],
         completeHTMLTags: true,
         pasteURLAsLink: true,
         htmlTagLanguage: html({

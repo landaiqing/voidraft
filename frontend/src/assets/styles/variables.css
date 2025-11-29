@@ -61,6 +61,19 @@
 
   /* Markdown 内联代码样式 */
   --cm-inline-code-bg: oklch(28% 0.02 255);
+
+  /* Markdown 上标/下标样式 */
+  --cm-superscript-color: inherit;
+  --cm-subscript-color: inherit;
+
+  /* Markdown 高亮样式 */
+  --cm-highlight-background: rgba(250, 204, 21, 0.35);
+
+  /* Markdown 脚注样式 */
+  --cm-footnote-ref-color: #818cf8;
+  --cm-footnote-ref-hover-bg: rgba(129, 140, 248, 0.15);
+  --cm-footnote-undefined-color: #f87171;
+  --cm-footnote-def-color: #818cf8;
 }
 
 /* 亮色主题 */
@@ -120,6 +133,19 @@
 
   /* Markdown 内联代码样式 */
   --cm-inline-code-bg: oklch(92.9% 0.013 255.508);
+
+  /* Markdown 上标/下标样式 */
+  --cm-superscript-color: inherit;
+  --cm-subscript-color: inherit;
+
+  /* Markdown 高亮样式 */
+  --cm-highlight-background: rgba(253, 224, 71, 0.45);
+
+  /* Markdown 脚注样式 */
+  --cm-footnote-ref-color: #6366f1;
+  --cm-footnote-ref-hover-bg: rgba(99, 102, 241, 0.15);
+  --cm-footnote-undefined-color: #ef4444;
+  --cm-footnote-def-color: #6366f1;
 }
 
 /* 跟随系统的浅色偏好 */
@@ -180,5 +206,18 @@
 
     /* Markdown 内联代码样式 */
     --cm-inline-code-bg: oklch(92.9% 0.013 255.508);
+
+    /* Markdown 上标/下标样式 */
+    --cm-superscript-color: inherit;
+    --cm-subscript-color: inherit;
+
+    /* Markdown 高亮样式 */
+    --cm-highlight-background: rgba(253, 224, 71, 0.45);
+
+    /* Markdown 脚注样式 */
+    --cm-footnote-ref-color: #6366f1;
+    --cm-footnote-ref-hover-bg: rgba(99, 102, 241, 0.15);
+    --cm-footnote-undefined-color: #ef4444;
+    --cm-footnote-def-color: #6366f1;
   }
 }

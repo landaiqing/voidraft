@@ -6,6 +6,7 @@ import { useConfigStore } from './configStore';
 import { useEditorStore } from './editorStore';
 import type { ThemeColors } from '@/views/editor/theme/types';
 import { cloneThemeColors, FALLBACK_THEME_NAME, themePresetList, themePresetMap } from '@/views/editor/theme/presets';
+import { refreshMermaidTheme } from '@/views/editor/extensions/markdown/plugins/mermaid';
 
 type ThemeOption = { name: string; type: ThemeType };
 
@@ -138,6 +139,9 @@ export const useThemeStore = defineStore('theme', () => {
 
   const refreshEditorTheme = () => {
     applyThemeToDOM(currentTheme.value);
+
+    // Refresh mermaid diagrams with new theme
+    refreshMermaidTheme();
 
     const editorStore = useEditorStore();
     editorStore?.applyThemeSettings();

@@ -6,19 +6,16 @@ import { useUpdateStore } from '@/stores/updateStore';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import markdownit from 'markdown-it'
+import { marked } from 'marked';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
 
-// 初始化Remarkable实例并配置
-const md = markdownit({
-  html: true,       // 允许HTML
-  linkify: false,   // 不解析链接
-  typographer: true, // 开启智能引号
-  xhtmlOut: true,   // 使用xhtml语法输出
-  breaks: true,     // 允许换行
+// 配置marked
+marked.setOptions({
+  breaks: true,      // 允许换行
+  gfm: true,         // GitHub风格Markdown
 });
 
 // 计算属性
@@ -29,10 +26,10 @@ const autoCheckUpdates = computed({
   }
 });
 
-// 使用Remarkable解析Markdown
+// 使用marked解析Markdown
 const parseMarkdown = (markdown: string) => {
   if (!markdown) return '';
-  return md.render(markdown);
+  return marked.parse(markdown) as string;
 };
 
 // 处理更新按钮点击

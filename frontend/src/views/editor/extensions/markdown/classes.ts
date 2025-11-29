@@ -64,5 +64,14 @@ export const blockquote = {
 	emoji = {
 		/** Emoji widget */
 		widget: 'cm-emoji'
+	},
+	/** Classes for mermaid diagram decorations. */
+	mermaid = {
+		/** Mermaid preview container */
+		preview: 'cm-mermaid-preview',
+		/** Loading state */
+		loading: 'cm-mermaid-loading',
+		/** Error state */
+		error: 'cm-mermaid-error'
 	}
 

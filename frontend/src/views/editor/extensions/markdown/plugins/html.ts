@@ -1,9 +1,11 @@
 import { syntaxTree } from '@codemirror/language';
-import { EditorState, StateField, Range } from '@codemirror/state';
+import { EditorState, Range } from '@codemirror/state';
 import {
 	Decoration,
 	DecorationSet,
 	EditorView,
+	ViewPlugin,
+	ViewUpdate,
 	WidgetType
 } from '@codemirror/view';
 import DOMPurify from 'dompurify';
@@ -15,34 +17,41 @@ interface EmbedBlockData {
 	content: string;
 }
 
-function extractHTMLBlocks(state: EditorState) {
+/**
+ * Extract all HTML blocks from the document (both HTMLBlock and HTMLTag).
+ * Returns all blocks regardless of cursor position.
+ */
+function extractAllHTMLBlocks(state: EditorState): EmbedBlockData[] {
 	const blocks = new Array<EmbedBlockData>();
 	syntaxTree(state).iterate({
 		enter({ from, to, name }) {
-			if (name !== 'HTMLBlock') return;
-			if (isCursorInRange(state, [from, to])) return;
+			// Support both block-level HTML (HTMLBlock) and inline HTML tags (HTMLTag)
+			if (name !== 'HTMLBlock' && name !== 'HTMLTag') return;
 			const html = state.sliceDoc(from, to);
 			const content = DOMPurify.sanitize(html);
 
-			blocks.push({
-				from,
-				to,
-				content
-			});
+			// Skip empty content after sanitization
+			if (!content.trim()) return;
+
+			blocks.push({ from, to, content });
 		}
 	});
 	return blocks;
 }
 
-// Decoration to hide the original HTML source code
-const hideDecoration = Decoration.replace({});
-
-function blockToDecoration(blocks: EmbedBlockData[]): Range<Decoration>[] {
+/**
+ * Build decorations for HTML blocks.
+ * Only shows preview for blocks where cursor is not inside.
+ */
+function buildDecorations(state: EditorState, blocks: EmbedBlockData[]): DecorationSet {
 	const decorations: Range<Decoration>[] = [];
 	
 	for (const block of blocks) {
+		// Skip if cursor is in range
+		if (isCursorInRange(state, [block.from, block.to])) continue;
+		
 		// Hide the original HTML source code
-		decorations.push(hideDecoration.range(block.from, block.to));
+		decorations.push(Decoration.replace({}).range(block.from, block.to));
 		
 		// Add the preview widget at the end
 		decorations.push(
@@ -53,25 +62,57 @@ function blockToDecoration(blocks: EmbedBlockData[]): Range<Decoration>[] {
 		);
 	}
 	
-	return decorations;
+	return Decoration.set(decorations, true);
 }
 
-export const htmlBlock = StateField.define<DecorationSet>({
-	create(state) {
-		return Decoration.set(blockToDecoration(extractHTMLBlocks(state)), true);
-	},
-	update(value, tx) {
-		if (tx.docChanged || tx.selection) {
-			return Decoration.set(
-				blockToDecoration(extractHTMLBlocks(tx.state)),
-				true
-			);
-		}
-		return value.map(tx.changes);
-	},
-	provide(field) {
-		return EditorView.decorations.from(field);
+/**
+ * Check if selection affects any HTML block (cursor moved in/out of a block).
+ */
+function selectionAffectsBlocks(
+	state: EditorState,
+	prevState: EditorState,
+	blocks: EmbedBlockData[]
+): boolean {
+	for (const block of blocks) {
+		const wasInRange = isCursorInRange(prevState, [block.from, block.to]);
+		const isInRange = isCursorInRange(state, [block.from, block.to]);
+		if (wasInRange !== isInRange) return true;
 	}
+	return false;
+}
+
+/**
+ * ViewPlugin for HTML block preview.
+ * Uses smart caching to avoid unnecessary updates during text selection.
+ */
+class HTMLBlockPlugin {
+	decorations: DecorationSet;
+	blocks: EmbedBlockData[];
+
+	constructor(view: EditorView) {
+		this.blocks = extractAllHTMLBlocks(view.state);
+		this.decorations = buildDecorations(view.state, this.blocks);
+	}
+
+	update(update: ViewUpdate) {
+		// If document changed, re-extract all blocks
+		if (update.docChanged) {
+			this.blocks = extractAllHTMLBlocks(update.state);
+			this.decorations = buildDecorations(update.state, this.blocks);
+			return;
+		}
+
+		// If selection changed, only rebuild if cursor moved in/out of a block
+		if (update.selectionSet) {
+			if (selectionAffectsBlocks(update.state, update.startState, this.blocks)) {
+				this.decorations = buildDecorations(update.state, this.blocks);
+			}
+		}
+	}
+}
+
+const htmlBlockPlugin = ViewPlugin.fromClass(HTMLBlockPlugin, {
+	decorations: (v) => v.decorations
 });
 
 class HTMLBlockWidget extends WidgetType {
@@ -123,12 +164,19 @@ class HTMLBlockWidget extends WidgetType {
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-html-block-widget': {
-		display: 'block',
+		display: 'inline-block',
 		position: 'relative',
-		width: '100%',
-		overflow: 'auto'
+		maxWidth: '100%',
+		overflow: 'auto',
+		verticalAlign: 'middle'
 	},
 	'.cm-html-block-content': {
+		display: 'inline-block'
+	},
+	// Ensure images are properly sized
+	'.cm-html-block-content img': {
+		maxWidth: '100%',
+		height: 'auto',
 		display: 'block'
 	},
 	'.cm-html-block-edit-btn': {
@@ -157,4 +205,4 @@ const baseTheme = EditorView.baseTheme({
 });
 
 // Export the extension with theme
-export const htmlBlockExtension = [htmlBlock, baseTheme];
+export const htmlBlockExtension = [htmlBlockPlugin, baseTheme];
