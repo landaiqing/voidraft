@@ -60,18 +60,35 @@ export const blockquote = {
 		/** Copy button */
 		copyBtn: 'cm-code-block-copy-btn'
 	},
-	/** Classes for emoji decorations. */
-	emoji = {
-		/** Emoji widget */
-		widget: 'cm-emoji'
-	},
-	/** Classes for mermaid diagram decorations. */
-	mermaid = {
-		/** Mermaid preview container */
-		preview: 'cm-mermaid-preview',
-		/** Loading state */
-		loading: 'cm-mermaid-loading',
-		/** Error state */
-		error: 'cm-mermaid-error'
+	/** Classes for table decorations. */
+	table = {
+		/** Table container wrapper */
+		wrapper: 'cm-table-wrapper',
+		/** The rendered table element */
+		table: 'cm-table',
+		/** Table header row */
+		header: 'cm-table-header',
+		/** Table header cell */
+		headerCell: 'cm-table-header-cell',
+		/** Table body */
+		body: 'cm-table-body',
+		/** Table data row */
+		row: 'cm-table-row',
+		/** Table data cell */
+		cell: 'cm-table-cell',
+		/** Cell alignment classes */
+		alignLeft: 'cm-table-align-left',
+		alignCenter: 'cm-table-align-center',
+		alignRight: 'cm-table-align-right',
+		/** Cell content wrapper (for editing) */
+		cellContent: 'cm-table-cell-content',
+		/** Resize handle */
+		resizeHandle: 'cm-table-resize-handle',
+		/** Active editing cell */
+		cellActive: 'cm-table-cell-active',
+		/** Row hover state */
+		rowHover: 'cm-table-row-hover',
+		/** Selected cell */
+		cellSelected: 'cm-table-cell-selected'
 	}
 

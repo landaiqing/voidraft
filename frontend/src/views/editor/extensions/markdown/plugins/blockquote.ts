@@ -35,22 +35,24 @@ function buildBlockQuoteDecorations(view: EditorView): DecorationSet {
 
 			const cursorInBlockquote = isCursorInRange(view.state, [node.from, node.to]);
 
-			// Add line decoration for each line in the blockquote
-			const startLine = view.state.doc.lineAt(node.from).number;
-			const endLine = view.state.doc.lineAt(node.to).number;
-
-			for (let i = startLine; i <= endLine; i++) {
-				if (!processedLines.has(i)) {
-					processedLines.add(i);
-					const line = view.state.doc.line(i);
-					decorations.push(
-						Decoration.line({ class: classes.widget }).range(line.from)
-					);
-				}
-			}
-
-			// Hide quote marks when cursor is outside
+			// Only add decorations when cursor is outside the blockquote
+			// This allows selection highlighting to be visible when editing
 			if (!cursorInBlockquote) {
+				// Add line decoration for each line in the blockquote
+				const startLine = view.state.doc.lineAt(node.from).number;
+				const endLine = view.state.doc.lineAt(node.to).number;
+
+				for (let i = startLine; i <= endLine; i++) {
+					if (!processedLines.has(i)) {
+						processedLines.add(i);
+						const line = view.state.doc.line(i);
+						decorations.push(
+							Decoration.line({ class: classes.widget }).range(line.from)
+						);
+					}
+				}
+
+				// Hide quote marks when cursor is outside
 				const cursor = node.node.cursor();
 				cursor.iterate((child) => {
 					if (child.type.name === 'QuoteMark') {

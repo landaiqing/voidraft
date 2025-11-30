@@ -32,6 +32,12 @@ function buildInlineCodeDecorations(view: EditorView): DecorationSet {
 			enter: ({ type, from: nodeFrom, to: nodeTo }) => {
 				if (type.name !== 'InlineCode') return;
 
+				const cursorInCode = isCursorInRange(view.state, [nodeFrom, nodeTo]);
+				
+				// Skip background decoration when cursor is in the code
+				// This allows selection highlighting to be visible when editing
+				if (cursorInCode) return;
+
 				// Get the actual code content (excluding backticks)
 				const text = view.state.doc.sliceString(nodeFrom, nodeTo);
 				
@@ -55,12 +61,10 @@ function buildInlineCodeDecorations(view: EditorView): DecorationSet {
 
 				// Only add decoration if there's actual content
 				if (codeStart < codeEnd) {
-					const cursorInCode = isCursorInRange(view.state, [nodeFrom, nodeTo]);
-					
 					// Add mark decoration for the code content
 					decorations.push(
 						Decoration.mark({
-							class: cursorInCode ? 'cm-inline-code cm-inline-code-active' : 'cm-inline-code'
+							class: 'cm-inline-code'
 						}).range(codeStart, codeEnd)
 					);
 				}
@@ -103,10 +107,6 @@ const baseTheme = EditorView.baseTheme({
 		padding: '0.1rem 0.3rem',
 		fontFamily: 'var(--voidraft-font-mono)',
 		fontSize: '0.9em'
-	},
-	'.cm-inline-code-active': {
-		// Slightly different style when cursor is inside
-		backgroundColor: 'var(--cm-inline-code-bg)'
 	}
 });
 

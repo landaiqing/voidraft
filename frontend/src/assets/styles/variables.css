@@ -53,11 +53,7 @@
   /* Markdown 代码块样式 - 暗色主题  */
   --cm-codeblock-bg: rgba(46, 51, 69, 0.8);
   --cm-codeblock-radius: 0.4rem;
-  --cm-codeblock-lang-color: oklch(65% 0.03 257);
-  --cm-codeblock-btn-bg: oklch(28% 0.02 253);
-  --cm-codeblock-btn-hover-bg: oklch(38% 0.035 257);
-  --cm-codeblock-btn-color: oklch(65% 0.03 257);
-  --cm-codeblock-btn-hover-color: oklch(85% 0.015 255);
+
 
   /* Markdown 内联代码样式 */
   --cm-inline-code-bg: oklch(28% 0.02 255);
@@ -68,12 +64,6 @@
 
   /* Markdown 高亮样式 */
   --cm-highlight-background: rgba(250, 204, 21, 0.35);
-
-  /* Markdown 脚注样式 */
-  --cm-footnote-ref-color: #818cf8;
-  --cm-footnote-ref-hover-bg: rgba(129, 140, 248, 0.15);
-  --cm-footnote-undefined-color: #f87171;
-  --cm-footnote-def-color: #818cf8;
 }
 
 /* 亮色主题 */
@@ -125,11 +115,6 @@
   /* Markdown 代码块样式 - 亮色主题 */
   --cm-codeblock-bg: oklch(92.9% 0.013 255.508);
   --cm-codeblock-radius: 0.4rem;
-  --cm-codeblock-lang-color: oklch(37.2% 0.044 257.287);
-  --cm-codeblock-btn-bg: oklch(86.9% 0.022 252.894);
-  --cm-codeblock-btn-hover-bg: oklch(70.4% 0.04 256.788);
-  --cm-codeblock-btn-color: oklch(37.2% 0.044 257.287);
-  --cm-codeblock-btn-hover-color: oklch(20% 0.044 257);
 
   /* Markdown 内联代码样式 */
   --cm-inline-code-bg: oklch(92.9% 0.013 255.508);
@@ -140,12 +125,6 @@
 
   /* Markdown 高亮样式 */
   --cm-highlight-background: rgba(253, 224, 71, 0.45);
-
-  /* Markdown 脚注样式 */
-  --cm-footnote-ref-color: #6366f1;
-  --cm-footnote-ref-hover-bg: rgba(99, 102, 241, 0.15);
-  --cm-footnote-undefined-color: #ef4444;
-  --cm-footnote-def-color: #6366f1;
 }
 
 /* 跟随系统的浅色偏好 */
@@ -198,11 +177,6 @@
     /* Markdown 代码块样式 - 亮色主题 */
     --cm-codeblock-bg: oklch(92.9% 0.013 255.508);
     --cm-codeblock-radius: 0.4rem;
-    --cm-codeblock-lang-color: oklch(37.2% 0.044 257.287);
-    --cm-codeblock-btn-bg: oklch(86.9% 0.022 252.894);
-    --cm-codeblock-btn-hover-bg: oklch(70.4% 0.04 256.788);
-    --cm-codeblock-btn-color: oklch(37.2% 0.044 257.287);
-    --cm-codeblock-btn-hover-color: oklch(20% 0.044 257);
 
     /* Markdown 内联代码样式 */
     --cm-inline-code-bg: oklch(92.9% 0.013 255.508);
@@ -213,11 +187,5 @@
 
     /* Markdown 高亮样式 */
     --cm-highlight-background: rgba(253, 224, 71, 0.45);
-
-    /* Markdown 脚注样式 */
-    --cm-footnote-ref-color: #6366f1;
-    --cm-footnote-ref-hover-bg: rgba(99, 102, 241, 0.15);
-    --cm-footnote-undefined-color: #ef4444;
-    --cm-footnote-def-color: #6366f1;
   }
 }

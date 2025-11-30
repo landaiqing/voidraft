@@ -8,13 +8,12 @@ import { image } from './plugins/image';
 import { links } from './plugins/link';
 import { lists } from './plugins/list';
 import { headingSlugField } from './state/heading-slug';
-import { codeblockEnhanced } from './plugins/code-block-enhanced';
 import { emoji } from './plugins/emoji';
 import { horizontalRule } from './plugins/horizontal-rule';
 import { inlineCode } from './plugins/inline-code';
 import { subscriptSuperscript } from './plugins/subscript-superscript';
 import { highlight } from './plugins/highlight';
-import { mermaidPreview } from './plugins/mermaid';
+import { table } from './plugins/table';
 
 
 /**
@@ -30,14 +29,12 @@ export const markdownExtensions: Extension = [
 	links(),
 	image(),
 	htmlBlockExtension,
-	// Enhanced features
-	codeblockEnhanced(),
 	emoji(),
 	horizontalRule(),
 	inlineCode(),
 	subscriptSuperscript(),
 	highlight(),
-	mermaidPreview(),
+	table(),
 ];
 
 export default markdownExtensions;
