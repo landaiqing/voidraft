@@ -157,11 +157,10 @@ const emojiPlugin = ViewPlugin.fromClass(EmojiPlugin, {
 
 /**
  * Base theme for emoji.
+ * Inherits font size and line height from parent element.
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-emoji': {
-		fontSize: '1.2em',
-		lineHeight: '1',
 		verticalAlign: 'middle',
 		cursor: 'default'
 	}

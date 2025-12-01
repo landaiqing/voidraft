@@ -9,7 +9,6 @@ import {
 } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
 import { isCursorInRange } from '../util';
-import { codeblock as classes, codeblockEnhanced as enhancedClasses } from '../classes';
 
 /** Code block node types in syntax tree */
 const CODE_BLOCK_TYPES = ['FencedCode', 'CodeBlock'] as const;
@@ -22,7 +21,7 @@ const ICON_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" s
 interface CodeBlockData {
 	from: number;
 	to: number;
-	language: string;
+	language: string | null;
 	content: string;
 }
 
@@ -39,10 +38,13 @@ export const codeblock = (): Extension => [codeBlockPlugin, baseTheme];
 
 /**
  * Widget for displaying language label and copy button.
- * Uses ignoreEvent: true to prevent editor focus changes.
+ * Handles click events directly on the button element.
  */
 class CodeBlockInfoWidget extends WidgetType {
-	constructor(readonly data: CodeBlockData) {
+	constructor(
+		readonly data: CodeBlockData,
+		readonly view: EditorView
+	) {
 		super();
 	}
 
@@ -53,26 +55,51 @@ class CodeBlockInfoWidget extends WidgetType {
 
 	toDOM(): HTMLElement {
 		const container = document.createElement('span');
-		container.className = enhancedClasses.info;
-		container.dataset.codeFrom = String(this.data.from);
+		container.className = 'cm-code-block-info';
 
-		// Language label
-		const lang = document.createElement('span');
-		lang.className = enhancedClasses.lang;
-		lang.textContent = this.data.language;
+		// Only show language label if specified
+		if (this.data.language) {
+			const lang = document.createElement('span');
+			lang.className = 'cm-code-block-lang';
+			lang.textContent = this.data.language;
+			container.append(lang);
+		}
 
-		// Copy button
 		const btn = document.createElement('button');
-		btn.className = enhancedClasses.copyBtn;
+		btn.className = 'cm-code-block-copy-btn';
 		btn.title = 'Copy';
 		btn.innerHTML = ICON_COPY;
-		btn.dataset.codeContent = this.data.content;
 
-		container.append(lang, btn);
+		// Direct click handler - more reliable than eventHandlers
+		btn.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			this.handleCopy(btn);
+		});
+
+		// Prevent mousedown from affecting editor
+		btn.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+		});
+
+		container.append(btn);
 		return container;
 	}
 
-	// Critical: ignore all events to prevent editor focus
+	private handleCopy(btn: HTMLButtonElement): void {
+		const content = getCodeContent(this.view, this.data.from, this.data.to);
+		if (!content) return;
+
+		navigator.clipboard.writeText(content).then(() => {
+			btn.innerHTML = ICON_CHECK;
+			setTimeout(() => {
+				btn.innerHTML = ICON_COPY;
+			}, 1500);
+		});
+	}
+
+	// Ignore events to prevent editor focus changes
 	ignoreEvent(): boolean {
 		return true;
 	}
@@ -127,33 +154,28 @@ function buildDecorations(view: EditorView): { decorations: DecorationSet; block
 				const startLine = view.state.doc.lineAt(nodeFrom);
 				const endLine = view.state.doc.lineAt(nodeTo);
 
-				// Line decorations
 				for (let num = startLine.number; num <= endLine.number; num++) {
 					const line = view.state.doc.line(num);
-					const pos: string[] = [];
-					if (num === startLine.number) pos.push(classes.widgetBegin);
-					if (num === endLine.number) pos.push(classes.widgetEnd);
+					const pos: string[] = ['cm-codeblock'];
+					if (num === startLine.number) pos.push('cm-codeblock-begin');
+					if (num === endLine.number) pos.push('cm-codeblock-end');
 
 					decorations.push(
-						Decoration.line({
-							class: `${classes.widget} ${pos.join(' ')}`.trim()
-						}).range(line.from)
+						Decoration.line({ class: pos.join(' ') }).range(line.from)
 					);
 				}
 
-				// Info widget (only if language specified)
-				if (language) {
-					const content = getCodeContent(view, nodeFrom, nodeTo);
-					const data: CodeBlockData = { from: nodeFrom, to: nodeTo, language, content };
-					blocks.set(nodeFrom, data);
+				// Info widget with copy button (always show, language label only if specified)
+				const content = getCodeContent(view, nodeFrom, nodeTo);
+				const data: CodeBlockData = { from: nodeFrom, to: nodeTo, language, content };
+				blocks.set(nodeFrom, data);
 
-					decorations.push(
-						Decoration.widget({
-							widget: new CodeBlockInfoWidget(data),
-							side: 1
-						}).range(startLine.to)
-					);
-				}
+				decorations.push(
+					Decoration.widget({
+						widget: new CodeBlockInfoWidget(data, view),
+						side: 1
+					}).range(startLine.to)
+				);
 
 				// Hide markers
 				node.toTree().iterate({
@@ -168,21 +190,6 @@ function buildDecorations(view: EditorView): { decorations: DecorationSet; block
 	}
 
 	return { decorations: Decoration.set(decorations, true), blocks };
-}
-
-/**
- * Handle copy button click.
- */
-function handleCopyClick(btn: HTMLButtonElement): void {
-	const content = btn.dataset.codeContent;
-	if (!content) return;
-
-	navigator.clipboard.writeText(content).then(() => {
-		btn.innerHTML = ICON_CHECK;
-		setTimeout(() => {
-			btn.innerHTML = ICON_COPY;
-		}, 1500);
-	});
 }
 
 /**
@@ -225,54 +232,28 @@ class CodeBlockPluginClass {
 }
 
 const codeBlockPlugin = ViewPlugin.fromClass(CodeBlockPluginClass, {
-	decorations: (v) => v.decorations,
-
-	eventHandlers: {
-		// Handle copy button clicks without triggering editor focus
-		mousedown(e: MouseEvent, view: EditorView) {
-			const target = e.target as HTMLElement;
-
-			// Check if clicked on copy button or its SVG child
-			const btn = target.closest(`.${enhancedClasses.copyBtn}`) as HTMLButtonElement;
-			if (btn) {
-				e.preventDefault();
-				e.stopPropagation();
-				handleCopyClick(btn);
-				return true;
-			}
-
-			// Check if clicked on info container (language label)
-			if (target.closest(`.${enhancedClasses.info}`)) {
-				e.preventDefault();
-				e.stopPropagation();
-				return true;
-			}
-
-			return false;
-		}
-	}
+	decorations: (v) => v.decorations
 });
 
 /**
  * Base theme for code blocks.
  */
 const baseTheme = EditorView.baseTheme({
-	[`.${classes.widget}`]: {
+	'.cm-codeblock': {
 		backgroundColor: 'var(--cm-codeblock-bg)'
 	},
-	[`.${classes.widgetBegin}`]: {
+	'.cm-codeblock-begin': {
 		borderTopLeftRadius: 'var(--cm-codeblock-radius)',
 		borderTopRightRadius: 'var(--cm-codeblock-radius)',
 		position: 'relative',
-        borderTop: '1px solid var(--text-primary)'
+		boxShadow: 'inset 0 1px 0 var(--text-primary)'
 	},
-	[`.${classes.widgetEnd}`]: {
+	'.cm-codeblock-end': {
 		borderBottomLeftRadius: 'var(--cm-codeblock-radius)',
 		borderBottomRightRadius: 'var(--cm-codeblock-radius)',
-        borderBottom: '1px solid var(--text-primary)'
+		boxShadow: 'inset 0 -1px 0 var(--text-primary)'
 	},
-	// Info container
-	[`.${enhancedClasses.info}`]: {
+	'.cm-code-block-info': {
 		position: 'absolute',
 		right: '8px',
 		top: '50%',
@@ -284,17 +265,15 @@ const baseTheme = EditorView.baseTheme({
 		opacity: '0.5',
 		transition: 'opacity 0.15s'
 	},
-	[`.${enhancedClasses.info}:hover`]: {
+	'.cm-code-block-info:hover': {
 		opacity: '1'
 	},
-	// Language label
-	[`.${enhancedClasses.lang}`]: {
+	'.cm-code-block-lang': {
 		color: 'var(--cm-codeblock-lang, var(--cm-foreground))',
 		textTransform: 'lowercase',
 		userSelect: 'none'
 	},
-	// Copy button
-	[`.${enhancedClasses.copyBtn}`]: {
+	'.cm-code-block-copy-btn': {
 		display: 'inline-flex',
 		alignItems: 'center',
 		justifyContent: 'center',
@@ -307,11 +286,11 @@ const baseTheme = EditorView.baseTheme({
 		opacity: '0.7',
 		transition: 'opacity 0.15s, background 0.15s'
 	},
-	[`.${enhancedClasses.copyBtn}:hover`]: {
+	'.cm-code-block-copy-btn:hover': {
 		opacity: '1',
 		background: 'rgba(128, 128, 128, 0.2)'
 	},
-	[`.${enhancedClasses.copyBtn} svg`]: {
+	'.cm-code-block-copy-btn svg': {
 		width: '1em',
 		height: '1em'
 	}

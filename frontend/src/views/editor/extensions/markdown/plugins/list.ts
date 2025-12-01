@@ -9,7 +9,6 @@ import {
 import { Range, StateField, Transaction } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isCursorInRange } from '../util';
-import { list as classes } from '../classes';
 
 /**
  * Pattern for bullet list markers.
@@ -43,7 +42,7 @@ class ListBulletWidget extends WidgetType {
 
 	toDOM(): HTMLElement {
 		const span = document.createElement('span');
-		span.className = classes.bullet;
+		span.className = 'cm-list-bullet';
 		span.textContent = '•';
 		return span;
 	}
@@ -145,7 +144,7 @@ class TaskCheckboxWidget extends WidgetType {
 	toDOM(view: EditorView): HTMLElement {
 		const wrap = document.createElement('span');
 		wrap.setAttribute('aria-hidden', 'true');
-		wrap.className = classes.taskCheckbox;
+		wrap.className = 'cm-task-checkbox';
 
 		const checkbox = document.createElement('input');
 		checkbox.type = 'checkbox';
@@ -205,12 +204,9 @@ function buildTaskListDecorations(state: import('@codemirror/state').EditorState
 			const isChecked = markerText.length >= 2 && 'xX'.includes(markerText[1]);
 			const checkboxPos = taskMarker.from + 1; // Position of the x or space
 
-			// Add checked style to the entire task content
 			if (isChecked) {
 				decorations.push(
-					Decoration.mark({
-						class: classes.taskChecked
-					}).range(taskFrom, taskTo)
+					Decoration.mark({ class: 'cm-task-checked' }).range(taskFrom, taskTo)
 				);
 			}
 
@@ -255,19 +251,18 @@ const taskListField = StateField.define<DecorationSet>({
  * Base theme for lists.
  */
 const baseTheme = EditorView.baseTheme({
-	[`.${classes.bullet}`]: {
-		// No extra width - just replace the character
+	'.cm-list-bullet': {
 		color: 'var(--cm-list-bullet-color, inherit)'
 	},
-	[`.${classes.taskChecked}`]: {
+	'.cm-task-checked': {
 		textDecoration: 'line-through',
 		opacity: '0.6'
 	},
-	[`.${classes.taskCheckbox}`]: {
+	'.cm-task-checkbox': {
 		display: 'inline-block',
 		verticalAlign: 'baseline'
 	},
-	[`.${classes.taskCheckbox} input`]: {
+	'.cm-task-checkbox input': {
 		cursor: 'pointer',
 		margin: '0',
 		width: '1em',

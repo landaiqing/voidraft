@@ -16,6 +16,9 @@ import { isCursorInRange, invisibleDecoration } from '../util';
  * - Superscript: ^text^ → renders as superscript
  * - Subscript: ~text~ → renders as subscript
  *
+ * Note: Inline footnotes ^[content] are handled by the Footnote extension
+ * which parses InlineFootnote before Superscript in the syntax tree.
+ *
  * Examples:
  * - 19^th^ → 19ᵗʰ (superscript)
  * - H~2~O → H₂O (subscript)
@@ -37,30 +40,15 @@ function buildDecorations(view: EditorView): DecorationSet {
 			to,
 			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
 				// Handle Superscript nodes
+				// Note: InlineFootnote ^[content] is parsed before Superscript,
+				// so we don't need to check for bracket patterns here
 				if (type.name === 'Superscript') {
-					// Get the full content including marks
-					const fullContent = view.state.doc.sliceString(nodeFrom, nodeTo);
-					
-					// Skip if this contains inline footnote pattern ^[
-					// This catches ^[text] being misinterpreted as superscript
-					if (fullContent.includes('^[') || fullContent.includes('[') && fullContent.includes(']')) {
-						return;
-					}
-
 					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
 
 					// Get the mark nodes (the ^ characters)
 					const marks = node.getChildren('SuperscriptMark');
 
 					if (!cursorInRange && marks.length >= 2) {
-						// Get inner content between marks
-						const innerContent = view.state.doc.sliceString(marks[0].to, marks[marks.length - 1].from);
-						
-						// Skip if inner content looks like footnote (starts with [ or contains brackets)
-						if (innerContent.startsWith('[') || innerContent.includes('[') || innerContent.includes(']')) {
-							return;
-						}
-
 						// Hide the opening and closing ^ marks
 						decorations.push(invisibleDecoration.range(marks[0].from, marks[0].to));
 						decorations.push(invisibleDecoration.range(marks[marks.length - 1].from, marks[marks.length - 1].to));
@@ -148,16 +136,17 @@ const subscriptSuperscriptPlugin = ViewPlugin.fromClass(
 /**
  * Base theme for subscript and superscript.
  * Uses mark decoration instead of widget to avoid layout issues.
+ * fontSize uses smaller value as subscript/superscript are naturally smaller.
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-superscript': {
 		verticalAlign: 'super',
-		fontSize: '0.8em',
+		fontSize: '0.75em',
 		color: 'var(--cm-superscript-color, inherit)'
 	},
 	'.cm-subscript': {
 		verticalAlign: 'sub',
-		fontSize: '0.8em',
+		fontSize: '0.75em',
 		color: 'var(--cm-subscript-color, inherit)'
 	}
 });

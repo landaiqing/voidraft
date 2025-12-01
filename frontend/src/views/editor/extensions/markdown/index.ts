@@ -3,7 +3,6 @@ import { blockquote } from './plugins/blockquote';
 import { codeblock } from './plugins/code-block';
 import { headings } from './plugins/heading';
 import { hideMarks } from './plugins/hide-mark';
-import { htmlBlockExtension } from './plugins/html';
 import { image } from './plugins/image';
 import { links } from './plugins/link';
 import { lists } from './plugins/list';
@@ -13,8 +12,7 @@ import { horizontalRule } from './plugins/horizontal-rule';
 import { inlineCode } from './plugins/inline-code';
 import { subscriptSuperscript } from './plugins/subscript-superscript';
 import { highlight } from './plugins/highlight';
-import { table } from './plugins/table';
-
+import { footnote } from './plugins/footnote';
 
 /**
  * markdown extensions
@@ -28,13 +26,12 @@ export const markdownExtensions: Extension = [
 	lists(),
 	links(),
 	image(),
-	htmlBlockExtension,
 	emoji(),
 	horizontalRule(),
 	inlineCode(),
 	subscriptSuperscript(),
 	highlight(),
-	table(),
+	footnote(),
 ];
 
 export default markdownExtensions;

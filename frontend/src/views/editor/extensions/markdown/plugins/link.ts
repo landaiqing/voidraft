@@ -16,8 +16,10 @@ const AUTO_LINK_MARK_RE = /^<|>$/g;
 
 /**
  * Parent node types that should not process.
+ * - Image: handled by image plugin
+ * - LinkReference: reference link definitions like [label]: url should be fully visible
  */
-const BLACKLISTED_PARENTS = new Set(['Image']);
+const BLACKLISTED_PARENTS = new Set(['Image', 'LinkReference']);
 
 /**
  * Links plugin.
@@ -49,6 +51,19 @@ function buildLinkDecorations(view: EditorView): DecorationSet {
 
 				const marks = parent.getChildren('LinkMark');
 				const linkTitle = parent.getChild('LinkTitle');
+
+				// Find the ']' mark position to distinguish between link text and link target
+				// Link structure: [display text](url)
+				// We should only hide the URL in the () part, not in the [] part
+				const closeBracketMark = marks.find((mark) => {
+					const text = view.state.sliceDoc(mark.from, mark.to);
+					return text === ']';
+				});
+
+				// If URL is before ']', it's part of the display text, don't hide it
+				if (closeBracketMark && nodeFrom < closeBracketMark.from) {
+					return;
+				}
 
 				// Check if cursor overlaps with the link
 				const cursorOverlaps = selectionRanges.some((range) =>

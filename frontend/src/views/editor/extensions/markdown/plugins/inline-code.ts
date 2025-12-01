@@ -105,8 +105,7 @@ const baseTheme = EditorView.baseTheme({
 		backgroundColor: 'var(--cm-inline-code-bg)',
 		borderRadius: '0.25rem',
 		padding: '0.1rem 0.3rem',
-		fontFamily: 'var(--voidraft-font-mono)',
-		fontSize: '0.9em'
+		fontFamily: 'var(--voidraft-font-mono)'
 	}
 });
 

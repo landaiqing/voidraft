@@ -8,7 +8,6 @@ import {
 import { Range } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { isCursorInRange, invisibleDecoration } from '../util';
-import { blockquote as classes } from '../classes';
 
 /**
  * Blockquote plugin.
@@ -47,7 +46,7 @@ function buildBlockQuoteDecorations(view: EditorView): DecorationSet {
 						processedLines.add(i);
 						const line = view.state.doc.line(i);
 						decorations.push(
-							Decoration.line({ class: classes.widget }).range(line.from)
+							Decoration.line({ class: 'cm-blockquote' }).range(line.from)
 						);
 					}
 				}
@@ -96,7 +95,7 @@ const blockQuotePlugin = ViewPlugin.fromClass(BlockQuotePlugin, {
  * Base theme for blockquotes.
  */
 const baseTheme = EditorView.baseTheme({
-	[`.${classes.widget}`]: {
+	'.cm-blockquote': {
 		borderLeft: '4px solid var(--cm-blockquote-border, #ccc)',
 		color: 'var(--cm-blockquote-color, #666)'
 	}
