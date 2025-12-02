@@ -14,33 +14,173 @@
  * - This is text^[inline footnote content] with inline footnote.
  */
 
-import { MarkdownConfig, Line, BlockContext } from '@lezer/markdown';
+import { MarkdownConfig, Line, BlockContext, InlineContext } from '@lezer/markdown';
+import { CharCode, isFootnoteIdChar } from '../util';
 
 /**
- * ASCII character codes for parsing.
+ * Parse inline footnote ^[content].
+ * 
+ * @param cx - Inline context
+ * @param pos - Start position (at ^)
+ * @returns Position after element, or -1 if no match
  */
-const enum Ch {
-	OpenBracket = 91,    // [
-	CloseBracket = 93,   // ]
-	Caret = 94,          // ^
-	Colon = 58,          // :
-	Space = 32,
-	Tab = 9,
-	Newline = 10,
+function parseInlineFootnote(cx: InlineContext, pos: number): number {
+	const end = cx.end;
+
+	// Minimum: ^[ + content + ] = at least 4 chars
+	if (end < pos + 3) return -1;
+
+	// Track bracket depth for nested brackets
+	let bracketDepth = 1;
+	let hasContent = false;
+	const contentStart = pos + 2;
+
+	for (let i = contentStart; i < end; i++) {
+		const char = cx.char(i);
+
+		// Don't allow newlines
+		if (char === CharCode.Newline) return -1;
+
+		// Track bracket depth
+		if (char === CharCode.OpenBracket) {
+			bracketDepth++;
+		} else if (char === CharCode.CloseBracket) {
+			bracketDepth--;
+			if (bracketDepth === 0) {
+				// Found closing bracket - must have content
+				if (!hasContent) return -1;
+
+				// Create element with marks and content
+				return cx.addElement(cx.elt('InlineFootnote', pos, i + 1, [
+					cx.elt('InlineFootnoteMark', pos, contentStart),
+					cx.elt('InlineFootnoteContent', contentStart, i),
+					cx.elt('InlineFootnoteMark', i, i + 1)
+				]));
+			}
+		} else {
+			hasContent = true;
+		}
+	}
+
+	return -1;
 }
 
 /**
- * Check if a character is valid for footnote ID.
- * Allows: letters, numbers, underscore, hyphen
+ * Parse footnote reference [^id].
+ * 
+ * @param cx - Inline context
+ * @param pos - Start position (at [)
+ * @returns Position after element, or -1 if no match
  */
-function isFootnoteIdChar(code: number): boolean {
-	return (
-		(code >= 48 && code <= 57) ||   // 0-9
-		(code >= 65 && code <= 90) ||   // A-Z
-		(code >= 97 && code <= 122) ||  // a-z
-		code === 95 ||                   // _
-		code === 45                      // -
-	);
+function parseFootnoteReference(cx: InlineContext, pos: number): number {
+	const end = cx.end;
+
+	// Minimum: [^ + id + ] = at least 4 chars
+	if (end < pos + 3) return -1;
+
+	let hasValidId = false;
+	const labelStart = pos + 2;
+
+	for (let i = labelStart; i < end; i++) {
+		const char = cx.char(i);
+
+		// Found closing bracket
+		if (char === CharCode.CloseBracket) {
+			if (!hasValidId) return -1;
+
+			// Create element with marks and label
+			return cx.addElement(cx.elt('FootnoteReference', pos, i + 1, [
+				cx.elt('FootnoteReferenceMark', pos, labelStart),
+				cx.elt('FootnoteReferenceLabel', labelStart, i),
+				cx.elt('FootnoteReferenceMark', i, i + 1)
+			]));
+		}
+
+		// Don't allow newlines
+		if (char === CharCode.Newline) return -1;
+
+		// Validate id character using O(1) lookup table
+		if (isFootnoteIdChar(char)) {
+			hasValidId = true;
+		} else {
+			return -1;
+		}
+	}
+
+	return -1;
+}
+
+/**
+ * Parse footnote definition [^id]: content.
+ * 
+ * @param cx - Block context
+ * @param line - Current line
+ * @returns True if parsed successfully
+ */
+function parseFootnoteDefinition(cx: BlockContext, line: Line): boolean {
+	const text = line.text;
+	const len = text.length;
+
+	// Minimum: [^id]: = at least 5 chars
+	if (len < 5) return false;
+
+	// Find ]: pattern - use O(1) lookup for ID chars
+	let labelEnd = 2;
+	while (labelEnd < len) {
+		const char = text.charCodeAt(labelEnd);
+
+		if (char === CharCode.CloseBracket) {
+			// Check for : after ]
+			if (labelEnd + 1 < len && text.charCodeAt(labelEnd + 1) === CharCode.Colon) {
+				break;
+			}
+			return false;
+		}
+
+		// Use O(1) lookup table
+		if (!isFootnoteIdChar(char)) return false;
+
+		labelEnd++;
+	}
+
+	// Validate ]: was found
+	if (labelEnd >= len ||
+		text.charCodeAt(labelEnd) !== CharCode.CloseBracket ||
+		text.charCodeAt(labelEnd + 1) !== CharCode.Colon) {
+		return false;
+	}
+
+	// Calculate positions (all at once to avoid repeated arithmetic)
+	const start = cx.lineStart;
+	const openMarkEnd = start + 2;
+	const labelEndPos = start + labelEnd;
+	const closeMarkEnd = start + labelEnd + 2;
+
+	// Skip optional space after :
+	let contentOffset = labelEnd + 2;
+	if (contentOffset < len) {
+		const spaceChar = text.charCodeAt(contentOffset);
+		if (spaceChar === CharCode.Space || spaceChar === CharCode.Tab) {
+			contentOffset++;
+		}
+	}
+
+	// Build children array
+	const children = [
+		cx.elt('FootnoteDefinitionMark', start, openMarkEnd),
+		cx.elt('FootnoteDefinitionLabel', openMarkEnd, labelEndPos),
+		cx.elt('FootnoteDefinitionMark', labelEndPos, closeMarkEnd)
+	];
+
+	// Add content if present
+	if (contentOffset < len) {
+		children.push(cx.elt('FootnoteDefinitionContent', start + contentOffset, start + len));
+	}
+
+	// Create and add block element
+	cx.addElement(cx.elt('FootnoteDefinition', start, start + len, children));
+	cx.nextLine();
+	return true;
 }
 
 /**
@@ -76,119 +216,26 @@ export const Footnote: MarkdownConfig = {
 	],
 
 	parseInline: [
-		// Inline footnote must be parsed before Superscript to handle ^[ pattern
 		{
 			name: 'InlineFootnote',
 			parse(cx, next, pos) {
-				// Check for ^[ pattern
-				if (next !== Ch.Caret || cx.char(pos + 1) !== Ch.OpenBracket) {
+				// Fast path: must start with ^[
+				if (next !== CharCode.Caret || cx.char(pos + 1) !== CharCode.OpenBracket) {
 					return -1;
 				}
-
-				// Find the closing ]
-				// Content can contain any characters except unbalanced brackets and newlines
-				let end = pos + 2;
-				let bracketDepth = 1; // We're inside one [
-				let hasContent = false;
-
-				while (end < cx.end) {
-					const char = cx.char(end);
-
-					// Don't allow newlines in inline footnotes
-					if (char === Ch.Newline) {
-						return -1;
-					}
-
-					// Track bracket depth for nested brackets
-					if (char === Ch.OpenBracket) {
-						bracketDepth++;
-					} else if (char === Ch.CloseBracket) {
-						bracketDepth--;
-						if (bracketDepth === 0) {
-							// Found the closing bracket
-							if (!hasContent) {
-								return -1; // Empty inline footnote
-							}
-
-							// Create the element with marks and content
-							const children = [
-								// Opening mark ^[
-								cx.elt('InlineFootnoteMark', pos, pos + 2),
-								// Content
-								cx.elt('InlineFootnoteContent', pos + 2, end),
-								// Closing mark ]
-								cx.elt('InlineFootnoteMark', end, end + 1),
-							];
-
-							const element = cx.elt('InlineFootnote', pos, end + 1, children);
-							return cx.addElement(element);
-						}
-					} else {
-						hasContent = true;
-					}
-
-					end++;
-				}
-
-				return -1;
+				return parseInlineFootnote(cx, pos);
 			},
-			// Parse before Superscript to avoid ^[ being misinterpreted
 			before: 'Superscript',
 		},
 		{
 			name: 'FootnoteReference',
 			parse(cx, next, pos) {
-				// Check for [^ pattern
-				if (next !== Ch.OpenBracket || cx.char(pos + 1) !== Ch.Caret) {
+				// Fast path: must start with [^
+				if (next !== CharCode.OpenBracket || cx.char(pos + 1) !== CharCode.Caret) {
 					return -1;
 				}
-
-				// Find the closing ]
-				let end = pos + 2;
-				let hasValidId = false;
-
-				while (end < cx.end) {
-					const char = cx.char(end);
-
-					// Found closing bracket
-					if (char === Ch.CloseBracket) {
-						if (!hasValidId) {
-							return -1; // Empty footnote reference
-						}
-
-						// Create the element with marks and label
-						const children = [
-							// Opening mark [^
-							cx.elt('FootnoteReferenceMark', pos, pos + 2),
-							// Label (the id)
-							cx.elt('FootnoteReferenceLabel', pos + 2, end),
-							// Closing mark ]
-							cx.elt('FootnoteReferenceMark', end, end + 1),
-						];
-
-						const element = cx.elt('FootnoteReference', pos, end + 1, children);
-						return cx.addElement(element);
-					}
-
-					// Don't allow newlines
-					if (char === Ch.Newline) {
-						return -1;
-					}
-
-					// Validate id characters
-					if (isFootnoteIdChar(char)) {
-						hasValidId = true;
-					} else {
-						// Invalid character in footnote id
-						return -1;
-					}
-
-					end++;
-				}
-
-				return -1;
+				return parseFootnoteReference(cx, pos);
 			},
-			// Parse before links to avoid conflicts
 			before: 'Link',
 		},
 	],
@@ -197,90 +244,16 @@ export const Footnote: MarkdownConfig = {
 		{
 			name: 'FootnoteDefinition',
 			parse(cx: BlockContext, line: Line): boolean {
-				// Must start at the beginning of a line
-				// Check for [^ pattern
-				const text = line.text;
-				if (text.charCodeAt(0) !== Ch.OpenBracket ||
-					text.charCodeAt(1) !== Ch.Caret) {
+				// Fast path: must start with [^
+				if (line.text.charCodeAt(0) !== CharCode.OpenBracket ||
+					line.text.charCodeAt(1) !== CharCode.Caret) {
 					return false;
 				}
-
-				// Find ]: pattern
-				let labelEnd = 2;
-				while (labelEnd < text.length) {
-					const char = text.charCodeAt(labelEnd);
-
-					if (char === Ch.CloseBracket) {
-						// Check for : after ]
-						if (labelEnd + 1 < text.length &&
-							text.charCodeAt(labelEnd + 1) === Ch.Colon) {
-							break;
-						}
-						return false;
-					}
-
-					if (!isFootnoteIdChar(char)) {
-						return false;
-					}
-
-					labelEnd++;
-				}
-
-				// Must have found ]:
-				if (labelEnd >= text.length ||
-					text.charCodeAt(labelEnd) !== Ch.CloseBracket ||
-					text.charCodeAt(labelEnd + 1) !== Ch.Colon) {
-					return false;
-				}
-
-				// Calculate positions
-				const start = cx.lineStart;
-				const openMarkEnd = start + 2; // [^
-				const labelStart = openMarkEnd;
-				const labelEndPos = start + labelEnd;
-				const closeMarkStart = labelEndPos;
-				const closeMarkEnd = start + labelEnd + 2; // ]:
-				const contentStart = closeMarkEnd;
-
-				// Skip optional space after :
-				let contentOffset = labelEnd + 2;
-				if (contentOffset < text.length &&
-					(text.charCodeAt(contentOffset) === Ch.Space ||
-						text.charCodeAt(contentOffset) === Ch.Tab)) {
-					contentOffset++;
-				}
-
-				// Build the element
-				const children = [
-					// Opening mark [^
-					cx.elt('FootnoteDefinitionMark', start, openMarkEnd),
-					// Label
-					cx.elt('FootnoteDefinitionLabel', labelStart, labelEndPos),
-					// Closing mark ]:
-					cx.elt('FootnoteDefinitionMark', closeMarkStart, closeMarkEnd),
-				];
-
-				// Add content if present
-				const contentText = text.slice(contentOffset);
-				if (contentText.length > 0) {
-					children.push(
-						cx.elt('FootnoteDefinitionContent', start + contentOffset, start + text.length)
-					);
-				}
-
-				// Create the block element
-				const element = cx.elt('FootnoteDefinition', start, start + text.length, children);
-				cx.addElement(element);
-
-				// Move to next line
-				cx.nextLine();
-				return true;
+				return parseFootnoteDefinition(cx, line);
 			},
-			// Parse before other block elements
 			before: 'LinkReference',
 		},
 	],
 };
 
 export default Footnote;
-

@@ -1,33 +1,132 @@
-import { foldedRanges, syntaxTree } from '@codemirror/language';
-import type { SyntaxNodeRef, TreeCursor } from '@lezer/common';
-import { Decoration, EditorView } from '@codemirror/view';
-import {
-	EditorState,
-	SelectionRange,
-	CharCategory,
-	findClusterBreak
-} from '@codemirror/state';
-
-// ============================================================================
-// Type Definitions (ProseMark style)
-// ============================================================================
+import { Decoration } from '@codemirror/view';
+import { EditorState } from '@codemirror/state';
+import type { InlineContext, InlineParser } from '@lezer/markdown';
 
 /**
- * A range-like object with from and to properties.
+ * ASCII character codes for common delimiters.
  */
-export interface RangeLike {
-	from: number;
-	to: number;
+export const enum CharCode {
+	Space = 32,
+	Tab = 9,
+	Newline = 10,
+	Backslash = 92,
+	Dollar = 36,       // $
+	Plus = 43,         // +
+	Equal = 61,        // =
+	OpenBracket = 91,  // [
+	CloseBracket = 93, // ]
+	Caret = 94,        // ^
+	Colon = 58,        // :
+	Hyphen = 45,       // -
+	Underscore = 95,   // _
 }
+
+/**
+ * Pre-computed lookup table for footnote ID characters.
+ * Valid characters: 0-9, A-Z, a-z, _, -
+ * Uses Uint8Array for memory efficiency and O(1) lookup.
+ */
+const FOOTNOTE_ID_CHARS = new Uint8Array(128);
+// Initialize lookup table (0-9: 48-57, A-Z: 65-90, a-z: 97-122, _: 95, -: 45)
+for (let i = 48; i <= 57; i++) FOOTNOTE_ID_CHARS[i] = 1;  // 0-9
+for (let i = 65; i <= 90; i++) FOOTNOTE_ID_CHARS[i] = 1;  // A-Z
+for (let i = 97; i <= 122; i++) FOOTNOTE_ID_CHARS[i] = 1; // a-z
+FOOTNOTE_ID_CHARS[95] = 1; // _
+FOOTNOTE_ID_CHARS[45] = 1; // -
+
+/**
+ * O(1) check if a character is valid for footnote ID.
+ * @param code - ASCII character code
+ * @returns True if valid footnote ID character
+ */
+export function isFootnoteIdChar(code: number): boolean {
+	return code < 128 && FOOTNOTE_ID_CHARS[code] === 1;
+}
+
+/**
+ * Configuration for paired delimiter parser factory.
+ */
+export interface PairedDelimiterConfig {
+	/** Parser name */
+	name: string;
+	/** Node name for the container element */
+	nodeName: string;
+	/** Node name for the delimiter marks */
+	markName: string;
+	/** First delimiter character code */
+	delimChar: number;
+	/** Whether delimiter is doubled (e.g., == vs =) */
+	isDouble: true;
+	/** Whether to allow newlines in content */
+	allowNewlines?: boolean;
+	/** Parse order - after which parser */
+	after?: string;
+	/** Parse order - before which parser */
+	before?: string;
+}
+
+/**
+ * Factory function to create a paired delimiter inline parser.
+ * Optimized with:
+ * - Fast path early return
+ * - Minimal function calls in loop
+ * - Pre-computed delimiter length
+ * 
+ * @param config - Parser configuration
+ * @returns InlineParser for MarkdownConfig
+ */
+export function createPairedDelimiterParser(config: PairedDelimiterConfig): InlineParser {
+	const { name, nodeName, markName, delimChar, allowNewlines = false, after, before } = config;
+	const delimLen = 2; // Always double delimiter for these parsers
+
+	return {
+		name,
+		parse(cx: InlineContext, next: number, pos: number): number {
+			// Fast path: check first character
+			if (next !== delimChar) return -1;
+
+			// Check second delimiter character
+			if (cx.char(pos + 1) !== delimChar) return -1;
+
+			// Don't match triple delimiter (e.g., ===, +++)
+			if (cx.char(pos + 2) === delimChar) return -1;
+
+			// Calculate search bounds
+			const searchEnd = cx.end - 1;
+			const contentStart = pos + delimLen;
+
+			// Look for closing delimiter
+			for (let i = contentStart; i < searchEnd; i++) {
+				const char = cx.char(i);
+
+				// Check for newline (unless allowed)
+				if (!allowNewlines && char === CharCode.Newline) return -1;
+
+				// Found potential closing delimiter
+				if (char === delimChar && cx.char(i + 1) === delimChar) {
+					// Don't match triple delimiter
+					if (i + 2 < cx.end && cx.char(i + 2) === delimChar) continue;
+
+					// Create element with marks
+					return cx.addElement(cx.elt(nodeName, pos, i + delimLen, [
+						cx.elt(markName, pos, contentStart),
+						cx.elt(markName, i, i + delimLen)
+					]));
+				}
+			}
+
+			return -1;
+		},
+		...(after && { after }),
+		...(before && { before })
+	};
+}
+
 
 /**
  * Tuple representation of a range [from, to].
  */
 export type RangeTuple = [number, number];
-
-// ============================================================================
-// Range Utilities
-// ============================================================================
 
 /**
  * Check if two ranges overlap (touch or intersect).
@@ -42,46 +141,6 @@ export function checkRangeOverlap(
 	range2: RangeTuple
 ): boolean {
 	return range1[0] <= range2[1] && range2[0] <= range1[1];
-}
-
-/**
- * Check if two range-like objects touch or overlap.
- * ProseMark-style range comparison.
- *
- * @param a - First range
- * @param b - Second range
- * @returns True if ranges touch
- */
-export function rangeTouchesRange(a: RangeLike, b: RangeLike): boolean {
-	return a.from <= b.to && b.from <= a.to;
-}
-
-/**
- * Check if a selection touches a range.
- *
- * @param selection - Array of selection ranges
- * @param range - Range to check against
- * @returns True if any selection touches the range
- */
-export function selectionTouchesRange(
-	selection: readonly SelectionRange[],
-	range: RangeLike
-): boolean {
-	return selection.some((sel) => rangeTouchesRange(sel, range));
-}
-
-/**
- * Check if a range is inside another range (subset).
- *
- * @param parent - Parent (bigger) range
- * @param child - Child (smaller) range
- * @returns True if child is inside parent
- */
-export function checkRangeSubset(
-	parent: RangeTuple,
-	child: RangeTuple
-): boolean {
-	return child[0] >= parent[0] && child[1] <= parent[1];
 }
 
 /**
@@ -100,158 +159,11 @@ export function isCursorInRange(
 	);
 }
 
-// ============================================================================
-// Tree Iteration Utilities
-// ============================================================================
-
-/**
- * Iterate over the syntax tree in the visible ranges of the document.
- *
- * @param view - Editor view
- * @param iterateFns - Object with `enter` and `leave` iterate function
- */
-export function iterateTreeInVisibleRanges(
-	view: EditorView,
-	iterateFns: {
-		enter(node: SyntaxNodeRef): boolean | void;
-		leave?(node: SyntaxNodeRef): void;
-	}
-): void {
-	for (const { from, to } of view.visibleRanges) {
-		syntaxTree(view.state).iterate({ ...iterateFns, from, to });
-	}
-}
-
-/**
- * Iterate through child nodes of a cursor.
- * ProseMark-style tree traversal.
- *
- * @param cursor - Tree cursor to iterate
- * @param enter - Callback function, return true to stop iteration
- */
-export function iterChildren(
-	cursor: TreeCursor,
-	enter: (cursor: TreeCursor) => boolean | undefined
-): void {
-	if (!cursor.firstChild()) return;
-	do {
-		if (enter(cursor)) break;
-	} while (cursor.nextSibling());
-	cursor.parent();
-}
-
-// ============================================================================
-// Line Utilities
-// ============================================================================
-
-/**
- * Returns the lines of the editor that are in the given range and not folded.
- * This function is useful for adding line decorations to each line of a block node.
- *
- * @param view - Editor view
- * @param from - Start of the range
- * @param to - End of the range
- * @returns A list of line blocks that are in the range
- */
-export function editorLines(
-	view: EditorView,
-	from: number,
-	to: number
-) {
-	let lines = view.viewportLineBlocks.filter((block) =>
-		checkRangeOverlap([block.from, block.to], [from, to])
-	);
-
-	const folded = foldedRanges(view.state).iter();
-	while (folded.value) {
-		lines = lines.filter(
-			(line) =>
-				!checkRangeOverlap(
-					[folded.from, folded.to],
-					[line.from, line.to]
-				)
-		);
-		folded.next();
-	}
-
-	return lines;
-}
-
-/**
- * Get line numbers for a range.
- *
- * @param state - Editor state
- * @param from - Start position
- * @param to - End position
- * @returns Array of line numbers
- */
-export function getLineNumbers(
-	state: EditorState,
-	from: number,
-	to: number
-): number[] {
-	const startLine = state.doc.lineAt(from).number;
-	const endLine = state.doc.lineAt(to).number;
-	const lines: number[] = [];
-
-	for (let i = startLine; i <= endLine; i++) {
-		lines.push(i);
-	}
-
-	return lines;
-}
-
-// ============================================================================
-// Word Utilities (ProseMark style)
-// ============================================================================
-
-/**
- * Get the "WORD" at a position (vim-style WORD, including non-whitespace).
- *
- * @param state - Editor state
- * @param pos - Position in document
- * @returns Selection range of the WORD, or null if at whitespace
- */
-export function stateWORDAt(
-	state: EditorState,
-	pos: number
-): SelectionRange | null {
-	const { text, from, length } = state.doc.lineAt(pos);
-	const cat = state.charCategorizer(pos);
-	let start = pos - from;
-	let end = pos - from;
-
-	while (start > 0) {
-		const prev = findClusterBreak(text, start, false);
-		if (cat(text.slice(prev, start)) === CharCategory.Space) break;
-		start = prev;
-	}
-
-	while (end < length) {
-		const next = findClusterBreak(text, end);
-		if (cat(text.slice(end, next)) === CharCategory.Space) break;
-		end = next;
-	}
-
-	return start === end
-		? null
-		: { from: start + from, to: end + from } as SelectionRange;
-}
-
-// ============================================================================
-// Decoration Utilities
-// ============================================================================
-
 /**
  * Decoration to simply hide anything (replace with nothing).
  */
 export const invisibleDecoration = Decoration.replace({});
 
-
-
-// ============================================================================
-// Slug Generation
-// ============================================================================
 
 /**
  * Class for generating unique slugs from heading contents.
@@ -288,5 +200,3 @@ export class Slugger {
 		this.occurrences.clear();
 	}
 }
-
-

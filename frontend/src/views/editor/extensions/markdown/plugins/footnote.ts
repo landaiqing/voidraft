@@ -216,7 +216,7 @@ class FootnoteRefWidget extends WidgetType {
 	toDOM(): HTMLElement {
 		const span = document.createElement('span');
 		span.className = 'cm-footnote-ref';
-		span.textContent = String(this.index);
+		span.textContent = `[${this.index}]`;
 		span.dataset.footnoteId = this.id;
 
 		if (!this.hasDefinition) {
@@ -249,7 +249,7 @@ class InlineFootnoteWidget extends WidgetType {
 	toDOM(): HTMLElement {
 		const span = document.createElement('span');
 		span.className = 'cm-inline-footnote-ref';
-		span.textContent = String(this.index);
+		span.textContent = `[${this.index}]`;
 		span.dataset.footnoteContent = this.content;
 		span.dataset.footnoteIndex = String(this.index);
 
@@ -258,6 +258,31 @@ class InlineFootnoteWidget extends WidgetType {
 
 	eq(other: InlineFootnoteWidget): boolean {
 		return this.content === other.content && this.index === other.index;
+	}
+
+	ignoreEvent(): boolean {
+		return false;
+	}
+}
+
+/**
+ * Widget to display footnote definition label.
+ */
+class FootnoteDefLabelWidget extends WidgetType {
+	constructor(readonly id: string) {
+		super();
+	}
+
+	toDOM(): HTMLElement {
+		const span = document.createElement('span');
+		span.className = 'cm-footnote-def-label';
+		span.textContent = `[${this.id}]`;
+		span.dataset.footnoteId = this.id;
+		return span;
+	}
+
+	eq(other: FootnoteDefLabelWidget): boolean {
+		return this.id === other.id;
 	}
 
 	ignoreEvent(): boolean {
@@ -318,15 +343,18 @@ function buildDecorations(view: EditorView): DecorationSet {
 					const labelNode = node.getChild('FootnoteDefinitionLabel');
 
 					if (!cursorInRange && marks.length >= 2 && labelNode) {
-						// Hide the [^ and ]: marks
-						decorations.push(invisibleDecoration.range(marks[0].from, marks[0].to));
-						decorations.push(invisibleDecoration.range(marks[1].from, marks[1].to));
+						const id = view.state.sliceDoc(labelNode.from, labelNode.to);
+						
+						// Hide the entire [^id]: part
+						decorations.push(invisibleDecoration.range(marks[0].from, marks[1].to));
 
-						// Style the label as definition marker
+						// Add widget to show [id]
+						const widget = new FootnoteDefLabelWidget(id);
 						decorations.push(
-							Decoration.mark({
-								class: 'cm-footnote-def-label',
-							}).range(labelNode.from, labelNode.to)
+							Decoration.widget({
+								widget,
+								side: 1,
+							}).range(marks[1].to)
 						);
 					}
 				}

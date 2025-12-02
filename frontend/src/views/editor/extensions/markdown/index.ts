@@ -12,6 +12,8 @@ import { horizontalRule } from './plugins/horizontal-rule';
 import { inlineCode } from './plugins/inline-code';
 import { subscriptSuperscript } from './plugins/subscript-superscript';
 import { highlight } from './plugins/highlight';
+import { insert } from './plugins/insert';
+import { math } from './plugins/math';
 import { footnote } from './plugins/footnote';
 
 /**
@@ -31,6 +33,8 @@ export const markdownExtensions: Extension = [
 	inlineCode(),
 	subscriptSuperscript(),
 	highlight(),
+	insert(),
+	math(),
 	footnote(),
 ];
 

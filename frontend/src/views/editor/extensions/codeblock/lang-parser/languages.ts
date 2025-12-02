@@ -10,6 +10,8 @@ import {StandardSQL} from "@codemirror/lang-sql";
 import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
 import {Subscript, Superscript, Table} from "@lezer/markdown";
 import {Highlight} from "@/views/editor/extensions/markdown/syntax/highlight";
+import {Insert} from "@/views/editor/extensions/markdown/syntax/insert";
+import {Math} from "@/views/editor/extensions/markdown/syntax/math";
 import {Footnote} from "@/views/editor/extensions/markdown/syntax/footnote";
 import {javaLanguage} from "@codemirror/lang-java";
 import {phpLanguage} from "@codemirror/lang-php";
@@ -116,7 +118,7 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("md", "Markdown", markdown({
         base: markdownLanguage,
-        extensions: [Subscript, Superscript, Highlight, Footnote, Table],
+        extensions: [Subscript, Superscript, Highlight, Insert, Math, Footnote, Table],
         completeHTMLTags: true,
         pasteURLAsLink: true,
         htmlTagLanguage: html({

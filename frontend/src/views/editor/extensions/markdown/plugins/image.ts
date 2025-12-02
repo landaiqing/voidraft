@@ -116,19 +116,27 @@ const imageHoverTooltip = hoverTooltip(
 			arrow: true,
 			create: () => {
 				const dom = document.createElement('div');
-				dom.className = 'cm-image-tooltip';
+				dom.className = 'cm-image-tooltip cm-image-loading';
+
+				const spinner = document.createElement('span');
+				spinner.className = 'cm-image-spinner';
 
 				const imgEl = document.createElement('img');
 				imgEl.src = img.src;
 				imgEl.alt = img.alt;
 
+				imgEl.onload = () => {
+					dom.classList.remove('cm-image-loading');
+				};
 				imgEl.onerror = () => {
+					spinner.remove();
 					imgEl.remove();
 					dom.textContent = 'Failed to load image';
+					dom.classList.remove('cm-image-loading');
 					dom.classList.add('cm-image-tooltip-error');
 				};
 
-				dom.append(imgEl);
+				dom.append(spinner, imgEl);
 				return { dom };
 			}
 		};
@@ -150,14 +158,49 @@ const theme = EditorView.baseTheme({
 	},
 	'.cm-image-indicator:hover': { opacity: '1' },
 	'.cm-image-tooltip': {
-		background: 'var(--bg-secondary)',
+		position: 'relative',
+		background: `
+			linear-gradient(45deg, #e0e0e0 25%, transparent 25%),
+			linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+			linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
+			linear-gradient(-45deg, transparent 75%, #e0e0e0 75%)
+		`,
+		backgroundColor: '#fff',
+		backgroundSize: '12px 12px',
+		backgroundPosition: '0 0, 0 6px, 6px -6px, -6px 0px',
 		border: '1px solid var(--border-color)',
 		boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
 		'& img': {
 			display: 'block',
 			maxWidth: '60vw',
-			maxHeight: '50vh'
+			maxHeight: '50vh',
+			opacity: '1',
+			transition: 'opacity 0.15s ease-out'
 		}
+	},
+	'.cm-image-loading': {
+		minWidth: '48px',
+		minHeight: '48px',
+		'& img': { opacity: '0' }
+	},
+	'.cm-image-spinner': {
+		position: 'absolute',
+		top: '50%',
+		left: '50%',
+		width: '16px',
+		height: '16px',
+		marginTop: '-8px',
+		marginLeft: '-8px',
+		border: '2px solid #ccc',
+		borderTopColor: '#666',
+		borderRadius: '50%',
+		animation: 'cm-spin 0.5s linear infinite'
+	},
+	'.cm-image-tooltip:not(.cm-image-loading) .cm-image-spinner': {
+		display: 'none'
+	},
+	'@keyframes cm-spin': {
+		to: { transform: 'rotate(360deg)' }
 	},
 	'.cm-image-tooltip-error': {
 		padding: '16px 24px',
@@ -169,8 +212,8 @@ const theme = EditorView.baseTheme({
 		borderBottomColor: 'var(--border-color) !important'
 	},
 	'.cm-tooltip-arrow:after': {
-		borderTopColor: 'var(--bg-secondary) !important',
-		borderBottomColor: 'var(--bg-secondary) !important'
+		borderTopColor: '#fff !important',
+		borderBottomColor: '#fff !important'
 	}
 });
 
