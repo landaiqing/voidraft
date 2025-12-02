@@ -115,6 +115,10 @@ const atomicNoteBlock = ViewPlugin.fromClass(
 
 /**
  * 块背景层 - 修复高度计算问题
+ * 
+ * 使用 lineBlockAt 获取行坐标，而不是 coordsAtPos 获取字符坐标。
+ * 这样即使某些字符被隐藏（如 heading 的 # 标记 fontSize: 0），
+ * 行的坐标也不会受影响，边界线位置正确。
  */
 const blockLayer = layer({
   above: false,
@@ -135,14 +139,17 @@ const blockLayer = layer({
         return;
       }
       
-      // view.coordsAtPos 如果编辑器不可见则返回 null
-      const fromCoordsTop = view.coordsAtPos(Math.max(block.content.from, view.visibleRanges[0].from))?.top;
-      let toCoordsBottom = view.coordsAtPos(Math.min(block.content.to, view.visibleRanges[view.visibleRanges.length - 1].to))?.bottom;
+      const fromPos = Math.max(block.content.from, view.visibleRanges[0].from);
+      const toPos = Math.min(block.content.to, view.visibleRanges[view.visibleRanges.length - 1].to);
       
-      if (fromCoordsTop === undefined || toCoordsBottom === undefined) {
-        idx++;
-        return;
-      }
+      // 使用 lineBlockAt 获取行的坐标，不受字符样式（如 fontSize: 0）影响
+      const fromLineBlock = view.lineBlockAt(fromPos);
+      const toLineBlock = view.lineBlockAt(toPos);
+      
+      // lineBlockAt 返回的 top 是相对于内容区域的偏移
+      // 转换为视口坐标进行后续计算
+      const fromCoordsTop = fromLineBlock.top + view.documentTop;
+      let toCoordsBottom = toLineBlock.bottom + view.documentTop;
       
       // 对最后一个块进行特殊处理，让它直接延伸到底部
       if (idx === blocks.length - 1) {
@@ -151,7 +158,7 @@ const blockLayer = layer({
         
         // 让最后一个块直接延伸到编辑器底部
         if (contentBottom < editorHeight) {
-          const extraHeight = editorHeight - contentBottom-10;
+          const extraHeight = editorHeight - contentBottom - 10;
           toCoordsBottom += extraHeight;
         }
       }

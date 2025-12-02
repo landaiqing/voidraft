@@ -5,9 +5,14 @@
 import {jsonLanguage} from "@codemirror/lang-json";
 import {pythonLanguage} from "@codemirror/lang-python";
 import {javascriptLanguage, typescriptLanguage} from "@codemirror/lang-javascript";
-import {htmlLanguage} from "@codemirror/lang-html";
+import {html, htmlLanguage} from "@codemirror/lang-html";
 import {StandardSQL} from "@codemirror/lang-sql";
-import {markdownLanguage} from "@codemirror/lang-markdown";
+import {markdown, markdownLanguage} from "@codemirror/lang-markdown";
+import {Subscript, Superscript, Table} from "@lezer/markdown";
+import {Highlight} from "@/views/editor/extensions/markdown/syntax/highlight";
+import {Insert} from "@/views/editor/extensions/markdown/syntax/insert";
+import {Math} from "@/views/editor/extensions/markdown/syntax/math";
+import {Footnote} from "@/views/editor/extensions/markdown/syntax/footnote";
 import {javaLanguage} from "@codemirror/lang-java";
 import {phpLanguage} from "@codemirror/lang-php";
 import {cssLanguage} from "@codemirror/lang-css";
@@ -22,9 +27,9 @@ import {wastLanguage} from "@codemirror/lang-wast";
 import {sassLanguage} from "@codemirror/lang-sass";
 import {lessLanguage} from "@codemirror/lang-less";
 import {angularLanguage} from "@codemirror/lang-angular";
-import { svelteLanguage } from "@replit/codemirror-lang-svelte";
-import { httpLanguage } from "@/views/editor/extensions/httpclient/language/http-language";
-import { mermaidLanguage } from '@/views/editor/language/mermaid';
+import {svelteLanguage} from "@replit/codemirror-lang-svelte";
+import {httpLanguage} from "@/views/editor/extensions/httpclient/language/http-language";
+import {mermaidLanguage} from '@/views/editor/language/mermaid';
 import {StreamLanguage} from "@codemirror/language";
 import {ruby} from "@codemirror/legacy-modes/mode/ruby";
 import {shell} from "@codemirror/legacy-modes/mode/shell";
@@ -64,6 +69,7 @@ import dartPrettierPlugin from "@/common/prettier/plugins/dart";
 import luaPrettierPlugin from "@/common/prettier/plugins/lua";
 import webPrettierPlugin from "@/common/prettier/plugins/web";
 import * as prettierPluginEstree from "prettier/plugins/estree";
+import {languages} from "@codemirror/language-data";
 
 /**
  * 语言信息类
@@ -110,7 +116,19 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "sql",
         plugins: [sqlPrettierPlugin]
     }),
-    new LanguageInfo("md", "Markdown", markdownLanguage.parser, ["md"], {
+    new LanguageInfo("md", "Markdown", markdown({
+        base: markdownLanguage,
+        extensions: [Subscript, Superscript, Highlight, Insert, Math, Footnote, Table],
+        completeHTMLTags: true,
+        pasteURLAsLink: true,
+        htmlTagLanguage: html({
+            matchClosingTags: true,
+            autoCloseTags: true
+        }),
+        addKeymap: true,
+        codeLanguages: languages,
+
+    }).language.parser, ["md"], {
         parser: "markdown",
         plugins: [markdownPrettierPlugin]
     }),

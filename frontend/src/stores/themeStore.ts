@@ -138,7 +138,6 @@ export const useThemeStore = defineStore('theme', () => {
 
   const refreshEditorTheme = () => {
     applyThemeToDOM(currentTheme.value);
-
     const editorStore = useEditorStore();
     editorStore?.applyThemeSettings();
   };

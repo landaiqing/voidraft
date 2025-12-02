@@ -1,43 +1,19 @@
 import {
     AppConfig,
-    AppearanceConfig,
-    EditingConfig,
-    GeneralConfig,
+    AuthMethod,
     LanguageType,
     SystemThemeType,
     TabType,
-    UpdatesConfig,
-    UpdateSourceType,
-    GitBackupConfig,
-    AuthMethod
+    UpdateSourceType
 } from '@/../bindings/voidraft/internal/models/models';
 import {FONT_OPTIONS} from './fonts';
 
-// 配置键映射和限制的类型定义
-export type GeneralConfigKeyMap = {
-    readonly [K in keyof GeneralConfig]: string;
-};
-
-export type EditingConfigKeyMap = {
-    readonly [K in keyof EditingConfig]: string;
-};
-
-export type AppearanceConfigKeyMap = {
-    readonly [K in keyof AppearanceConfig]: string;
-};
-
-export type UpdatesConfigKeyMap = {
-    readonly [K in keyof UpdatesConfig]: string;
-};
-
-export type BackupConfigKeyMap = {
-    readonly [K in keyof GitBackupConfig]: string;
-};
-
 export type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
+export type ConfigSection = 'general' | 'editing' | 'appearance' | 'updates' | 'backup';
 
-// 配置键映射
-export const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
+// 统一配置键映射（平级展开）
+export const CONFIG_KEY_MAP = {
+    // general
     alwaysOnTop: 'general.alwaysOnTop',
     dataPath: 'general.dataPath',
     enableSystemTray: 'general.enableSystemTray',
@@ -47,9 +23,7 @@ export const GENERAL_CONFIG_KEY_MAP: GeneralConfigKeyMap = {
     enableWindowSnap: 'general.enableWindowSnap',
     enableLoadingAnimation: 'general.enableLoadingAnimation',
     enableTabs: 'general.enableTabs',
-} as const;
-
-export const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
+    // editing
     fontSize: 'editing.fontSize',
     fontFamily: 'editing.fontFamily',
     fontWeight: 'editing.fontWeight',
@@ -57,16 +31,12 @@ export const EDITING_CONFIG_KEY_MAP: EditingConfigKeyMap = {
     enableTabIndent: 'editing.enableTabIndent',
     tabSize: 'editing.tabSize',
     tabType: 'editing.tabType',
-    autoSaveDelay: 'editing.autoSaveDelay'
-} as const;
-
-export const APPEARANCE_CONFIG_KEY_MAP: AppearanceConfigKeyMap = {
+    autoSaveDelay: 'editing.autoSaveDelay',
+    // appearance
     language: 'appearance.language',
     systemTheme: 'appearance.systemTheme',
-    currentTheme: 'appearance.currentTheme'
-} as const;
-
-export const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
+    currentTheme: 'appearance.currentTheme',
+    // updates
     version: 'updates.version',
     autoUpdate: 'updates.autoUpdate',
     primarySource: 'updates.primarySource',
@@ -74,10 +44,8 @@ export const UPDATES_CONFIG_KEY_MAP: UpdatesConfigKeyMap = {
     backupBeforeUpdate: 'updates.backupBeforeUpdate',
     updateTimeout: 'updates.updateTimeout',
     github: 'updates.github',
-    gitea: 'updates.gitea'
-} as const;
-
-export const BACKUP_CONFIG_KEY_MAP: BackupConfigKeyMap = {
+    gitea: 'updates.gitea',
+    // backup
     enabled: 'backup.enabled',
     repo_url: 'backup.repo_url',
     auth_method: 'backup.auth_method',
@@ -89,6 +57,8 @@ export const BACKUP_CONFIG_KEY_MAP: BackupConfigKeyMap = {
     backup_interval: 'backup.backup_interval',
     auto_backup: 'backup.auto_backup',
 } as const;
+
+export type ConfigKey = keyof typeof CONFIG_KEY_MAP;
 
 // 配置限制
 export const CONFIG_LIMITS = {
