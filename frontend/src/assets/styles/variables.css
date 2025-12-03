@@ -64,6 +64,12 @@
 
   /* Markdown 高亮样式 */
   --cm-highlight-background: rgba(250, 204, 21, 0.35);
+
+  /* Markdown 表格样式 - 暗色主题 */
+  --cm-table-bg: rgba(35, 40, 52, 0.5);
+  --cm-table-header-bg: rgba(46, 51, 69, 0.7);
+  --cm-table-border: rgba(75, 85, 99, 0.35);
+  --cm-table-row-hover: rgba(55, 62, 78, 0.5);
 }
 
 /* 亮色主题 */
@@ -125,6 +131,12 @@
 
   /* Markdown 高亮样式 */
   --cm-highlight-background: rgba(253, 224, 71, 0.45);
+
+  /* Markdown 表格样式 - 亮色主题 */
+  --cm-table-bg: oklch(97.5% 0.006 255);
+  --cm-table-header-bg: oklch(94% 0.01 255);
+  --cm-table-border: oklch(88% 0.008 255);
+  --cm-table-row-hover: oklch(95% 0.008 255);
 }
 
 /* 跟随系统的浅色偏好 */
@@ -187,5 +199,11 @@
 
     /* Markdown 高亮样式 */
     --cm-highlight-background: rgba(253, 224, 71, 0.45);
+
+    /* Markdown 表格样式 - 亮色主题 */
+    --cm-table-bg: oklch(97.5% 0.006 255);
+    --cm-table-header-bg: oklch(94% 0.01 255);
+    --cm-table-border: oklch(88% 0.008 255);
+    --cm-table-row-hover: oklch(95% 0.008 255);
   }
 }

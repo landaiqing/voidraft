@@ -1,4 +1,4 @@
-import { Extension, Range } from '@codemirror/state';
+import { Extension, RangeSetBuilder } from '@codemirror/state';
 import {
 	ViewPlugin,
 	DecorationSet,
@@ -8,21 +8,26 @@ import {
 	WidgetType
 } from '@codemirror/view';
 import { syntaxTree } from '@codemirror/language';
-import { isCursorInRange } from '../util';
+import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
 
 /** Code block node types in syntax tree */
-const CODE_BLOCK_TYPES = ['FencedCode', 'CodeBlock'] as const;
+const CODE_BLOCK_TYPES = new Set(['FencedCode', 'CodeBlock']);
 
-/** Copy button icon SVGs (size controlled by CSS) */
+/** Copy button icon SVGs */
 const ICON_COPY = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>`;
 const ICON_CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
-/** Cache for code block metadata */
-interface CodeBlockData {
+/** Pre-computed line decoration classes */
+const LINE_DECO_NORMAL = Decoration.line({ class: 'cm-codeblock' });
+const LINE_DECO_BEGIN = Decoration.line({ class: 'cm-codeblock cm-codeblock-begin' });
+const LINE_DECO_END = Decoration.line({ class: 'cm-codeblock cm-codeblock-end' });
+const LINE_DECO_SINGLE = Decoration.line({ class: 'cm-codeblock cm-codeblock-begin cm-codeblock-end' });
+
+/** Code block metadata for widget */
+interface CodeBlockMeta {
 	from: number;
 	to: number;
 	language: string | null;
-	content: string;
 }
 
 /**
@@ -32,36 +37,32 @@ interface CodeBlockData {
  * - Adds background styling to code blocks
  * - Shows language label + copy button when language is specified
  * - Hides markers when cursor is outside block
- * - Optimized with viewport-only rendering
+ * - Optimized with viewport-only rendering and minimal rebuilds
  */
 export const codeblock = (): Extension => [codeBlockPlugin, baseTheme];
 
 /**
  * Widget for displaying language label and copy button.
- * Handles click events directly on the button element.
+ * Content is computed lazily on copy action.
  */
 class CodeBlockInfoWidget extends WidgetType {
-	constructor(
-		readonly data: CodeBlockData,
-		readonly view: EditorView
-	) {
+	constructor(readonly meta: CodeBlockMeta) {
 		super();
 	}
 
 	eq(other: CodeBlockInfoWidget): boolean {
-		return other.data.from === this.data.from &&
-			other.data.language === this.data.language;
+		return other.meta.from === this.meta.from &&
+			other.meta.language === this.meta.language;
 	}
 
-	toDOM(): HTMLElement {
+	toDOM(view: EditorView): HTMLElement {
 		const container = document.createElement('span');
 		container.className = 'cm-code-block-info';
 
-		// Only show language label if specified
-		if (this.data.language) {
+		if (this.meta.language) {
 			const lang = document.createElement('span');
 			lang.className = 'cm-code-block-lang';
-			lang.textContent = this.data.language;
+			lang.textContent = this.meta.language;
 			container.append(lang);
 		}
 
@@ -70,14 +71,12 @@ class CodeBlockInfoWidget extends WidgetType {
 		btn.title = 'Copy';
 		btn.innerHTML = ICON_COPY;
 
-		// Direct click handler - more reliable than eventHandlers
 		btn.addEventListener('click', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
-			this.handleCopy(btn);
+			this.copyContent(view, btn);
 		});
 
-		// Prevent mousedown from affecting editor
 		btn.addEventListener('mousedown', (e) => {
 			e.preventDefault();
 			e.stopPropagation();
@@ -87,8 +86,13 @@ class CodeBlockInfoWidget extends WidgetType {
 		return container;
 	}
 
-	private handleCopy(btn: HTMLButtonElement): void {
-		const content = getCodeContent(this.view, this.data.from, this.data.to);
+	/** Lazy content extraction and copy */
+	private copyContent(view: EditorView, btn: HTMLButtonElement): void {
+		const { from, to } = this.meta;
+		const text = view.state.doc.sliceString(from, to);
+		const lines = text.split('\n');
+		const content = lines.length >= 2 ? lines.slice(1, -1).join('\n') : '';
+		
 		if (!content) return;
 
 		navigator.clipboard.writeText(content).then(() => {
@@ -99,134 +103,205 @@ class CodeBlockInfoWidget extends WidgetType {
 		});
 	}
 
-	// Ignore events to prevent editor focus changes
 	ignoreEvent(): boolean {
 		return true;
 	}
 }
 
-/**
- * Extract language from code block node.
- */
-function getLanguage(view: EditorView, node: any, offset: number): string | null {
-	let lang: string | null = null;
-	node.toTree().iterate({
-		enter: ({ type, from, to }) => {
-			if (type.name === 'CodeInfo') {
-				lang = view.state.doc.sliceString(offset + from, offset + to).trim();
-			}
-		}
-	});
-	return lang;
+/** Parsed code block info from single tree traversal */
+interface ParsedBlock {
+	from: number;
+	to: number;
+	language: string | null;
+	marks: RangeTuple[]; // CodeMark and CodeInfo positions to hide
 }
 
 /**
- * Extract code content (without fence markers).
+ * Parse a code block node in a single traversal.
+ * Extracts language and mark positions together.
  */
-function getCodeContent(view: EditorView, from: number, to: number): string {
-	const lines = view.state.doc.sliceString(from, to).split('\n');
-	return lines.length >= 2 ? lines.slice(1, -1).join('\n') : '';
+function parseCodeBlock(view: EditorView, nodeFrom: number, nodeTo: number, node: any): ParsedBlock {
+	let language: string | null = null;
+	const marks: RangeTuple[] = [];
+
+	node.toTree().iterate({
+		enter: ({ type, from, to }) => {
+			const absFrom = nodeFrom + from;
+			const absTo = nodeFrom + to;
+			
+			if (type.name === 'CodeInfo') {
+				language = view.state.doc.sliceString(absFrom, absTo).trim();
+				marks.push([absFrom, absTo]);
+			} else if (type.name === 'CodeMark') {
+				marks.push([absFrom, absTo]);
+			}
+		}
+	});
+
+	return { from: nodeFrom, to: nodeTo, language, marks };
+}
+
+/**
+ * Find which code block the cursor is in (returns block start position, or -1 if not in any).
+ */
+function getCursorBlockPosition(view: EditorView, blocks: RangeTuple[]): number {
+	const { ranges } = view.state.selection;
+	for (const sel of ranges) {
+		const selRange: RangeTuple = [sel.from, sel.to];
+		for (const block of blocks) {
+			if (checkRangeOverlap(selRange, block)) {
+				return block[0]; // Return the block's start position as identifier
+			}
+		}
+	}
+	return -1;
+}
+
+/**
+ * Collect all code block ranges in visible viewport.
+ */
+function collectCodeBlockRanges(view: EditorView): RangeTuple[] {
+	const ranges: RangeTuple[] = [];
+	const seen = new Set<number>();
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, from: nodeFrom, to: nodeTo }) => {
+				if (!CODE_BLOCK_TYPES.has(type.name)) return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
+				ranges.push([nodeFrom, nodeTo]);
+			}
+		});
+	}
+
+	return ranges;
 }
 
 /**
  * Build decorations for visible code blocks.
+ * Uses RangeSetBuilder for efficient sorted construction.
  */
-function buildDecorations(view: EditorView): { decorations: DecorationSet; blocks: Map<number, CodeBlockData> } {
-	const decorations: Range<Decoration>[] = [];
-	const blocks = new Map<number, CodeBlockData>();
-	const seen = new Set<string>();
+function buildDecorations(view: EditorView): DecorationSet {
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { pos: number; endPos?: number; deco: Decoration; isWidget?: boolean; isReplace?: boolean }[] = [];
+	const seen = new Set<number>();
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
 			from,
 			to,
 			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
-				if (!CODE_BLOCK_TYPES.includes(type.name as any)) return;
+				if (!CODE_BLOCK_TYPES.has(type.name)) return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
 
-				const key = `${nodeFrom}:${nodeTo}`;
-				if (seen.has(key)) return;
-				seen.add(key);
-
-				const inBlock = isCursorInRange(view.state, [nodeFrom, nodeTo]);
+				// Check if cursor is in this block
+				const inBlock = checkRangeOverlap(
+					[nodeFrom, nodeTo],
+					[view.state.selection.main.from, view.state.selection.main.to]
+				);
 				if (inBlock) return;
 
-				const language = getLanguage(view, node, nodeFrom);
+				// Parse block in single traversal
+				const block = parseCodeBlock(view, nodeFrom, nodeTo, node);
 				const startLine = view.state.doc.lineAt(nodeFrom);
 				const endLine = view.state.doc.lineAt(nodeTo);
 
+				// Add line decorations
 				for (let num = startLine.number; num <= endLine.number; num++) {
 					const line = view.state.doc.line(num);
-					const pos: string[] = ['cm-codeblock'];
-					if (num === startLine.number) pos.push('cm-codeblock-begin');
-					if (num === endLine.number) pos.push('cm-codeblock-end');
-
-					decorations.push(
-						Decoration.line({ class: pos.join(' ') }).range(line.from)
-					);
+					let deco: Decoration;
+					
+					if (startLine.number === endLine.number) {
+						deco = LINE_DECO_SINGLE;
+					} else if (num === startLine.number) {
+						deco = LINE_DECO_BEGIN;
+					} else if (num === endLine.number) {
+						deco = LINE_DECO_END;
+					} else {
+						deco = LINE_DECO_NORMAL;
+					}
+					
+					items.push({ pos: line.from, deco });
 				}
 
-				// Info widget with copy button (always show, language label only if specified)
-				const content = getCodeContent(view, nodeFrom, nodeTo);
-				const data: CodeBlockData = { from: nodeFrom, to: nodeTo, language, content };
-				blocks.set(nodeFrom, data);
-
-				decorations.push(
-					Decoration.widget({
-						widget: new CodeBlockInfoWidget(data, view),
+				// Add info widget
+				const meta: CodeBlockMeta = {
+					from: nodeFrom,
+					to: nodeTo,
+					language: block.language
+				};
+				items.push({
+					pos: startLine.to,
+					deco: Decoration.widget({
+						widget: new CodeBlockInfoWidget(meta),
 						side: 1
-					}).range(startLine.to)
-				);
-
-				// Hide markers
-				node.toTree().iterate({
-					enter: ({ type: t, from: f, to: t2 }) => {
-						if (t.name === 'CodeInfo' || t.name === 'CodeMark') {
-							decorations.push(Decoration.replace({}).range(nodeFrom + f, nodeFrom + t2));
-						}
-					}
+					}),
+					isWidget: true
 				});
+
+				// Hide marks
+				for (const [mFrom, mTo] of block.marks) {
+					items.push({ pos: mFrom, endPos: mTo, deco: invisibleDecoration, isReplace: true });
+				}
 			}
 		});
 	}
 
-	return { decorations: Decoration.set(decorations, true), blocks };
+	// Sort by position and add to builder
+	items.sort((a, b) => {
+		if (a.pos !== b.pos) return a.pos - b.pos;
+		// Widgets should come after line decorations at same position
+		return (a.isWidget ? 1 : 0) - (b.isWidget ? 1 : 0);
+	});
+
+	for (const item of items) {
+		if (item.isReplace && item.endPos !== undefined) {
+			builder.add(item.pos, item.endPos, item.deco);
+		} else {
+			builder.add(item.pos, item.pos, item.deco);
+		}
+	}
+
+	return builder.finish();
 }
 
 /**
- * Code block plugin with optimized updates.
+ * Code block plugin with optimized update detection.
  */
 class CodeBlockPluginClass {
 	decorations: DecorationSet;
-	blocks: Map<number, CodeBlockData>;
-	private lastHead = -1;
+	private blockRanges: RangeTuple[] = [];
+	private cursorBlockPos = -1; // Which block the cursor is in (-1 = none)
 
 	constructor(view: EditorView) {
-		const result = buildDecorations(view);
-		this.decorations = result.decorations;
-		this.blocks = result.blocks;
-		this.lastHead = view.state.selection.main.head;
+		this.blockRanges = collectCodeBlockRanges(view);
+		this.cursorBlockPos = getCursorBlockPosition(view, this.blockRanges);
+		this.decorations = buildDecorations(view);
 	}
 
 	update(update: ViewUpdate): void {
 		const { docChanged, viewportChanged, selectionSet } = update;
 
-		// Skip rebuild if cursor stayed on same line
-		if (selectionSet && !docChanged && !viewportChanged) {
-			const newHead = update.state.selection.main.head;
-			const oldLine = update.startState.doc.lineAt(this.lastHead).number;
-			const newLine = update.state.doc.lineAt(newHead).number;
-
-			if (oldLine === newLine) {
-				this.lastHead = newHead;
-				return;
-			}
+		// Always rebuild on doc or viewport change
+		if (docChanged || viewportChanged) {
+			this.blockRanges = collectCodeBlockRanges(update.view);
+			this.cursorBlockPos = getCursorBlockPosition(update.view, this.blockRanges);
+			this.decorations = buildDecorations(update.view);
+			return;
 		}
 
-		if (docChanged || viewportChanged || selectionSet) {
-			const result = buildDecorations(update.view);
-			this.decorations = result.decorations;
-			this.blocks = result.blocks;
-			this.lastHead = update.state.selection.main.head;
+		// For selection changes, only rebuild if cursor moves to a different block
+		if (selectionSet) {
+			const newBlockPos = getCursorBlockPosition(update.view, this.blockRanges);
+			
+			if (newBlockPos !== this.cursorBlockPos) {
+				this.cursorBlockPos = newBlockPos;
+				this.decorations = buildDecorations(update.view);
+			}
 		}
 	}
 }
@@ -240,18 +315,17 @@ const codeBlockPlugin = ViewPlugin.fromClass(CodeBlockPluginClass, {
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-codeblock': {
-		backgroundColor: 'var(--cm-codeblock-bg)'
+		backgroundColor: 'var(--cm-codeblock-bg)',
+		fontFamily: 'inherit',
 	},
 	'.cm-codeblock-begin': {
 		borderTopLeftRadius: 'var(--cm-codeblock-radius)',
 		borderTopRightRadius: 'var(--cm-codeblock-radius)',
 		position: 'relative',
-		boxShadow: 'inset 0 1px 0 var(--text-primary)'
 	},
 	'.cm-codeblock-end': {
 		borderBottomLeftRadius: 'var(--cm-codeblock-radius)',
 		borderBottomRightRadius: 'var(--cm-codeblock-radius)',
-		boxShadow: 'inset 0 -1px 0 var(--text-primary)'
 	},
 	'.cm-code-block-info': {
 		position: 'absolute',

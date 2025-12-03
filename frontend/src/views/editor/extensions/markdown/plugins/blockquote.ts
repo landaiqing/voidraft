@@ -5,9 +5,12 @@ import {
 	ViewPlugin,
 	ViewUpdate
 } from '@codemirror/view';
-import { Range } from '@codemirror/state';
+import { RangeSetBuilder } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
-import { isCursorInRange, invisibleDecoration } from '../util';
+import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
+
+/** Pre-computed line decoration */
+const LINE_DECO = Decoration.line({ class: 'cm-blockquote' });
 
 /**
  * Blockquote plugin.
@@ -22,22 +25,69 @@ export function blockquote() {
 }
 
 /**
- * Build blockquote decorations.
+ * Collect blockquote ranges in visible viewport.
  */
-function buildBlockQuoteDecorations(view: EditorView): DecorationSet {
-	const decorations: Range<Decoration>[] = [];
+function collectBlockquoteRanges(view: EditorView): RangeTuple[] {
+	const ranges: RangeTuple[] = [];
+	const seen = new Set<number>();
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter(node) {
+				if (node.type.name !== 'Blockquote') return;
+				if (seen.has(node.from)) return;
+				seen.add(node.from);
+				ranges.push([node.from, node.to]);
+				return false; // Don't recurse into nested
+			}
+		});
+	}
+
+	return ranges;
+}
+
+/**
+ * Get cursor's blockquote position (-1 if not in any).
+ */
+function getCursorBlockquotePos(view: EditorView, ranges: RangeTuple[]): number {
+	const sel = view.state.selection.main;
+	const selRange: RangeTuple = [sel.from, sel.to];
+	
+	for (const range of ranges) {
+		if (checkRangeOverlap(selRange, range)) {
+			return range[0];
+		}
+	}
+	return -1;
+}
+
+/**
+ * Build blockquote decorations for visible viewport.
+ */
+function buildDecorations(view: EditorView): DecorationSet {
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { pos: number; endPos?: number; deco: Decoration }[] = [];
 	const processedLines = new Set<number>();
+	const seen = new Set<number>();
 
-	syntaxTree(view.state).iterate({
-		enter(node) {
-			if (node.type.name !== 'Blockquote') return;
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter(node) {
+				if (node.type.name !== 'Blockquote') return;
+				if (seen.has(node.from)) return;
+				seen.add(node.from);
 
-			const cursorInBlockquote = isCursorInRange(view.state, [node.from, node.to]);
+				const inBlock = checkRangeOverlap(
+					[node.from, node.to],
+					[view.state.selection.main.from, view.state.selection.main.to]
+				);
+				if (inBlock) return false;
 
-			// Only add decorations when cursor is outside the blockquote
-			// This allows selection highlighting to be visible when editing
-			if (!cursorInBlockquote) {
-				// Add line decoration for each line in the blockquote
+				// Line decorations
 				const startLine = view.state.doc.lineAt(node.from).number;
 				const endLine = view.state.doc.lineAt(node.to).number;
 
@@ -45,44 +95,67 @@ function buildBlockQuoteDecorations(view: EditorView): DecorationSet {
 					if (!processedLines.has(i)) {
 						processedLines.add(i);
 						const line = view.state.doc.line(i);
-						decorations.push(
-							Decoration.line({ class: 'cm-blockquote' }).range(line.from)
-						);
+						items.push({ pos: line.from, deco: LINE_DECO });
 					}
 				}
 
-				// Hide quote marks when cursor is outside
+				// Hide quote marks
 				const cursor = node.node.cursor();
 				cursor.iterate((child) => {
 					if (child.type.name === 'QuoteMark') {
-						decorations.push(
-							invisibleDecoration.range(child.from, child.to)
-						);
+						items.push({ pos: child.from, endPos: child.to, deco: invisibleDecoration });
 					}
 				});
+
+				return false;
 			}
+		});
+	}
 
-			// Don't recurse into nested blockquotes (handled by outer iteration)
-			return false;
+	// Sort and build
+	items.sort((a, b) => a.pos - b.pos);
+	
+	for (const item of items) {
+		if (item.endPos !== undefined) {
+			builder.add(item.pos, item.endPos, item.deco);
+		} else {
+			builder.add(item.pos, item.pos, item.deco);
 		}
-	});
+	}
 
-	return Decoration.set(decorations, true);
+	return builder.finish();
 }
 
 /**
- * Blockquote plugin class.
+ * Blockquote plugin with optimized updates.
  */
 class BlockQuotePlugin {
 	decorations: DecorationSet;
+	private blockRanges: RangeTuple[] = [];
+	private cursorBlockPos = -1;
 
 	constructor(view: EditorView) {
-		this.decorations = buildBlockQuoteDecorations(view);
+		this.blockRanges = collectBlockquoteRanges(view);
+		this.cursorBlockPos = getCursorBlockquotePos(view, this.blockRanges);
+		this.decorations = buildDecorations(view);
 	}
 
 	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged || update.selectionSet) {
-			this.decorations = buildBlockQuoteDecorations(update.view);
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		if (docChanged || viewportChanged) {
+			this.blockRanges = collectBlockquoteRanges(update.view);
+			this.cursorBlockPos = getCursorBlockquotePos(update.view, this.blockRanges);
+			this.decorations = buildDecorations(update.view);
+			return;
+		}
+
+		if (selectionSet) {
+			const newPos = getCursorBlockquotePos(update.view, this.blockRanges);
+			if (newPos !== this.cursorBlockPos) {
+				this.cursorBlockPos = newPos;
+				this.decorations = buildDecorations(update.view);
+			}
 		}
 	}
 }

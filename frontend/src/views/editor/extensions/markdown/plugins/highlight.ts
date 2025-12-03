@@ -1,4 +1,4 @@
-import { Extension, Range } from '@codemirror/state';
+import { Extension, RangeSetBuilder } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import {
 	ViewPlugin,
@@ -7,104 +7,150 @@ import {
 	EditorView,
 	ViewUpdate
 } from '@codemirror/view';
-import { isCursorInRange, invisibleDecoration } from '../util';
+import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
+
+/** Mark decoration for highlighted content */
+const highlightMarkDecoration = Decoration.mark({ class: 'cm-highlight' });
 
 /**
  * Highlight plugin using syntax tree.
  *
- * Uses the custom Highlight extension to detect:
- * - Highlight: ==text== → renders as highlighted text
- *
- * Examples:
- * - This is ==important== text → This is <mark>important</mark> text
- * - Please ==review this section== carefully
+ * Detects ==text== and renders as highlighted text.
  */
-export const highlight = (): Extension => [
-	highlightPlugin,
-	baseTheme
-];
+export const highlight = (): Extension => [highlightPlugin, baseTheme];
 
 /**
- * Build decorations for highlight using syntax tree.
+ * Collect all highlight ranges in visible viewport.
+ */
+function collectHighlightRanges(view: EditorView): RangeTuple[] {
+	const ranges: RangeTuple[] = [];
+	const seen = new Set<number>();
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, from: nodeFrom, to: nodeTo }) => {
+				if (type.name !== 'Highlight') return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
+				ranges.push([nodeFrom, nodeTo]);
+			}
+		});
+	}
+
+	return ranges;
+}
+
+/**
+ * Get which highlight the cursor is in (-1 if none).
+ */
+function getCursorHighlightPos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
+	const selRange: RangeTuple = [selFrom, selTo];
+	
+	for (const range of ranges) {
+		if (checkRangeOverlap(range, selRange)) {
+			return range[0];
+		}
+	}
+	return -1;
+}
+
+/**
+ * Build highlight decorations.
  */
 function buildDecorations(view: EditorView): DecorationSet {
-	const decorations: Range<Decoration>[] = [];
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { from: number; to: number; deco: Decoration }[] = [];
+	const { from: selFrom, to: selTo } = view.state.selection.main;
+	const selRange: RangeTuple = [selFrom, selTo];
+	const seen = new Set<number>();
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
 			from,
 			to,
 			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
-				// Handle Highlight nodes
-				if (type.name === 'Highlight') {
-					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
+				if (type.name !== 'Highlight') return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
 
-					// Get the mark nodes (the == characters)
-					const marks = node.getChildren('HighlightMark');
+				// Skip if cursor is in this highlight
+				if (checkRangeOverlap([nodeFrom, nodeTo], selRange)) return;
 
-					if (!cursorInRange && marks.length >= 2) {
-						// Hide the opening and closing == marks
-						decorations.push(invisibleDecoration.range(marks[0].from, marks[0].to));
-						decorations.push(invisibleDecoration.range(marks[marks.length - 1].from, marks[marks.length - 1].to));
+				const marks = node.getChildren('HighlightMark');
+				if (marks.length < 2) return;
 
-						// Apply highlight style to the content between marks
-						const contentStart = marks[0].to;
-						const contentEnd = marks[marks.length - 1].from;
-						if (contentStart < contentEnd) {
-							decorations.push(
-								Decoration.mark({
-									class: 'cm-highlight'
-								}).range(contentStart, contentEnd)
-							);
-						}
-					}
+				// Hide opening ==
+				items.push({ from: marks[0].from, to: marks[0].to, deco: invisibleDecoration });
+
+				// Apply highlight style to content
+				const contentStart = marks[0].to;
+				const contentEnd = marks[marks.length - 1].from;
+				if (contentStart < contentEnd) {
+					items.push({ from: contentStart, to: contentEnd, deco: highlightMarkDecoration });
 				}
+
+				// Hide closing ==
+				items.push({ from: marks[marks.length - 1].from, to: marks[marks.length - 1].to, deco: invisibleDecoration });
 			}
 		});
 	}
 
-	return Decoration.set(decorations, true);
+	// Sort and add to builder
+	items.sort((a, b) => a.from - b.from);
+	
+	for (const item of items) {
+		builder.add(item.from, item.to, item.deco);
+	}
+
+	return builder.finish();
 }
 
 /**
- * Plugin class with optimized update detection.
+ * Highlight plugin with optimized updates.
  */
 class HighlightPlugin {
 	decorations: DecorationSet;
-	private lastSelectionHead: number = -1;
+	private highlightRanges: RangeTuple[] = [];
+	private cursorHighlightPos = -1;
 
 	constructor(view: EditorView) {
+		this.highlightRanges = collectHighlightRanges(view);
+		const { from, to } = view.state.selection.main;
+		this.cursorHighlightPos = getCursorHighlightPos(this.highlightRanges, from, to);
 		this.decorations = buildDecorations(view);
-		this.lastSelectionHead = view.state.selection.main.head;
 	}
 
 	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged) {
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		if (docChanged || viewportChanged) {
+			this.highlightRanges = collectHighlightRanges(update.view);
+			const { from, to } = update.state.selection.main;
+			this.cursorHighlightPos = getCursorHighlightPos(this.highlightRanges, from, to);
 			this.decorations = buildDecorations(update.view);
-			this.lastSelectionHead = update.state.selection.main.head;
 			return;
 		}
 
-		if (update.selectionSet) {
-			const newHead = update.state.selection.main.head;
-			if (newHead !== this.lastSelectionHead) {
+		if (selectionSet) {
+			const { from, to } = update.state.selection.main;
+			const newPos = getCursorHighlightPos(this.highlightRanges, from, to);
+
+			if (newPos !== this.cursorHighlightPos) {
+				this.cursorHighlightPos = newPos;
 				this.decorations = buildDecorations(update.view);
-				this.lastSelectionHead = newHead;
 			}
 		}
 	}
 }
 
-const highlightPlugin = ViewPlugin.fromClass(
-	HighlightPlugin,
-	{
-		decorations: (v) => v.decorations
-	}
-);
+const highlightPlugin = ViewPlugin.fromClass(HighlightPlugin, {
+	decorations: (v) => v.decorations
+});
 
 /**
  * Base theme for highlight.
- * Uses mark decoration with a subtle background color.
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-highlight': {
@@ -112,4 +158,3 @@ const baseTheme = EditorView.baseTheme({
 		borderRadius: '2px',
 	}
 });
-

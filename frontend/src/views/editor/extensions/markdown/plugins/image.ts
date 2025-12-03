@@ -1,5 +1,14 @@
+/**
+ * Image plugin for CodeMirror.
+ *
+ * Features:
+ * - Identifies markdown images
+ * - Shows indicator icon at the end
+ * - Click to preview image
+ */
+
 import { syntaxTree } from '@codemirror/language';
-import { Extension, Range } from '@codemirror/state';
+import { Extension, Range, StateField, StateEffect, ChangeSet } from '@codemirror/state';
 import {
 	DecorationSet,
 	Decoration,
@@ -7,7 +16,7 @@ import {
 	EditorView,
 	ViewPlugin,
 	ViewUpdate,
-	hoverTooltip,
+	showTooltip,
 	Tooltip
 } from '@codemirror/view';
 
@@ -24,6 +33,25 @@ const ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" vie
 
 function isImageUrl(url: string): boolean {
 	return IMAGE_EXT_RE.test(url) || url.startsWith('data:image/');
+}
+
+/**
+ * Check if document changes affect any of the given regions.
+ */
+function changesAffectRegions(changes: ChangeSet, regions: { from: number; to: number }[]): boolean {
+	if (regions.length === 0) return true;
+	
+	let affected = false;
+	changes.iterChanges((fromA, toA) => {
+		if (affected) return;
+		for (const region of regions) {
+			if (fromA <= region.to && toA >= region.from) {
+				affected = true;
+				return;
+			}
+		}
+	});
+	return affected;
 }
 
 function extractImages(view: EditorView): ImageInfo[] {
@@ -47,23 +75,115 @@ function extractImages(view: EditorView): ImageInfo[] {
 	return result;
 }
 
+/** Effect to toggle tooltip visibility */
+const toggleImageTooltip = StateEffect.define<ImageInfo | null>();
+
+/** Effect to close tooltip */
+const closeImageTooltip = StateEffect.define<null>();
+
+/** StateField to track active tooltip */
+const imageTooltipState = StateField.define<ImageInfo | null>({
+	create: () => null,
+	update(value, tr) {
+		for (const effect of tr.effects) {
+			if (effect.is(toggleImageTooltip)) {
+				// Toggle: if same image, close; otherwise open new
+				if (value && effect.value && value.from === effect.value.from) {
+					return null;
+				}
+				return effect.value;
+			}
+			if (effect.is(closeImageTooltip)) {
+				return null;
+			}
+		}
+		// Close tooltip on document changes
+		if (tr.docChanged) {
+			return null;
+		}
+		return value;
+	},
+	provide: (field) =>
+		showTooltip.from(field, (img): Tooltip | null => {
+			if (!img) return null;
+			return {
+				pos: img.to,
+				above: true,
+				create: () => {
+					const dom = document.createElement('div');
+					dom.className = 'cm-image-tooltip cm-image-loading';
+
+					const spinner = document.createElement('span');
+					spinner.className = 'cm-image-spinner';
+
+					const imgEl = document.createElement('img');
+					imgEl.src = img.src;
+					imgEl.alt = img.alt;
+
+					imgEl.onload = () => {
+						dom.classList.remove('cm-image-loading');
+					};
+					imgEl.onerror = () => {
+						spinner.remove();
+						imgEl.remove();
+						dom.textContent = 'Failed to load image';
+						dom.classList.remove('cm-image-loading');
+						dom.classList.add('cm-image-tooltip-error');
+					};
+
+					dom.append(spinner, imgEl);
+
+					// Prevent clicks inside tooltip from closing it
+					dom.addEventListener('click', (e) => {
+						e.stopPropagation();
+					});
+
+					return { dom };
+				}
+			};
+		})
+});
+
+/**
+ * Indicator widget shown at the end of images.
+ * Clicking toggles the tooltip.
+ */
 class IndicatorWidget extends WidgetType {
 	constructor(readonly info: ImageInfo) {
 		super();
 	}
 
-	toDOM(): HTMLElement {
+	toDOM(view: EditorView): HTMLElement {
 		const el = document.createElement('span');
 		el.className = 'cm-image-indicator';
 		el.innerHTML = ICON;
+		el.title = 'Click to preview image';
+
+		// Click handler to toggle tooltip
+		el.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			view.dispatch({
+				effects: toggleImageTooltip.of(this.info)
+			});
+		});
+
 		return el;
 	}
 
 	eq(other: IndicatorWidget): boolean {
 		return this.info.from === other.info.from && this.info.src === other.info.src;
 	}
+
+	ignoreEvent(): boolean {
+		return false;
+	}
 }
 
+/**
+ * Plugin to manage image decorations.
+ * Optimized with incremental updates when changes don't affect image regions.
+ */
 class ImagePlugin {
 	decorations: DecorationSet;
 	images: ImageInfo[] = [];
@@ -74,9 +194,29 @@ class ImagePlugin {
 	}
 
 	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged) {
+		// Always rebuild on viewport change
+		if (update.viewportChanged) {
 			this.images = extractImages(update.view);
 			this.decorations = this.build();
+			return;
+		}
+		
+		// For document changes, only rebuild if changes affect image regions
+		if (update.docChanged) {
+			const needsRebuild = changesAffectRegions(update.changes, this.images);
+			
+			if (needsRebuild) {
+				this.images = extractImages(update.view);
+				this.decorations = this.build();
+			} else {
+				// Just update positions of existing decorations
+				this.decorations = this.decorations.map(update.changes);
+				this.images = this.images.map(img => ({
+					...img,
+					from: update.changes.mapPos(img.from),
+					to: update.changes.mapPos(img.to)
+				}));
+			}
 		}
 	}
 
@@ -87,62 +227,35 @@ class ImagePlugin {
 		}
 		return Decoration.set(deco, true);
 	}
-
-	getImageAt(pos: number): ImageInfo | null {
-		for (const img of this.images) {
-			if (pos >= img.to && pos <= img.to + 1) {
-				return img;
-			}
-		}
-		return null;
-	}
 }
 
 const imagePlugin = ViewPlugin.fromClass(ImagePlugin, {
 	decorations: (v) => v.decorations
 });
 
-const imageHoverTooltip = hoverTooltip(
-	(view, pos): Tooltip | null => {
-		const plugin = view.plugin(imagePlugin);
-		if (!plugin) return null;
+/**
+ * Close tooltip when clicking outside.
+ */
+const clickOutsideHandler = EditorView.domEventHandlers({
+	click(event, view) {
+		const target = event.target as HTMLElement;
 
-		const img = plugin.getImageAt(pos);
-		if (!img) return null;
+		// Don't close if clicking on indicator or inside tooltip
+		if (target.closest('.cm-image-indicator') || target.closest('.cm-image-tooltip')) {
+			return false;
+		}
 
-		return {
-			pos: img.to,
-			above: true,
-			arrow: true,
-			create: () => {
-				const dom = document.createElement('div');
-				dom.className = 'cm-image-tooltip cm-image-loading';
+		// Close tooltip if one is open
+		const currentTooltip = view.state.field(imageTooltipState);
+		if (currentTooltip) {
+			view.dispatch({
+				effects: closeImageTooltip.of(null)
+			});
+		}
 
-				const spinner = document.createElement('span');
-				spinner.className = 'cm-image-spinner';
-
-				const imgEl = document.createElement('img');
-				imgEl.src = img.src;
-				imgEl.alt = img.alt;
-
-				imgEl.onload = () => {
-					dom.classList.remove('cm-image-loading');
-				};
-				imgEl.onerror = () => {
-					spinner.remove();
-					imgEl.remove();
-					dom.textContent = 'Failed to load image';
-					dom.classList.remove('cm-image-loading');
-					dom.classList.add('cm-image-tooltip-error');
-				};
-
-				dom.append(spinner, imgEl);
-				return { dom };
-			}
-		};
-	},
-	{ hoverTime: 300 }
-);
+		return false;
+	}
+});
 
 const theme = EditorView.baseTheme({
 	'.cm-image-indicator': {
@@ -157,6 +270,7 @@ const theme = EditorView.baseTheme({
 		'& svg': { width: '14px', height: '14px' }
 	},
 	'.cm-image-indicator:hover': { opacity: '1' },
+
 	'.cm-image-tooltip': {
 		position: 'relative',
 		background: `
@@ -205,16 +319,13 @@ const theme = EditorView.baseTheme({
 	'.cm-image-tooltip-error': {
 		padding: '16px 24px',
 		fontSize: '12px',
-		color: 'var(--text-muted)'
-	},
-	'.cm-tooltip-arrow:before': {
-		borderTopColor: 'var(--border-color) !important',
-		borderBottomColor: 'var(--border-color) !important'
-	},
-	'.cm-tooltip-arrow:after': {
-		borderTopColor: '#fff !important',
-		borderBottomColor: '#fff !important'
+		color: 'red'
 	}
 });
 
-export const image = (): Extension => [imagePlugin, imageHoverTooltip, theme];
+export const image = (): Extension => [
+	imagePlugin,
+	imageTooltipState,
+	clickOutsideHandler,
+	theme
+];

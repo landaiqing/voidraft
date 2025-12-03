@@ -21,41 +21,72 @@ import {
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { isCursorInRange, invisibleDecoration } from '../util';
+import { LruCache } from '@/common/utils/lruCache';
 
-// ============================================================================
-// Inline Math Widget
-// ============================================================================
+interface KatexCacheValue {
+	html: string;
+	error: string | null;
+}
+
+/**
+ * LRU cache for KaTeX rendering results.
+ * Key format: "inline:latex" or "block:latex"
+ */
+const katexCache = new LruCache<string, KatexCacheValue>(200);
+
+/**
+ * Get cached KaTeX render result or render and cache it.
+ */
+function renderKatex(latex: string, displayMode: boolean): KatexCacheValue {
+	const cacheKey = `${displayMode ? 'block' : 'inline'}:${latex}`;
+	
+	// Check cache first
+	const cached = katexCache.get(cacheKey);
+	if (cached !== undefined) {
+		return cached;
+	}
+	
+	// Render and cache
+	let result: KatexCacheValue;
+	try {
+		const html = katex.renderToString(latex, {
+			throwOnError: !displayMode, // inline throws, block doesn't
+			displayMode,
+			output: 'html'
+		});
+		result = { html, error: null };
+	} catch (e) {
+		result = {
+			html: '',
+			error: e instanceof Error ? e.message : 'Render error'
+		};
+	}
+	
+	katexCache.set(cacheKey, result);
+	return result;
+}
 
 /**
  * Widget to display inline math formula.
+ * Uses cached KaTeX rendering for performance.
  */
 class InlineMathWidget extends WidgetType {
-	private html: string;
-	private error: string | null = null;
-
 	constructor(readonly latex: string) {
 		super();
-		try {
-			this.html = katex.renderToString(latex, {
-				throwOnError: true,
-				displayMode: false,
-				output: 'html'
-			});
-		} catch (e) {
-			this.error = e instanceof Error ? e.message : 'Render error';
-			this.html = '';
-		}
 	}
 
 	toDOM(): HTMLElement {
 		const span = document.createElement('span');
 		span.className = 'cm-inline-math';
 		
-		if (this.error) {
+		// Use cached render
+		const { html, error } = renderKatex(this.latex, false);
+		
+		if (error) {
 			span.textContent = this.latex;
-			span.title = this.error;
+			span.title = error;
 		} else {
-			span.innerHTML = this.html;
+			span.innerHTML = html;
 		}
 		
 		return span;
@@ -70,34 +101,17 @@ class InlineMathWidget extends WidgetType {
 	}
 }
 
-// ============================================================================
-// Block Math Widget
-// ============================================================================
-
 /**
  * Widget to display block math formula.
  * Uses absolute positioning to overlay on source lines.
  */
 class BlockMathWidget extends WidgetType {
-	private html: string;
-	private error: string | null = null;
-
 	constructor(
 		readonly latex: string,
 		readonly lineCount: number = 1,
 		readonly lineHeight: number = 22
 	) {
 		super();
-		try {
-			this.html = katex.renderToString(latex, {
-				throwOnError: false,
-				displayMode: true,
-				output: 'html'
-			});
-		} catch (e) {
-			this.error = e instanceof Error ? e.message : 'Render error';
-			this.html = '';
-		}
 	}
 
 	toDOM(): HTMLElement {
@@ -110,11 +124,14 @@ class BlockMathWidget extends WidgetType {
 		const inner = document.createElement('div');
 		inner.className = 'cm-block-math';
 		
-		if (this.error) {
+		// Use cached render
+		const { html, error } = renderKatex(this.latex, true);
+		
+		if (error) {
 			inner.textContent = this.latex;
-			inner.title = this.error;
+			inner.title = error;
 		} else {
-			inner.innerHTML = this.html;
+			inner.innerHTML = html;
 		}
 		
 		container.appendChild(inner);
@@ -130,15 +147,42 @@ class BlockMathWidget extends WidgetType {
 	}
 }
 
-// ============================================================================
-// Decorations
-// ============================================================================
+/**
+ * Represents a math region in the document.
+ */
+interface MathRegion {
+	from: number;
+	to: number;
+}
+
+/**
+ * Result of building decorations, includes math regions for cursor tracking.
+ */
+interface BuildResult {
+	decorations: DecorationSet;
+	mathRegions: MathRegion[];
+}
+
+/**
+ * Find the math region containing the given position.
+ * Returns the region index or -1 if not in any region.
+ */
+function findMathRegionIndex(pos: number, regions: MathRegion[]): number {
+	for (let i = 0; i < regions.length; i++) {
+		if (pos >= regions[i].from && pos <= regions[i].to) {
+			return i;
+		}
+	}
+	return -1;
+}
 
 /**
  * Build decorations for math formulas.
+ * Also collects math regions for cursor tracking optimization.
  */
-function buildDecorations(view: EditorView): DecorationSet {
+function buildDecorations(view: EditorView): BuildResult {
 	const decorations: Range<Decoration>[] = [];
+	const mathRegions: MathRegion[] = [];
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
@@ -147,6 +191,9 @@ function buildDecorations(view: EditorView): DecorationSet {
 			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
 				// Handle inline math
 				if (type.name === 'InlineMath') {
+					// Collect math region for cursor tracking
+					mathRegions.push({ from: nodeFrom, to: nodeTo });
+					
 					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
 					const marks = node.getChildren('InlineMathMark');
 
@@ -169,6 +216,9 @@ function buildDecorations(view: EditorView): DecorationSet {
 
 				// Handle block math ($$...$$)
 				if (type.name === 'BlockMath') {
+					// Collect math region for cursor tracking
+					mathRegions.push({ from: nodeFrom, to: nodeTo });
+					
 					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
 					const marks = node.getChildren('BlockMathMark');
 
@@ -225,36 +275,58 @@ function buildDecorations(view: EditorView): DecorationSet {
 		});
 	}
 
-	return Decoration.set(decorations, true);
+	return {
+		decorations: Decoration.set(decorations, true),
+		mathRegions
+	};
 }
-
-// ============================================================================
-// Plugin
-// ============================================================================
 
 /**
  * Math plugin with optimized update detection.
  */
 class MathPlugin {
 	decorations: DecorationSet;
+	private mathRegions: MathRegion[] = [];
 	private lastSelectionHead: number = -1;
+	private lastMathRegionIndex: number = -1;
 
 	constructor(view: EditorView) {
-		this.decorations = buildDecorations(view);
+		const result = buildDecorations(view);
+		this.decorations = result.decorations;
+		this.mathRegions = result.mathRegions;
 		this.lastSelectionHead = view.state.selection.main.head;
+		this.lastMathRegionIndex = findMathRegionIndex(this.lastSelectionHead, this.mathRegions);
 	}
 
 	update(update: ViewUpdate) {
+		// Always rebuild on document change or viewport change
 		if (update.docChanged || update.viewportChanged) {
-			this.decorations = buildDecorations(update.view);
+			const result = buildDecorations(update.view);
+			this.decorations = result.decorations;
+			this.mathRegions = result.mathRegions;
 			this.lastSelectionHead = update.state.selection.main.head;
+			this.lastMathRegionIndex = findMathRegionIndex(this.lastSelectionHead, this.mathRegions);
 			return;
 		}
 
+		// For selection changes, only rebuild if cursor changes math region context
 		if (update.selectionSet) {
 			const newHead = update.state.selection.main.head;
+			
 			if (newHead !== this.lastSelectionHead) {
-				this.decorations = buildDecorations(update.view);
+				const newRegionIndex = findMathRegionIndex(newHead, this.mathRegions);
+				
+				// Only rebuild if:
+				// 1. Cursor entered a math region (was outside, now inside)
+				// 2. Cursor left a math region (was inside, now outside)
+				// 3. Cursor moved to a different math region
+				if (newRegionIndex !== this.lastMathRegionIndex) {
+					const result = buildDecorations(update.view);
+					this.decorations = result.decorations;
+					this.mathRegions = result.mathRegions;
+					this.lastMathRegionIndex = findMathRegionIndex(newHead, this.mathRegions);
+				}
+				
 				this.lastSelectionHead = newHead;
 			}
 		}
@@ -267,10 +339,6 @@ const mathPlugin = ViewPlugin.fromClass(
 		decorations: (v) => v.decorations
 	}
 );
-
-// ============================================================================
-// Theme
-// ============================================================================
 
 /**
  * Base theme for math.
@@ -335,10 +403,6 @@ const baseTheme = EditorView.baseTheme({
 		color: 'transparent !important',
 	},
 });
-
-// ============================================================================
-// Export
-// ============================================================================
 
 /**
  * Math extension.

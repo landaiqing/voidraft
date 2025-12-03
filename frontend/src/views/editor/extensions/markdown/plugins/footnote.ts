@@ -7,14 +7,9 @@
  * - Shows footnote content on hover (tooltip)
  * - Click to jump between reference and definition
  * - Hides syntax marks when cursor is outside
- *
- * Syntax (MultiMarkdown/PHP Markdown Extra):
- * - Reference: [^id] → renders as superscript
- * - Definition: [^id]: content
- * - Inline footnote: ^[content] → renders as superscript with embedded content
  */
 
-import { Extension, Range, StateField, EditorState } from '@codemirror/state';
+import { Extension, RangeSetBuilder, EditorState } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import {
 	ViewPlugin,
@@ -26,84 +21,72 @@ import {
 	hoverTooltip,
 	Tooltip,
 } from '@codemirror/view';
-import { isCursorInRange, invisibleDecoration } from '../util';
+import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-/**
- * Information about a footnote definition.
- */
 interface FootnoteDefinition {
-	/** The footnote identifier (e.g., "1", "note") */
 	id: string;
-	/** The content of the footnote */
 	content: string;
-	/** Start position in document */
 	from: number;
-	/** End position in document */
 	to: number;
 }
 
-/**
- * Information about a footnote reference.
- */
 interface FootnoteReference {
-	/** The footnote identifier */
 	id: string;
-	/** Start position in document */
 	from: number;
-	/** End position in document */
 	to: number;
-	/** Numeric index (1-based, for display) */
 	index: number;
 }
 
-/**
- * Information about an inline footnote.
- */
 interface InlineFootnoteInfo {
-	/** The content of the inline footnote */
 	content: string;
-	/** Start position in document */
 	from: number;
-	/** End position in document */
 	to: number;
-	/** Numeric index (1-based, for display) */
 	index: number;
 }
 
 /**
- * Collected footnote data from the document.
- * Uses Maps for O(1) lookup by position and id.
+ * Collected footnote data with O(1) lookup indexes.
  */
 interface FootnoteData {
 	definitions: Map<string, FootnoteDefinition>;
 	references: FootnoteReference[];
 	inlineFootnotes: InlineFootnoteInfo[];
-	// Index maps for O(1) lookup
 	referencesByPos: Map<number, FootnoteReference>;
 	inlineByPos: Map<number, InlineFootnoteInfo>;
+	definitionByPos: Map<number, FootnoteDefinition>; // For position-based lookup
 	firstRefById: Map<string, FootnoteReference>;
+	// All footnote ranges for cursor detection
+	allRanges: RangeTuple[];
 }
 
 // ============================================================================
-// Footnote Collection
+// Footnote Collection (cached via closure)
 // ============================================================================
 
+let cachedData: FootnoteData | null = null;
+let cachedDocLength = -1;
+
 /**
- * Collect all footnote definitions, references, and inline footnotes from the document.
- * Builds index maps for O(1) lookup during decoration and tooltip handling.
+ * Collect all footnote data from the document.
  */
 function collectFootnotes(state: EditorState): FootnoteData {
+	// Simple cache invalidation based on doc length
+	if (cachedData && cachedDocLength === state.doc.length) {
+		return cachedData;
+	}
+
 	const definitions = new Map<string, FootnoteDefinition>();
 	const references: FootnoteReference[] = [];
 	const inlineFootnotes: InlineFootnoteInfo[] = [];
-	// Index maps for fast lookup
 	const referencesByPos = new Map<number, FootnoteReference>();
 	const inlineByPos = new Map<number, InlineFootnoteInfo>();
+	const definitionByPos = new Map<number, FootnoteDefinition>();
 	const firstRefById = new Map<string, FootnoteReference>();
+	const allRanges: RangeTuple[] = [];
 	const seenIds = new Map<string, number>();
 	let inlineIndex = 0;
 
@@ -119,7 +102,10 @@ function collectFootnotes(state: EditorState): FootnoteData {
 						? state.sliceDoc(contentNode.from, contentNode.to).trim()
 						: '';
 
-					definitions.set(id, { id, content, from, to });
+					const def: FootnoteDefinition = { id, content, from, to };
+					definitions.set(id, def);
+					definitionByPos.set(from, def);
+					allRanges.push([from, to]);
 				}
 			} else if (type.name === 'FootnoteReference') {
 				const labelNode = node.getChild('FootnoteReferenceLabel');
@@ -140,8 +126,8 @@ function collectFootnotes(state: EditorState): FootnoteData {
 
 					references.push(ref);
 					referencesByPos.set(from, ref);
+					allRanges.push([from, to]);
 
-					// Track first reference for each id
 					if (!firstRefById.has(id)) {
 						firstRefById.set(id, ref);
 					}
@@ -162,48 +148,31 @@ function collectFootnotes(state: EditorState): FootnoteData {
 
 					inlineFootnotes.push(info);
 					inlineByPos.set(from, info);
+					allRanges.push([from, to]);
 				}
 			}
 		},
 	});
 
-	return {
+	cachedData = {
 		definitions,
 		references,
 		inlineFootnotes,
 		referencesByPos,
 		inlineByPos,
+		definitionByPos,
 		firstRefById,
+		allRanges,
 	};
+	cachedDocLength = state.doc.length;
+
+	return cachedData;
 }
 
 // ============================================================================
-// State Field
+// Widgets
 // ============================================================================
 
-/**
- * State field to track footnote data across the document.
- * This allows efficient lookup for tooltips and navigation.
- */
-export const footnoteDataField = StateField.define<FootnoteData>({
-	create(state) {
-		return collectFootnotes(state);
-	},
-	update(value, tr) {
-		if (tr.docChanged) {
-			return collectFootnotes(tr.state);
-		}
-		return value;
-	},
-});
-
-// ============================================================================
-// Widget
-// ============================================================================
-
-/**
- * Widget to display footnote reference as superscript.
- */
 class FootnoteRefWidget extends WidgetType {
 	constructor(
 		readonly id: string,
@@ -235,9 +204,6 @@ class FootnoteRefWidget extends WidgetType {
 	}
 }
 
-/**
- * Widget to display inline footnote as superscript.
- */
 class InlineFootnoteWidget extends WidgetType {
 	constructor(
 		readonly content: string,
@@ -265,9 +231,6 @@ class InlineFootnoteWidget extends WidgetType {
 	}
 }
 
-/**
- * Widget to display footnote definition label.
- */
 class FootnoteDefLabelWidget extends WidgetType {
 	constructor(readonly id: string) {
 		super();
@@ -291,24 +254,45 @@ class FootnoteDefLabelWidget extends WidgetType {
 }
 
 // ============================================================================
+// Cursor Detection
+// ============================================================================
+
+/**
+ * Get which footnote range the cursor is in (returns start position, -1 if none).
+ */
+function getCursorFootnotePos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
+	const selRange: RangeTuple = [selFrom, selTo];
+	
+	for (const range of ranges) {
+		if (checkRangeOverlap(range, selRange)) {
+			return range[0];
+		}
+	}
+	return -1;
+}
+
+// ============================================================================
 // Decorations
 // ============================================================================
 
 /**
- * Build decorations for footnote references and inline footnotes.
+ * Build decorations using RangeSetBuilder.
  */
-function buildDecorations(view: EditorView): DecorationSet {
-	const decorations: Range<Decoration>[] = [];
-	const data = view.state.field(footnoteDataField);
+function buildDecorations(view: EditorView, data: FootnoteData): DecorationSet {
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { pos: number; endPos?: number; deco: Decoration; priority?: number }[] = [];
+	const { from: selFrom, to: selTo } = view.state.selection.main;
+	const selRange: RangeTuple = [selFrom, selTo];
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
 			from,
 			to,
 			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
-				// Handle footnote references
+				const inCursor = checkRangeOverlap([nodeFrom, nodeTo], selRange);
+
+				// Footnote References
 				if (type.name === 'FootnoteReference') {
-					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
 					const labelNode = node.getChild('FootnoteReferenceLabel');
 					const marks = node.getChildren('FootnoteReferenceMark');
 
@@ -317,51 +301,41 @@ function buildDecorations(view: EditorView): DecorationSet {
 					const id = view.state.sliceDoc(labelNode.from, labelNode.to);
 					const ref = data.referencesByPos.get(nodeFrom);
 
-					if (!cursorInRange && ref && ref.id === id) {
-						// Hide the entire syntax and show widget
-						decorations.push(invisibleDecoration.range(nodeFrom, nodeTo));
-
-						// Add widget at the end
-						const widget = new FootnoteRefWidget(
-							id,
-							ref.index,
-							data.definitions.has(id)
-						);
-						decorations.push(
-							Decoration.widget({
-								widget,
+					if (!inCursor && ref && ref.id === id) {
+						items.push({ pos: nodeFrom, endPos: nodeTo, deco: invisibleDecoration });
+						items.push({
+							pos: nodeTo,
+							deco: Decoration.widget({
+								widget: new FootnoteRefWidget(id, ref.index, data.definitions.has(id)),
 								side: 1,
-							}).range(nodeTo)
-						);
+							}),
+							priority: 1
+						});
 					}
 				}
 
-				// Handle footnote definitions
+				// Footnote Definitions
 				if (type.name === 'FootnoteDefinition') {
-					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
 					const marks = node.getChildren('FootnoteDefinitionMark');
 					const labelNode = node.getChild('FootnoteDefinitionLabel');
 
-					if (!cursorInRange && marks.length >= 2 && labelNode) {
+					if (!inCursor && marks.length >= 2 && labelNode) {
 						const id = view.state.sliceDoc(labelNode.from, labelNode.to);
 						
-						// Hide the entire [^id]: part
-						decorations.push(invisibleDecoration.range(marks[0].from, marks[1].to));
-
-						// Add widget to show [id]
-						const widget = new FootnoteDefLabelWidget(id);
-						decorations.push(
-							Decoration.widget({
-								widget,
+						items.push({ pos: marks[0].from, endPos: marks[1].to, deco: invisibleDecoration });
+						items.push({
+							pos: marks[1].to,
+							deco: Decoration.widget({
+								widget: new FootnoteDefLabelWidget(id),
 								side: 1,
-							}).range(marks[1].to)
-						);
+							}),
+							priority: 1
+						});
 					}
 				}
 
-				// Handle inline footnotes
+				// Inline Footnotes
 				if (type.name === 'InlineFootnote') {
-					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
 					const contentNode = node.getChild('InlineFootnoteContent');
 					const marks = node.getChildren('InlineFootnoteMark');
 
@@ -369,58 +343,80 @@ function buildDecorations(view: EditorView): DecorationSet {
 
 					const inlineNote = data.inlineByPos.get(nodeFrom);
 
-					if (!cursorInRange && inlineNote) {
-						// Hide the entire syntax and show widget
-						decorations.push(invisibleDecoration.range(nodeFrom, nodeTo));
-
-						// Add widget at the end
-						const widget = new InlineFootnoteWidget(
-							inlineNote.content,
-							inlineNote.index
-						);
-						decorations.push(
-							Decoration.widget({
-								widget,
+					if (!inCursor && inlineNote) {
+						items.push({ pos: nodeFrom, endPos: nodeTo, deco: invisibleDecoration });
+						items.push({
+							pos: nodeTo,
+							deco: Decoration.widget({
+								widget: new InlineFootnoteWidget(inlineNote.content, inlineNote.index),
 								side: 1,
-							}).range(nodeTo)
-						);
+							}),
+							priority: 1
+						});
 					}
 				}
 			},
 		});
 	}
 
-	return Decoration.set(decorations, true);
+	// Sort by position, widgets after replace at same position
+	items.sort((a, b) => {
+		if (a.pos !== b.pos) return a.pos - b.pos;
+		return (a.priority || 0) - (b.priority || 0);
+	});
+
+	for (const item of items) {
+		if (item.endPos !== undefined) {
+			builder.add(item.pos, item.endPos, item.deco);
+		} else {
+			builder.add(item.pos, item.pos, item.deco);
+		}
+	}
+
+	return builder.finish();
 }
 
 // ============================================================================
-// Plugin Class
+// Plugin
 // ============================================================================
 
-/**
- * Footnote view plugin with optimized update detection.
- */
 class FootnotePlugin {
 	decorations: DecorationSet;
-	private lastSelectionHead: number = -1;
+	private data: FootnoteData;
+	private cursorFootnotePos = -1;
 
 	constructor(view: EditorView) {
-		this.decorations = buildDecorations(view);
-		this.lastSelectionHead = view.state.selection.main.head;
+		this.data = collectFootnotes(view.state);
+		const { from, to } = view.state.selection.main;
+		this.cursorFootnotePos = getCursorFootnotePos(this.data.allRanges, from, to);
+		this.decorations = buildDecorations(view, this.data);
 	}
 
 	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged) {
-			this.decorations = buildDecorations(update.view);
-			this.lastSelectionHead = update.state.selection.main.head;
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		if (docChanged) {
+			// Invalidate cache on doc change
+			cachedData = null;
+			this.data = collectFootnotes(update.state);
+			const { from, to } = update.state.selection.main;
+			this.cursorFootnotePos = getCursorFootnotePos(this.data.allRanges, from, to);
+			this.decorations = buildDecorations(update.view, this.data);
 			return;
 		}
 
-		if (update.selectionSet) {
-			const newHead = update.state.selection.main.head;
-			if (newHead !== this.lastSelectionHead) {
-				this.decorations = buildDecorations(update.view);
-				this.lastSelectionHead = newHead;
+		if (viewportChanged) {
+			this.decorations = buildDecorations(update.view, this.data);
+			return;
+		}
+
+		if (selectionSet) {
+			const { from, to } = update.state.selection.main;
+			const newPos = getCursorFootnotePos(this.data.allRanges, from, to);
+
+			if (newPos !== this.cursorFootnotePos) {
+				this.cursorFootnotePos = newPos;
+				this.decorations = buildDecorations(update.view, this.data);
 			}
 		}
 	}
@@ -434,102 +430,92 @@ const footnotePlugin = ViewPlugin.fromClass(FootnotePlugin, {
 // Hover Tooltip
 // ============================================================================
 
-/**
- * Hover tooltip that shows footnote content.
- */
 const footnoteHoverTooltip = hoverTooltip(
 	(view, pos): Tooltip | null => {
-		const data = view.state.field(footnoteDataField);
+		const data = collectFootnotes(view.state);
 
-		// Check if hovering over a footnote reference widget
-		const target = document.elementFromPoint(
-			view.coordsAtPos(pos)?.left ?? 0,
-			view.coordsAtPos(pos)?.top ?? 0
-		) as HTMLElement | null;
+		// Check widget elements first
+		const coords = view.coordsAtPos(pos);
+		if (coords) {
+			const target = document.elementFromPoint(coords.left, coords.top) as HTMLElement | null;
 
-		if (target?.classList.contains('cm-footnote-ref')) {
-			const id = target.dataset.footnoteId;
-			if (id) {
-				const def = data.definitions.get(id);
-				if (def) {
+			if (target?.classList.contains('cm-footnote-ref')) {
+				const id = target.dataset.footnoteId;
+				if (id) {
+					const def = data.definitions.get(id);
+					if (def) {
+						return {
+							pos,
+							above: true,
+							arrow: true,
+							create: () => createTooltipDom(id, def.content),
+						};
+					}
+				}
+			}
+
+			if (target?.classList.contains('cm-inline-footnote-ref')) {
+				const content = target.dataset.footnoteContent;
+				const index = target.dataset.footnoteIndex;
+				if (content && index) {
 					return {
 						pos,
 						above: true,
 						arrow: true,
-						create: () => createTooltipDom(id, def.content),
+						create: () => createInlineTooltipDom(parseInt(index), content),
 					};
 				}
 			}
 		}
 
-		// Check if hovering over an inline footnote widget
-		if (target?.classList.contains('cm-inline-footnote-ref')) {
-			const content = target.dataset.footnoteContent;
-			const index = target.dataset.footnoteIndex;
-			if (content && index) {
-				return {
-					pos,
-					above: true,
-					arrow: true,
-					create: () => createInlineTooltipDom(parseInt(index), content),
-				};
-			}
-		}
-
-		// Check if position is within a footnote reference node
-		let foundId: string | null = null;
-		let foundPos: number = pos;
-		let foundInlineContent: string | null = null;
-		let foundInlineIndex: number | null = null;
-
-		syntaxTree(view.state).iterate({
-			from: pos,
-			to: pos,
-			enter: ({ type, from, to, node }) => {
-				if (type.name === 'FootnoteReference') {
-					const labelNode = node.getChild('FootnoteReferenceLabel');
-					if (labelNode && pos >= from && pos <= to) {
-						foundId = view.state.sliceDoc(labelNode.from, labelNode.to);
-						foundPos = to;
-					}
-				} else if (type.name === 'InlineFootnote') {
-					const contentNode = node.getChild('InlineFootnoteContent');
-					if (contentNode && pos >= from && pos <= to) {
-						foundInlineContent = view.state.sliceDoc(contentNode.from, contentNode.to);
-						const inlineNote = data.inlineByPos.get(from);
-						if (inlineNote) {
-							foundInlineIndex = inlineNote.index;
-						}
-						foundPos = to;
-					}
-				}
-			},
-		});
-
-		if (foundId) {
-			const def = data.definitions.get(foundId);
+		// Check by position using indexed data
+		const ref = data.referencesByPos.get(pos);
+		if (ref) {
+			const def = data.definitions.get(ref.id);
 			if (def) {
-				const tooltipId = foundId;
-				const tooltipPos = foundPos;
 				return {
-					pos: tooltipPos,
+					pos: ref.to,
 					above: true,
 					arrow: true,
-					create: () => createTooltipDom(tooltipId, def.content),
+					create: () => createTooltipDom(ref.id, def.content),
 				};
 			}
 		}
 
-		if (foundInlineContent && foundInlineIndex !== null) {
-			const tooltipContent = foundInlineContent;
-			const tooltipIndex = foundInlineIndex;
-			const tooltipPos = foundPos;
+		const inline = data.inlineByPos.get(pos);
+		if (inline) {
 			return {
-				pos: tooltipPos,
+				pos: inline.to,
 				above: true,
 				arrow: true,
-				create: () => createInlineTooltipDom(tooltipIndex, tooltipContent),
+				create: () => createInlineTooltipDom(inline.index, inline.content),
 			};
+		}
+
+		// Fallback: check if pos is within any footnote range
+		for (const ref of data.references) {
+			if (pos >= ref.from && pos <= ref.to) {
+				const def = data.definitions.get(ref.id);
+				if (def) {
+					return {
+						pos: ref.to,
+						above: true,
+						arrow: true,
+						create: () => createTooltipDom(ref.id, def.content),
+					};
+				}
+			}
+		}
+
+		for (const inline of data.inlineFootnotes) {
+			if (pos >= inline.from && pos <= inline.to) {
+				return {
+					pos: inline.to,
+					above: true,
+					arrow: true,
+					create: () => createInlineTooltipDom(inline.index, inline.content),
+				};
+			}
 		}
 
 		return null;
@@ -537,9 +523,6 @@ const footnoteHoverTooltip = hoverTooltip(
 	{ hoverTime: 300 }
 );
 
-/**
- * Create tooltip DOM element for regular footnote.
- */
 function createTooltipDom(id: string, content: string): { dom: HTMLElement } {
 	const dom = document.createElement('div');
 	dom.className = 'cm-footnote-tooltip';
@@ -558,9 +541,6 @@ function createTooltipDom(id: string, content: string): { dom: HTMLElement } {
 	return { dom };
 }
 
-/**
- * Create tooltip DOM element for inline footnote.
- */
 function createInlineTooltipDom(index: number, content: string): { dom: HTMLElement } {
 	const dom = document.createElement('div');
 	dom.className = 'cm-footnote-tooltip';
@@ -583,26 +563,18 @@ function createInlineTooltipDom(index: number, content: string): { dom: HTMLElem
 // Click Handler
 // ============================================================================
 
-/**
- * Click handler for footnote navigation.
- * Uses mousedown to intercept before editor moves cursor.
- * - Click on reference → jump to definition
- * - Click on definition label → jump to first reference
- */
 const footnoteClickHandler = EditorView.domEventHandlers({
 	mousedown(event, view) {
 		const target = event.target as HTMLElement;
 
-		// Handle click on footnote reference widget
+		// Click on footnote reference → jump to definition
 		if (target.classList.contains('cm-footnote-ref')) {
 			const id = target.dataset.footnoteId;
 			if (id) {
-				const data = view.state.field(footnoteDataField);
+				const data = collectFootnotes(view.state);
 				const def = data.definitions.get(id);
 				if (def) {
-					// Prevent default to stop cursor from moving to widget position
 					event.preventDefault();
-					// Use setTimeout to dispatch after mousedown completes
 					setTimeout(() => {
 						view.dispatch({
 							selection: { anchor: def.from },
@@ -615,30 +587,22 @@ const footnoteClickHandler = EditorView.domEventHandlers({
 			}
 		}
 
-		// Handle click on definition label
+		// Click on definition label → jump to first reference
 		if (target.classList.contains('cm-footnote-def-label')) {
-			const pos = view.posAtDOM(target);
-			if (pos !== null) {
-				const data = view.state.field(footnoteDataField);
-
-				// Find which definition this belongs to
-				for (const [id, def] of data.definitions) {
-					if (pos >= def.from && pos <= def.to) {
-						// O(1) lookup for first reference
-						const firstRef = data.firstRefById.get(id);
-						if (firstRef) {
-							event.preventDefault();
-							setTimeout(() => {
-								view.dispatch({
-									selection: { anchor: firstRef.from },
-									scrollIntoView: true,
-								});
-								view.focus();
-							}, 0);
-							return true;
-						}
-						break;
-					}
+			const id = target.dataset.footnoteId;
+			if (id) {
+				const data = collectFootnotes(view.state);
+				const firstRef = data.firstRefById.get(id);
+				if (firstRef) {
+					event.preventDefault();
+					setTimeout(() => {
+						view.dispatch({
+							selection: { anchor: firstRef.from },
+							scrollIntoView: true,
+						});
+						view.focus();
+					}, 0);
+					return true;
 				}
 			}
 		}
@@ -651,11 +615,7 @@ const footnoteClickHandler = EditorView.domEventHandlers({
 // Theme
 // ============================================================================
 
-/**
- * Base theme for footnotes.
- */
 const baseTheme = EditorView.baseTheme({
-	// Footnote reference (superscript)
 	'.cm-footnote-ref': {
 		display: 'inline-flex',
 		alignItems: 'center',
@@ -684,7 +644,6 @@ const baseTheme = EditorView.baseTheme({
 		backgroundColor: 'var(--cm-footnote-undefined-bg, rgba(217, 48, 37, 0.1))',
 	},
 
-	// Inline footnote reference (superscript) - uses distinct color
 	'.cm-inline-footnote-ref': {
 		display: 'inline-flex',
 		alignItems: 'center',
@@ -709,7 +668,6 @@ const baseTheme = EditorView.baseTheme({
 		backgroundColor: 'var(--cm-inline-footnote-hover-bg, rgba(230, 126, 34, 0.2))',
 	},
 
-	// Footnote definition label
 	'.cm-footnote-def-label': {
 		color: 'var(--cm-footnote-def-color, #1a73e8)',
 		fontWeight: '600',
@@ -719,7 +677,6 @@ const baseTheme = EditorView.baseTheme({
 		textDecoration: 'underline',
 	},
 
-	// Tooltip
 	'.cm-footnote-tooltip': {
 		maxWidth: '400px',
 		padding: '0',
@@ -746,7 +703,6 @@ const baseTheme = EditorView.baseTheme({
 		wordBreak: 'break-word',
 	},
 
-	// Tooltip animation
 	'.cm-tooltip:has(.cm-footnote-tooltip)': {
 		animation: 'cm-footnote-fade-in 0.15s ease-out',
 	},
@@ -762,16 +718,8 @@ const baseTheme = EditorView.baseTheme({
 
 /**
  * Footnote extension.
- *
- * Features:
- * - Parses footnote references [^id] and definitions [^id]: content
- * - Parses inline footnotes ^[content]
- * - Renders references and inline footnotes as superscript numbers
- * - Shows definition/content on hover
- * - Click to navigate between reference and definition
  */
 export const footnote = (): Extension => [
-	footnoteDataField,
 	footnotePlugin,
 	footnoteHoverTooltip,
 	footnoteClickHandler,
@@ -780,3 +728,9 @@ export const footnote = (): Extension => [
 
 export default footnote;
 
+/**
+ * Get footnote data for external use.
+ */
+export function getFootnoteData(state: EditorState): FootnoteData {
+	return collectFootnotes(state);
+}

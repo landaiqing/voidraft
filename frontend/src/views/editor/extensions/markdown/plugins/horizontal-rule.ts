@@ -1,28 +1,27 @@
-import { Extension, StateField, EditorState, Range } from '@codemirror/state';
+import { Extension, RangeSetBuilder } from '@codemirror/state';
 import {
 	DecorationSet,
 	Decoration,
 	EditorView,
+	ViewPlugin,
+	ViewUpdate,
 	WidgetType
 } from '@codemirror/view';
-import { isCursorInRange } from '../util';
+import { checkRangeOverlap, RangeTuple } from '../util';
 import { syntaxTree } from '@codemirror/language';
 
 /**
  * Horizontal rule plugin that renders beautiful horizontal lines.
  *
- * This plugin:
+ * Features:
  * - Replaces markdown horizontal rules (---, ***, ___) with styled <hr> elements
  * - Shows the original text when cursor is on the line
  * - Uses inline widget to avoid affecting block system boundaries
  */
-export const horizontalRule = (): Extension => [
-	horizontalRuleField,
-	baseTheme
-];
+export const horizontalRule = (): Extension => [horizontalRulePlugin, baseTheme];
 
 /**
- * Widget to display a horizontal rule (inline version).
+ * Widget to display a horizontal rule.
  */
 class HorizontalRuleWidget extends WidgetType {
 	toDOM(): HTMLElement {
@@ -45,54 +44,127 @@ class HorizontalRuleWidget extends WidgetType {
 	}
 }
 
+/** Shared widget instance (all HR widgets are identical) */
+const hrWidget = new HorizontalRuleWidget();
+
 /**
- * Build horizontal rule decorations.
- * Uses Decoration.replace WITHOUT block: true to avoid affecting block system.
+ * Collect all horizontal rule ranges in visible viewport.
  */
-function buildHorizontalRuleDecorations(state: EditorState): DecorationSet {
-	const decorations: Range<Decoration>[] = [];
+function collectHRRanges(view: EditorView): RangeTuple[] {
+	const ranges: RangeTuple[] = [];
+	const seen = new Set<number>();
 
-	syntaxTree(state).iterate({
-		enter: ({ type, from, to }) => {
-			if (type.name !== 'HorizontalRule') return;
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, from: nodeFrom, to: nodeTo }) => {
+				if (type.name !== 'HorizontalRule') return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
+				ranges.push([nodeFrom, nodeTo]);
+			}
+		});
+	}
 
-			// Skip if cursor is on this line
-			if (isCursorInRange(state, [from, to])) return;
-
-			// Replace the entire horizontal rule with a styled widget
-			// NOTE: NOT using block: true to avoid affecting codeblock boundaries
-			decorations.push(
-				Decoration.replace({
-					widget: new HorizontalRuleWidget()
-				}).range(from, to)
-			);
-		}
-	});
-
-	return Decoration.set(decorations, true);
+	return ranges;
 }
 
 /**
- * StateField for horizontal rule decorations.
+ * Get which HR the cursor is in (-1 if none).
  */
-const horizontalRuleField = StateField.define<DecorationSet>({
-	create(state) {
-		return buildHorizontalRuleDecorations(state);
-	},
-	update(value, tx) {
-		if (tx.docChanged || tx.selection) {
-			return buildHorizontalRuleDecorations(tx.state);
+function getCursorHRPos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
+	const selRange: RangeTuple = [selFrom, selTo];
+	
+	for (const range of ranges) {
+		if (checkRangeOverlap(range, selRange)) {
+			return range[0];
 		}
-		return value.map(tx.changes);
-	},
-	provide(field) {
-		return EditorView.decorations.from(field);
 	}
+	return -1;
+}
+
+/**
+ * Build horizontal rule decorations.
+ */
+function buildDecorations(view: EditorView): DecorationSet {
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { from: number; to: number }[] = [];
+	const { from: selFrom, to: selTo } = view.state.selection.main;
+	const selRange: RangeTuple = [selFrom, selTo];
+	const seen = new Set<number>();
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, from: nodeFrom, to: nodeTo }) => {
+				if (type.name !== 'HorizontalRule') return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
+
+				// Skip if cursor is on this HR
+				if (checkRangeOverlap([nodeFrom, nodeTo], selRange)) return;
+
+				items.push({ from: nodeFrom, to: nodeTo });
+			}
+		});
+	}
+
+	// Sort and add to builder
+	items.sort((a, b) => a.from - b.from);
+	
+	for (const item of items) {
+		builder.add(item.from, item.to, Decoration.replace({ widget: hrWidget }));
+	}
+
+	return builder.finish();
+}
+
+/**
+ * Horizontal rule plugin with optimized updates.
+ */
+class HorizontalRulePlugin {
+	decorations: DecorationSet;
+	private hrRanges: RangeTuple[] = [];
+	private cursorHRPos = -1;
+
+	constructor(view: EditorView) {
+		this.hrRanges = collectHRRanges(view);
+		const { from, to } = view.state.selection.main;
+		this.cursorHRPos = getCursorHRPos(this.hrRanges, from, to);
+		this.decorations = buildDecorations(view);
+	}
+
+	update(update: ViewUpdate) {
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		if (docChanged || viewportChanged) {
+			this.hrRanges = collectHRRanges(update.view);
+			const { from, to } = update.state.selection.main;
+			this.cursorHRPos = getCursorHRPos(this.hrRanges, from, to);
+			this.decorations = buildDecorations(update.view);
+			return;
+		}
+
+		if (selectionSet) {
+			const { from, to } = update.state.selection.main;
+			const newPos = getCursorHRPos(this.hrRanges, from, to);
+
+			if (newPos !== this.cursorHRPos) {
+				this.cursorHRPos = newPos;
+				this.decorations = buildDecorations(update.view);
+			}
+		}
+	}
+}
+
+const horizontalRulePlugin = ViewPlugin.fromClass(HorizontalRulePlugin, {
+	decorations: (v) => v.decorations
 });
 
 /**
  * Base theme for horizontal rules.
- * Uses inline-block display to render properly without block: true.
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-horizontal-rule-widget': {

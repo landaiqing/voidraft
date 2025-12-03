@@ -1,5 +1,5 @@
 import { syntaxTree } from '@codemirror/language';
-import { Range } from '@codemirror/state';
+import { Extension, RangeSetBuilder } from '@codemirror/state';
 import {
 	Decoration,
 	DecorationSet,
@@ -7,17 +7,12 @@ import {
 	ViewPlugin,
 	ViewUpdate
 } from '@codemirror/view';
-import { checkRangeOverlap, isCursorInRange, invisibleDecoration } from '../util';
-
-/**
- * Pattern for auto-link markers (< and >).
- */
-const AUTO_LINK_MARK_RE = /^<|>$/g;
+import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
 
 /**
  * Parent node types that should not process.
  * - Image: handled by image plugin
- * - LinkReference: reference link definitions like [label]: url should be fully visible
+ * - LinkReference: reference link definitions should be fully visible
  */
 const BLACKLISTED_PARENTS = new Set(['Image', 'LinkReference']);
 
@@ -28,16 +23,71 @@ const BLACKLISTED_PARENTS = new Set(['Image', 'LinkReference']);
  * - Hides link markup when cursor is outside
  * - Link icons and click events are handled by hyperlink extension
  */
-export const links = () => [goToLinkPlugin];
+export const links = (): Extension => [goToLinkPlugin];
+
+/**
+ * Link info for tracking.
+ */
+interface LinkInfo {
+	parentFrom: number;
+	parentTo: number;
+	urlFrom: number;
+	urlTo: number;
+	marks: { from: number; to: number }[];
+	linkTitle: { from: number; to: number } | null;
+	isAutoLink: boolean;
+}
+
+/**
+ * Collect all link ranges in visible viewport.
+ */
+function collectLinkRanges(view: EditorView): RangeTuple[] {
+	const ranges: RangeTuple[] = [];
+	const seen = new Set<number>();
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, node }) => {
+				if (type.name !== 'URL') return;
+
+				const parent = node.parent;
+				if (!parent || BLACKLISTED_PARENTS.has(parent.name)) return;
+				if (seen.has(parent.from)) return;
+				seen.add(parent.from);
+
+				ranges.push([parent.from, parent.to]);
+			}
+		});
+	}
+
+	return ranges;
+}
+
+/**
+ * Get which link the cursor is in (-1 if none).
+ */
+function getCursorLinkPos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
+	const selRange: RangeTuple = [selFrom, selTo];
+	
+	for (const range of ranges) {
+		if (checkRangeOverlap(range, selRange)) {
+			return range[0];
+		}
+	}
+	return -1;
+}
 
 /**
  * Build link decorations.
- * Only hides markdown syntax marks, no icons added.
- * Uses array + Decoration.set() for automatic sorting.
  */
-function buildLinkDecorations(view: EditorView): DecorationSet {
-	const decorations: Range<Decoration>[] = [];
-	const selectionRanges = view.state.selection.ranges;
+function buildDecorations(view: EditorView): DecorationSet {
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { from: number; to: number }[] = [];
+	const { from: selFrom, to: selTo } = view.state.selection.main;
+	const selRange: RangeTuple = [selFrom, selTo];
+	const seen = new Set<number>();
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
@@ -49,94 +99,104 @@ function buildLinkDecorations(view: EditorView): DecorationSet {
 				const parent = node.parent;
 				if (!parent || BLACKLISTED_PARENTS.has(parent.name)) return;
 
+				// Use parent.from as unique key to handle multiple URLs in same link
+				if (seen.has(parent.from)) return;
+				seen.add(parent.from);
+
 				const marks = parent.getChildren('LinkMark');
 				const linkTitle = parent.getChild('LinkTitle');
 
-				// Find the ']' mark position to distinguish between link text and link target
-				// Link structure: [display text](url)
-				// We should only hide the URL in the () part, not in the [] part
+				// Find the ']' mark to distinguish link text from URL
 				const closeBracketMark = marks.find((mark) => {
 					const text = view.state.sliceDoc(mark.from, mark.to);
 					return text === ']';
 				});
 
-				// If URL is before ']', it's part of the display text, don't hide it
+				// If URL is before ']', it's part of display text, don't hide
 				if (closeBracketMark && nodeFrom < closeBracketMark.from) {
 					return;
 				}
 
-				// Check if cursor overlaps with the link
-				const cursorOverlaps = selectionRanges.some((range) =>
-					checkRangeOverlap([range.from, range.to], [parent.from, parent.to])
-				);
+				// Check if cursor overlaps with the parent link
+				if (checkRangeOverlap([parent.from, parent.to], selRange)) {
+					return;
+				}
 
-				// Hide link marks and URL when cursor is outside
-				if (!cursorOverlaps && marks.length > 0) {
+				// Hide link marks and URL
+				if (marks.length > 0) {
 					for (const mark of marks) {
-						decorations.push(invisibleDecoration.range(mark.from, mark.to));
+						items.push({ from: mark.from, to: mark.to });
 					}
-					decorations.push(invisibleDecoration.range(nodeFrom, nodeTo));
+					items.push({ from: nodeFrom, to: nodeTo });
 
 					if (linkTitle) {
-						decorations.push(invisibleDecoration.range(linkTitle.from, linkTitle.to));
+						items.push({ from: linkTitle.from, to: linkTitle.to });
 					}
 				}
 
-				// Get link content
-				const linkContent = view.state.sliceDoc(nodeFrom, nodeTo);
-
 				// Handle auto-links with < > markers
-				if (AUTO_LINK_MARK_RE.test(linkContent)) {
-					if (!isCursorInRange(view.state, [node.from, node.to])) {
-						decorations.push(invisibleDecoration.range(nodeFrom, nodeFrom + 1));
-						decorations.push(invisibleDecoration.range(nodeTo - 1, nodeTo));
-					}
+				const linkContent = view.state.sliceDoc(nodeFrom, nodeTo);
+				if (linkContent.startsWith('<') && linkContent.endsWith('>')) {
+					// Already hidden the whole URL above, no extra handling needed
 				}
 			}
 		});
 	}
 
-	// Use Decoration.set with sort=true to handle unsorted ranges
-	return Decoration.set(decorations, true);
+	// Sort and add to builder
+	items.sort((a, b) => a.from - b.from);
+	
+	// Deduplicate overlapping ranges
+	let lastTo = -1;
+	for (const item of items) {
+		if (item.from >= lastTo) {
+			builder.add(item.from, item.to, invisibleDecoration);
+			lastTo = item.to;
+		}
+	}
+
+	return builder.finish();
 }
 
 /**
- * Link plugin with optimized update detection.
+ * Link plugin with optimized updates.
  */
 class LinkPlugin {
 	decorations: DecorationSet;
-	private lastSelectionRanges: string = '';
+	private linkRanges: RangeTuple[] = [];
+	private cursorLinkPos = -1;
 
 	constructor(view: EditorView) {
-		this.decorations = buildLinkDecorations(view);
-		this.lastSelectionRanges = this.serializeSelection(view);
+		this.linkRanges = collectLinkRanges(view);
+		const { from, to } = view.state.selection.main;
+		this.cursorLinkPos = getCursorLinkPos(this.linkRanges, from, to);
+		this.decorations = buildDecorations(view);
 	}
 
 	update(update: ViewUpdate) {
-		// Always rebuild on doc or viewport change
-		if (update.docChanged || update.viewportChanged) {
-			this.decorations = buildLinkDecorations(update.view);
-			this.lastSelectionRanges = this.serializeSelection(update.view);
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		if (docChanged || viewportChanged) {
+			this.linkRanges = collectLinkRanges(update.view);
+			const { from, to } = update.state.selection.main;
+			this.cursorLinkPos = getCursorLinkPos(this.linkRanges, from, to);
+			this.decorations = buildDecorations(update.view);
 			return;
 		}
 
-		// For selection changes, check if selection actually changed
-		if (update.selectionSet) {
-			const newRanges = this.serializeSelection(update.view);
-			if (newRanges !== this.lastSelectionRanges) {
-				this.decorations = buildLinkDecorations(update.view);
-				this.lastSelectionRanges = newRanges;
+		if (selectionSet) {
+			const { from, to } = update.state.selection.main;
+			const newPos = getCursorLinkPos(this.linkRanges, from, to);
+
+			if (newPos !== this.cursorLinkPos) {
+				this.cursorLinkPos = newPos;
+				this.decorations = buildDecorations(update.view);
 			}
 		}
-	}
-
-	private serializeSelection(view: EditorView): string {
-		return view.state.selection.ranges
-			.map((r) => `${r.from}:${r.to}`)
-			.join(',');
 	}
 }
 
 export const goToLinkPlugin = ViewPlugin.fromClass(LinkPlugin, {
 	decorations: (v) => v.decorations
 });
+

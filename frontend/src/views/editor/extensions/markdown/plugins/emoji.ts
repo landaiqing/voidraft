@@ -7,7 +7,7 @@ import {
 	ViewUpdate,
 	WidgetType
 } from '@codemirror/view';
-import { isCursorInRange } from '../util';
+import { checkRangeOverlap, RangeTuple } from '../util';
 import { emojies } from '@/common/constant/emojies';
 
 /**
@@ -17,14 +17,11 @@ import { emojies } from '@/common/constant/emojies';
  * - Detects emoji patterns like :smile:, :heart:, etc.
  * - Replaces them with actual emoji characters
  * - Shows the original text when cursor is nearby
- * - Uses RangeSetBuilder for optimal performance
- * - Supports 1900+ emojis from the comprehensive emoji dictionary
+ * - Optimized with cached matches and minimal rebuilds
  */
 export const emoji = (): Extension => [emojiPlugin, baseTheme];
 
-/**
- * Emoji regex pattern for matching :emoji_name: syntax.
- */
+/** Non-global regex for matchAll (more efficient than global with lastIndex reset) */
 const EMOJI_REGEX = /:([a-z0-9_+\-]+):/gi;
 
 /**
@@ -52,7 +49,7 @@ class EmojiWidget extends WidgetType {
 }
 
 /**
- * Match result for emoji patterns.
+ * Cached emoji match.
  */
 interface EmojiMatch {
 	from: number;
@@ -62,26 +59,29 @@ interface EmojiMatch {
 }
 
 /**
- * Find all emoji matches in a text range.
+ * Find all emoji matches in visible ranges.
  */
-function findEmojiMatches(text: string, offset: number): EmojiMatch[] {
+function findAllEmojiMatches(view: EditorView): EmojiMatch[] {
 	const matches: EmojiMatch[] = [];
-	let match: RegExpExecArray | null;
+	const doc = view.state.doc;
 
-	// Reset regex state
-	EMOJI_REGEX.lastIndex = 0;
+	for (const { from, to } of view.visibleRanges) {
+		const text = doc.sliceString(from, to);
+		let match: RegExpExecArray | null;
+		
+		EMOJI_REGEX.lastIndex = 0;
+		while ((match = EMOJI_REGEX.exec(text)) !== null) {
+			const name = match[1].toLowerCase();
+			const emojiChar = emojies[name];
 
-	while ((match = EMOJI_REGEX.exec(text)) !== null) {
-		const name = match[1].toLowerCase();
-		const emoji = emojies[name];
-
-		if (emoji) {
-			matches.push({
-				from: offset + match.index,
-				to: offset + match.index + match[0].length,
-				name,
-				emoji
-			});
+			if (emojiChar) {
+				matches.push({
+					from: from + match.index,
+					to: from + match.index + match[0].length,
+					name,
+					emoji: emojiChar
+				});
+			}
 		}
 	}
 
@@ -89,63 +89,79 @@ function findEmojiMatches(text: string, offset: number): EmojiMatch[] {
 }
 
 /**
- * Build emoji decorations using RangeSetBuilder.
+ * Get which emoji the cursor is in (-1 if none).
  */
-function buildEmojiDecorations(view: EditorView): DecorationSet {
-	const builder = new RangeSetBuilder<Decoration>();
-	const doc = view.state.doc;
-
-	for (const { from, to } of view.visibleRanges) {
-		const text = doc.sliceString(from, to);
-		const matches = findEmojiMatches(text, from);
-
-		for (const match of matches) {
-			// Skip if cursor is in this range
-			if (isCursorInRange(view.state, [match.from, match.to])) {
-				continue;
-			}
-
-			builder.add(
-				match.from,
-				match.to,
-				Decoration.replace({
-					widget: new EmojiWidget(match.emoji, match.name)
-				})
-			);
+function getCursorEmojiIndex(matches: EmojiMatch[], selFrom: number, selTo: number): number {
+	const selRange: RangeTuple = [selFrom, selTo];
+	
+	for (let i = 0; i < matches.length; i++) {
+		if (checkRangeOverlap([matches[i].from, matches[i].to], selRange)) {
+			return i;
 		}
+	}
+	return -1;
+}
+
+/**
+ * Build decorations from cached matches.
+ */
+function buildDecorations(matches: EmojiMatch[], selFrom: number, selTo: number): DecorationSet {
+	const builder = new RangeSetBuilder<Decoration>();
+	const selRange: RangeTuple = [selFrom, selTo];
+
+	for (const match of matches) {
+		// Skip if cursor overlaps this emoji
+		if (checkRangeOverlap([match.from, match.to], selRange)) {
+			continue;
+		}
+
+		builder.add(
+			match.from,
+			match.to,
+			Decoration.replace({
+				widget: new EmojiWidget(match.emoji, match.name)
+			})
+		);
 	}
 
 	return builder.finish();
 }
 
 /**
- * Emoji plugin with optimized update detection.
+ * Emoji plugin with cached matches and optimized updates.
  */
 class EmojiPlugin {
 	decorations: DecorationSet;
-	private lastSelectionHead: number = -1;
+	private matches: EmojiMatch[] = [];
+	private cursorEmojiIdx = -1;
 
 	constructor(view: EditorView) {
-		this.decorations = buildEmojiDecorations(view);
-		this.lastSelectionHead = view.state.selection.main.head;
+		this.matches = findAllEmojiMatches(view);
+		const { from, to } = view.state.selection.main;
+		this.cursorEmojiIdx = getCursorEmojiIndex(this.matches, from, to);
+		this.decorations = buildDecorations(this.matches, from, to);
 	}
 
 	update(update: ViewUpdate) {
-		// Always rebuild on doc or viewport change
-		if (update.docChanged || update.viewportChanged) {
-			this.decorations = buildEmojiDecorations(update.view);
-			this.lastSelectionHead = update.state.selection.main.head;
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		// Rebuild matches on doc or viewport change
+		if (docChanged || viewportChanged) {
+			this.matches = findAllEmojiMatches(update.view);
+			const { from, to } = update.state.selection.main;
+			this.cursorEmojiIdx = getCursorEmojiIndex(this.matches, from, to);
+			this.decorations = buildDecorations(this.matches, from, to);
 			return;
 		}
 
-		// For selection changes, check if we moved significantly
-		if (update.selectionSet) {
-			const newHead = update.state.selection.main.head;
+		// For selection changes, only rebuild if cursor enters/leaves an emoji
+		if (selectionSet) {
+			const { from, to } = update.state.selection.main;
+			const newIdx = getCursorEmojiIndex(this.matches, from, to);
 
-			// Only rebuild if cursor moved to a different position
-			if (newHead !== this.lastSelectionHead) {
-				this.decorations = buildEmojiDecorations(update.view);
-				this.lastSelectionHead = newHead;
+			if (newIdx !== this.cursorEmojiIdx) {
+				this.cursorEmojiIdx = newIdx;
+				this.decorations = buildDecorations(this.matches, from, to);
 			}
 		}
 	}
@@ -157,7 +173,6 @@ const emojiPlugin = ViewPlugin.fromClass(EmojiPlugin, {
 
 /**
  * Base theme for emoji.
- * Inherits font size and line height from parent element.
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-emoji': {

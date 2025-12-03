@@ -1,4 +1,4 @@
-import { Extension, Range } from '@codemirror/state';
+import { Extension, RangeSetBuilder } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import {
 	ViewPlugin,
@@ -7,108 +7,153 @@ import {
 	EditorView,
 	ViewUpdate
 } from '@codemirror/view';
-import { isCursorInRange, invisibleDecoration } from '../util';
+import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
+
+/** Mark decoration for inserted content */
+const insertMarkDecoration = Decoration.mark({ class: 'cm-insert' });
 
 /**
  * Insert plugin using syntax tree.
  *
- * Uses the custom Insert extension to detect:
- * - Insert: ++text++ → renders as inserted text (underline)
- *
- * Examples:
- * - This is ++inserted++ text → This is <ins>inserted</ins> text
- * - Please ++review this section++ carefully
+ * Detects ++text++ and renders as inserted text (underline).
  */
-export const insert = (): Extension => [
-	insertPlugin,
-	baseTheme
-];
+export const insert = (): Extension => [insertPlugin, baseTheme];
 
 /**
- * Build decorations for insert using syntax tree.
+ * Collect all insert ranges in visible viewport.
+ */
+function collectInsertRanges(view: EditorView): RangeTuple[] {
+	const ranges: RangeTuple[] = [];
+	const seen = new Set<number>();
+
+	for (const { from, to } of view.visibleRanges) {
+		syntaxTree(view.state).iterate({
+			from,
+			to,
+			enter: ({ type, from: nodeFrom, to: nodeTo }) => {
+				if (type.name !== 'Insert') return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
+				ranges.push([nodeFrom, nodeTo]);
+			}
+		});
+	}
+
+	return ranges;
+}
+
+/**
+ * Get which insert the cursor is in (-1 if none).
+ */
+function getCursorInsertPos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
+	const selRange: RangeTuple = [selFrom, selTo];
+	
+	for (const range of ranges) {
+		if (checkRangeOverlap(range, selRange)) {
+			return range[0];
+		}
+	}
+	return -1;
+}
+
+/**
+ * Build insert decorations.
  */
 function buildDecorations(view: EditorView): DecorationSet {
-	const decorations: Range<Decoration>[] = [];
+	const builder = new RangeSetBuilder<Decoration>();
+	const items: { from: number; to: number; deco: Decoration }[] = [];
+	const { from: selFrom, to: selTo } = view.state.selection.main;
+	const selRange: RangeTuple = [selFrom, selTo];
+	const seen = new Set<number>();
 
 	for (const { from, to } of view.visibleRanges) {
 		syntaxTree(view.state).iterate({
 			from,
 			to,
 			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
-				// Handle Insert nodes
-				if (type.name === 'Insert') {
-					const cursorInRange = isCursorInRange(view.state, [nodeFrom, nodeTo]);
+				if (type.name !== 'Insert') return;
+				if (seen.has(nodeFrom)) return;
+				seen.add(nodeFrom);
 
-					// Get the mark nodes (the ++ characters)
-					const marks = node.getChildren('InsertMark');
+				// Skip if cursor is in this insert
+				if (checkRangeOverlap([nodeFrom, nodeTo], selRange)) return;
 
-					if (!cursorInRange && marks.length >= 2) {
-						// Hide the opening and closing ++ marks
-						decorations.push(invisibleDecoration.range(marks[0].from, marks[0].to));
-						decorations.push(invisibleDecoration.range(marks[marks.length - 1].from, marks[marks.length - 1].to));
+				const marks = node.getChildren('InsertMark');
+				if (marks.length < 2) return;
 
-						// Apply insert style to the content between marks
-						const contentStart = marks[0].to;
-						const contentEnd = marks[marks.length - 1].from;
-						if (contentStart < contentEnd) {
-							decorations.push(
-								Decoration.mark({
-									class: 'cm-insert'
-								}).range(contentStart, contentEnd)
-							);
-						}
-					}
+				// Hide opening ++
+				items.push({ from: marks[0].from, to: marks[0].to, deco: invisibleDecoration });
+
+				// Apply insert style to content
+				const contentStart = marks[0].to;
+				const contentEnd = marks[marks.length - 1].from;
+				if (contentStart < contentEnd) {
+					items.push({ from: contentStart, to: contentEnd, deco: insertMarkDecoration });
 				}
+
+				// Hide closing ++
+				items.push({ from: marks[marks.length - 1].from, to: marks[marks.length - 1].to, deco: invisibleDecoration });
 			}
 		});
 	}
 
-	return Decoration.set(decorations, true);
+	// Sort and add to builder
+	items.sort((a, b) => a.from - b.from);
+	
+	for (const item of items) {
+		builder.add(item.from, item.to, item.deco);
+	}
+
+	return builder.finish();
 }
 
 /**
- * Plugin class with optimized update detection.
+ * Insert plugin with optimized updates.
  */
 class InsertPlugin {
 	decorations: DecorationSet;
-	private lastSelectionHead: number = -1;
+	private insertRanges: RangeTuple[] = [];
+	private cursorInsertPos = -1;
 
 	constructor(view: EditorView) {
+		this.insertRanges = collectInsertRanges(view);
+		const { from, to } = view.state.selection.main;
+		this.cursorInsertPos = getCursorInsertPos(this.insertRanges, from, to);
 		this.decorations = buildDecorations(view);
-		this.lastSelectionHead = view.state.selection.main.head;
 	}
 
 	update(update: ViewUpdate) {
-		if (update.docChanged || update.viewportChanged) {
+		const { docChanged, viewportChanged, selectionSet } = update;
+
+		if (docChanged || viewportChanged) {
+			this.insertRanges = collectInsertRanges(update.view);
+			const { from, to } = update.state.selection.main;
+			this.cursorInsertPos = getCursorInsertPos(this.insertRanges, from, to);
 			this.decorations = buildDecorations(update.view);
-			this.lastSelectionHead = update.state.selection.main.head;
 			return;
 		}
 
-		if (update.selectionSet) {
-			const newHead = update.state.selection.main.head;
-			if (newHead !== this.lastSelectionHead) {
+		if (selectionSet) {
+			const { from, to } = update.state.selection.main;
+			const newPos = getCursorInsertPos(this.insertRanges, from, to);
+
+			if (newPos !== this.cursorInsertPos) {
+				this.cursorInsertPos = newPos;
 				this.decorations = buildDecorations(update.view);
-				this.lastSelectionHead = newHead;
 			}
 		}
 	}
 }
 
-const insertPlugin = ViewPlugin.fromClass(
-	InsertPlugin,
-	{
-		decorations: (v) => v.decorations
-	}
-);
+const insertPlugin = ViewPlugin.fromClass(InsertPlugin, {
+	decorations: (v) => v.decorations
+});
 
 /**
  * Base theme for insert.
- * Uses underline decoration for inserted text.
  */
 const baseTheme = EditorView.baseTheme({
 	'.cm-insert': {
 		textDecoration: 'underline',
 	}
 });
-

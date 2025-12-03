@@ -7,7 +7,7 @@ export const config: ThemeColors = {
   dark: false,
 
   background: '#ffffff',
-  backgroundSecondary: '#f1faf1',
+  backgroundSecondary: '##f4f7fb ',
 
   foreground: '#444d56',
   cursor: '#044289',

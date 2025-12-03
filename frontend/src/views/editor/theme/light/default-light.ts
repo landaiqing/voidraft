@@ -6,7 +6,7 @@ export const defaultLightColors: ThemeColors = {
     dark: false,
 
     background: '#ffffff',
-    backgroundSecondary: '#f4f7fb',
+    backgroundSecondary: '#f1faf1',
 
     foreground: '#24292e',
     cursor: '#000000',

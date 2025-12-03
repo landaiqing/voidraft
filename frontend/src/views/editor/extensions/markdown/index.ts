@@ -15,6 +15,8 @@ import { highlight } from './plugins/highlight';
 import { insert } from './plugins/insert';
 import { math } from './plugins/math';
 import { footnote } from './plugins/footnote';
+import table from "./plugins/table";
+import {htmlBlockExtension} from "./plugins/html";
 
 /**
  * markdown extensions
@@ -36,6 +38,8 @@ export const markdownExtensions: Extension = [
 	insert(),
 	math(),
 	footnote(),
+    table(),
+    htmlBlockExtension
 ];
 
 export default markdownExtensions;
