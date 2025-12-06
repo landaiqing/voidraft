@@ -119,7 +119,7 @@
   --voidraft-loading-overlay: linear-gradient(transparent 0%, rgba(220, 240, 220, 0.5) 50%);
 
   /* Markdown 代码块样式 - 亮色主题 */
-  --cm-codeblock-bg: oklch(92.9% 0.013 255.508);
+  --cm-codeblock-bg: #f3f3f3;
   --cm-codeblock-radius: 0.4rem;
 
   /* Markdown 内联代码样式 */

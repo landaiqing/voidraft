@@ -13,6 +13,7 @@ import {Highlight} from "@/views/editor/extensions/markdown/syntax/highlight";
 import {Insert} from "@/views/editor/extensions/markdown/syntax/insert";
 import {Math} from "@/views/editor/extensions/markdown/syntax/math";
 import {Footnote} from "@/views/editor/extensions/markdown/syntax/footnote";
+import {Emoji} from "@/views/editor/extensions/markdown/syntax/emoji";
 import {javaLanguage} from "@codemirror/lang-java";
 import {phpLanguage} from "@codemirror/lang-php";
 import {cssLanguage} from "@codemirror/lang-css";
@@ -118,7 +119,7 @@ export const LANGUAGES: LanguageInfo[] = [
     }),
     new LanguageInfo("md", "Markdown", markdown({
         base: markdownLanguage,
-        extensions: [Subscript, Superscript, Highlight, Insert, Math, Footnote, Table],
+        extensions: [Subscript, Superscript, Highlight, Insert, Math, Footnote, Table, Emoji],
         completeHTMLTags: true,
         pasteURLAsLink: true,
         htmlTagLanguage: html({

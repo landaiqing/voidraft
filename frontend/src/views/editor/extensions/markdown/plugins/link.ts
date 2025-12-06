@@ -1,202 +1,111 @@
-import { syntaxTree } from '@codemirror/language';
-import { Extension, RangeSetBuilder } from '@codemirror/state';
-import {
-	Decoration,
-	DecorationSet,
-	EditorView,
-	ViewPlugin,
-	ViewUpdate
-} from '@codemirror/view';
+/**
+ * Link handler with underline and clickable icon.
+ */
+
+import { Decoration, EditorView, WidgetType } from '@codemirror/view';
 import { checkRangeOverlap, invisibleDecoration, RangeTuple } from '../util';
+import { SyntaxNode } from '@lezer/common';
+import { BuildContext } from './types';
+import * as runtime from "@wailsio/runtime";
 
-/**
- * Parent node types that should not process.
- * - Image: handled by image plugin
- * - LinkReference: reference link definitions should be fully visible
- */
-const BLACKLISTED_PARENTS = new Set(['Image', 'LinkReference']);
+const BLACKLISTED_LINK_PARENTS = new Set(['Image', 'LinkReference']);
 
-/**
- * Links plugin.
- *
- * Features:
- * - Hides link markup when cursor is outside
- * - Link icons and click events are handled by hyperlink extension
- */
-export const links = (): Extension => [goToLinkPlugin];
+/** Link text decoration with underline */
+const linkTextDecoration = Decoration.mark({ class: 'cm-md-link-text' });
 
-/**
- * Link info for tracking.
- */
-interface LinkInfo {
-	parentFrom: number;
-	parentTo: number;
-	urlFrom: number;
-	urlTo: number;
-	marks: { from: number; to: number }[];
-	linkTitle: { from: number; to: number } | null;
-	isAutoLink: boolean;
+/** Link icon widget - clickable to open URL */
+class LinkIconWidget extends WidgetType {
+	constructor(readonly url: string) { super(); }
+	eq(other: LinkIconWidget) { return this.url === other.url; }
+	toDOM(): HTMLElement {
+		const span = document.createElement('span');
+		span.className = 'cm-md-link-icon';
+		span.textContent = '🔗';
+		span.title = this.url;
+		span.onmousedown = (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			runtime.Browser.OpenURL(this.url);
+		};
+		return span;
+	}
+	ignoreEvent(e: Event) { return e.type === 'mousedown'; }
 }
 
 /**
- * Collect all link ranges in visible viewport.
+ * Handle URL node (within Link).
  */
-function collectLinkRanges(view: EditorView): RangeTuple[] {
-	const ranges: RangeTuple[] = [];
-	const seen = new Set<number>();
+export function handleURL(
+	ctx: BuildContext,
+	nf: number,
+	nt: number,
+	node: SyntaxNode,
+	ranges: RangeTuple[]
+): void {
+	const parent = node.parent;
+	if (!parent || BLACKLISTED_LINK_PARENTS.has(parent.name)) return;
+	if (ctx.seen.has(parent.from)) return;
+	ctx.seen.add(parent.from);
+	ranges.push([parent.from, parent.to]);
+	if (checkRangeOverlap([parent.from, parent.to], ctx.selRange)) return;
 
-	for (const { from, to } of view.visibleRanges) {
-		syntaxTree(view.state).iterate({
-			from,
-			to,
-			enter: ({ type, node }) => {
-				if (type.name !== 'URL') return;
+	// Get link text node (content between first [ and ])
+	const linkText = parent.getChild('LinkLabel');
+	const marks = parent.getChildren('LinkMark');
+	const linkTitle = parent.getChild('LinkTitle');
+	const closeBracket = marks.find(m => ctx.view.state.sliceDoc(m.from, m.to) === ']');
+	
+	if (closeBracket && nf < closeBracket.from) return;
 
-				const parent = node.parent;
-				if (!parent || BLACKLISTED_PARENTS.has(parent.name)) return;
-				if (seen.has(parent.from)) return;
-				seen.add(parent.from);
+	// Get URL for the icon
+	const url = ctx.view.state.sliceDoc(nf, nt);
 
-				ranges.push([parent.from, parent.to]);
-			}
+	// Add underline decoration to link text
+	if (linkText) {
+		ctx.items.push({ from: linkText.from, to: linkText.to, deco: linkTextDecoration });
+	}
+
+	// Hide markdown syntax marks
+	for (const m of marks) {
+		ctx.items.push({ from: m.from, to: m.to, deco: invisibleDecoration });
+	}
+	
+	// Hide URL
+	ctx.items.push({ from: nf, to: nt, deco: invisibleDecoration });
+	
+	// Hide link title if present
+	if (linkTitle) {
+		ctx.items.push({ from: linkTitle.from, to: linkTitle.to, deco: invisibleDecoration });
+	}
+
+	// Add clickable icon widget after link text (at close bracket position)
+	if (closeBracket) {
+		ctx.items.push({
+			from: closeBracket.from,
+			to: closeBracket.from,
+			deco: Decoration.widget({ widget: new LinkIconWidget(url), side: 1 }),
+			priority: 1
 		});
 	}
-
-	return ranges;
 }
 
 /**
- * Get which link the cursor is in (-1 if none).
+ * Theme for markdown links.
  */
-function getCursorLinkPos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
-	const selRange: RangeTuple = [selFrom, selTo];
-	
-	for (const range of ranges) {
-		if (checkRangeOverlap(range, selRange)) {
-			return range[0];
+export const linkTheme = EditorView.baseTheme({
+	'.cm-md-link-text': {
+		color: 'var(--cm-link-color, #0969da)',
+		textDecoration: 'underline',
+		textUnderlineOffset: '2px',
+		cursor: 'text'
+	},
+	'.cm-md-link-icon': {
+		cursor: 'pointer',
+		marginLeft: '0.2em',
+		opacity: '0.7',
+		transition: 'opacity 0.15s ease',
+		'&:hover': {
+			opacity: '1'
 		}
 	}
-	return -1;
-}
-
-/**
- * Build link decorations.
- */
-function buildDecorations(view: EditorView): DecorationSet {
-	const builder = new RangeSetBuilder<Decoration>();
-	const items: { from: number; to: number }[] = [];
-	const { from: selFrom, to: selTo } = view.state.selection.main;
-	const selRange: RangeTuple = [selFrom, selTo];
-	const seen = new Set<number>();
-
-	for (const { from, to } of view.visibleRanges) {
-		syntaxTree(view.state).iterate({
-			from,
-			to,
-			enter: ({ type, from: nodeFrom, to: nodeTo, node }) => {
-				if (type.name !== 'URL') return;
-
-				const parent = node.parent;
-				if (!parent || BLACKLISTED_PARENTS.has(parent.name)) return;
-
-				// Use parent.from as unique key to handle multiple URLs in same link
-				if (seen.has(parent.from)) return;
-				seen.add(parent.from);
-
-				const marks = parent.getChildren('LinkMark');
-				const linkTitle = parent.getChild('LinkTitle');
-
-				// Find the ']' mark to distinguish link text from URL
-				const closeBracketMark = marks.find((mark) => {
-					const text = view.state.sliceDoc(mark.from, mark.to);
-					return text === ']';
-				});
-
-				// If URL is before ']', it's part of display text, don't hide
-				if (closeBracketMark && nodeFrom < closeBracketMark.from) {
-					return;
-				}
-
-				// Check if cursor overlaps with the parent link
-				if (checkRangeOverlap([parent.from, parent.to], selRange)) {
-					return;
-				}
-
-				// Hide link marks and URL
-				if (marks.length > 0) {
-					for (const mark of marks) {
-						items.push({ from: mark.from, to: mark.to });
-					}
-					items.push({ from: nodeFrom, to: nodeTo });
-
-					if (linkTitle) {
-						items.push({ from: linkTitle.from, to: linkTitle.to });
-					}
-				}
-
-				// Handle auto-links with < > markers
-				const linkContent = view.state.sliceDoc(nodeFrom, nodeTo);
-				if (linkContent.startsWith('<') && linkContent.endsWith('>')) {
-					// Already hidden the whole URL above, no extra handling needed
-				}
-			}
-		});
-	}
-
-	// Sort and add to builder
-	items.sort((a, b) => a.from - b.from);
-	
-	// Deduplicate overlapping ranges
-	let lastTo = -1;
-	for (const item of items) {
-		if (item.from >= lastTo) {
-			builder.add(item.from, item.to, invisibleDecoration);
-			lastTo = item.to;
-		}
-	}
-
-	return builder.finish();
-}
-
-/**
- * Link plugin with optimized updates.
- */
-class LinkPlugin {
-	decorations: DecorationSet;
-	private linkRanges: RangeTuple[] = [];
-	private cursorLinkPos = -1;
-
-	constructor(view: EditorView) {
-		this.linkRanges = collectLinkRanges(view);
-		const { from, to } = view.state.selection.main;
-		this.cursorLinkPos = getCursorLinkPos(this.linkRanges, from, to);
-		this.decorations = buildDecorations(view);
-	}
-
-	update(update: ViewUpdate) {
-		const { docChanged, viewportChanged, selectionSet } = update;
-
-		if (docChanged || viewportChanged) {
-			this.linkRanges = collectLinkRanges(update.view);
-			const { from, to } = update.state.selection.main;
-			this.cursorLinkPos = getCursorLinkPos(this.linkRanges, from, to);
-			this.decorations = buildDecorations(update.view);
-			return;
-		}
-
-		if (selectionSet) {
-			const { from, to } = update.state.selection.main;
-			const newPos = getCursorLinkPos(this.linkRanges, from, to);
-
-			if (newPos !== this.cursorLinkPos) {
-				this.cursorLinkPos = newPos;
-				this.decorations = buildDecorations(update.view);
-			}
-		}
-	}
-}
-
-export const goToLinkPlugin = ViewPlugin.fromClass(LinkPlugin, {
-	decorations: (v) => v.decorations
 });
-

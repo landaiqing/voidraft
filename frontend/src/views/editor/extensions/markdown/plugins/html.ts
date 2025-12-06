@@ -340,7 +340,7 @@ const theme = EditorView.baseTheme({
  * - Shows indicator icon at the end
  * - Click to preview rendered HTML
  */
-export const htmlBlockExtension: Extension = [
+export const html = (): Extension => [
 	htmlBlockPlugin,
 	htmlTooltipState,
 	clickOutsideHandler,

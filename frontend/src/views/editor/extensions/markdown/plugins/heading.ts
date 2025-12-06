@@ -1,168 +1,63 @@
-import { syntaxTree } from '@codemirror/language';
-import { Extension, RangeSetBuilder } from '@codemirror/state';
-import {
-	Decoration,
-	DecorationSet,
-	EditorView,
-	ViewPlugin,
-	ViewUpdate
-} from '@codemirror/view';
-import { checkRangeOverlap, RangeTuple } from '../util';
+/**
+ * Heading handler and theme.
+ */
 
-/** Hidden mark decoration */
-const hiddenMarkDecoration = Decoration.mark({
-	class: 'cm-heading-mark-hidden'
-});
+import { Decoration, EditorView } from '@codemirror/view';
+import { RangeTuple } from '../util';
+import { SyntaxNode } from '@lezer/common';
+import { BuildContext } from './types';
+
+const DECO_HEADING_HIDDEN = Decoration.mark({ class: 'cm-heading-mark-hidden' });
 
 /**
- * Collect all heading ranges in visible viewport.
+ * Handle ATXHeading node (# Heading).
  */
-function collectHeadingRanges(view: EditorView): RangeTuple[] {
-	const ranges: RangeTuple[] = [];
-	const seen = new Set<number>();
+export function handleATXHeading(
+	ctx: BuildContext,
+	nf: number,
+	nt: number,
+	node: SyntaxNode,
+	inCursor: boolean,
+	ranges: RangeTuple[]
+): void {
+	if (ctx.seen.has(nf)) return;
+	ctx.seen.add(nf);
+	ranges.push([nf, nt]);
+	if (inCursor) return;
 
-	for (const { from, to } of view.visibleRanges) {
-		syntaxTree(view.state).iterate({
-			from,
-			to,
-			enter(node) {
-				if (!node.type.name.startsWith('ATXHeading') && 
-					!node.type.name.startsWith('SetextHeading')) {
-					return;
-				}
-				if (seen.has(node.from)) return;
-				seen.add(node.from);
-				ranges.push([node.from, node.to]);
-			}
-		});
+	const header = node.firstChild;
+	if (header && header.type.name === 'HeaderMark') {
+		ctx.items.push({ from: header.from, to: Math.min(header.to + 1, nt), deco: DECO_HEADING_HIDDEN });
 	}
-
-	return ranges;
 }
 
 /**
- * Get which heading the cursor is in (-1 if none).
+ * Handle SetextHeading node (underline style).
  */
-function getCursorHeadingPos(ranges: RangeTuple[], selFrom: number, selTo: number): number {
-	const selRange: RangeTuple = [selFrom, selTo];
-	
-	for (const range of ranges) {
-		if (checkRangeOverlap(range, selRange)) {
-			return range[0];
-		}
+export function handleSetextHeading(
+	ctx: BuildContext,
+	nf: number,
+	nt: number,
+	node: SyntaxNode,
+	inCursor: boolean,
+	ranges: RangeTuple[]
+): void {
+	if (ctx.seen.has(nf)) return;
+	ctx.seen.add(nf);
+	ranges.push([nf, nt]);
+	if (inCursor) return;
+
+	const headerMarks = node.getChildren('HeaderMark');
+	for (const mark of headerMarks) {
+		ctx.items.push({ from: mark.from, to: mark.to, deco: DECO_HEADING_HIDDEN });
 	}
-	return -1;
 }
 
 /**
- * Build heading decorations using RangeSetBuilder.
+ * Theme for headings.
  */
-function buildDecorations(view: EditorView): DecorationSet {
-	const builder = new RangeSetBuilder<Decoration>();
-	const items: { from: number; to: number }[] = [];
-	const { from: selFrom, to: selTo } = view.state.selection.main;
-	const selRange: RangeTuple = [selFrom, selTo];
-	const seen = new Set<number>();
-
-	for (const { from, to } of view.visibleRanges) {
-		syntaxTree(view.state).iterate({
-			from,
-			to,
-			enter(node) {
-				// Skip if cursor is in this heading
-				if (checkRangeOverlap([node.from, node.to], selRange)) return;
-
-				// ATX headings (# Heading)
-				if (node.type.name.startsWith('ATXHeading')) {
-					if (seen.has(node.from)) return;
-					seen.add(node.from);
-
-					const header = node.node.firstChild;
-					if (header && header.type.name === 'HeaderMark') {
-						const markFrom = header.from;
-						// Include the space after #
-						const markTo = Math.min(header.to + 1, node.to);
-						items.push({ from: markFrom, to: markTo });
-					}
-				}
-				// Setext headings (underline style)
-				else if (node.type.name.startsWith('SetextHeading')) {
-					if (seen.has(node.from)) return;
-					seen.add(node.from);
-
-					const cursor = node.node.cursor();
-					cursor.iterate((child) => {
-						if (child.type.name === 'HeaderMark') {
-							items.push({ from: child.from, to: child.to });
-						}
-					});
-				}
-			}
-		});
-	}
-
-	// Sort by position and add to builder
-	items.sort((a, b) => a.from - b.from);
-	
-	for (const item of items) {
-		builder.add(item.from, item.to, hiddenMarkDecoration);
-	}
-
-	return builder.finish();
-}
-
-/**
- * Heading plugin with optimized updates.
- */
-class HeadingPlugin {
-	decorations: DecorationSet;
-	private headingRanges: RangeTuple[] = [];
-	private cursorHeadingPos = -1;
-
-	constructor(view: EditorView) {
-		this.headingRanges = collectHeadingRanges(view);
-		const { from, to } = view.state.selection.main;
-		this.cursorHeadingPos = getCursorHeadingPos(this.headingRanges, from, to);
-		this.decorations = buildDecorations(view);
-	}
-
-	update(update: ViewUpdate) {
-		const { docChanged, viewportChanged, selectionSet } = update;
-
-		if (docChanged || viewportChanged) {
-			this.headingRanges = collectHeadingRanges(update.view);
-			const { from, to } = update.state.selection.main;
-			this.cursorHeadingPos = getCursorHeadingPos(this.headingRanges, from, to);
-			this.decorations = buildDecorations(update.view);
-			return;
-		}
-
-		if (selectionSet) {
-			const { from, to } = update.state.selection.main;
-			const newPos = getCursorHeadingPos(this.headingRanges, from, to);
-
-			if (newPos !== this.cursorHeadingPos) {
-				this.cursorHeadingPos = newPos;
-				this.decorations = buildDecorations(update.view);
-			}
-		}
-	}
-}
-
-const headingPlugin = ViewPlugin.fromClass(HeadingPlugin, {
-	decorations: (v) => v.decorations
-});
-
-/**
- * Theme for hidden heading marks.
- */
-const headingTheme = EditorView.baseTheme({
+export const headingTheme = EditorView.baseTheme({
 	'.cm-heading-mark-hidden': {
 		fontSize: '0'
 	}
 });
-
-/**
- * Headings plugin.
- */
-export const headings = (): Extension => [headingPlugin, headingTheme];
