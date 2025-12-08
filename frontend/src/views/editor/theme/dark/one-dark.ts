@@ -34,6 +34,11 @@ export const config: ThemeColors = {
   borderColor: darkBackground,
   matchingBracket: '#bad0f847',
 
+  // 搜索匹配 - One Dark 蓝橙色调
+  searchMatch: 'rgba(97, 175, 239, 0.4)',
+  searchMatchSelected: 'rgba(229, 192, 123, 0.55)',
+  searchMatchSelectedOutline: '#e5c07b',
+
   comment: stone,
   lineComment: '#6c7484',
   blockComment: '#606775',

@@ -70,6 +70,25 @@
   --cm-table-header-bg: rgba(46, 51, 69, 0.7);
   --cm-table-border: rgba(75, 85, 99, 0.35);
   --cm-table-row-hover: rgba(55, 62, 78, 0.5);
+
+  /* Search Panel - Dark Theme */
+  --search-panel-bg: #252526;
+  --search-panel-text: #cccccc;
+  --search-panel-border: #454545;
+  --search-input-bg: #3c3c3c;
+  --search-input-text: #cccccc;
+  --search-input-border: #3c3c3c;
+  --search-focus-border: #0078d4;
+  --search-btn-hover: rgba(255, 255, 255, 0.1);
+  --search-btn-active-bg: rgba(0, 120, 212, 0.4);
+  --search-btn-active-text: #ffffff;
+  --search-error-border: #f14c4c;
+  --search-error-bg: #5a1d1d;
+
+  /* Search Match Highlight - Dark Theme (VSCode style) */
+  --search-match-bg: rgba(250, 220, 81, 0.85);
+  --search-match-selected-bg: rgba(81, 175, 255, 0.5);
+  --search-match-selected-border: #74b0f4;
 }
 
 /* 亮色主题 */
@@ -137,6 +156,25 @@
   --cm-table-header-bg: oklch(94% 0.01 255);
   --cm-table-border: oklch(88% 0.008 255);
   --cm-table-row-hover: oklch(95% 0.008 255);
+
+  /* Search Panel - Light Theme */
+  --search-panel-bg: #f3f3f3;
+  --search-panel-text: #616161;
+  --search-panel-border: #c8c8c8;
+  --search-input-bg: #ffffff;
+  --search-input-text: #616161;
+  --search-input-border: #cecece;
+  --search-focus-border: #0078d4;
+  --search-btn-hover: rgba(0, 0, 0, 0.1);
+  --search-btn-active-bg: rgba(0, 120, 212, 0.2);
+  --search-btn-active-text: #0078d4;
+  --search-error-border: #e51400;
+  --search-error-bg: #fdeceb;
+
+  /* Search Match Highlight - Light Theme (VSCode style) */
+    --search-match-bg: rgba(250, 220, 81, 0.85);
+  --search-match-selected-bg: rgba(38, 143, 255, 0.3);
+  --search-match-selected-border: #268fff;
 }
 
 /* 跟随系统的浅色偏好 */
@@ -205,5 +243,24 @@
     --cm-table-header-bg: oklch(94% 0.01 255);
     --cm-table-border: oklch(88% 0.008 255);
     --cm-table-row-hover: oklch(95% 0.008 255);
+
+    /* Search Panel - Light Theme (auto) */
+    --search-panel-bg: #f3f3f3;
+    --search-panel-text: #616161;
+    --search-panel-border: #c8c8c8;
+    --search-input-bg: #ffffff;
+    --search-input-text: #616161;
+    --search-input-border: #cecece;
+    --search-focus-border: #0078d4;
+    --search-btn-hover: rgba(0, 0, 0, 0.1);
+    --search-btn-active-bg: rgba(0, 120, 212, 0.2);
+    --search-btn-active-text: #0078d4;
+    --search-error-border: #e51400;
+    --search-error-bg: #fdeceb;
+
+    /* Search Match Highlight - Light Theme auto (VSCode style) */
+      --search-match-bg: rgba(250, 220, 81, 0.85);
+    --search-match-selected-bg: rgba(38, 143, 255, 0.3);
+    --search-match-selected-border: #268fff;
   }
 }

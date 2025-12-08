@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#ffffff10',
   matchingBracket: '#263238',
 
+  // 搜索匹配 - Material 青绿色调
+  searchMatch: 'rgba(137, 221, 255, 0.4)',
+  searchMatchSelected: 'rgba(130, 170, 255, 0.55)',
+  searchMatchSelectedOutline: '#82aaff',
+
   comment: '#546e7a',
   lineComment: '#4b606a',
   blockComment: '#455962',

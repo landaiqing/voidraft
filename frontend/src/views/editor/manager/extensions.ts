@@ -2,16 +2,19 @@ import {Manager} from './manager';
 import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import i18n from '@/i18n';
 import {ExtensionDefinition} from './types';
+import {Prec} from '@codemirror/state';
 
-import index from '../extensions/rainbowBracket';
-import {createTextHighlighter} from '../extensions/textHighlight';
+import rainbowBrackets from '../extensions/rainbowBracket';
 import {color} from '../extensions/colorSelector';
 import {hyperLink} from '../extensions/hyperlink';
 import {minimap} from '../extensions/minimap';
 import {vscodeSearch} from '../extensions/vscodeSearch';
-import {createCheckboxExtension} from '../extensions/checkbox';
 import {createTranslatorExtension} from '../extensions/translator';
-import {foldingOnIndent} from '../extensions/fold/foldExtension';
+import markdownExtensions from '../extensions/markdown';
+import {foldGutter} from "@codemirror/language";
+import {highlightActiveLineGutter, highlightWhitespace, highlightTrailingWhitespace} from "@codemirror/view";
+import createEditorContextMenu from '../contextMenu';
+import {blockLineNumbers} from '../extensions/codeblock';
 
 type ExtensionEntry = {
     definition: ExtensionDefinition
@@ -28,7 +31,7 @@ const defineExtension = (create: (config: any) => any, defaultConfig: Record<str
 
 const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
     [ExtensionID.ExtensionRainbowBrackets]: {
-        definition: defineExtension(() => index()),
+        definition: defineExtension(() => rainbowBrackets()),
         displayNameKey: 'extensions.rainbowBrackets.name',
         descriptionKey: 'extensions.rainbowBrackets.description'
     },
@@ -66,25 +69,34 @@ const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
         descriptionKey: 'extensions.search.description'
     },
     [ExtensionID.ExtensionFold]: {
-        definition: defineExtension(() => foldingOnIndent),
+        definition: defineExtension(() => Prec.low(foldGutter())),
         displayNameKey: 'extensions.fold.name',
         descriptionKey: 'extensions.fold.description'
     },
-    [ExtensionID.ExtensionTextHighlight]: {
-        definition: defineExtension((config: any) => createTextHighlighter({
-            backgroundColor: config?.backgroundColor ?? '#FFD700',
-            opacity: config?.opacity ?? 0.3
-        }), {
-            backgroundColor: '#FFD700',
-            opacity: 0.3
-        }),
-        displayNameKey: 'extensions.textHighlight.name',
-        descriptionKey: 'extensions.textHighlight.description'
+    [ExtensionID.ExtensionMarkdown]: {
+        definition: defineExtension(() => markdownExtensions),
+        displayNameKey: 'extensions.markdown.name',
+        descriptionKey: 'extensions.markdown.description'
     },
-    [ExtensionID.ExtensionCheckbox]: {
-        definition: defineExtension(() => createCheckboxExtension()),
-        displayNameKey: 'extensions.checkbox.name',
-        descriptionKey: 'extensions.checkbox.description'
+    [ExtensionID.ExtensionLineNumbers]: {
+        definition: defineExtension(() => Prec.high([blockLineNumbers, highlightActiveLineGutter()])),
+        displayNameKey: 'extensions.lineNumbers.name',
+        descriptionKey: 'extensions.lineNumbers.description'
+    },
+    [ExtensionID.ExtensionContextMenu]: {
+        definition: defineExtension(() => createEditorContextMenu()),
+        displayNameKey: 'extensions.contextMenu.name',
+        descriptionKey: 'extensions.contextMenu.description'
+    },
+    [ExtensionID.ExtensionHighlightWhitespace]: {
+        definition: defineExtension(() => highlightWhitespace()),
+        displayNameKey: 'extensions.highlightWhitespace.name',
+        descriptionKey: 'extensions.highlightWhitespace.description'
+    },
+    [ExtensionID.ExtensionHighlightTrailingWhitespace]: {
+        definition: defineExtension(() => highlightTrailingWhitespace()),
+        displayNameKey: 'extensions.highlightTrailingWhitespace.name',
+        descriptionKey: 'extensions.highlightTrailingWhitespace.description'
     }
 } as const;
 

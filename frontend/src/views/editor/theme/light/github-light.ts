@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#e1e4e8',
   matchingBracket: '#34d05840',
 
+  // 搜索匹配 - GitHub 蓝色调
+  searchMatch: 'rgba(3, 102, 214, 0.25)',
+  searchMatchSelected: 'rgba(3, 102, 214, 0.45)',
+  searchMatchSelectedOutline: '#0366d6',
+
   comment: '#6a737d',
   lineComment: '#5e6873',
   blockComment: '#4f5864',

@@ -171,11 +171,11 @@ export const inlineStylesTheme = EditorView.baseTheme({
 	'.cm-superscript': {
 		verticalAlign: 'super',
 		fontSize: '0.75em',
-		color: 'var(--cm-superscript-color, inherit)'
+		color: 'inherit'
 	},
 	'.cm-subscript': {
 		verticalAlign: 'sub',
 		fontSize: '0.75em',
-		color: 'var(--cm-subscript-color, inherit)'
+		color: 'inherit'
 	}
 });

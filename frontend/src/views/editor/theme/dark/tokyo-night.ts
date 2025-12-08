@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#16161e',
   matchingBracket: '#16161e',
 
+  // 搜索匹配 - Tokyo Night 紫蓝色调
+  searchMatch: 'rgba(187, 154, 247, 0.4)',
+  searchMatchSelected: 'rgba(122, 162, 247, 0.55)',
+  searchMatchSelectedOutline: '#7aa2f7',
+
   comment: '#444b6a',
   lineComment: '#3d4360',
   blockComment: '#373d55',

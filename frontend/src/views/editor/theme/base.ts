@@ -62,6 +62,17 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             outline: `0.5px solid ${colors.matchingBracket}`,
         },
 
+        // 搜索匹配
+        '.cm-searchMatch': {
+            backgroundColor: `${colors.searchMatch} !important`,
+            borderRadius: '2px',
+        },
+        '.cm-searchMatch-selected': {
+            backgroundColor: `${colors.searchMatchSelected} !important`,
+            outline: `2px solid ${colors.searchMatchSelectedOutline}`,
+            borderRadius: '2px',
+        },
+
         // 代码块层（自定义）
         '.code-blocks-layer': {
             width: '100%',

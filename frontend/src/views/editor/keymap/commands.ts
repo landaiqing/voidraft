@@ -1,13 +1,8 @@
 import {KeyBindingCommand} from '@/../bindings/voidraft/internal/models/models';
 import {
-    hideSearchVisibilityCommand,
-    searchReplaceAll,
-    searchShowReplace,
-    searchToggleCase,
-    searchToggleRegex,
-    searchToggleWholeWord,
-    showSearchVisibilityCommand
-} from '../extensions/vscodeSearch/commands';
+    openSearchPanel,
+    closeSearchPanel,
+} from '@codemirror/search';
 import {
     addNewBlockAfterCurrent,
     addNewBlockAfterLast,
@@ -26,7 +21,6 @@ import {deleteLineCommand} from '../extensions/codeblock/deleteLine';
 import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines';
 import {transposeChars} from '../extensions/codeblock';
 import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste';
-import {textHighlightToggleCommand} from '../extensions/textHighlight';
 import {
     copyLineDown,
     copyLineUp,
@@ -68,34 +62,13 @@ const defaultEditorOptions = {
  */
 export const commands = {
     [KeyBindingCommand.ShowSearchCommand]: {
-        handler: showSearchVisibilityCommand,
+        handler: openSearchPanel,
         descriptionKey: 'keybindings.commands.showSearch'
     },
     [KeyBindingCommand.HideSearchCommand]: {
-        handler: hideSearchVisibilityCommand,
+        handler: closeSearchPanel,
         descriptionKey: 'keybindings.commands.hideSearch'
     },
-    [KeyBindingCommand.SearchToggleCaseCommand]: {
-        handler: searchToggleCase,
-        descriptionKey: 'keybindings.commands.searchToggleCase'
-    },
-    [KeyBindingCommand.SearchToggleWordCommand]: {
-        handler: searchToggleWholeWord,
-        descriptionKey: 'keybindings.commands.searchToggleWord'
-    },
-    [KeyBindingCommand.SearchToggleRegexCommand]: {
-        handler: searchToggleRegex,
-        descriptionKey: 'keybindings.commands.searchToggleRegex'
-    },
-    [KeyBindingCommand.SearchShowReplaceCommand]: {
-        handler: searchShowReplace,
-        descriptionKey: 'keybindings.commands.searchShowReplace'
-    },
-    [KeyBindingCommand.SearchReplaceAllCommand]: {
-        handler: searchReplaceAll,
-        descriptionKey: 'keybindings.commands.searchReplaceAll'
-    },
-
     // 代码块操作命令
     [KeyBindingCommand.BlockSelectAllCommand]: {
         handler: selectAll,
@@ -284,12 +257,6 @@ export const commands = {
     [KeyBindingCommand.DeleteGroupForwardCommand]: {
         handler: deleteGroupForward,
         descriptionKey: 'keybindings.commands.deleteGroupForward'
-    },
-
-    // 文本高亮扩展命令
-    [KeyBindingCommand.TextHighlightToggleCommand]: {
-        handler: textHighlightToggleCommand,
-        descriptionKey: 'keybindings.commands.textHighlightToggle'
     },
 } as const;
 

@@ -20,6 +20,11 @@ export const defaultLightColors: ThemeColors = {
     borderColor: '#d8dee4',
     matchingBracket: '#00000019',
 
+    // 搜索匹配 - 金黄色调
+    searchMatch: 'rgba(255, 200, 0, 0.55)',
+    searchMatchSelected: 'rgba(255, 140, 0, 0.75)',
+    searchMatchSelectedOutline: '#ff8c00',
+
     comment: '#6a737d',
     lineComment: '#808a95',
     blockComment: '#5c646f',

@@ -79,6 +79,7 @@ const blockLineNumbers = lineNumbers({
 
 /**
  * 创建代码块扩展
+ * 注意：blockLineNumbers 已移至动态扩展管理，通过 ExtensionLineNumbers 控制
  */
 export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extension {
     const {
@@ -90,9 +91,6 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
     return [
         // 核心状态管理
         blockState,
-
-        // 块内行号
-        blockLineNumbers,
 
         // 语言解析支持
         ...getCodeBlockLanguageExtension(),

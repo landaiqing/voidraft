@@ -5,39 +5,26 @@ import {
     dropCursor,
     EditorView,
     highlightActiveLine,
-    highlightActiveLineGutter,
     highlightSpecialChars,
     keymap,
-    lineNumbers,
     rectangularSelection,
+    scrollPastEnd
 } from '@codemirror/view';
-import {
-    bracketMatching,
-    defaultHighlightStyle,
-    foldGutter,
-    indentOnInput,
-    syntaxHighlighting,
-} from '@codemirror/language';
+import {bracketMatching, defaultHighlightStyle, indentOnInput, syntaxHighlighting,} from '@codemirror/language';
 import {history} from '@codemirror/commands';
 import {highlightSelectionMatches} from '@codemirror/search';
-import {autocompletion, closeBrackets, closeBracketsKeymap} from '@codemirror/autocomplete';
-import createEditorContextMenu from '../contextMenu';
+import {closeBrackets, closeBracketsKeymap} from '@codemirror/autocomplete';
 
 // 基本编辑器设置
 export const createBasicSetup = (): Extension[] => {
     return [
         // 基础UI
-        lineNumbers(),
-        highlightActiveLineGutter(),
         highlightSpecialChars(),
         dropCursor(),
         EditorView.lineWrapping,
 
         // 历史记录
         history(),
-
-        // 代码折叠
-        foldGutter(),
 
         // 选择与高亮
         drawSelection(),
@@ -52,11 +39,7 @@ export const createBasicSetup = (): Extension[] => {
         bracketMatching(),
         closeBrackets(),
 
-        // 自动完成
-        autocompletion(),
-
-        // 上下文菜单
-        createEditorContextMenu(),
+        scrollPastEnd(),
 
         // 键盘映射
         keymap.of([

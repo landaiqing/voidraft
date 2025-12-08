@@ -192,5 +192,10 @@ export interface ThemeColors extends ThemeTagColors {
 
   borderColor: string;  // 边框颜色
   matchingBracket: string;  // 匹配括号颜色
+
+  // 搜索匹配颜色
+  searchMatch: string;  // 搜索匹配背景色
+  searchMatchSelected: string;  // 当前选中匹配背景色
+  searchMatchSelectedOutline: string;  // 当前选中匹配边框色
 }
 

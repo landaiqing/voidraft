@@ -22,6 +22,11 @@ export const defaultDarkColors: ThemeColors = {
   borderColor: '#1e222a',
   matchingBracket: '#ffffff19',
 
+  // 搜索匹配 - 金黄色调
+  searchMatch: 'rgba(250, 220, 81, 0.7)',
+  searchMatchSelected: 'rgba(255, 140, 0, 0.85)',
+  searchMatchSelectedOutline: '#ff6600',
+
   // 语法标签色值
   comment: '#6272a4',
   lineComment: '#5c6b99',

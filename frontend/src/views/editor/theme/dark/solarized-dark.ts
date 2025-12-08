@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#073642',
   matchingBracket: '#073642',
 
+  // 搜索匹配 - Solarized 黄橙色调
+  searchMatch: 'rgba(181, 137, 0, 0.45)',
+  searchMatchSelected: 'rgba(203, 75, 22, 0.55)',
+  searchMatchSelectedOutline: '#cb4b16',
+
   comment: '#586e75',
   lineComment: '#4f646a',
   blockComment: '#46595e',

@@ -15,16 +15,19 @@ type ExtensionID string
 
 const (
 	// 编辑增强扩展
-	ExtensionRainbowBrackets ExtensionID = "rainbowBrackets" // 彩虹括号
-	ExtensionHyperlink       ExtensionID = "hyperlink"       // 超链接
-	ExtensionColorSelector   ExtensionID = "colorSelector"   // 颜色选择器
-	ExtensionFold            ExtensionID = "fold"
-	ExtensionTextHighlight   ExtensionID = "textHighlight"
-	ExtensionCheckbox        ExtensionID = "checkbox"   // 选择框
-	ExtensionTranslator      ExtensionID = "translator" // 划词翻译
+	ExtensionRainbowBrackets             ExtensionID = "rainbowBrackets"             // 彩虹括号
+	ExtensionHyperlink                   ExtensionID = "hyperlink"                   // 超链接
+	ExtensionColorSelector               ExtensionID = "colorSelector"               // 颜色选择器
+	ExtensionFold                        ExtensionID = "fold"                        // 代码折叠
+	ExtensionTranslator                  ExtensionID = "translator"                  // 划词翻译
+	ExtensionMarkdown                    ExtensionID = "markdown"                    // Markdown渲染
+	ExtensionHighlightWhitespace         ExtensionID = "highlightWhitespace"         // 显示空白字符
+	ExtensionHighlightTrailingWhitespace ExtensionID = "highlightTrailingWhitespace" // 高亮行尾空白
 
 	// UI增强扩展
-	ExtensionMinimap ExtensionID = "minimap" // 小地图
+	ExtensionMinimap     ExtensionID = "minimap"     // 小地图
+	ExtensionLineNumbers ExtensionID = "lineNumbers" // 行号显示
+	ExtensionContextMenu ExtensionID = "contextMenu" // 上下文菜单
 
 	// 工具扩展
 	ExtensionSearch ExtensionID = "search" // 搜索功能
@@ -88,21 +91,6 @@ func NewDefaultExtensions() []Extension {
 			Config:    ExtensionConfig{},
 		},
 		{
-			ID:        ExtensionTextHighlight,
-			Enabled:   true,
-			IsDefault: true,
-			Config: ExtensionConfig{
-				"backgroundColor": "#FFD700",
-				"opacity":         0.3,
-			},
-		},
-		{
-			ID:        ExtensionCheckbox,
-			Enabled:   true,
-			IsDefault: true,
-			Config:    ExtensionConfig{},
-		},
-		{
 			ID:        ExtensionTranslator,
 			Enabled:   true,
 			IsDefault: true,
@@ -111,6 +99,24 @@ func NewDefaultExtensions() []Extension {
 				"minSelectionLength":   2,
 				"maxTranslationLength": 5000,
 			},
+		},
+		{
+			ID:        ExtensionMarkdown,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
+		},
+		{
+			ID:        ExtensionHighlightWhitespace,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
+		},
+		{
+			ID:        ExtensionHighlightTrailingWhitespace,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
 		},
 
 		// UI增强扩展
@@ -123,6 +129,18 @@ func NewDefaultExtensions() []Extension {
 				"showOverlay": "always",
 				"autohide":    false,
 			},
+		},
+		{
+			ID:        ExtensionLineNumbers,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
+		},
+		{
+			ID:        ExtensionContextMenu,
+			Enabled:   true,
+			IsDefault: true,
+			Config:    ExtensionConfig{},
 		},
 
 		// 工具扩展

@@ -1,80 +1,64 @@
-import { getSearchQuery, search, SearchQuery } from "@codemirror/search";
-import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import { CustomSearchPanel } from "./FindReplaceControl";
-import { SearchVisibilityEffect } from "./state";
-import { searchBaseTheme } from "./theme";
+import { search } from "@codemirror/search";
+import { EditorView, Panel } from "@codemirror/view";
+import { StateEffect } from "@codemirror/state";
+import { createApp, App } from "vue";
+import SearchPanel from "./SearchPanel.vue";
 
-
-export class SearchPlugin {
-    private searchControl: CustomSearchPanel;
-    private prevQuery: SearchQuery | null = null;
-
-    constructor(view: EditorView) {
-        this.searchControl = new CustomSearchPanel(view);
-    }
-
-    update(update: ViewUpdate) {
-        const currentQuery = getSearchQuery(update.state);
-        if (!this.prevQuery || !currentQuery.eq(this.prevQuery)) {
-            this.searchControl.findMatchesAndSelectClosest(update.state);
+/**
+ * Create custom search panel using Vue component
+ * This integrates directly with CodeMirror's search extension
+ */
+function createSearchPanel(view: EditorView): Panel {
+    const dom = document.createElement("div");
+    dom.className = "vscode-search-container";
+    
+    let app: App | null = null;
+    
+    return {
+        dom,
+        top: true,
+        mount() {
+            // Mount Vue component after panel is added to DOM
+            app = createApp(SearchPanel, { view });
+            app.mount(dom);
+        },
+        destroy() {
+            // Cleanup Vue component
+            app?.unmount();
+            app = null;
         }
-        this.prevQuery = currentQuery;
-
-        for (const tr of update.transactions) {
-          for (const e of tr.effects) {
-            if (e.is(SearchVisibilityEffect)) {
-              this.searchControl.setVisibility(e.value);
-            }
-          }
-        }
-    }
-
-    destroy() {
-        this.searchControl.dom.remove(); // Clean up
-    }
-
-    toggleCaseInsensitive() {
-        this.searchControl.toggleCase();
-    }
-
-    toggleWholeWord() {
-        this.searchControl.toggleWord();
-    }
-
-    toggleRegex() {
-        this.searchControl.toggleRegex();
-    }
-
-    showReplace() {
-        this.searchControl.setVisibility(true);
-        this.searchControl.showReplace();
-    }
-
-    findReplaceMatch() {
-        this.searchControl.findReplaceMatch();
-    }
-
-    findNext() {
-        this.searchControl.matchNext();
-    }
-
-    replace() {
-        this.searchControl.replace();
-    }
-
-    replaceAll() {
-        this.searchControl.replaceAll();
-    }
-
-    findPrevious() {
-        this.searchControl.matchPrevious();
-    }
+    };
 }
 
-export const VSCodeSearch = ViewPlugin.fromClass(SearchPlugin);
+/**
+ * Custom scroll behavior - scroll match to center of viewport
+ * This is called automatically by findNext/findPrevious
+ */
+function scrollMatchToCenter(range: { from: number }, view: EditorView): StateEffect<unknown> {
+    return EditorView.scrollIntoView(range.from, { y: 'center' });
+}
 
+/**
+ * VSCode-style search extension
+ * Uses CodeMirror's built-in search with custom Vue UI
+ * 
+ * Config options set default values for search query:
+ * - caseSensitive: false (default) - match case
+ * - wholeWord: false (default) - match whole word
+ * - regexp: false (default) - use regular expression
+ * - literal: false (default) - literal string search
+ */
 export const vscodeSearch = [
-    search({}),
-    VSCodeSearch,
-    searchBaseTheme
+    search({ 
+        createPanel: createSearchPanel,
+        top: true,
+        scrollToMatch: scrollMatchToCenter,
+        caseSensitive: false,
+        wholeWord: false,
+        regexp: false,
+        literal: false,
+    }),
 ];
+
+// Re-export for backwards compatibility
+export { vscodeSearch as VSCodeSearch };

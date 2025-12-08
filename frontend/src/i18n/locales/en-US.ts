@@ -111,7 +111,6 @@ export default {
       deleteCharForward: 'Delete character forward',
       deleteGroupBackward: 'Delete group backward',
       deleteGroupForward: 'Delete group forward',
-      textHighlightToggle: 'Toggle text highlight',
     }
   },
   tabs: {
@@ -257,7 +256,7 @@ export default {
     },
     colorSelector: {
       name: 'Color Selector',
-      description: 'Visual color picker and color value display'
+      description: 'CSS code block visual color picker and color value display'
     },
     translator: {
       name: 'Text Translator',
@@ -275,19 +274,29 @@ export default {
       name: 'Code Folding',
       description: 'Collapse and expand code sections for better readability'
     },
-    textHighlight: {
-      name: 'Text Highlight',
-      description: 'Highlight selected text content (Ctrl+Shift+H to toggle highlight)',
-      backgroundColor: 'Background Color',
-      opacity: 'Opacity'
-    },
-    checkbox: {
-      name: 'Checkbox',
-      description: 'Render [x] and [ ] as interactive checkboxes'
+    markdown: {
+      name: 'Markdown Renderer',
+      description: 'Render Markdown elements, "what you see is what you get"'
     },
     codeblock: {
       name: 'Code Block',
       description: 'Code block related functionality'
+    },
+    lineNumbers: {
+      name: 'Line Numbers',
+      description: 'Display line numbers on the left side of the editor and highlight the current line'
+    },
+    contextMenu: {
+      name: 'Context Menu',
+      description: 'Show context menu when right-clicking in the editor'
+    },
+    highlightWhitespace: {
+      name: 'Highlight Whitespace',
+      description: 'Display whitespace characters such as spaces and tabs in the editor'
+    },
+    highlightTrailingWhitespace: {
+      name: 'Highlight Trailing Whitespace',
+      description: 'Highlight trailing whitespace at the end of lines'
     }
   },
   monitor: {

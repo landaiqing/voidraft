@@ -111,7 +111,6 @@ export default {
       deleteCharForward: '向前删除字符',
       deleteGroupBackward: '向后删除组',
       deleteGroupForward: '向前删除组',
-    textHighlightToggle: '切换文本高亮',
     }
   },
   tabs: {
@@ -259,7 +258,7 @@ export default {
     },
     colorSelector: {
       name: '颜色选择器',
-      description: '颜色值的可视化和选择'
+      description: 'CSS代码块颜色值的可视化和选择'
     },
     translator: {
       name: '划词翻译',
@@ -277,19 +276,29 @@ export default {
       name: '代码折叠',
       description: '折叠和展开代码段以提高代码可读性'
     },
-    textHighlight: {
-      name: '文本高亮',
-      description: '高亮选中的文本内容 (Ctrl+Shift+H 切换高亮)',
-      backgroundColor: '背景颜色',
-      opacity: '透明度'
-    },
-    checkbox: {
-      name: '选择框',
-      description: '将 [x] 和 [ ] 渲染为可交互的选择框'
+    markdown: {
+      name: 'Markdown 渲染',
+      description: '渲染 Markdown 元素，“所见即所得”'
     },
     codeblock: {
       name: '代码块',
       description: '代码块相关功能'
+    },
+    lineNumbers: {
+      name: '行号显示',
+      description: '在编辑器左侧显示行号，并高亮当前行'
+    },
+    contextMenu: {
+      name: '上下文菜单',
+      description: '在编辑器中右键点击时显示上下文菜单'
+    },
+    highlightWhitespace: {
+      name: '显示空白字符',
+      description: '在编辑器中显示空格和制表符等空白字符'
+    },
+    highlightTrailingWhitespace: {
+      name: '高亮行尾空白',
+      description: '高亮显示行尾的多余空白字符'
     }
   },
   monitor: {

@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#1f2335',
   matchingBracket: '#1f2335',
 
+  // 搜索匹配 - Tokyo Night Storm 紫蓝色调
+  searchMatch: 'rgba(187, 154, 247, 0.4)',
+  searchMatchSelected: 'rgba(122, 162, 247, 0.55)',
+  searchMatchSelectedOutline: '#7aa2f7',
+
   comment: '#565f89',
   lineComment: '#4d567b',
   blockComment: '#454e6f',

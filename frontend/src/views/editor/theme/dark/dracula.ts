@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#191a21',
   matchingBracket: '#44475a',
 
+  // 搜索匹配 - Dracula 紫粉色调
+  searchMatch: 'rgba(189, 147, 249, 0.45)',
+  searchMatchSelected: 'rgba(255, 121, 198, 0.65)',
+  searchMatchSelectedOutline: '#ff79c6',
+
   comment: '#6272a4',
   lineComment: '#55608c',
   blockComment: '#4f597f',

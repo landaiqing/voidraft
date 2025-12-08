@@ -16,13 +16,8 @@ type KeyBindingCommand string
 
 const (
 	// 搜索扩展相关
-	ShowSearchCommand        KeyBindingCommand = "showSearch"        // 显示搜索
-	HideSearchCommand        KeyBindingCommand = "hideSearch"        // 隐藏搜索
-	SearchToggleCaseCommand  KeyBindingCommand = "searchToggleCase"  // 搜索切换大小写
-	SearchToggleWordCommand  KeyBindingCommand = "searchToggleWord"  // 搜索切换整词
-	SearchToggleRegexCommand KeyBindingCommand = "searchToggleRegex" // 搜索切换正则
-	SearchShowReplaceCommand KeyBindingCommand = "searchShowReplace" // 显示替换
-	SearchReplaceAllCommand  KeyBindingCommand = "searchReplaceAll"  // 替换全部
+	ShowSearchCommand KeyBindingCommand = "showSearch" // 显示搜索
+	HideSearchCommand KeyBindingCommand = "hideSearch" // 隐藏搜索
 
 	// 代码块扩展相关
 	BlockSelectAllCommand        KeyBindingCommand = "blockSelectAll"        // 块内选择全部
@@ -78,9 +73,6 @@ const (
 	HistoryRedoCommand          KeyBindingCommand = "historyRedo"          // 重做
 	HistoryUndoSelectionCommand KeyBindingCommand = "historyUndoSelection" // 撤销选择
 	HistoryRedoSelectionCommand KeyBindingCommand = "historyRedoSelection" // 重做选择
-
-	// 文本高亮扩展相关
-	TextHighlightToggleCommand KeyBindingCommand = "textHighlightToggle" // 切换文本高亮
 )
 
 // KeyBindingMetadata 快捷键配置元数据
@@ -121,41 +113,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			Command:   HideSearchCommand,
 			Extension: ExtensionSearch,
 			Key:       "Escape",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   SearchToggleCaseCommand,
-			Extension: ExtensionSearch,
-			Key:       "Alt-c",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   SearchToggleWordCommand,
-			Extension: ExtensionSearch,
-			Key:       "Alt-w",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   SearchToggleRegexCommand,
-			Extension: ExtensionSearch,
-			Key:       "Alt-r",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   SearchShowReplaceCommand,
-			Extension: ExtensionSearch,
-			Key:       "Mod-h",
-			Enabled:   true,
-			IsDefault: true,
-		},
-		{
-			Command:   SearchReplaceAllCommand,
-			Extension: ExtensionSearch,
-			Key:       "Mod-Alt-Enter",
 			Enabled:   true,
 			IsDefault: true,
 		},
@@ -493,15 +450,6 @@ func NewDefaultKeyBindings() []KeyBinding {
 			Command:   DeleteGroupForwardCommand,
 			Extension: ExtensionEditor,
 			Key:       "Ctrl-Delete",
-			Enabled:   true,
-			IsDefault: true,
-		},
-
-		// 文本高亮扩展快捷键
-		{
-			Command:   TextHighlightToggleCommand,
-			Extension: ExtensionTextHighlight,
-			Key:       "Mod-Shift-h",
 			Enabled:   true,
 			IsDefault: true,
 		},

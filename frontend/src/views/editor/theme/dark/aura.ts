@@ -21,6 +21,11 @@ export const config: ThemeColors = {
   borderColor: '#3b334b',
   matchingBracket: '#a394f033',
 
+  // 搜索匹配 - Aura 紫青色调
+  searchMatch: 'rgba(162, 119, 255, 0.4)',
+  searchMatchSelected: 'rgba(97, 255, 202, 0.45)',
+  searchMatchSelectedOutline: '#61ffca',
+
   comment: '#6d6d6d',
   lineComment: '#5c5c5c',
   blockComment: '#5a5a5a',

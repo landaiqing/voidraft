@@ -30,7 +30,6 @@ import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
 import {createDebounce} from '@/common/utils/debounce';
-import markdownExtensions  from "@/views/editor/extensions/markdown";
 
 export interface DocumentStats {
     lines: number;
@@ -298,7 +297,6 @@ export const useEditorStore = defineStore('editor', () => {
             codeBlockExtension,
             ...dynamicExtensions,
             ...httpExtension,
-            markdownExtensions
         ];
 
         // 创建编辑器状态

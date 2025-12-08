@@ -121,6 +121,12 @@ func (es *ExtensionService) initDatabase() error {
 			es.logger.Error("Failed to insert default extensions", "error", err)
 			return err
 		}
+	} else {
+		// 检查并补充缺失的扩展
+		if err := es.syncExtensions(); err != nil {
+			es.logger.Error("Failed to ensure all extensions exist", "error", err)
+			return err
+		}
 	}
 
 	return nil
@@ -148,6 +154,80 @@ func (es *ExtensionService) insertDefaultExtensions() error {
 		if err != nil {
 			return &ExtensionError{"insert_extension", string(ext.ID), err}
 		}
+	}
+
+	return nil
+}
+
+// syncExtensions 确保数据库中的扩展与代码定义同步
+func (es *ExtensionService) syncExtensions() error {
+	defaultSettings := models.NewDefaultExtensionSettings()
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	// 构建代码中定义的扩展ID集合
+	definedExtensions := make(map[string]bool)
+	for _, ext := range defaultSettings.Extensions {
+		definedExtensions[string(ext.ID)] = true
+	}
+
+	// 1. 添加缺失的扩展
+	for _, ext := range defaultSettings.Extensions {
+		var exists int
+		err := es.databaseService.db.QueryRow("SELECT COUNT(*) FROM extensions WHERE id = ?", string(ext.ID)).Scan(&exists)
+		if err != nil {
+			return &ExtensionError{"check_extension_exists", string(ext.ID), err}
+		}
+
+		if exists == 0 {
+			configJSON, err := json.Marshal(ext.Config)
+			if err != nil {
+				return &ExtensionError{"marshal_config", string(ext.ID), err}
+			}
+
+			_, err = es.databaseService.db.Exec(sqlInsertExtension,
+				string(ext.ID),
+				ext.Enabled,
+				ext.IsDefault,
+				string(configJSON),
+				now,
+				now,
+			)
+			if err != nil {
+				return &ExtensionError{"insert_missing_extension", string(ext.ID), err}
+			}
+			es.logger.Info("Added missing extension to database", "id", ext.ID)
+		}
+	}
+
+	// 2. 删除数据库中已不存在于代码定义的扩展
+	rows, err := es.databaseService.db.Query("SELECT id FROM extensions")
+	if err != nil {
+		return &ExtensionError{"query_all_extension_ids", "", err}
+	}
+	defer rows.Close()
+
+	var toDelete []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return &ExtensionError{"scan_extension_id", "", err}
+		}
+		if !definedExtensions[id] {
+			toDelete = append(toDelete, id)
+		}
+	}
+
+	if err = rows.Err(); err != nil {
+		return &ExtensionError{"iterate_extension_ids", "", err}
+	}
+
+	// 删除不再定义的扩展
+	for _, id := range toDelete {
+		_, err := es.databaseService.db.Exec("DELETE FROM extensions WHERE id = ?", id)
+		if err != nil {
+			return &ExtensionError{"delete_obsolete_extension", id, err}
+		}
+		es.logger.Info("Removed obsolete extension from database", "id", id)
 	}
 
 	return nil

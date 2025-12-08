@@ -415,13 +415,11 @@ export enum ExtensionID {
      * 颜色选择器
      */
     ExtensionColorSelector = "colorSelector",
-    ExtensionFold = "fold",
-    ExtensionTextHighlight = "textHighlight",
 
     /**
-     * 选择框
+     * 代码折叠
      */
-    ExtensionCheckbox = "checkbox",
+    ExtensionFold = "fold",
 
     /**
      * 划词翻译
@@ -429,10 +427,35 @@ export enum ExtensionID {
     ExtensionTranslator = "translator",
 
     /**
+     * Markdown渲染
+     */
+    ExtensionMarkdown = "markdown",
+
+    /**
+     * 显示空白字符
+     */
+    ExtensionHighlightWhitespace = "highlightWhitespace",
+
+    /**
+     * 高亮行尾空白
+     */
+    ExtensionHighlightTrailingWhitespace = "highlightTrailingWhitespace",
+
+    /**
      * UI增强扩展
      * 小地图
      */
     ExtensionMinimap = "minimap",
+
+    /**
+     * 行号显示
+     */
+    ExtensionLineNumbers = "lineNumbers",
+
+    /**
+     * 上下文菜单
+     */
+    ExtensionContextMenu = "contextMenu",
 
     /**
      * 工具扩展
@@ -811,31 +834,6 @@ export enum KeyBindingCommand {
     HideSearchCommand = "hideSearch",
 
     /**
-     * 搜索切换大小写
-     */
-    SearchToggleCaseCommand = "searchToggleCase",
-
-    /**
-     * 搜索切换整词
-     */
-    SearchToggleWordCommand = "searchToggleWord",
-
-    /**
-     * 搜索切换正则
-     */
-    SearchToggleRegexCommand = "searchToggleRegex",
-
-    /**
-     * 显示替换
-     */
-    SearchShowReplaceCommand = "searchShowReplace",
-
-    /**
-     * 替换全部
-     */
-    SearchReplaceAllCommand = "searchReplaceAll",
-
-    /**
      * 代码块扩展相关
      * 块内选择全部
      */
@@ -1073,12 +1071,6 @@ export enum KeyBindingCommand {
      * 重做选择
      */
     HistoryRedoSelectionCommand = "historyRedoSelection",
-
-    /**
-     * 文本高亮扩展相关
-     * 切换文本高亮
-     */
-    TextHighlightToggleCommand = "textHighlightToggle",
 };
 
 /**
