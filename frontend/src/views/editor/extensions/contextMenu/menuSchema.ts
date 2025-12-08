@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
-import type { KeyBindingCommand } from '@/../bindings/voidraft/internal/models/models';
+import type { KeyBindingCommand } from '../../../../../bindings/voidraft/internal/models/models';
 
 export interface MenuContext {
   view: EditorView;

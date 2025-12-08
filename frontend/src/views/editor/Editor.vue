@@ -7,8 +7,8 @@ import Toolbar from '@/components/toolbar/Toolbar.vue';
 import {useWindowStore} from '@/stores/windowStore';
 import LoadingScreen from '@/components/loading/LoadingScreen.vue';
 import {useTabStore} from '@/stores/tabStore';
-import ContextMenu from './contextMenu/ContextMenu.vue';
-import {contextMenuManager} from './contextMenu/manager';
+import ContextMenu from '@/views/editor/extensions/contextMenu/ContextMenu.vue';
+import {contextMenuManager} from '@/views/editor/extensions/contextMenu/manager';
 import TranslatorDialog from './extensions/translator/TranslatorDialog.vue';
 import {translatorManager} from './extensions/translator/manager';
 

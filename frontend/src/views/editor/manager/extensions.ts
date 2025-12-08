@@ -13,7 +13,7 @@ import {createTranslatorExtension} from '../extensions/translator';
 import markdownExtensions from '../extensions/markdown';
 import {foldGutter} from "@codemirror/language";
 import {highlightActiveLineGutter, highlightWhitespace, highlightTrailingWhitespace} from "@codemirror/view";
-import createEditorContextMenu from '../contextMenu';
+import createEditorContextMenu from '../extensions/contextMenu';
 import {blockLineNumbers} from '../extensions/codeblock';
 
 type ExtensionEntry = {

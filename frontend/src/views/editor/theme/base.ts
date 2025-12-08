@@ -69,7 +69,7 @@ export function createBaseTheme(colors: ThemeColors): Extension {
         },
         '.cm-searchMatch-selected': {
             backgroundColor: `${colors.searchMatchSelected} !important`,
-            outline: `2px solid ${colors.searchMatchSelectedOutline}`,
+            outline: `1px solid ${colors.searchMatchSelectedOutline}`,
             borderRadius: '2px',
         },
 

@@ -1,7 +1,7 @@
 import { EditorView } from '@codemirror/view';
 import { Extension } from '@codemirror/state';
-import { copyCommand, cutCommand, pasteCommand } from '../extensions/codeblock/copyPaste';
-import { KeyBindingCommand } from '@/../bindings/voidraft/internal/models/models';
+import { copyCommand, cutCommand, pasteCommand } from '../codeblock/copyPaste';
+import { KeyBindingCommand } from '../../../../../bindings/voidraft/internal/models/models';
 import { useKeybindingStore } from '@/stores/keybindingStore';
 import { undo, redo } from '@codemirror/commands';
 import i18n from '@/i18n';
