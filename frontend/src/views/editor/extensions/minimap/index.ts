@@ -51,6 +51,8 @@ const minimapClass = ViewPlugin.fromClass(
     private dom: HTMLElement | undefined;
     private inner: HTMLElement | undefined;
     private canvas: HTMLCanvasElement | undefined;
+    private renderHandle: number | ReturnType<typeof setTimeout> | null = null;
+    private cancelRender: (() => void) | null = null;
 
     public text: TextState;
     public selection: SelectionState;
@@ -97,35 +99,21 @@ const minimapClass = ViewPlugin.fromClass(
         }
       }
 
-      // 阻止小地图上的右键菜单
-      this.dom.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      });
-
-      // 阻止小地图内部元素和画布上的右键菜单
-      this.inner.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      });
-
-      this.canvas.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      });
-
       if (config.autohide) {
         this.dom.classList.add('cm-minimap-autohide');
       }
+
+      this.requestRender();
     }
 
     private remove() {
+      this.cancelRenderRequest();
       if (this.dom) {
         this.dom.remove();
       }
+      this.dom = undefined;
+      this.inner = undefined;
+      this.canvas = undefined;
     }
 
     update(update: ViewUpdate) {
@@ -153,7 +141,7 @@ const minimapClass = ViewPlugin.fromClass(
         this.text.update(update);
         this.selection.update(update);
         this.diagnostic.update(update);
-        this.render();
+        this.requestRender();
       }
     }
 
@@ -202,8 +190,9 @@ const minimapClass = ViewPlugin.fromClass(
 
       const gutters = this.view.state.facet(Config).gutters;
 
+      const lines = this.view.state.field(LinesState);
+
       for (let i = startIndex; i < endIndex; i++) {
-        const lines = this.view.state.field(LinesState);
         if (i >= lines.length) break;
 
         const drawContext = {
@@ -233,8 +222,40 @@ const minimapClass = ViewPlugin.fromClass(
 
         offsetY += lineHeight;
       }
+    }
 
-      context.restore();
+    requestRender() {
+      if (this.renderHandle !== null) {
+        return;
+      }
+
+      if (typeof requestAnimationFrame === "function") {
+        const handle = requestAnimationFrame(() => {
+          this.renderHandle = null;
+          this.cancelRender = null;
+          this.render();
+        });
+        this.renderHandle = handle;
+        this.cancelRender = () => cancelAnimationFrame(handle);
+        return;
+      }
+
+      const handle = setTimeout(() => {
+        this.renderHandle = null;
+        this.cancelRender = null;
+        this.render();
+      }, 16);
+      this.renderHandle = handle;
+      this.cancelRender = () => clearTimeout(handle);
+    }
+
+    cancelRenderRequest() {
+      if (!this.cancelRender) {
+        return;
+      }
+      this.cancelRender();
+      this.renderHandle = null;
+      this.cancelRender = null;
     }
 
     private canvasStartAndEndIndex(
@@ -291,7 +312,7 @@ const minimapClass = ViewPlugin.fromClass(
   {
     eventHandlers: {
       scroll() {
-        requestAnimationFrame(() => this.render());
+        this.requestRender();
       },
     },
     provide: (plugin) => {
@@ -323,17 +344,6 @@ export type MinimapConfig = Omit<Options, "enabled"> & {
  */
 const showMinimapFacet = Facet.define<MinimapConfig | null, MinimapConfig | null>({
   combine: (c) => c.find((o) => o !== null) ?? null,
-  enables: (f) => {
-    return [
-      [
-        Config.compute([f], (s) => s.facet(f)),
-        Theme,
-        LinesState,
-        minimapClass, // TODO, codemirror-ify this one better
-        Overlay,
-      ],
-    ];
-  },
 });
 
 /**
@@ -350,11 +360,17 @@ const defaultCreateFn = (view: EditorView) => {
  * @returns 
  */
 export function minimap(options: Partial<Omit<MinimapConfig, 'create'>> = {}) {
-  return showMinimapFacet.of({
+  const config: MinimapConfig = {
     create: defaultCreateFn,
-    ...options
-  });
-}
+    ...options,
+  };
 
-// 保持原始接口兼容性
-export { showMinimapFacet as showMinimap };
+  return [
+    showMinimapFacet.of(config),
+    Config.compute([showMinimapFacet], (s) => s.facet(showMinimapFacet)),
+    Theme,
+    LinesState,
+    minimapClass,
+    Overlay,
+  ];
+}

@@ -8,9 +8,10 @@ import { Config, Options, Scale } from "./config";
 import { LinesState, foldsChanged } from "./linesState";
 import crelt from "crelt";
 import { ChangeSet, EditorState } from "@codemirror/state";
-
-type TagSpan = { text: string; tags: string };
-type FontInfo = { color: string; font: string; lineHeight: number };
+import { createDocInput } from "./text/docInput";
+import { TagSpan, FontInfo } from "./text/textTypes";
+import { GlyphAtlas } from "./text/glyphAtlas";
+import { LineRenderer } from "./text/lineRenderer";
 
 export class TextState extends LineBasedState<Array<TagSpan>> {
   private _previousTree: Tree | undefined;
@@ -18,11 +19,22 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
   private _fontInfoMap: Map<string, FontInfo> = new Map();
   private _themeClasses: Set<string> | undefined;
   private _highlightingCallbackId: number | NodeJS.Timeout | undefined;
+  private _fontInfoDirty: boolean = true;
+  private _fontInfoVersion: number = 0;
+  private _measurementCache:
+    | { charWidth: number; lineHeight: number; version: number }
+    | undefined;
+  private _glyphAtlas = new GlyphAtlas();
+  private _lineRenderer: LineRenderer;
 
   public constructor(view: EditorView) {
     super(view);
 
     this._themeClasses = new Set(Array.from(view.dom.classList));
+    this._lineRenderer = new LineRenderer(
+      this._glyphAtlas,
+      this.getFontInfo.bind(this)
+    );
 
     if (view.state.facet(Config).enabled) {
       this.updateImpl(view.state);
@@ -68,15 +80,9 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
   }
 
   private updateImpl(state: EditorState, changes?: ChangeSet) {
-    this.map.clear();
-
     /* Store display text setting for rendering */
     this._displayText = state.facet(Config).displayText;
-
-    /* If class list has changed, clear and recalculate the font info map */
-    if (this.themeChanged()) {
-      this._fontInfoMap.clear();
-    }
+    this.refreshFontCachesIfNeeded();
 
     /* Incrementally parse the tree based on previous tree + changes */
     let treeFragments: ReadonlyArray<TreeFragment> | undefined = undefined;
@@ -95,9 +101,10 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
     }
 
     /* Parse the document into a lezer tree */
-    const docToString = state.doc.toString();
     const parser = state.facet(language)?.parser;
-    const tree = parser ? parser.parse(docToString, treeFragments) : undefined;
+    const tree = parser
+      ? parser.parse(createDocInput(state.doc), treeFragments)
+      : undefined;
     this._previousTree = tree;
 
     /* Highlight the document, and store the text and tags for each line */
@@ -106,6 +113,12 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
     };
 
     let highlights: Array<{ from: number; to: number; tags: string }> = [];
+    let viewportLines:
+      | {
+          from: number;
+          to: number;
+        }
+      | undefined;
 
     if (tree) {
       /**
@@ -143,33 +156,51 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
 
       const vpLineTop = state.doc.lineAt(this.view.viewport.from).number;
       const vpLineBottom = state.doc.lineAt(this.view.viewport.to).number;
-      const vpLineCount = vpLineBottom - vpLineTop;
-      const vpScroll = vpLineTop / (state.doc.lines - vpLineCount);
+      const vpLineCount = Math.max(1, vpLineBottom - vpLineTop);
+      const scrollDenominator = Math.max(1, state.doc.lines - vpLineCount);
+      const vpScroll = Math.min(1, Math.max(0, vpLineTop / scrollDenominator));
 
       const { SizeRatio, PixelMultiplier } = Scale;
       const mmLineCount = vpLineCount * SizeRatio * PixelMultiplier;
       const mmLineRatio = vpScroll * mmLineCount;
 
-      const mmLineTop = Math.max(1, Math.floor(vpLineTop - mmLineRatio));
-      const mmLineBottom = Math.min(
+      const mmLineTopRaw = Math.max(1, Math.floor(vpLineTop - mmLineRatio));
+      const mmLineBottomRaw = Math.min(
         vpLineBottom + Math.floor(mmLineCount - mmLineRatio),
         state.doc.lines
       );
 
-      // Highlight the in-view lines synchronously
-      highlightTree(
-        tree,
-        highlighter,
-        (from, to, tags) => {
-          highlights.push({ from, to, tags });
-        },
-        state.doc.line(mmLineTop).from,
-        state.doc.line(mmLineBottom).to
-      );
+      if (
+        Number.isFinite(mmLineTopRaw) &&
+        Number.isFinite(mmLineBottomRaw)
+      ) {
+        const mmLineTop = Math.max(1, Math.floor(mmLineTopRaw));
+        const mmLineBottom = Math.max(mmLineTop, Math.floor(mmLineBottomRaw));
+
+        viewportLines = {
+          from: mmLineTop,
+          to: mmLineBottom,
+        };
+
+        // Highlight the in-view lines synchronously
+        highlightTree(
+          tree,
+          highlighter,
+          (from, to, tags) => {
+            highlights.push({ from, to, tags });
+          },
+          state.doc.line(mmLineTop).from,
+          state.doc.line(mmLineBottom).to
+        );
+      }
     }
 
+    const hasExistingData = this.map.size > 0;
+    const lineRange =
+      viewportLines && hasExistingData ? viewportLines : undefined;
+
     // Update the map
-    this.updateMapImpl(state, highlights);
+    this.updateMapImpl(state, highlights, lineRange);
 
     // Highlight the entire tree in an idle callback
     highlights = [];
@@ -178,7 +209,10 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
         highlightTree(tree, highlighter, (from, to, tags) => {
           highlights.push({ from, to, tags });
         });
-        this.updateMapImpl(state, highlights);
+        this.updateMapImpl(state, highlights, {
+          from: 1,
+          to: state.doc.lines,
+        });
         this._highlightingCallbackId = undefined;
       }
     };
@@ -188,17 +222,58 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
         : setTimeout(highlightingCallback);
   }
 
+  private refreshFontCachesIfNeeded() {
+    if (!this._fontInfoDirty) {
+      return;
+    }
+
+    this._fontInfoMap.clear();
+    this._glyphAtlas.bust();
+    this._measurementCache = undefined;
+    this._lineRenderer.markAllChanged();
+    this._fontInfoDirty = false;
+    this._fontInfoVersion++;
+  }
+
   private updateMapImpl(
     state: EditorState,
-    highlights: Array<{ from: number; to: number; tags: string }>
+    highlights: Array<{ from: number; to: number; tags: string }>,
+    lineRange?: { from: number; to: number }
   ) {
-    this.map.clear();
+    const lines = state.field(LinesState);
+    const totalLines = lines.length;
+    const startIndex = lineRange
+      ? Math.max(0, Math.min(totalLines, lineRange.from) - 1)
+      : 0;
+    const endIndex = lineRange
+      ? Math.min(totalLines, Math.max(lineRange.to, lineRange.from))
+      : totalLines;
 
-    const docToString = state.doc.toString();
+    if (!lineRange) {
+      this.map.clear();
+      this._lineRenderer.markAllChanged();
+    } else {
+      this._lineRenderer.pruneLines(totalLines);
+      for (const lineNumber of Array.from(this.map.keys())) {
+        if (lineNumber > totalLines) {
+          this.map.delete(lineNumber);
+        }
+      }
+    }
+
+    if (startIndex >= endIndex) {
+      return;
+    }
+
+    const slice = (from: number, to: number) => state.doc.sliceString(from, to);
     const highlightsIterator = highlights.values();
     let highlightPtr = highlightsIterator.next();
 
-    for (const [index, line] of state.field(LinesState).entries()) {
+    for (let rawIndex = startIndex; rawIndex < endIndex; rawIndex++) {
+      const line = lines[rawIndex];
+      if (!line) {
+        continue;
+      }
       const spans: Array<TagSpan> = [];
 
       for (const span of line) {
@@ -225,7 +300,7 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
 
           // Append unstyled text before the highlight begins
           if (from > position) {
-            spans.push({ text: docToString.slice(position, from), tags: "" });
+            spans.push({ text: slice(position, from), tags: "" });
           }
 
           // A highlight may start before and extend beyond the current span
@@ -233,7 +308,7 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
           const end = Math.min(to, span.to);
 
           // Append the highlighted text
-          spans.push({ text: docToString.slice(start, end), tags });
+          spans.push({ text: slice(start, end), tags });
           position = end;
 
           // If the highlight continues beyond this span, break from this loop
@@ -248,15 +323,20 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
         // If there are remaining spans that did not get highlighted, append them unstyled
         if (position !== span.to) {
           spans.push({
-            text: docToString.slice(position, span.to),
+            text: slice(position, span.to),
             tags: "",
           });
         }
       }
 
       // Lines are indexed beginning at 1 instead of 0
-      const lineNumber = index + 1;
-      this.map.set(lineNumber, spans);
+      const lineNumber = rawIndex + 1;
+      const previous = this.map.get(lineNumber);
+      if (previous && this.areSpansEqual(previous, spans)) {
+        continue;
+      }
+
+      this.setLine(lineNumber, spans);
     }
   }
 
@@ -270,86 +350,41 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
     context.fillStyle = color;
     context.font = font;
 
-    return {
+    if (
+      this._measurementCache &&
+      this._measurementCache.version === this._fontInfoVersion
+    ) {
+      return {
+        charWidth: this._measurementCache.charWidth,
+        lineHeight: this._measurementCache.lineHeight,
+      };
+    }
+
+    const measurements = {
       charWidth: context.measureText("_").width,
       lineHeight: lineHeight,
+      version: this._fontInfoVersion,
+    };
+    this._measurementCache = measurements;
+
+    return {
+      charWidth: measurements.charWidth,
+      lineHeight: measurements.lineHeight,
     };
   }
 
   public beforeDraw() {
-    this._fontInfoMap.clear(); // Confirm this worked for theme changes or get rid of it because it's slow
+    this.refreshFontCachesIfNeeded(); // Confirm this worked for theme changes or get rid of it because it's slow
   }
 
   public drawLine(ctx: DrawContext, lineNumber: number) {
-    const line = this.get(lineNumber);
-    if (!line) {
+    const spans = this.get(lineNumber);
+    if (!spans) {
       return;
     }
 
-    let { context, charWidth, lineHeight, offsetX, offsetY } = ctx;
-
-    let prevInfo: FontInfo | undefined;
-    context.textBaseline = "ideographic";
-
-    for (const span of line) {
-      const info = this.getFontInfo(span.tags);
-
-      if (!prevInfo || prevInfo.color !== info.color) {
-        context.fillStyle = info.color;
-      }
-
-      if (!prevInfo || prevInfo.font !== info.font) {
-        context.font = info.font;
-      }
-
-      prevInfo = info;
-
-      lineHeight = Math.max(lineHeight, info.lineHeight);
-
-      switch (this._displayText) {
-        case "characters": {
-          // TODO: `fillText` takes up the majority of profiling time in `render`
-          // Try speeding it up with `drawImage`
-          // https://stackoverflow.com/questions/8237030/html5-canvas-faster-filltext-vs-drawimage/8237081
-
-          context.fillText(span.text, offsetX, offsetY + lineHeight);
-          offsetX += span.text.length * charWidth;
-          break;
-        }
-
-        case "blocks": {
-          const nonWhitespace = /\S+/g;
-          let start: RegExpExecArray | null;
-          while ((start = nonWhitespace.exec(span.text)) !== null) {
-            const startX = offsetX + start.index * charWidth;
-            let width = (nonWhitespace.lastIndex - start.index) * charWidth;
-
-            // Reached the edge of the minimap
-            if (startX > context.canvas.width) {
-              break;
-            }
-
-            // Limit width to edge of minimap
-            if (startX + width > context.canvas.width) {
-              width = context.canvas.width - startX;
-            }
-
-            // Scaled 2px buffer between lines
-            const yBuffer = 2 / Scale.SizeRatio;
-            const height = lineHeight - yBuffer;
-
-            context.fillStyle = info.color;
-            context.globalAlpha = 0.65; // Make the blocks a bit faded
-            context.beginPath();
-            context.rect(startX, offsetY, width, height);
-            context.fill();
-          }
-
-          offsetX += span.text.length * charWidth;
-          break;
-        }
-      }
-    }
+    const displayMode = this._displayText ?? "characters";
+    this._lineRenderer.drawLine(lineNumber, spans, displayMode, ctx);
   }
 
   private getFontInfo(tags: string): FontInfo {
@@ -382,31 +417,52 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
     return result;
   }
 
+  private setLine(lineNumber: number, spans: Array<TagSpan>) {
+    this.map.set(lineNumber, spans);
+    this._lineRenderer.markLineChanged(lineNumber);
+  }
+
+  private areSpansEqual(a: Array<TagSpan>, b: Array<TagSpan>) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].text !== b[i].text || a[i].tags !== b[i].tags) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private themeChanged(): boolean {
     const previous = this._themeClasses;
     const now = new Set<string>(Array.from(this.view.dom.classList));
     this._themeClasses = now;
 
     if (!previous) {
+      this._fontInfoDirty = true;
       return true;
     }
 
     // Ignore certain classes being added/removed
-    previous.delete("cm-focused");
-    now.delete("cm-focused");
+    const previousComparable = new Set(previous);
+    const nowComparable = new Set(now);
+    previousComparable.delete("cm-focused");
+    nowComparable.delete("cm-focused");
 
-    if (previous.size !== now.size) {
+    if (previousComparable.size !== nowComparable.size) {
+      this._fontInfoDirty = true;
       return true;
     }
 
-    let containsAll = true;
-    previous.forEach((theme) => {
-      if (!now.has(theme)) {
-        containsAll = false;
+    for (const theme of previousComparable) {
+      if (!nowComparable.has(theme)) {
+        this._fontInfoDirty = true;
+        return true;
       }
-    });
+    }
 
-    return !containsAll;
+    return false;
   }
 }
 

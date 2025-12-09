@@ -51,6 +51,9 @@ const OverlayView = ViewPlugin.fromClass(
 
     private _isDragging: boolean = false;
     private _dragStartY: number | undefined;
+    private readonly _boundMouseDown = (event: MouseEvent) => this.onMouseDown(event);
+    private readonly _boundMouseUp = (event: MouseEvent) => this.onMouseUp(event);
+    private readonly _boundMouseMove = (event: MouseEvent) => this.onMouseMove(event);
 
     public constructor(private view: EditorView) {
       if (view.state.facet(Config).enabled) {
@@ -59,14 +62,16 @@ const OverlayView = ViewPlugin.fromClass(
     }
 
     private create(view: EditorView) {
+      this.remove();
+
       this.container = crelt("div", { class: "cm-minimap-overlay-container" });
       this.dom = crelt("div", { class: "cm-minimap-overlay" });
       this.container.appendChild(this.dom);
 
       // Attach event listeners for overlay
-      this.container.addEventListener("mousedown", this.onMouseDown.bind(this));
-      window.addEventListener("mouseup", this.onMouseUp.bind(this));
-      window.addEventListener("mousemove", this.onMouseMove.bind(this));
+      this.container.addEventListener("mousedown", this._boundMouseDown);
+      window.addEventListener("mouseup", this._boundMouseUp);
+      window.addEventListener("mousemove", this._boundMouseMove);
 
       // Attach the overlay elements to the minimap
       const inner = view.dom.querySelector(".cm-minimap-inner");
@@ -82,10 +87,12 @@ const OverlayView = ViewPlugin.fromClass(
 
     private remove() {
       if (this.container) {
-        this.container.removeEventListener("mousedown", this.onMouseDown);
-        window.removeEventListener("mouseup", this.onMouseUp);
-        window.removeEventListener("mousemove", this.onMouseMove);
+        this.container.removeEventListener("mousedown", this._boundMouseDown);
+        window.removeEventListener("mouseup", this._boundMouseUp);
+        window.removeEventListener("mousemove", this._boundMouseMove);
         this.container.remove();
+        this.container = undefined;
+        this.dom = undefined;
       }
     }
 

@@ -1,8 +1,9 @@
 import { LineBasedState } from "./linebasedstate";
 import { EditorView, ViewUpdate } from "@codemirror/view";
-import { LinesState, foldsChanged } from "./linesState";
+import { Lines, LinesState, foldsChanged } from "./linesState";
 import { DrawContext } from "./types";
 import { Config } from "./config";
+import { lineLength, lineNumberAt, offsetWithinLine } from "./lineGeometry";
 
 type Selection = { from: number; to: number; extends: boolean };
 type DrawInfo = { backgroundColor: string };
@@ -52,95 +53,40 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
       return;
     }
 
-    this.map.clear();
-
-    /* If class list has changed, clear and recalculate the selection style */
     if (this._themeClasses !== this.view.dom.classList.value) {
       this._drawInfo = undefined;
       this._themeClasses = this.view.dom.classList.value;
     }
 
-    const { ranges } = update.state.selection;
+    const lines = update.state.field(LinesState);
+    const nextSelections = new Map<number, Array<Selection>>();
 
-    let selectionIndex = 0;
-    for (const [index, line] of update.state.field(LinesState).entries()) {
-      const selections: Array<Selection> = [];
-
-      let offset = 0;
-      for (const span of line) {
-        do {
-          // We've already processed all selections
-          if (selectionIndex >= ranges.length) {
-            continue;
-          }
-
-          // The next selection begins after this span
-          if (span.to < ranges[selectionIndex].from) {
-            continue;
-          }
-
-          // Ignore 0-length selections
-          if (ranges[selectionIndex].from === ranges[selectionIndex].to) {
-            selectionIndex++;
-            continue;
-          }
-
-          // Build the selection for the current span
-          const range = ranges[selectionIndex];
-          const selection = {
-            from: offset + Math.max(span.from, range.from) - span.from,
-            to: offset + Math.min(span.to, range.to) - span.from,
-            extends: range.to > span.to,
-          };
-
-          const lastSelection = selections.slice(-1)[0];
-          if (lastSelection && lastSelection.to === selection.from) {
-            // The selection in this span may just be a continuation of the
-            // selection in the previous span
-
-            // Adjust `to` depending on if we're in a folded span
-            let { to } = selection;
-            if (span.folded && selection.extends) {
-              to = selection.from + 1;
-            } else if (span.folded && !selection.extends) {
-              to = lastSelection.to;
-            }
-
-            selections[selections.length - 1] = {
-              ...lastSelection,
-              to,
-              extends: selection.extends,
-            };
-          } else if (!span.folded) {
-            // It's a new selection; if we're not in a folded span we
-            // should push it onto the stack
-            selections.push(selection);
-          }
-
-          // If the selection doesn't end in this span, break out of the loop
-          if (selection.extends) {
-            break;
-          }
-
-          // Otherwise, move to the next selection
-          selectionIndex++;
-        } while (
-          selectionIndex < ranges.length &&
-          span.to >= ranges[selectionIndex].from
-        );
-
-        offset += span.folded ? 1 : span.to - span.from;
-      }
-
-      // If we don't have any selections on this line, we don't need to store anything
-      if (selections.length === 0) {
+    for (const range of update.state.selection.ranges) {
+      if (range.empty) {
         continue;
       }
 
-      // Lines are indexed beginning at 1 instead of 0
-      const lineNumber = index + 1;
-      this.map.set(lineNumber, selections);
+      const startLine = lineNumberAt(lines, range.from);
+      const endLine = lineNumberAt(
+        lines,
+        Math.max(range.from, range.to - 1)
+      );
+
+      if (startLine <= 0 || endLine <= 0) {
+        continue;
+      }
+
+      this.collectRangeSelections(
+        nextSelections,
+        lines,
+        range.from,
+        range.to,
+        startLine,
+        endLine
+      );
     }
+
+    this.applySelectionDiff(nextSelections);
   }
 
   public drawLine(ctx: DrawContext, lineNumber: number) {
@@ -198,6 +144,104 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
     this.view.dom.removeChild(mockToken);
 
     return result;
+  }
+
+  private collectRangeSelections(
+    store: Map<number, Array<Selection>>,
+    lines: Lines,
+    rangeFrom: number,
+    rangeTo: number,
+    startLine: number,
+    endLine: number
+  ) {
+    for (let lineNumber = startLine; lineNumber <= endLine; lineNumber++) {
+      const spans = lines[lineNumber - 1];
+      if (!spans || spans.length === 0) {
+        continue;
+      }
+
+      const length = lineLength(spans);
+      const fromOffset =
+        lineNumber === startLine ? offsetWithinLine(rangeFrom, spans) : 0;
+
+      let toOffset =
+        lineNumber === endLine ? offsetWithinLine(rangeTo, spans) : length;
+      if (toOffset === fromOffset) {
+        toOffset = Math.min(length, fromOffset + 1);
+      }
+
+      const lastSpan = spans[spans.length - 1];
+      const spanEnd = lastSpan ? lastSpan.to : rangeTo;
+      const extendsLine =
+        lineNumber < endLine || (lineNumber === endLine && rangeTo > spanEnd);
+
+      const selections = this.ensureLineEntry(store, lineNumber);
+      this.appendSelection(selections, {
+        from: fromOffset,
+        to: toOffset,
+        extends: extendsLine,
+      });
+    }
+  }
+
+  private ensureLineEntry(
+    store: Map<number, Array<Selection>>,
+    lineNumber: number
+  ) {
+    let selections = store.get(lineNumber);
+    if (!selections) {
+      selections = [];
+      store.set(lineNumber, selections);
+    }
+    return selections;
+  }
+
+  private appendSelection(target: Array<Selection>, entry: Selection) {
+    const last = target[target.length - 1];
+    if (last && entry.from <= last.to) {
+      target[target.length - 1] = {
+        from: Math.min(last.from, entry.from),
+        to: Math.max(last.to, entry.to),
+        extends: entry.extends || last.extends,
+      };
+      return;
+    }
+    target.push(entry);
+  }
+
+  private applySelectionDiff(nextMap: Map<number, Array<Selection>>) {
+    if (nextMap.size === 0 && this.map.size === 0) {
+      return;
+    }
+
+    for (const key of Array.from(this.map.keys())) {
+      if (!nextMap.has(key)) {
+        this.map.delete(key);
+      }
+    }
+
+    for (const [lineNumber, selections] of nextMap) {
+      const existing = this.map.get(lineNumber);
+      if (!existing || !this.areSelectionsEqual(existing, selections)) {
+        this.map.set(lineNumber, selections);
+      }
+    }
+  }
+
+  private areSelectionsEqual(a: Array<Selection>, b: Array<Selection>) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (
+        a[i].from !== b[i].from ||
+        a[i].to !== b[i].to ||
+        a[i].extends !== b[i].extends
+      ) {
+        return false;
+      }
+    }
+    return true;
   }
 }
 

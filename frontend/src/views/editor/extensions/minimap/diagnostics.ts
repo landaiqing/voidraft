@@ -9,11 +9,20 @@ import {
 import { LineBasedState } from "./linebasedstate";
 import { DrawContext } from "./types";
 import { Lines, LinesState, foldsChanged } from "./linesState";
-import { Config } from "./config";
+import { Config, Scale } from "./config";
+import { lineLength, lineNumberAt, offsetWithinLine } from "./lineGeometry";
 
 type Severity = Diagnostic["severity"];
+type DiagnosticRange = { from: number; to: number };
+type LineDiagnostics = {
+  severity: Severity;
+  ranges: Array<DiagnosticRange>;
+};
+const MIN_PIXEL_WIDTH = 1 / Scale.PixelMultiplier;
+const snapToDevice = (value: number) =>
+  Math.round(value * Scale.PixelMultiplier) / Scale.PixelMultiplier;
 
-export class DiagnosticState extends LineBasedState<Severity> {
+export class DiagnosticState extends LineBasedState<LineDiagnostics> {
   private count: number | undefined = undefined;
 
   public constructor(view: EditorView) {
@@ -63,70 +72,74 @@ export class DiagnosticState extends LineBasedState<Severity> {
     this.count = diagnosticCount(update.state);
 
     forEachDiagnostic(update.state, (diagnostic, from, to) => {
-      // Find the start and end lines for the diagnostic
-      const lineStart = this.findLine(from, lines);
-      const lineEnd = this.findLine(to, lines);
+      const lineStart = lineNumberAt(lines, from);
+      const lineEnd = lineNumberAt(lines, to);
+      if (lineStart <= 0 || lineEnd <= 0) {
+        return;
+      }
 
-      // Populate each line in the range with the highest severity diagnostic
-      let severity = diagnostic.severity;
-      for (let i = lineStart; i <= lineEnd; i++) {
-        const previous = this.get(i);
-        if (previous) {
-          severity = [severity, previous]
-            .sort(this.sort.bind(this))
-            .slice(0, 1)[0];
+      for (let lineNumber = lineStart; lineNumber <= lineEnd; lineNumber++) {
+        const spans = lines[lineNumber - 1];
+        if (!spans || spans.length === 0) {
+          continue;
         }
-        this.set(i, severity);
+
+        const length = lineLength(spans);
+
+        const startOffset =
+          lineNumber === lineStart
+            ? offsetWithinLine(from, spans)
+            : 0;
+        const endOffset =
+          lineNumber === lineEnd ? offsetWithinLine(to, spans) : length;
+
+        const fromOffset = Math.max(0, Math.min(length, startOffset));
+        let toOffset = Math.max(fromOffset, Math.min(length, endOffset));
+        if (toOffset === fromOffset) {
+          toOffset = Math.min(length, fromOffset + 1);
+        }
+
+        this.pushRange(lineNumber, diagnostic.severity, {
+          from: fromOffset,
+          to: toOffset,
+        });
       }
     });
+
+    this.mergeRanges();
   }
 
   public drawLine(ctx: DrawContext, lineNumber: number) {
-    const { context, lineHeight, offsetX, offsetY } = ctx;
-    const severity = this.get(lineNumber);
-    if (!severity) {
+    const diagnostics = this.get(lineNumber);
+    if (!diagnostics) {
       return;
     }
 
-    // Draw the full line width rectangle in the background
-    context.globalAlpha = 0.65;
-    context.beginPath();
-    context.rect(
-      offsetX,
-      offsetY /* TODO Scaling causes anti-aliasing in rectangles */,
-      context.canvas.width - offsetX,
-      lineHeight
-    );
-    context.fillStyle = this.color(severity);
-    context.fill();
+    const { context, lineHeight, charWidth, offsetX, offsetY } = ctx;
+    const color = this.color(diagnostics.severity);
+    const snappedY = snapToDevice(offsetY);
+    const snappedHeight =
+      Math.max(MIN_PIXEL_WIDTH, snapToDevice(offsetY + lineHeight) - snappedY) ||
+      MIN_PIXEL_WIDTH;
 
-    // Draw diagnostic range rectangle in the foreground
-    // TODO: We need to update the state to have specific ranges
-    // context.globalAlpha = 1;
-    // context.beginPath();
-    // context.rect(offsetX, offsetY, textWidth, lineHeight);
-    // context.fillStyle = this.color(severity);
-    // context.fill();
-  }
+    context.fillStyle = color;
+    for (const range of diagnostics.ranges) {
+      const startX = offsetX + range.from * charWidth;
+      const width = Math.max(
+        MIN_PIXEL_WIDTH,
+        (range.to - range.from) * charWidth
+      );
+      const snappedX = snapToDevice(startX);
+      const snappedWidth =
+        Math.max(MIN_PIXEL_WIDTH, snapToDevice(startX + width) - snappedX) ||
+        MIN_PIXEL_WIDTH;
 
-  /**
-   * Given a position and a set of line ranges, return
-   * the line number the position falls within
-   */
-  private findLine(pos: number, lines: Lines) {
-    const index = lines.findIndex((spans) => {
-      const start = spans.slice(0, 1)[0];
-      const end = spans.slice(-1)[0];
-
-      if (!start || !end) {
-        return false;
-      }
-
-      return start.from <= pos && pos <= end.to;
-    });
-
-    // Line numbers begin at 1
-    return index + 1;
+      context.globalAlpha = 0.65;
+      context.beginPath();
+      context.rect(snappedX, snappedY, snappedWidth, snappedHeight);
+      context.fill();
+    }
+    context.globalAlpha = 1;
   }
 
   /**
@@ -141,12 +154,6 @@ export class DiagnosticState extends LineBasedState<Severity> {
       : "#999";
   }
 
-  /** Sorts severity from most to least severe */
-  private sort(a: Severity, b: Severity) {
-    return this.score(b) - this.score(a);
-  }
-
-  /** Assigns a score to severity, with most severe being the highest */
   private score(s: Severity) {
     switch (s) {
       case "error": {
@@ -158,6 +165,47 @@ export class DiagnosticState extends LineBasedState<Severity> {
       default: {
         return 1;
       }
+    }
+  }
+
+  private pushRange(
+    lineNumber: number,
+    severity: Severity,
+    range: DiagnosticRange
+  ) {
+    let entry = this.get(lineNumber);
+    if (!entry) {
+      entry = { severity, ranges: [range] };
+      this.set(lineNumber, entry);
+      return;
+    }
+
+    if (this.score(severity) > this.score(entry.severity)) {
+      entry.severity = severity;
+    }
+
+    entry.ranges.push(range);
+  }
+
+  private mergeRanges() {
+    for (const entry of this.map.values()) {
+      if (entry.ranges.length <= 1) {
+        continue;
+      }
+
+      entry.ranges.sort((a, b) => a.from - b.from);
+      const merged: Array<DiagnosticRange> = [];
+
+      for (const range of entry.ranges) {
+        const last = merged[merged.length - 1];
+        if (last && range.from <= last.to) {
+          last.to = Math.max(last.to, range.to);
+        } else {
+          merged.push({ ...range });
+        }
+      }
+
+      entry.ranges = merged;
     }
   }
 }
