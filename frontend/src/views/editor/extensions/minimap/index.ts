@@ -37,6 +37,7 @@ const Theme = EditorView.theme({
     overflowY: "hidden",
     "& canvas": {
       display: "block",
+      willChange: "transform, opacity",
     },
   },
   "& .cm-minimap-box-shadow": {
@@ -45,6 +46,7 @@ const Theme = EditorView.theme({
 });
 
 const WIDTH_RATIO = 6;
+type RenderReason = "scroll" | "data";
 
 const minimapClass = ViewPlugin.fromClass(
   class {
@@ -53,6 +55,9 @@ const minimapClass = ViewPlugin.fromClass(
     private canvas: HTMLCanvasElement | undefined;
     private renderHandle: number | ReturnType<typeof setTimeout> | null = null;
     private cancelRender: (() => void) | null = null;
+    private pendingScrollTop: number | null = null;
+    private lastRenderedScrollTop: number = -1;
+    private pendingRenderReason: RenderReason | null = null;
 
     public text: TextState;
     public selection: SelectionState;
@@ -160,6 +165,11 @@ const minimapClass = ViewPlugin.fromClass(
         return;
       }
 
+      const effectiveScrollTop = this.pendingScrollTop ?? this.view.scrollDOM.scrollTop;
+      this.pendingScrollTop = null;
+      this.pendingRenderReason = null;
+      this.lastRenderedScrollTop = effectiveScrollTop;
+
       this.text.beforeDraw();
 
       this.updateBoxShadow();
@@ -185,7 +195,8 @@ const minimapClass = ViewPlugin.fromClass(
 
       let { startIndex, endIndex, offsetY } = this.canvasStartAndEndIndex(
         context,
-        lineHeight
+        lineHeight,
+        effectiveScrollTop
       );
 
       const gutters = this.view.state.facet(Config).gutters;
@@ -216,15 +227,39 @@ const minimapClass = ViewPlugin.fromClass(
           drawContext.offsetX += 2;
         }
 
-        this.text.drawLine(drawContext, i + 1);
-        this.selection.drawLine(drawContext, i + 1);
-        this.diagnostic.drawLine(drawContext, i + 1);
+        const lineNumber = i + 1;
+        this.text.drawLine(drawContext, lineNumber);
+        this.selection.drawLine(drawContext, lineNumber);
+
+        if (this.diagnostic.has(lineNumber)) {
+          this.diagnostic.drawLine(drawContext, lineNumber);
+        }
 
         offsetY += lineHeight;
       }
     }
 
-    requestRender() {
+    requestRender(reason: RenderReason = "data") {
+      if (reason === "scroll") {
+        const scrollTop = this.view.scrollDOM.scrollTop;
+        if (this.lastRenderedScrollTop === scrollTop && !this.pendingRenderReason) {
+          return;
+        }
+        if (
+          this.pendingRenderReason === "scroll" &&
+          this.pendingScrollTop === scrollTop
+        ) {
+          return;
+        }
+        this.pendingScrollTop = scrollTop;
+      } else {
+        this.pendingScrollTop = null;
+      }
+
+      if (reason === "data" || this.pendingRenderReason === null) {
+        this.pendingRenderReason = reason;
+      }
+
       if (this.renderHandle !== null) {
         return;
       }
@@ -256,17 +291,21 @@ const minimapClass = ViewPlugin.fromClass(
       this.cancelRender();
       this.renderHandle = null;
       this.cancelRender = null;
+      this.pendingScrollTop = null;
+      this.pendingRenderReason = null;
     }
 
     private canvasStartAndEndIndex(
       context: CanvasRenderingContext2D,
-      lineHeight: number
+      lineHeight: number,
+      scrollTopOverride?: number
     ) {
       let { top: pTop, bottom: pBottom } = this.view.documentPadding;
       (pTop /= Scale.SizeRatio), (pBottom /= Scale.SizeRatio);
 
       const canvasHeight = context.canvas.height;
-      const { clientHeight, scrollHeight, scrollTop } = this.view.scrollDOM;
+      const { clientHeight, scrollHeight } = this.view.scrollDOM;
+      const scrollTop = scrollTopOverride ?? this.view.scrollDOM.scrollTop;
       let scrollPercent = scrollTop / (scrollHeight - clientHeight);
       if (isNaN(scrollPercent)) {
         scrollPercent = 0;
@@ -312,7 +351,7 @@ const minimapClass = ViewPlugin.fromClass(
   {
     eventHandlers: {
       scroll() {
-        this.requestRender();
+        this.requestRender("scroll");
       },
     },
     provide: (plugin) => {

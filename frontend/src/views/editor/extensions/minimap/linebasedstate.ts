@@ -14,6 +14,10 @@ export abstract class LineBasedState<TValue> {
     return this.map.get(lineNumber);
   }
 
+  public has(lineNumber: number): boolean {
+    return this.map.has(lineNumber);
+  }
+
   protected set(lineNumber: number, value: TValue) {
     this.map.set(lineNumber, value);
   }

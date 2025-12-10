@@ -77,6 +77,12 @@ function computeLinesState(state: EditorState): Lines {
 const LinesState = StateField.define<Lines>({
   create: (state) => computeLinesState(state),
   update: (current, tr) => {
+    const prevEnabled = tr.startState.facet(Config).enabled;
+    const nextEnabled = tr.state.facet(Config).enabled;
+    if (prevEnabled !== nextEnabled) {
+      return computeLinesState(tr.state);
+    }
+
     if (foldsChanged([tr]) || tr.docChanged) {
       return computeLinesState(tr.state);
     }
@@ -93,3 +99,11 @@ function foldsChanged(transactions: readonly Transaction[]) {
 }
 
 export { foldsChanged, LinesState };
+
+export function getLinesSnapshot(state: EditorState): Lines {
+  const lines = state.field(LinesState);
+  if (lines.length || !state.facet(Config).enabled) {
+    return lines;
+  }
+  return computeLinesState(state);
+}

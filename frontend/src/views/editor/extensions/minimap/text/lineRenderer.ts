@@ -18,6 +18,7 @@ type LineBitmap = {
 export class LineRenderer {
   private readonly _lineVersions = new Map<number, number>();
   private readonly _lineCache = new Map<number, LineBitmap>();
+  private static readonly MAX_CACHE_LINES = 2000;
 
   public constructor(
     private readonly glyphAtlas: GlyphAtlas,
@@ -28,6 +29,7 @@ export class LineRenderer {
     const version = (this._lineVersions.get(lineNumber) ?? 0) + 1;
     this._lineVersions.set(lineNumber, version);
     this._lineCache.delete(lineNumber);
+    this.trimCache();
   }
 
   public markAllChanged() {
@@ -42,6 +44,7 @@ export class LineRenderer {
         this._lineCache.delete(key);
       }
     }
+    this.trimCache();
   }
 
   public drawLine(
@@ -170,7 +173,17 @@ export class LineRenderer {
     };
 
     this._lineCache.set(lineNumber, entry);
+    this.trimCache();
     return entry;
+  }
+
+  private trimCache() {
+    while (this._lineCache.size > LineRenderer.MAX_CACHE_LINES) {
+      const oldest = this._lineCache.keys().next();
+      if (oldest.done) break;
+      this._lineCache.delete(oldest.value);
+      this._lineVersions.delete(oldest.value);
+    }
   }
 
   private paintSpans(

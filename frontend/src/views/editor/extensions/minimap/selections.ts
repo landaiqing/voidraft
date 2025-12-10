@@ -1,16 +1,27 @@
 import { LineBasedState } from "./linebasedstate";
 import { EditorView, ViewUpdate } from "@codemirror/view";
-import { Lines, LinesState, foldsChanged } from "./linesState";
+import { EditorState } from "@codemirror/state";
+import { Lines, foldsChanged, getLinesSnapshot } from "./linesState";
 import { DrawContext } from "./types";
 import { Config } from "./config";
 import { lineLength, lineNumberAt, offsetWithinLine } from "./lineGeometry";
 
 type Selection = { from: number; to: number; extends: boolean };
 type DrawInfo = { backgroundColor: string };
+type RangeInfo = {
+  from: number;
+  to: number;
+  lineFrom: number;
+  lineTo: number;
+};
+
+const MAX_CACHED_LINES = 800;
 
 export class SelectionState extends LineBasedState<Array<Selection>> {
   private _drawInfo: DrawInfo | undefined;
   private _themeClasses: string;
+  private _rangeInfo: Array<RangeInfo> = [];
+  private _linesSnapshot: Lines = [];
 
   public constructor(view: EditorView) {
     super(view);
@@ -53,40 +64,7 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
       return;
     }
 
-    if (this._themeClasses !== this.view.dom.classList.value) {
-      this._drawInfo = undefined;
-      this._themeClasses = this.view.dom.classList.value;
-    }
-
-    const lines = update.state.field(LinesState);
-    const nextSelections = new Map<number, Array<Selection>>();
-
-    for (const range of update.state.selection.ranges) {
-      if (range.empty) {
-        continue;
-      }
-
-      const startLine = lineNumberAt(lines, range.from);
-      const endLine = lineNumberAt(
-        lines,
-        Math.max(range.from, range.to - 1)
-      );
-
-      if (startLine <= 0 || endLine <= 0) {
-        continue;
-      }
-
-      this.collectRangeSelections(
-        nextSelections,
-        lines,
-        range.from,
-        range.to,
-        startLine,
-        endLine
-      );
-    }
-
-    this.applySelectionDiff(nextSelections);
+    this.rebuild(update.state);
   }
 
   public drawLine(ctx: DrawContext, lineNumber: number) {
@@ -97,7 +75,7 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
       offsetX: startOffsetX,
       offsetY,
     } = ctx;
-    const selections = this.get(lineNumber);
+    const selections = this.ensureSelections(lineNumber);
     if (!selections) {
       return;
     }
@@ -146,56 +124,6 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
     return result;
   }
 
-  private collectRangeSelections(
-    store: Map<number, Array<Selection>>,
-    lines: Lines,
-    rangeFrom: number,
-    rangeTo: number,
-    startLine: number,
-    endLine: number
-  ) {
-    for (let lineNumber = startLine; lineNumber <= endLine; lineNumber++) {
-      const spans = lines[lineNumber - 1];
-      if (!spans || spans.length === 0) {
-        continue;
-      }
-
-      const length = lineLength(spans);
-      const fromOffset =
-        lineNumber === startLine ? offsetWithinLine(rangeFrom, spans) : 0;
-
-      let toOffset =
-        lineNumber === endLine ? offsetWithinLine(rangeTo, spans) : length;
-      if (toOffset === fromOffset) {
-        toOffset = Math.min(length, fromOffset + 1);
-      }
-
-      const lastSpan = spans[spans.length - 1];
-      const spanEnd = lastSpan ? lastSpan.to : rangeTo;
-      const extendsLine =
-        lineNumber < endLine || (lineNumber === endLine && rangeTo > spanEnd);
-
-      const selections = this.ensureLineEntry(store, lineNumber);
-      this.appendSelection(selections, {
-        from: fromOffset,
-        to: toOffset,
-        extends: extendsLine,
-      });
-    }
-  }
-
-  private ensureLineEntry(
-    store: Map<number, Array<Selection>>,
-    lineNumber: number
-  ) {
-    let selections = store.get(lineNumber);
-    if (!selections) {
-      selections = [];
-      store.set(lineNumber, selections);
-    }
-    return selections;
-  }
-
   private appendSelection(target: Array<Selection>, entry: Selection) {
     const last = target[target.length - 1];
     if (last && entry.from <= last.to) {
@@ -208,40 +136,109 @@ export class SelectionState extends LineBasedState<Array<Selection>> {
     }
     target.push(entry);
   }
-
-  private applySelectionDiff(nextMap: Map<number, Array<Selection>>) {
-    if (nextMap.size === 0 && this.map.size === 0) {
-      return;
+  private rebuild(state: EditorState) {
+    if (this._themeClasses !== this.view.dom.classList.value) {
+      this._drawInfo = undefined;
+      this._themeClasses = this.view.dom.classList.value;
     }
 
-    for (const key of Array.from(this.map.keys())) {
-      if (!nextMap.has(key)) {
-        this.map.delete(key);
-      }
-    }
-
-    for (const [lineNumber, selections] of nextMap) {
-      const existing = this.map.get(lineNumber);
-      if (!existing || !this.areSelectionsEqual(existing, selections)) {
-        this.map.set(lineNumber, selections);
-      }
-    }
+    this._linesSnapshot = getLinesSnapshot(state);
+    this._rangeInfo = this.buildRangeInfo(state, this._linesSnapshot);
+    this.map.clear();
   }
 
-  private areSelectionsEqual(a: Array<Selection>, b: Array<Selection>) {
-    if (a.length !== b.length) {
-      return false;
-    }
-    for (let i = 0; i < a.length; i++) {
-      if (
-        a[i].from !== b[i].from ||
-        a[i].to !== b[i].to ||
-        a[i].extends !== b[i].extends
-      ) {
-        return false;
+  private buildRangeInfo(state: EditorState, lines: Lines) {
+    const info: Array<RangeInfo> = [];
+    for (const range of state.selection.ranges) {
+      if (range.empty) {
+        continue;
       }
+
+      const startLine = lineNumberAt(lines, range.from);
+      const endLine = lineNumberAt(lines, Math.max(range.from, range.to - 1));
+      if (startLine <= 0 || endLine <= 0) {
+        continue;
+      }
+
+      info.push({
+        from: range.from,
+        to: range.to,
+        lineFrom: startLine,
+        lineTo: endLine,
+      });
     }
-    return true;
+    return info;
+  }
+
+  private ensureSelections(lineNumber: number) {
+    const cached = this.get(lineNumber);
+    if (cached) {
+      return cached;
+    }
+
+    const computed = this.buildSelectionsForLine(lineNumber);
+    if (!computed || computed.length === 0) {
+      return undefined;
+    }
+
+    if (this.map.has(lineNumber)) {
+      this.map.delete(lineNumber);
+    }
+    this.map.set(lineNumber, computed);
+    while (this.map.size > MAX_CACHED_LINES) {
+      const oldest = this.map.keys().next();
+      if (oldest.done) {
+        break;
+      }
+      this.map.delete(oldest.value);
+    }
+
+    return computed;
+  }
+
+  private buildSelectionsForLine(lineNumber: number) {
+    const spans = this._linesSnapshot[lineNumber - 1];
+    if (!spans || spans.length === 0) {
+      return undefined;
+    }
+
+    const relevant = this._rangeInfo.filter(
+      (info) => lineNumber >= info.lineFrom && lineNumber <= info.lineTo
+    );
+    if (!relevant.length) {
+      return undefined;
+    }
+
+    const selections: Array<Selection> = [];
+    for (const range of relevant) {
+      const length = lineLength(spans);
+      const fromOffset =
+        lineNumber === range.lineFrom
+          ? offsetWithinLine(range.from, spans)
+          : 0;
+
+      let toOffset =
+        lineNumber === range.lineTo
+          ? offsetWithinLine(range.to, spans)
+          : length;
+      if (toOffset === fromOffset) {
+        toOffset = Math.min(length, fromOffset + 1);
+      }
+
+      const lastSpan = spans[spans.length - 1];
+      const spanEnd = lastSpan ? lastSpan.to : range.to;
+      const extendsLine =
+        lineNumber < range.lineTo ||
+        (lineNumber === range.lineTo && range.to > spanEnd);
+
+      this.appendSelection(selections, {
+        from: fromOffset,
+        to: toOffset,
+        extends: extendsLine,
+      });
+    }
+
+    return selections;
   }
 }
 

@@ -404,7 +404,13 @@ export class TextState extends LineBasedState<Array<TagSpan>> {
 
     // Get style information and store it
     const style = window.getComputedStyle(mockToken);
-    const lineHeight = parseFloat(style.lineHeight) / Scale.SizeRatio;
+    const rawLineHeight = parseFloat(style.lineHeight);
+    const fallbackLineHeight = parseFloat(style.fontSize) || this.view.defaultLineHeight;
+    const resolvedLineHeight =
+      Number.isFinite(rawLineHeight) && rawLineHeight > 0
+        ? rawLineHeight
+        : fallbackLineHeight;
+    const lineHeight = Math.max(1, resolvedLineHeight / Scale.SizeRatio);
     const result = {
       color: style.color,
       font: `${style.fontStyle} ${style.fontWeight} ${lineHeight}px ${style.fontFamily}`,
