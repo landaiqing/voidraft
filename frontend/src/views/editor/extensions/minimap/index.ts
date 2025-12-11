@@ -1,26 +1,36 @@
-import { Facet } from "@codemirror/state";
-import { EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
-import { Overlay } from "./overlay";
-import { Config, Options, Scale } from "./config";
-import { DiagnosticState, diagnostics } from "./diagnostics";
-import { SelectionState, selections } from "./selections";
-import { TextState, text } from "./text";
-import { LinesState } from "./linesState";
-import crelt from "crelt";
-import { GUTTER_WIDTH, drawLineGutter } from "./gutters";
+/**
+ * Minimap Extension Entry
+ * Uses block rendering for visible area only
+ */
+
+import { Facet } from '@codemirror/state';
+import { EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
+import { Overlay } from './overlay';
+import { Config, Options, Scale } from './config';
+import { DiagnosticState, diagnostics } from './diagnostics';
+import { SelectionState, selections } from './selections';
+import { LinesState, foldsChanged } from './linesState';
+import { BlockManager } from './blockManager';
+import crelt from 'crelt';
+import { GUTTER_WIDTH, drawLineGutter } from './gutters';
+import { createDebounce } from '@/common/utils/debounce';
 
 const Theme = EditorView.theme({
-  "&": {
-    height: "100%",
-    overflowY: "auto",
+  '&': {
+    height: '100%',
+    overflowY: 'auto',
   },
-  "& .cm-minimap-gutter": {
+  '& .cm-minimap-gutter': {
     borderRight: 0,
     flexShrink: 0,
-    left: "unset",
-    position: "sticky",
+    left: 'unset',
+    position: 'sticky',
     right: 0,
     top: 0,
+  },
+  // 初始化时隐藏，避免宽度未设置时闪烁
+  '& .cm-minimap-initializing': {
+    opacity: 0,
   },
   '& .cm-minimap-autohide': {
     opacity: 0.0,
@@ -29,24 +39,27 @@ const Theme = EditorView.theme({
   '& .cm-minimap-autohide:hover': {
     opacity: 1.0,
   },
-  "& .cm-minimap-inner": {
-    height: "100%",
-    position: "absolute",
+  '& .cm-minimap-inner': {
+    height: '100%',
+    position: 'absolute',
     right: 0,
     top: 0,
-    overflowY: "hidden",
-    "& canvas": {
-      display: "block",
-      willChange: "transform, opacity",
+    overflowY: 'hidden',
+    '& canvas': {
+      display: 'block',
+      willChange: 'transform, opacity',
     },
   },
-  "& .cm-minimap-box-shadow": {
-    boxShadow: "12px 0px 20px 5px #6c6c6c",
+  '& .cm-minimap-box-shadow': {
+    boxShadow: '12px 0px 20px 5px #6c6c6c',
   },
 });
 
 const WIDTH_RATIO = 6;
-type RenderReason = "scroll" | "data";
+type RenderReason = 'scroll' | 'data';
+
+// 渲染类型：blocks=块内容变化需要重渲染, overlays=只需重绘选区等覆盖层
+type RenderType = 'blocks' | 'overlays';
 
 const minimapClass = ViewPlugin.fromClass(
   class {
@@ -58,40 +71,98 @@ const minimapClass = ViewPlugin.fromClass(
     private pendingScrollTop: number | null = null;
     private lastRenderedScrollTop: number = -1;
     private pendingRenderReason: RenderReason | null = null;
+    private pendingRenderType: RenderType | null = null;
 
-    public text: TextState;
+    // 块管理器（Worker 渲染）
+    private blockManager: BlockManager;
     public selection: SelectionState;
     public diagnostic: DiagnosticState;
 
+    // 等待滚动位置稳定
+    private initialRenderDelay: ReturnType<typeof setTimeout> | null = null;
+    private isInitialized = false;
+    private hasRenderedOnce = false; // 是否已首次渲染
+    private lastScrollTop = -1;
+    private scrollStableCount = 0;
+
+    // 块渲染防抖（500ms）
+    private debouncedBlockRender: ReturnType<typeof createDebounce>['debouncedFn'];
+    private cancelDebounce: () => void;
+
     public constructor(private view: EditorView) {
-      this.text = text(view);
+      this.blockManager = new BlockManager(view);
       this.selection = selections(view);
       this.diagnostic = diagnostics(view);
 
+      // 创建防抖的块渲染函数
+      const { debouncedFn, cancel } = createDebounce(() => {
+        this.requestRender('data', 'blocks');
+      }, { delay: 1000 });
+      this.debouncedBlockRender = debouncedFn;
+      this.cancelDebounce = cancel;
+      
+      // 当块渲染完成时，请求重新渲染（只渲染 overlays）
+      this.blockManager.setOnBlockReady(() => {
+        if (this.isInitialized) {
+          this.requestRender('data', 'overlays');
+        }
+      });
+
       if (view.state.facet(showMinimapFacet)) {
         this.create(view);
+        this.waitForScrollStable();
       }
+    }
+
+    // 等待滚动位置稳定后再渲染
+    private waitForScrollStable(): void {
+      const check = () => {
+        const scrollTop = this.view.scrollDOM.scrollTop;
+        
+        if (scrollTop === this.lastScrollTop) {
+          this.scrollStableCount++;
+          // 连续 3 次检测位置不变，认为稳定
+          if (this.scrollStableCount >= 3) {
+            this.isInitialized = true;
+            this.initialRenderDelay = null;
+            this.requestRender('data', 'blocks');
+            return;
+          }
+        } else {
+          this.scrollStableCount = 0;
+          this.lastScrollTop = scrollTop;
+        }
+        
+        // 每 20ms 检测一次，最多等待 200ms
+        if (this.scrollStableCount < 10) {
+          this.initialRenderDelay = setTimeout(check, 20);
+        } else {
+          this.isInitialized = true;
+          this.initialRenderDelay = null;
+          this.requestRender('data', 'blocks');
+        }
+      };
+      
+      this.initialRenderDelay = setTimeout(check, 20);
     }
 
     private create(view: EditorView) {
       const config = view.state.facet(showMinimapFacet);
       if (!config) {
-        throw Error("Expected nonnull");
+        throw Error('Expected nonnull');
       }
 
-      this.inner = crelt("div", { class: "cm-minimap-inner" });
-      this.canvas = crelt("canvas") as HTMLCanvasElement;
+      this.inner = crelt('div', { class: 'cm-minimap-inner' });
+      this.canvas = crelt('canvas') as HTMLCanvasElement;
 
       this.dom = config.create(view).dom;
-      this.dom.classList.add("cm-gutters");
-      this.dom.classList.add("cm-minimap-gutter");
+      this.dom.classList.add('cm-gutters');
+      this.dom.classList.add('cm-minimap-gutter');
+      this.dom.classList.add('cm-minimap-initializing'); // 初始隐藏
 
       this.inner.appendChild(this.canvas);
       this.dom.appendChild(this.inner);
 
-      // For now let's keep this same behavior. We might want to change
-      // this in the future and have the extension figure out how to mount.
-      // Or expose some more generic right gutter api and use that
       this.view.scrollDOM.insertBefore(
         this.dom,
         this.view.contentDOM.nextSibling
@@ -108,7 +179,8 @@ const minimapClass = ViewPlugin.fromClass(
         this.dom.classList.add('cm-minimap-autohide');
       }
 
-      this.requestRender();
+      // 设置显示模式
+      this.blockManager.setDisplayText(view.state.facet(Config).displayText);
     }
 
     private remove() {
@@ -119,6 +191,7 @@ const minimapClass = ViewPlugin.fromClass(
       this.dom = undefined;
       this.inner = undefined;
       this.canvas = undefined;
+      this.hasRenderedOnce = false; // 重置首次渲染标记
     }
 
     update(update: ViewUpdate) {
@@ -135,6 +208,9 @@ const minimapClass = ViewPlugin.fromClass(
       }
 
       if (now) {
+        let needBlockRender = false;
+        let needOverlayRender = false;
+        
         if (prev && this.dom && prev.autohide !== now.autohide) {
           if (now.autohide) {
             this.dom.classList.add('cm-minimap-autohide');
@@ -143,10 +219,45 @@ const minimapClass = ViewPlugin.fromClass(
           }
         }
 
-        this.text.update(update);
+        // Check theme change
+        if (this.blockManager.checkThemeChange()) {
+          needBlockRender = true;
+        }
+
+        // Check config change
+        const prevConfig = update.startState.facet(Config);
+        const nowConfig = update.state.facet(Config);
+        if (prevConfig.displayText !== nowConfig.displayText) {
+          this.blockManager.setDisplayText(nowConfig.displayText);
+          needBlockRender = true;
+        }
+
+        // Check doc change
+        if (update.docChanged) {
+          const oldLineCount = update.startState.doc.lines;
+          this.blockManager.handleDocChange(update.state, update.changes, oldLineCount);
+          needBlockRender = true;
+        }
+
+        // Check fold change
+        if (foldsChanged(update.transactions)) {
+          this.blockManager.markAllDirty();
+          needBlockRender = true;
+        }
+
+        // Update selection and diagnostics
         this.selection.update(update);
         this.diagnostic.update(update);
-        this.requestRender();
+        if (update.selectionSet) {
+          needOverlayRender = true;
+        }
+
+        // 根据变化类型决定渲染方式
+        if (needBlockRender) {
+          this.debouncedBlockRender();
+        } else if (needOverlayRender) {
+          this.requestRender('data', 'overlays');
+        }
       }
     }
 
@@ -160,93 +271,118 @@ const minimapClass = ViewPlugin.fromClass(
     }
 
     render() {
-      // If we don't have elements to draw to exit early
       if (!this.dom || !this.canvas || !this.inner) {
         return;
       }
 
       const effectiveScrollTop = this.pendingScrollTop ?? this.view.scrollDOM.scrollTop;
+      const renderType = this.pendingRenderType ?? 'blocks';
       this.pendingScrollTop = null;
       this.pendingRenderReason = null;
+      this.pendingRenderType = null;
       this.lastRenderedScrollTop = effectiveScrollTop;
-
-      this.text.beforeDraw();
 
       this.updateBoxShadow();
 
-      this.dom.style.width = this.getWidth() + "px";
-      this.canvas.style.maxWidth = this.getWidth() + "px";
-      this.canvas.width = this.getWidth() * Scale.PixelMultiplier;
+      // Set canvas size
+      const width = this.getWidth();
+      this.dom.style.width = width + 'px';
+      this.canvas.style.maxWidth = width + 'px';
+      this.canvas.width = width * Scale.PixelMultiplier;
 
       const domHeight = this.view.dom.getBoundingClientRect().height;
-      this.inner.style.minHeight = domHeight + "px";
+      this.inner.style.minHeight = domHeight + 'px';
       this.canvas.height = domHeight * Scale.PixelMultiplier;
-      this.canvas.style.height = domHeight + "px";
+      this.canvas.style.height = domHeight + 'px';
 
-      const context = this.canvas.getContext("2d");
+      const context = this.canvas.getContext('2d');
       if (!context) {
         return;
       }
 
-      context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      // Get scroll info
+      const scrollInfo = {
+        scrollTop: effectiveScrollTop,
+        clientHeight: this.view.scrollDOM.clientHeight,
+        scrollHeight: this.view.scrollDOM.scrollHeight,
+      };
 
-      /* We need to get the correct font dimensions before this to measure characters */
-      const { charWidth, lineHeight } = this.text.measure(context);
+      // 渲染块
+      if (renderType === 'blocks') {
+        this.blockManager.render(this.canvas, context, scrollInfo);
+      } else {
+        this.blockManager.drawCachedBlocks(this.canvas, context, scrollInfo);
+      }
 
-      let { startIndex, endIndex, offsetY } = this.canvasStartAndEndIndex(
+      // Render overlays (gutters, selections, diagnostics)
+      const gutters = this.view.state.facet(Config).gutters;
+      this.renderOverlays(context, effectiveScrollTop, gutters);
+
+      // 首次渲染完成后显示 minimap
+      if (!this.hasRenderedOnce && this.dom) {
+        this.hasRenderedOnce = true;
+        this.dom.classList.remove('cm-minimap-initializing');
+      }
+    }
+
+    /**
+     * 渲染覆盖层（gutters、选区、诊断）
+     */
+    private renderOverlays(
+      context: CanvasRenderingContext2D,
+      scrollTop: number,
+      gutters: Required<Options>['gutters']
+    ) {
+      const { charWidth, lineHeight } = this.blockManager.measure(context);
+      const { startIndex, endIndex, offsetY: initialOffsetY } = this.canvasStartAndEndIndex(
         context,
         lineHeight,
-        effectiveScrollTop
+        scrollTop
       );
 
-      const gutters = this.view.state.facet(Config).gutters;
-
       const lines = this.view.state.field(LinesState);
+      let offsetY = initialOffsetY;
 
       for (let i = startIndex; i < endIndex; i++) {
         if (i >= lines.length) break;
 
-        const drawContext = {
-          offsetX: 0,
-          offsetY,
-          context,
-          lineHeight,
-          charWidth,
-        };
+        let offsetX = 0;
+        const lineNumber = i + 1;
 
+        // 渲染 gutters
         if (gutters.length) {
-          /* Small leading buffer */
-          drawContext.offsetX += 2;
-
+          offsetX += 2;
           for (const gutter of gutters) {
-            drawLineGutter(gutter, drawContext, i + 1);
-            drawContext.offsetX += GUTTER_WIDTH;
+            drawLineGutter(gutter, { offsetX, offsetY, context, lineHeight, charWidth }, lineNumber);
+            offsetX += GUTTER_WIDTH;
           }
-
-          /* Small trailing buffer */
-          drawContext.offsetX += 2;
+          offsetX += 2;
         }
 
-        const lineNumber = i + 1;
-        this.text.drawLine(drawContext, lineNumber);
-        this.selection.drawLine(drawContext, lineNumber);
+        // 渲染选区
+        this.selection.drawLine({ offsetX, offsetY, context, lineHeight, charWidth }, lineNumber);
 
+        // 渲染诊断
         if (this.diagnostic.has(lineNumber)) {
-          this.diagnostic.drawLine(drawContext, lineNumber);
+          this.diagnostic.drawLine({ offsetX, offsetY, context, lineHeight, charWidth }, lineNumber);
         }
 
         offsetY += lineHeight;
       }
     }
 
-    requestRender(reason: RenderReason = "data") {
-      if (reason === "scroll") {
+    requestRender(reason: RenderReason = 'data', type: RenderType = 'blocks') {
+      if (!this.isInitialized) {
+        return;
+      }
+
+      if (reason === 'scroll') {
         const scrollTop = this.view.scrollDOM.scrollTop;
         if (this.lastRenderedScrollTop === scrollTop && !this.pendingRenderReason) {
           return;
         }
         if (
-          this.pendingRenderReason === "scroll" &&
+          this.pendingRenderReason === 'scroll' &&
           this.pendingScrollTop === scrollTop
         ) {
           return;
@@ -256,15 +392,20 @@ const minimapClass = ViewPlugin.fromClass(
         this.pendingScrollTop = null;
       }
 
-      if (reason === "data" || this.pendingRenderReason === null) {
+      if (reason === 'data' || this.pendingRenderReason === null) {
         this.pendingRenderReason = reason;
+      }
+
+      // 合并渲染类型：blocks > overlays
+      if (this.pendingRenderType === null || type === 'blocks') {
+        this.pendingRenderType = type;
       }
 
       if (this.renderHandle !== null) {
         return;
       }
 
-      if (typeof requestAnimationFrame === "function") {
+      if (typeof requestAnimationFrame === 'function') {
         const handle = requestAnimationFrame(() => {
           this.renderHandle = null;
           this.cancelRender = null;
@@ -338,20 +479,26 @@ const minimapClass = ViewPlugin.fromClass(
       const { clientWidth, scrollWidth, scrollLeft } = this.view.scrollDOM;
 
       if (clientWidth + scrollLeft < scrollWidth) {
-        this.canvas.classList.add("cm-minimap-box-shadow");
+        this.canvas.classList.add('cm-minimap-box-shadow');
       } else {
-        this.canvas.classList.remove("cm-minimap-box-shadow");
+        this.canvas.classList.remove('cm-minimap-box-shadow');
       }
     }
 
     destroy() {
+      if (this.initialRenderDelay) {
+        clearTimeout(this.initialRenderDelay);
+        this.initialRenderDelay = null;
+      }
+      this.cancelDebounce();
+      this.blockManager.destroy();
       this.remove();
     }
   },
   {
     eventHandlers: {
       scroll() {
-        this.requestRender("scroll");
+        this.requestRender('scroll', 'blocks');
       },
     },
     provide: (plugin) => {
@@ -367,8 +514,7 @@ const minimapClass = ViewPlugin.fromClass(
   }
 );
 
-// 使用type定义
-export type MinimapConfig = Omit<Options, "enabled"> & {
+export type MinimapConfig = Omit<Options, 'enabled'> & {
   /**
    * A function that creates the element that contains the minimap
    */
@@ -378,25 +524,22 @@ export type MinimapConfig = Omit<Options, "enabled"> & {
 /**
  * Facet used to show a minimap in the right gutter of the editor using the
  * provided configuration.
- *
- * If you return `null`, a minimap will not be shown.
  */
 const showMinimapFacet = Facet.define<MinimapConfig | null, MinimapConfig | null>({
   combine: (c) => c.find((o) => o !== null) ?? null,
 });
 
 /**
- * 创建默认的minimap DOM元素
+ * 创建默认的 minimap DOM 元素
  */
-const defaultCreateFn = (view: EditorView) => {
+const defaultCreateFn = (_view: EditorView) => {
   const dom = document.createElement('div');
   return { dom };
 };
 
 /**
- * 添加minimap到编辑器
- * @param options Minimap配置项
- * @returns 
+ * 添加 minimap 到编辑器
+ * @param options Minimap 配置项
  */
 export function minimap(options: Partial<Omit<MinimapConfig, 'create'>> = {}) {
   const config: MinimapConfig = {

@@ -8,7 +8,7 @@ import {
 
 import { LineBasedState } from "./linebasedstate";
 import { DrawContext } from "./types";
-import { Lines, LinesState, foldsChanged } from "./linesState";
+import { LinesState, foldsChanged } from "./linesState";
 import { Config, Scale } from "./config";
 import { lineLength, lineNumberAt, offsetWithinLine } from "./lineGeometry";
 

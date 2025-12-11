@@ -238,10 +238,6 @@ const handleConfigInput = async (
 </template>
 
 <style scoped lang="scss">
-.settings-page {
-  //max-width: 1000px;
-}
-
 .extension-item {
   border-bottom: 1px solid var(--settings-input-border);
 
@@ -296,36 +292,38 @@ const handleConfigInput = async (
 
 .extension-config {
   background-color: var(--settings-input-bg);
-  border-left: 3px solid var(--settings-accent);
-  margin: 8px 0 16px 0;
-  padding: 12px;
-  border-radius: 6px;
-  font-size: 13px;
+  border-left: 2px solid var(--settings-accent);
+  margin: 4px 0 12px 0;
+  padding: 8px 10px;
+  border-radius: 2px;
+  font-size: 12px;
 }
 
 .config-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .config-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--settings-text);
   margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .reset-button {
-  padding: 6px 12px;
-  font-size: 11px;
+  padding: 3px 8px;
+  font-size: 12px;
   border: 1px solid var(--settings-input-border);
-  border-radius: 4px;
-  background-color: var(--settings-input-bg);
+  border-radius: 2px;
+  background-color: transparent;
   color: var(--settings-text-secondary);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   white-space: nowrap;
 
   &:hover {
@@ -337,8 +335,7 @@ const handleConfigInput = async (
 
 .config-table-wrapper {
   border: 1px solid var(--settings-input-border);
-  border-radius: 6px;
-  margin-top: 8px;
+  border-radius: 2px;
   overflow: hidden;
   background-color: var(--settings-panel, var(--settings-input-bg));
 }
@@ -346,7 +343,7 @@ const handleConfigInput = async (
 .config-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .config-table tr + tr {
@@ -355,38 +352,41 @@ const handleConfigInput = async (
 
 .config-table th,
 .config-table td {
-  padding: 10px 12px;
+  padding: 5px 8px;
   vertical-align: middle;
 }
 
 .config-table-key {
-  width: 36%;
+  width: 30%;
   text-align: left;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--settings-text-secondary);
   border-right: 1px solid var(--settings-input-border);
-  background-color: var(--settings-input-bg);
+  background-color: rgba(0, 0, 0, 0.05);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
+  font-size: 10px;
 }
 
 .config-table-value {
-  padding: 6px;
+  padding: 3px 4px;
 }
 
 .config-value-input {
   width: 100%;
-  padding: 8px 10px;
+  padding: 4px 6px;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: 2px;
   background: transparent;
   color: var(--settings-text);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
+  line-height: 1.3;
   box-sizing: border-box;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .config-value-input:hover {
-  border-color: var(--settings-hover-border, var(--settings-input-border));
+  border-color: var(--settings-input-border);
   background-color: var(--settings-hover);
 }
 
