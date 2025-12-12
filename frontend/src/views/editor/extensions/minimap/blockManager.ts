@@ -11,6 +11,7 @@ import {
   Highlight,
   LineSpan,
   FontInfo,
+  UpdateFontInfoRequest,
 } from './worker/protocol';
 import crelt from 'crelt';
 
@@ -26,6 +27,11 @@ interface Block {
   rendering: boolean;
   requestId: number;
   lastUsed: number; // LRU 时间戳
+  // 高亮缓存
+  cachedHighlights: Highlight[] | null;
+  cachedLines: LineSpan[][] | null;
+  cachedTextSlice: string | null;
+  cachedTextOffset: number;
 }
 
 export class BlockManager {
@@ -34,6 +40,7 @@ export class BlockManager {
   private fontInfoMap = new Map<string, FontInfo>();
   private fontDirty = true;
   private fontVersion = 0;
+  private sentFontTags = new Set<string>(); // 已发送给 Worker 的字体标签
   private measureCache: { charWidth: number; lineHeight: number; version: number } | null = null;
   private displayText: 'blocks' | 'characters' = 'characters';
   private themeClasses: Set<string>;
@@ -150,6 +157,10 @@ export class BlockManager {
   markAllDirty(): void {
     for (const block of this.blocks.values()) {
       block.dirty = true;
+      // 清除缓存，强制重新收集数据
+      block.cachedHighlights = null;
+      block.cachedLines = null;
+      block.cachedTextSlice = null;
     }
   }
 
@@ -185,11 +196,19 @@ export class BlockManager {
         this.blocks.delete(index);
       } else if (affectedBlocks.has(index)) {
         block.dirty = true;
+        // 清除缓存
+        block.cachedHighlights = null;
+        block.cachedLines = null;
+        block.cachedTextSlice = null;
         if (hasLineCountChange) {
           markRest = true; // 从这个块开始，后续块都需要更新
         }
       } else if (markRest) {
         block.dirty = true;
+        // 清除缓存
+        block.cachedHighlights = null;
+        block.cachedLines = null;
+        block.cachedTextSlice = null;
       }
     }
 
@@ -320,6 +339,10 @@ export class BlockManager {
         rendering: false,
         requestId: 0,
         lastUsed: now,
+        cachedHighlights: null,
+        cachedLines: null,
+        cachedTextSlice: null,
+        cachedTextOffset: 0,
       };
       this.blocks.set(index, block);
     } else {
@@ -344,51 +367,65 @@ export class BlockManager {
     this.renderingCount++;
 
     const { startLine, endLine } = block;
-    const linesSnapshot = getLinesSnapshot(state);
-    const tree = syntaxTree(state);
 
-    // Collect highlights
-    const highlights: Highlight[] = [];
-    if (tree.length > 0 && startLine <= state.doc.lines) {
-      const highlighter: Highlighter = {
-        style: (tags) => highlightingFor(state, tags),
-      };
-      const startPos = state.doc.line(startLine).from;
-      const endPos = state.doc.line(Math.min(endLine, state.doc.lines)).to;
+    let highlights: Highlight[];
+    let lines: LineSpan[][];
+    let textSlice: string;
+    let textOffset: number;
 
-      highlightTree(tree, highlighter, (from, to, tags) => {
-        highlights.push({ from, to, tags });
-      }, startPos, endPos);
-    }
+    // 只有当块是 dirty 时才重新收集数据，否则使用缓存
+    if (block.dirty || !block.cachedHighlights) {
+      const linesSnapshot = getLinesSnapshot(state);
+      const tree = syntaxTree(state);
 
-    // Extract relevant lines
-    const startIdx = startLine - 1;
-    const endIdx = Math.min(endLine, linesSnapshot.length);
-    const lines: LineSpan[][] = linesSnapshot.slice(startIdx, endIdx).map(line =>
-      line.map(span => ({ from: span.from, to: span.to, folded: span.folded }))
-    );
+      // Collect highlights
+      highlights = [];
+      if (tree.length > 0 && startLine <= state.doc.lines) {
+        const highlighter: Highlighter = {
+          style: (tags) => highlightingFor(state, tags),
+        };
+        const startPos = state.doc.line(startLine).from;
+        const endPos = state.doc.line(Math.min(endLine, state.doc.lines)).to;
 
-    // Get text slice
-    let textOffset = 0;
-    let textEnd = 0;
-    if (lines.length > 0 && lines[0].length > 0) {
-      textOffset = lines[0][0].from;
-      const lastLine = lines[lines.length - 1];
-      if (lastLine.length > 0) {
-        textEnd = lastLine[lastLine.length - 1].to;
+        highlightTree(tree, highlighter, (from, to, tags) => {
+          highlights.push({ from, to, tags });
+        }, startPos, endPos);
       }
-    }
-    const textSlice = state.doc.sliceString(textOffset, textEnd);
 
-    // Build font info map
-    const fontInfoMap: Record<string, FontInfo> = {};
-    for (const hl of highlights) {
-      if (!fontInfoMap[hl.tags]) {
-        const info = this.getFontInfo(hl.tags);
-        fontInfoMap[hl.tags] = info;
+      // Extract relevant lines
+      const startIdx = startLine - 1;
+      const endIdx = Math.min(endLine, linesSnapshot.length);
+      lines = linesSnapshot.slice(startIdx, endIdx).map(line =>
+        line.map(span => ({ from: span.from, to: span.to, folded: span.folded }))
+      );
+
+      // Get text slice
+      textOffset = 0;
+      let textEnd = 0;
+      if (lines.length > 0 && lines[0].length > 0) {
+        textOffset = lines[0][0].from;
+        const lastLine = lines[lines.length - 1];
+        if (lastLine.length > 0) {
+          textEnd = lastLine[lastLine.length - 1].to;
+        }
       }
+      textSlice = state.doc.sliceString(textOffset, textEnd);
+
+      // 缓存数据
+      block.cachedHighlights = highlights;
+      block.cachedLines = lines;
+      block.cachedTextSlice = textSlice;
+      block.cachedTextOffset = textOffset;
+    } else {
+      // 使用缓存的数据
+      highlights = block.cachedHighlights;
+      lines = block.cachedLines!;
+      textSlice = block.cachedTextSlice!;
+      textOffset = block.cachedTextOffset;
     }
-    fontInfoMap[''] = this.getFontInfo('');
+
+    // 确保字体信息已发送给 Worker
+    this.ensureFontInfoSent(highlights);
 
     const blockLines = endLine - startLine + 1;
     const request: BlockRequest = {
@@ -403,8 +440,6 @@ export class BlockManager {
       lines,
       textSlice,
       textOffset,
-      fontInfoMap,
-      defaultFont: fontInfoMap[''],
       displayText: this.displayText,
       charWidth,
       lineHeight,
@@ -412,6 +447,43 @@ export class BlockManager {
     };
 
     this.worker.postMessage(request);
+  }
+
+  /**
+   * 确保字体信息已发送给 Worker
+   * 增量发送：只发送新的标签
+   */
+  private ensureFontInfoSent(highlights: Highlight[]): void {
+    if (!this.worker) return;
+
+    // 收集新的标签
+    const newTags: string[] = [];
+    for (const hl of highlights) {
+      if (!this.sentFontTags.has(hl.tags)) {
+        newTags.push(hl.tags);
+      }
+    }
+    // 默认字体标签
+    if (!this.sentFontTags.has('')) {
+      newTags.push('');
+    }
+
+    // 如果没有新标签，不需要发送
+    if (newTags.length === 0) return;
+
+    // 构建新标签的字体信息
+    const fontInfoMap: Record<string, FontInfo> = {};
+    for (const tag of newTags) {
+      fontInfoMap[tag] = this.getFontInfo(tag);
+      this.sentFontTags.add(tag);
+    }
+
+    const updateRequest: UpdateFontInfoRequest = {
+      type: 'updateFontInfo',
+      fontInfoMap,
+      defaultFont: this.getFontInfo(''),
+    };
+    this.worker.postMessage(updateRequest);
   }
 
   private evictOldBlocks(): void {
@@ -432,6 +504,7 @@ export class BlockManager {
   private refreshFontCache(): void {
     this.fontInfoMap.clear();
     this.measureCache = null;
+    this.sentFontTags.clear(); // 需要重新发送字体信息给 Worker
     // 注意：fontDirty 在成功渲染块后才设为 false
     this.fontVersion++;
     this.markAllDirty();
@@ -495,4 +568,5 @@ export class BlockManager {
     this.worker = null;
   }
 }
+
 

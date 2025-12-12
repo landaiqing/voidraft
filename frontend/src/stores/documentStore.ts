@@ -158,6 +158,10 @@ export const useDocumentStore = defineStore('document', () => {
                 currentDocument.value.updatedAt = new Date().toISOString();
             }
 
+            // 同步更新标签页标题
+            const tabStore = useTabStore();
+            tabStore.updateTabTitle(docId, title);
+
             return true;
         } catch (error) {
             console.error('Failed to update document metadata:', error);
@@ -177,6 +181,12 @@ export const useDocumentStore = defineStore('document', () => {
 
             // 更新本地状态
             delete documents.value[docId];
+
+            // 同步清理标签页
+            const tabStore = useTabStore();
+            if (tabStore.hasTab(docId)) {
+                tabStore.closeTab(docId);
+            }
 
             // 如果删除的是当前文档，切换到第一个可用文档
             if (currentDocumentId.value === docId) {

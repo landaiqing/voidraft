@@ -25,6 +25,15 @@ export interface FontInfo {
   lineHeight: number;
 }
 
+/**
+ * 更新字体信息（主题变化时发送一次）
+ */
+export interface UpdateFontInfoRequest {
+  type: 'updateFontInfo';
+  fontInfoMap: Record<string, FontInfo>;
+  defaultFont: FontInfo;
+}
+
 export interface BlockRequest {
   type: 'renderBlock';
   blockId: number;
@@ -37,8 +46,6 @@ export interface BlockRequest {
   lines: LineSpan[][];
   textSlice: string;
   textOffset: number;
-  fontInfoMap: Record<string, FontInfo>;
-  defaultFont: FontInfo;
   displayText: 'blocks' | 'characters';
   charWidth: number;
   lineHeight: number;
@@ -53,7 +60,7 @@ export interface DestroyRequest {
   type: 'destroy';
 }
 
-export type ToWorkerMessage = BlockRequest | InitRequest | DestroyRequest;
+export type ToWorkerMessage = BlockRequest | InitRequest | DestroyRequest | UpdateFontInfoRequest;
 
 export interface BlockComplete {
   type: 'blockComplete';

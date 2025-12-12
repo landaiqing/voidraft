@@ -6,6 +6,10 @@ import {
   FontInfo,
 } from './protocol';
 
+// 缓存字体信息，只在主题变化时更新
+let cachedFontInfoMap: Record<string, FontInfo> = {};
+let cachedDefaultFont: FontInfo = { color: '#000', font: '12px monospace', lineHeight: 14 };
+
 function post(msg: ToMainMessage, transfer?: Transferable[]): void {
   self.postMessage(msg, { transfer });
 }
@@ -107,13 +111,15 @@ function renderBlock(request: BlockRequest): void {
     endLine,
     width,
     height,
-    fontInfoMap,
-    defaultFont,
     displayText,
     charWidth,
     lineHeight,
     gutterOffset,
   } = request;
+
+  // 使用缓存的字体信息
+  const fontInfoMap = cachedFontInfoMap;
+  const defaultFont = cachedDefaultFont;
 
   // Create OffscreenCanvas for this block
   const canvas = new OffscreenCanvas(width, height);
@@ -245,12 +251,22 @@ function drawTextBlocks(
 function handleMessage(msg: ToWorkerMessage): void {
   switch (msg.type) {
     case 'init':
+      // 重置字体缓存
+      cachedFontInfoMap = {};
+      cachedDefaultFont = { color: '#000', font: '12px monospace', lineHeight: 14 };
       post({ type: 'ready' });
+      break;
+    case 'updateFontInfo':
+      // 增量合并字体信息
+      Object.assign(cachedFontInfoMap, msg.fontInfoMap);
+      cachedDefaultFont = msg.defaultFont;
       break;
     case 'renderBlock':
       renderBlock(msg);
       break;
     case 'destroy':
+      // 清理缓存
+      cachedFontInfoMap = {};
       break;
   }
 }

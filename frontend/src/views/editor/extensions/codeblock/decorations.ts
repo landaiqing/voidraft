@@ -150,15 +150,19 @@ const blockLayer = layer({
       // 转换为视口坐标进行后续计算
       const fromCoordsTop = fromLineBlock.top + view.documentTop;
       let toCoordsBottom = toLineBlock.bottom + view.documentTop;
-      
-      // 对最后一个块进行特殊处理，让它直接延伸到底部
+
       if (idx === blocks.length - 1) {
-        const editorHeight = view.dom.clientHeight;
-        const contentBottom = toCoordsBottom - view.documentTop + view.documentPadding.top;
+        // 计算需要添加到最后一个块的额外高度，以覆盖 scrollPastEnd 添加的额外滚动空间
+        // scrollPastEnd 会在文档底部添加相当于 scrollDOM.clientHeight 的额外空间
+        // 当滚动到最底部时，顶部仍会显示一行（defaultLineHeight），需要减去这部分
+        const editorHeight = view.scrollDOM.clientHeight;
+        const extraHeight = editorHeight - (
+          view.defaultLineHeight + // 当滚动到最底部时，顶部仍显示一行
+          view.documentPadding.top +
+          8 // 额外的边距调整
+        );
         
-        // 让最后一个块直接延伸到编辑器底部
-        if (contentBottom < editorHeight) {
-          const extraHeight = editorHeight - contentBottom - 10;
+        if (extraHeight > 0) {
           toCoordsBottom += extraHeight;
         }
       }

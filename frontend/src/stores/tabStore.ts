@@ -15,7 +15,7 @@ export const useTabStore = defineStore('tab', () => {
     const documentStore = useDocumentStore();
 
     // === 核心状态 ===
-    const tabsMap = ref<Map<number, Tab>>(new Map());
+    const tabsMap = ref<Record<number, Tab>>({});
     const tabOrder = ref<number[]>([]);  // 维护标签页顺序
     const draggedTabId = ref<number | null>(null);
 
@@ -28,21 +28,21 @@ export const useTabStore = defineStore('tab', () => {
     // 按顺序返回标签页数组（用于UI渲染）
     const tabs = computed(() => {
         return tabOrder.value
-            .map(documentId => tabsMap.value.get(documentId))
+            .map(documentId => tabsMap.value[documentId])
             .filter(tab => tab !== undefined) as Tab[];
     });
 
     // === 私有方法 ===
     const hasTab = (documentId: number): boolean => {
-        return tabsMap.value.has(documentId);
+        return documentId in tabsMap.value;
     };
 
     const getTab = (documentId: number): Tab | undefined => {
-        return tabsMap.value.get(documentId);
+        return tabsMap.value[documentId];
     };
 
     const updateTabTitle = (documentId: number, title: string) => {
-        const tab = tabsMap.value.get(documentId);
+        const tab = tabsMap.value[documentId];
         if (tab) {
             tab.title = title;
         }
@@ -67,7 +67,7 @@ export const useTabStore = defineStore('tab', () => {
             title: document.title
         };
 
-        tabsMap.value.set(documentId, newTab);
+        tabsMap.value[documentId] = newTab;
         tabOrder.value.push(documentId);
     };
 
@@ -81,7 +81,7 @@ export const useTabStore = defineStore('tab', () => {
         if (tabIndex === -1) return;
 
         // 从映射和顺序数组中移除
-        tabsMap.value.delete(documentId);
+        delete tabsMap.value[documentId];
         tabOrder.value.splice(tabIndex, 1);
 
         // 如果关闭的是当前文档，需要切换到其他文档
@@ -111,7 +111,7 @@ export const useTabStore = defineStore('tab', () => {
             if (tabIndex === -1) return;
 
             // 从映射和顺序数组中移除
-            tabsMap.value.delete(documentId);
+            delete tabsMap.value[documentId];
             tabOrder.value.splice(tabIndex, 1);
         });
     };
@@ -121,12 +121,12 @@ export const useTabStore = defineStore('tab', () => {
      */
     const switchToTabAndDocument = (documentId: number) => {
         if (!hasTab(documentId)) return;
-        
+
         // 如果点击的是当前已激活的文档，不需要重复请求
         if (documentStore.currentDocumentId === documentId) {
             return;
         }
-        
+
         documentStore.openDocument(documentId);
     };
 
@@ -151,9 +151,30 @@ export const useTabStore = defineStore('tab', () => {
     };
 
     /**
+     * 验证并清理无效的标签页
+     */
+    const validateTabs = () => {
+        const validDocIds = Object.keys(documentStore.documents).map(Number);
+        
+        // 找出无效的标签页（文档已被删除）
+        const invalidTabIds = tabOrder.value.filter(docId => !validDocIds.includes(docId));
+        
+        if (invalidTabIds.length > 0) {
+            // 批量清理无效标签页
+            invalidTabIds.forEach(docId => {
+                delete tabsMap.value[docId];
+            });
+            tabOrder.value = tabOrder.value.filter(docId => validDocIds.includes(docId));
+        }
+    };
+
+    /**
      * 初始化标签页（当前文档）
      */
     const initializeTab = () => {
+        // 先验证并清理无效的标签页（处理持久化的脏数据）
+        validateTabs();
+        
         if (isTabsEnabled.value) {
             const currentDoc = documentStore.currentDocument;
             if (currentDoc) {
@@ -169,13 +190,13 @@ export const useTabStore = defineStore('tab', () => {
      */
     const closeOtherTabs = (keepDocumentId: number) => {
         if (!hasTab(keepDocumentId)) return;
-        
+
         // 获取所有其他标签页的ID
         const otherTabIds = tabOrder.value.filter(id => id !== keepDocumentId);
-        
+
         // 批量关闭其他标签页
         closeTabs(otherTabIds);
-        
+
         // 如果当前打开的文档在被关闭的标签中，需要切换到保留的文档
         if (otherTabIds.includes(documentStore.currentDocumentId!)) {
             switchToTabAndDocument(keepDocumentId);
@@ -188,13 +209,13 @@ export const useTabStore = defineStore('tab', () => {
     const closeTabsToRight = (documentId: number) => {
         const index = getTabIndex(documentId);
         if (index === -1) return;
-        
+
         // 获取右侧所有标签页的ID
         const rightTabIds = tabOrder.value.slice(index + 1);
-        
+
         // 批量关闭右侧标签页
         closeTabs(rightTabIds);
-        
+
         // 如果当前打开的文档在被关闭的右侧标签中，需要切换到指定的文档
         if (rightTabIds.includes(documentStore.currentDocumentId!)) {
             switchToTabAndDocument(documentId);
@@ -207,13 +228,13 @@ export const useTabStore = defineStore('tab', () => {
     const closeTabsToLeft = (documentId: number) => {
         const index = getTabIndex(documentId);
         if (index <= 0) return;
-        
+
         // 获取左侧所有标签页的ID
         const leftTabIds = tabOrder.value.slice(0, index);
-        
+
         // 批量关闭左侧标签页
         closeTabs(leftTabIds);
-        
+
         // 如果当前打开的文档在被关闭的左侧标签中，需要切换到指定的文档
         if (leftTabIds.includes(documentStore.currentDocumentId!)) {
             switchToTabAndDocument(documentId);
@@ -224,12 +245,15 @@ export const useTabStore = defineStore('tab', () => {
      * 清空所有标签页
      */
     const clearAllTabs = () => {
-        tabsMap.value.clear();
+        tabsMap.value = {};
         tabOrder.value = [];
     };
 
     // === 公共API ===
     return {
+        tabsMap,
+        tabOrder,
+        
         // 状态
         tabs: readonly(tabs),
         draggedTabId,
@@ -251,9 +275,16 @@ export const useTabStore = defineStore('tab', () => {
         initializeTab,
         clearAllTabs,
         updateTabTitle,
+        validateTabs,
 
         // 工具方法
         hasTab,
         getTab
     };
+}, {
+    persist: {
+        key: 'voidraft-tabs',
+        storage: localStorage,
+        pick: ['tabsMap', 'tabOrder'],
+    },
 });
