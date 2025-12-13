@@ -33,13 +33,6 @@ export default {
     confirmDelete: '再次点击确认删除',
     openInNewWindow: '在新窗口中打开',
     alreadyOpenInNewWindow: '已在新窗口中打开',
-    documentNameTooLong: '文档名称不能超过{max}个字符',
-    documentNameRequired: '文档名称不能为空',
-    cannotDeleteLastDocument: '无法删除最后一个文档',
-    cannotDeleteDefaultDocument: '无法删除默认文档',
-    unknownTime: '未知时间',
-    invalidDate: '无效日期',
-    timeError: '时间错误',
   },
   languages: {
     'zh-CN': '简体中文',
@@ -299,6 +292,10 @@ export default {
     highlightTrailingWhitespace: {
       name: '高亮行尾空白',
       description: '高亮显示行尾的多余空白字符'
+    },
+    httpClient: {
+      name: 'HTTP 客户端',
+      description: '在编辑器中直接发送 HTTP 请求并查看响应'
     }
   },
   monitor: {

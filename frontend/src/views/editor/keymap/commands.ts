@@ -1,8 +1,4 @@
-import {KeyBindingCommand} from '@/../bindings/voidraft/internal/models/models';
-import {
-    openSearchPanel,
-    closeSearchPanel,
-} from '@codemirror/search';
+import {closeSearchPanel, openSearchPanel,} from '@codemirror/search';
 import {
     addNewBlockAfterCurrent,
     addNewBlockAfterLast,
@@ -49,249 +45,249 @@ import {
 } from '@codemirror/commands';
 import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language';
 import i18n from '@/i18n';
+import {KeyBindingKey} from '@/../bindings/voidraft/internal/models/models';
 
-// 默认编辑器选项
-const defaultEditorOptions = {
+// 默认代码块扩展选项
+const defaultBlockExtensionOptions = {
     defaultBlockToken: 'text',
     defaultBlockAutoDetect: true,
 };
 
 /**
  * 前端命令注册表
- * 将后端定义的command字段映射到具体的前端方法和翻译键
+ * 将后端定义的key字段映射到具体的前端方法和翻译键
  */
-export const commands = {
-    [KeyBindingCommand.ShowSearchCommand]: {
+export const commands: Record<string, { handler: any; descriptionKey: string }> = {
+    [KeyBindingKey.ShowSearchKeyBindingKey]: {
         handler: openSearchPanel,
         descriptionKey: 'keybindings.commands.showSearch'
     },
-    [KeyBindingCommand.HideSearchCommand]: {
+    [KeyBindingKey.HideSearchKeyBindingKey]: {
         handler: closeSearchPanel,
         descriptionKey: 'keybindings.commands.hideSearch'
     },
-    // 代码块操作命令
-    [KeyBindingCommand.BlockSelectAllCommand]: {
+    [KeyBindingKey.BlockSelectAllKeyBindingKey]: {
         handler: selectAll,
         descriptionKey: 'keybindings.commands.blockSelectAll'
     },
-    [KeyBindingCommand.BlockAddAfterCurrentCommand]: {
-        handler: addNewBlockAfterCurrent(defaultEditorOptions),
+    [KeyBindingKey.BlockAddAfterCurrentKeyBindingKey]: {
+        handler: addNewBlockAfterCurrent(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockAddAfterCurrent'
     },
-    [KeyBindingCommand.BlockAddAfterLastCommand]: {
-        handler: addNewBlockAfterLast(defaultEditorOptions),
+    [KeyBindingKey.BlockAddAfterLastKeyBindingKey]: {
+        handler: addNewBlockAfterLast(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockAddAfterLast'
     },
-    [KeyBindingCommand.BlockAddBeforeCurrentCommand]: {
-        handler: addNewBlockBeforeCurrent(defaultEditorOptions),
+    [KeyBindingKey.BlockAddBeforeCurrentKeyBindingKey]: {
+        handler: addNewBlockBeforeCurrent(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockAddBeforeCurrent'
     },
-    [KeyBindingCommand.BlockGotoPreviousCommand]: {
+    [KeyBindingKey.BlockGotoPreviousKeyBindingKey]: {
         handler: gotoPreviousBlock,
         descriptionKey: 'keybindings.commands.blockGotoPrevious'
     },
-    [KeyBindingCommand.BlockGotoNextCommand]: {
+    [KeyBindingKey.BlockGotoNextKeyBindingKey]: {
         handler: gotoNextBlock,
         descriptionKey: 'keybindings.commands.blockGotoNext'
     },
-    [KeyBindingCommand.BlockSelectPreviousCommand]: {
+    [KeyBindingKey.BlockSelectPreviousKeyBindingKey]: {
         handler: selectPreviousBlock,
         descriptionKey: 'keybindings.commands.blockSelectPrevious'
     },
-    [KeyBindingCommand.BlockSelectNextCommand]: {
+    [KeyBindingKey.BlockSelectNextKeyBindingKey]: {
         handler: selectNextBlock,
         descriptionKey: 'keybindings.commands.blockSelectNext'
     },
-    [KeyBindingCommand.BlockDeleteCommand]: {
-        handler: deleteBlock(defaultEditorOptions),
+    [KeyBindingKey.BlockDeleteKeyBindingKey]: {
+        handler: deleteBlock(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockDelete'
     },
-    [KeyBindingCommand.BlockMoveUpCommand]: {
+    [KeyBindingKey.BlockMoveUpKeyBindingKey]: {
         handler: moveCurrentBlockUp,
         descriptionKey: 'keybindings.commands.blockMoveUp'
     },
-    [KeyBindingCommand.BlockMoveDownCommand]: {
+    [KeyBindingKey.BlockMoveDownKeyBindingKey]: {
         handler: moveCurrentBlockDown,
         descriptionKey: 'keybindings.commands.blockMoveDown'
     },
-    [KeyBindingCommand.BlockDeleteLineCommand]: {
+    [KeyBindingKey.BlockDeleteLineKeyBindingKey]: {
         handler: deleteLineCommand,
         descriptionKey: 'keybindings.commands.blockDeleteLine'
     },
-    [KeyBindingCommand.BlockMoveLineUpCommand]: {
+    [KeyBindingKey.BlockMoveLineUpKeyBindingKey]: {
         handler: moveLineUp,
         descriptionKey: 'keybindings.commands.blockMoveLineUp'
     },
-    [KeyBindingCommand.BlockMoveLineDownCommand]: {
+    [KeyBindingKey.BlockMoveLineDownKeyBindingKey]: {
         handler: moveLineDown,
         descriptionKey: 'keybindings.commands.blockMoveLineDown'
     },
-    [KeyBindingCommand.BlockTransposeCharsCommand]: {
+    [KeyBindingKey.BlockTransposeCharsKeyBindingKey]: {
         handler: transposeChars,
         descriptionKey: 'keybindings.commands.blockTransposeChars'
     },
-    [KeyBindingCommand.BlockFormatCommand]: {
+    [KeyBindingKey.BlockFormatKeyBindingKey]: {
         handler: formatCurrentBlock,
         descriptionKey: 'keybindings.commands.blockFormat'
     },
-    [KeyBindingCommand.BlockCopyCommand]: {
+    [KeyBindingKey.BlockCopyKeyBindingKey]: {
         handler: copyCommand,
         descriptionKey: 'keybindings.commands.blockCopy'
     },
-    [KeyBindingCommand.BlockCutCommand]: {
+    [KeyBindingKey.BlockCutKeyBindingKey]: {
         handler: cutCommand,
         descriptionKey: 'keybindings.commands.blockCut'
     },
-    [KeyBindingCommand.BlockPasteCommand]: {
+    [KeyBindingKey.BlockPasteKeyBindingKey]: {
         handler: pasteCommand,
         descriptionKey: 'keybindings.commands.blockPaste'
     },
-    [KeyBindingCommand.HistoryUndoCommand]: {
+    [KeyBindingKey.HistoryUndoKeyBindingKey]: {
         handler: undo,
         descriptionKey: 'keybindings.commands.historyUndo'
     },
-    [KeyBindingCommand.HistoryRedoCommand]: {
+    [KeyBindingKey.HistoryRedoKeyBindingKey]: {
         handler: redo,
         descriptionKey: 'keybindings.commands.historyRedo'
     },
-    [KeyBindingCommand.HistoryUndoSelectionCommand]: {
+    [KeyBindingKey.HistoryUndoSelectionKeyBindingKey]: {
         handler: undoSelection,
         descriptionKey: 'keybindings.commands.historyUndoSelection'
     },
-    [KeyBindingCommand.HistoryRedoSelectionCommand]: {
+    [KeyBindingKey.HistoryRedoSelectionKeyBindingKey]: {
         handler: redoSelection,
         descriptionKey: 'keybindings.commands.historyRedoSelection'
     },
-    [KeyBindingCommand.FoldCodeCommand]: {
+    [KeyBindingKey.FoldCodeKeyBindingKey]: {
         handler: foldCode,
         descriptionKey: 'keybindings.commands.foldCode'
     },
-    [KeyBindingCommand.UnfoldCodeCommand]: {
+    [KeyBindingKey.UnfoldCodeKeyBindingKey]: {
         handler: unfoldCode,
         descriptionKey: 'keybindings.commands.unfoldCode'
     },
-    [KeyBindingCommand.FoldAllCommand]: {
+    [KeyBindingKey.FoldAllKeyBindingKey]: {
         handler: foldAll,
         descriptionKey: 'keybindings.commands.foldAll'
     },
-    [KeyBindingCommand.UnfoldAllCommand]: {
+    [KeyBindingKey.UnfoldAllKeyBindingKey]: {
         handler: unfoldAll,
         descriptionKey: 'keybindings.commands.unfoldAll'
     },
-    [KeyBindingCommand.CursorSyntaxLeftCommand]: {
+    [KeyBindingKey.CursorSyntaxLeftKeyBindingKey]: {
         handler: cursorSyntaxLeft,
         descriptionKey: 'keybindings.commands.cursorSyntaxLeft'
     },
-    [KeyBindingCommand.CursorSyntaxRightCommand]: {
+    [KeyBindingKey.CursorSyntaxRightKeyBindingKey]: {
         handler: cursorSyntaxRight,
         descriptionKey: 'keybindings.commands.cursorSyntaxRight'
     },
-    [KeyBindingCommand.SelectSyntaxLeftCommand]: {
+    [KeyBindingKey.SelectSyntaxLeftKeyBindingKey]: {
         handler: selectSyntaxLeft,
         descriptionKey: 'keybindings.commands.selectSyntaxLeft'
     },
-    [KeyBindingCommand.SelectSyntaxRightCommand]: {
+    [KeyBindingKey.SelectSyntaxRightKeyBindingKey]: {
         handler: selectSyntaxRight,
         descriptionKey: 'keybindings.commands.selectSyntaxRight'
     },
-    [KeyBindingCommand.CopyLineUpCommand]: {
+    [KeyBindingKey.CopyLineUpKeyBindingKey]: {
         handler: copyLineUp,
         descriptionKey: 'keybindings.commands.copyLineUp'
     },
-    [KeyBindingCommand.CopyLineDownCommand]: {
+    [KeyBindingKey.CopyLineDownKeyBindingKey]: {
         handler: copyLineDown,
         descriptionKey: 'keybindings.commands.copyLineDown'
     },
-    [KeyBindingCommand.InsertBlankLineCommand]: {
+    [KeyBindingKey.InsertBlankLineKeyBindingKey]: {
         handler: insertBlankLine,
         descriptionKey: 'keybindings.commands.insertBlankLine'
     },
-    [KeyBindingCommand.SelectLineCommand]: {
+    [KeyBindingKey.SelectLineKeyBindingKey]: {
         handler: selectLine,
         descriptionKey: 'keybindings.commands.selectLine'
     },
-    [KeyBindingCommand.SelectParentSyntaxCommand]: {
+    [KeyBindingKey.SelectParentSyntaxKeyBindingKey]: {
         handler: selectParentSyntax,
         descriptionKey: 'keybindings.commands.selectParentSyntax'
     },
-    [KeyBindingCommand.IndentLessCommand]: {
+    [KeyBindingKey.IndentLessKeyBindingKey]: {
         handler: indentLess,
         descriptionKey: 'keybindings.commands.indentLess'
     },
-    [KeyBindingCommand.IndentMoreCommand]: {
+    [KeyBindingKey.IndentMoreKeyBindingKey]: {
         handler: indentMore,
         descriptionKey: 'keybindings.commands.indentMore'
     },
-    [KeyBindingCommand.IndentSelectionCommand]: {
+    [KeyBindingKey.IndentSelectionKeyBindingKey]: {
         handler: indentSelection,
         descriptionKey: 'keybindings.commands.indentSelection'
     },
-    [KeyBindingCommand.CursorMatchingBracketCommand]: {
+    [KeyBindingKey.CursorMatchingBracketKeyBindingKey]: {
         handler: cursorMatchingBracket,
         descriptionKey: 'keybindings.commands.cursorMatchingBracket'
     },
-    [KeyBindingCommand.ToggleCommentCommand]: {
+    [KeyBindingKey.ToggleCommentKeyBindingKey]: {
         handler: toggleComment,
         descriptionKey: 'keybindings.commands.toggleComment'
     },
-    [KeyBindingCommand.ToggleBlockCommentCommand]: {
+    [KeyBindingKey.ToggleBlockCommentKeyBindingKey]: {
         handler: toggleBlockComment,
         descriptionKey: 'keybindings.commands.toggleBlockComment'
     },
-    [KeyBindingCommand.InsertNewlineAndIndentCommand]: {
+    [KeyBindingKey.InsertNewlineAndIndentKeyBindingKey]: {
         handler: insertNewlineAndIndent,
         descriptionKey: 'keybindings.commands.insertNewlineAndIndent'
     },
-    [KeyBindingCommand.DeleteCharBackwardCommand]: {
+    [KeyBindingKey.DeleteCharBackwardKeyBindingKey]: {
         handler: deleteCharBackward,
         descriptionKey: 'keybindings.commands.deleteCharBackward'
     },
-    [KeyBindingCommand.DeleteCharForwardCommand]: {
+    [KeyBindingKey.DeleteCharForwardKeyBindingKey]: {
         handler: deleteCharForward,
         descriptionKey: 'keybindings.commands.deleteCharForward'
     },
-    [KeyBindingCommand.DeleteGroupBackwardCommand]: {
+    [KeyBindingKey.DeleteGroupBackwardKeyBindingKey]: {
         handler: deleteGroupBackward,
         descriptionKey: 'keybindings.commands.deleteGroupBackward'
     },
-    [KeyBindingCommand.DeleteGroupForwardCommand]: {
+    [KeyBindingKey.DeleteGroupForwardKeyBindingKey]: {
         handler: deleteGroupForward,
         descriptionKey: 'keybindings.commands.deleteGroupForward'
     },
-} as const;
+};
 
 /**
  * 获取命令处理函数
- * @param command 命令名称
+ * @param key 命令标识符
  * @returns 对应的处理函数，如果不存在则返回 undefined
  */
-export const getCommandHandler = (command: KeyBindingCommand) => {
-    return commands[command]?.handler;
+export const getCommandHandler = (key: string) => {
+    return commands[key]?.handler;
 };
 
 /**
  * 获取命令描述
- * @param command 命令名称
+ * @param key 命令标识符
  * @returns 对应的描述，如果不存在则返回 undefined
  */
-export const getCommandDescription = (command: KeyBindingCommand) => {
-    const descriptionKey = commands[command]?.descriptionKey;
+export const getCommandDescription = (key: string) => {
+    const descriptionKey = commands[key]?.descriptionKey;
     return descriptionKey ? i18n.global.t(descriptionKey) : undefined;
 };
 
 /**
  * 检查命令是否已注册
- * @param command 命令名称
+ * @param key 命令标识符
  * @returns 是否已注册
  */
-export const isCommandRegistered = (command: KeyBindingCommand): boolean => {
-    return command in commands;
+export const isCommandRegistered = (key: string): boolean => {
+    return key in commands;
 };
 
 /**
  * 获取所有已注册的命令
  * @returns 已注册的命令列表
  */
-export const getRegisteredCommands = (): KeyBindingCommand[] => {
-    return Object.keys(commands) as KeyBindingCommand[];
-}; 
+export const getRegisteredCommands = (): string[] => {
+    return Object.keys(commands);
+};

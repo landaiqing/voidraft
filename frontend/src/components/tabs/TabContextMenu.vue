@@ -1,35 +1,40 @@
 <template>
   <div
-    v-if="visible && canClose"
-    class="tab-context-menu"
-    :style="{
-      left: position.x + 'px',
-      top: position.y + 'px'
-    }"
-    @click.stop
+      v-if="visible && canClose"
+      v-click-outside="handleClose"
+      class="tab-context-menu"
+      :style="{
+        left: position.x + 'px',
+        top: position.y + 'px'
+      }"
+      @click.stop
   >
     <div v-if="canClose" class="menu-item" @click="handleMenuClick('close')">
-      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 6L6 18M6 6l12 12"/>
       </svg>
       <span class="menu-text">{{ t('tabs.contextMenu.closeTab') }}</span>
     </div>
     <div v-if="hasOtherTabs" class="menu-item" @click="handleMenuClick('closeOthers')">
-      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
         <path d="M9 9l6 6M15 9l-6 6"/>
       </svg>
       <span class="menu-text">{{ t('tabs.contextMenu.closeOthers') }}</span>
     </div>
     <div v-if="hasTabsToLeft" class="menu-item" @click="handleMenuClick('closeLeft')">
-      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 18l-6-6 6-6"/>
         <path d="M9 18l-6-6 6-6"/>
       </svg>
       <span class="menu-text">{{ t('tabs.contextMenu.closeLeft') }}</span>
     </div>
     <div v-if="hasTabsToRight" class="menu-item" @click="handleMenuClick('closeRight')">
-      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 18l6-6-6-6"/>
         <path d="M15 18l6-6-6-6"/>
       </svg>
@@ -39,9 +44,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useTabStore } from '@/stores/tabStore';
+import {computed, onMounted, onUnmounted} from 'vue';
+import {useI18n} from 'vue-i18n';
+import {useTabStore} from '@/stores/tabStore';
 
 interface Props {
   visible: boolean;
@@ -54,7 +59,7 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const { t } = useI18n();
+const {t} = useI18n();
 const tabStore = useTabStore();
 
 // 计算属性
@@ -79,6 +84,9 @@ const hasTabsToLeft = computed(() => {
   return index > 0;
 });
 
+const handleClose = () => {
+  emit('close');
+};
 // 处理菜单项点击
 const handleMenuClick = (action: string) => {
   if (!props.targetDocumentId) return;
@@ -97,34 +105,9 @@ const handleMenuClick = (action: string) => {
       tabStore.closeTabsToRight(props.targetDocumentId);
       break;
   }
-  
-  emit('close');
+
+  handleClose();
 };
-
-// 处理外部点击
-const handleClickOutside = (_event: MouseEvent) => {
-  if (props.visible) {
-    emit('close');
-  }
-};
-
-// 处理ESC键
-const handleEscapeKey = (event: KeyboardEvent) => {
-  if (event.key === 'Escape' && props.visible) {
-    emit('close');
-  }
-};
-
-// 生命周期
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
-  document.addEventListener('keydown', handleEscapeKey);
-});
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-  document.removeEventListener('keydown', handleEscapeKey);
-});
 </script>
 
 <style scoped lang="scss">
@@ -150,12 +133,12 @@ onUnmounted(() => {
   color: var(--text-primary);
   transition: all 0.15s ease;
   gap: 8px;
-  
+
   &:hover {
     background-color: var(--toolbar-button-hover);
     color: var(--text-primary);
   }
-  
+
   &:active {
     background-color: var(--border-color);
   }
@@ -167,7 +150,7 @@ onUnmounted(() => {
   height: 12px;
   color: var(--text-primary);
   transition: color 0.15s ease;
-  
+
   .menu-item:hover & {
     color: var(--text-primary);
   }

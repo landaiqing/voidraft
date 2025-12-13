@@ -1,5 +1,5 @@
 import type {ThemeColors} from './types';
-import {ThemeType} from '@/../bindings/voidraft/internal/models/models';
+import {Type as ThemeType} from '@/../bindings/voidraft/internal/models/ent/theme/models';
 import {defaultDarkColors} from './dark/default-dark';
 import {defaultLightColors} from './light/default-light';
 import {config as draculaColors} from './dark/dracula';
@@ -24,20 +24,20 @@ export interface ThemePreset {
 export const FALLBACK_THEME_NAME = defaultDarkColors.themeName;
 
 export const themePresetList: ThemePreset[] = [
-    {name: defaultDarkColors.themeName, type: ThemeType.ThemeTypeDark, colors: defaultDarkColors},
-    {name: draculaColors.themeName, type: ThemeType.ThemeTypeDark, colors: draculaColors},
-    {name: auraColors.themeName, type: ThemeType.ThemeTypeDark, colors: auraColors},
-    {name: githubDarkColors.themeName, type: ThemeType.ThemeTypeDark, colors: githubDarkColors},
-    {name: materialDarkColors.themeName, type: ThemeType.ThemeTypeDark, colors: materialDarkColors},
-    {name: oneDarkColors.themeName, type: ThemeType.ThemeTypeDark, colors: oneDarkColors},
-    {name: solarizedDarkColors.themeName, type: ThemeType.ThemeTypeDark, colors: solarizedDarkColors},
-    {name: tokyoNightColors.themeName, type: ThemeType.ThemeTypeDark, colors: tokyoNightColors},
-    {name: tokyoNightStormColors.themeName, type: ThemeType.ThemeTypeDark, colors: tokyoNightStormColors},
-    {name: defaultLightColors.themeName, type: ThemeType.ThemeTypeLight, colors: defaultLightColors},
-    {name: githubLightColors.themeName, type: ThemeType.ThemeTypeLight, colors: githubLightColors},
-    {name: materialLightColors.themeName, type: ThemeType.ThemeTypeLight, colors: materialLightColors},
-    {name: solarizedLightColors.themeName, type: ThemeType.ThemeTypeLight, colors: solarizedLightColors},
-    {name: tokyoNightDayColors.themeName, type: ThemeType.ThemeTypeLight, colors: tokyoNightDayColors},
+    {name: defaultDarkColors.themeName, type: ThemeType.TypeDark, colors: defaultDarkColors},
+    {name: draculaColors.themeName, type: ThemeType.TypeDark, colors: draculaColors},
+    {name: auraColors.themeName, type: ThemeType.TypeDark, colors: auraColors},
+    {name: githubDarkColors.themeName, type: ThemeType.TypeDark, colors: githubDarkColors},
+    {name: materialDarkColors.themeName, type: ThemeType.TypeDark, colors: materialDarkColors},
+    {name: oneDarkColors.themeName, type: ThemeType.TypeDark, colors: oneDarkColors},
+    {name: solarizedDarkColors.themeName, type: ThemeType.TypeDark, colors: solarizedDarkColors},
+    {name: tokyoNightColors.themeName, type: ThemeType.TypeDark, colors: tokyoNightColors},
+    {name: tokyoNightStormColors.themeName, type: ThemeType.TypeDark, colors: tokyoNightStormColors},
+    {name: defaultLightColors.themeName, type: ThemeType.TypeLight, colors: defaultLightColors},
+    {name: githubLightColors.themeName, type: ThemeType.TypeLight, colors: githubLightColors},
+    {name: materialLightColors.themeName, type: ThemeType.TypeLight, colors: materialLightColors},
+    {name: solarizedLightColors.themeName, type: ThemeType.TypeLight, colors: solarizedLightColors},
+    {name: tokyoNightDayColors.themeName, type: ThemeType.TypeLight, colors: tokyoNightDayColors},
 ];
 
 export const themePresetMap: Record<string, ThemePreset> = themePresetList.reduce(

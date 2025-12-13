@@ -20,10 +20,12 @@ export const createDynamicKeymapExtension = async (): Promise<Extension> => {
     await extensionStore.loadExtensions();
   }
   
-  // 获取启用的扩展ID列表
-  const enabledExtensionIds = extensionStore.enabledExtensions.map(ext => ext.id);
+  // 获取启用的扩展key列表
+  const enabledExtensionKeys = extensionStore.enabledExtensions
+    .map(ext => ext.key)
+    .filter((key): key is string => key !== undefined);
   
-  return Manager.createKeymapExtension(keybindingStore.keyBindings, enabledExtensionIds);
+  return Manager.createKeymapExtension(keybindingStore.keyBindings, enabledExtensionKeys);
 };
 
 /**
@@ -34,10 +36,12 @@ export const updateKeymapExtension = (view: any): void => {
   const keybindingStore = useKeybindingStore();
   const extensionStore = useExtensionStore();
   
-  // 获取启用的扩展ID列表
-  const enabledExtensionIds = extensionStore.enabledExtensions.map(ext => ext.id);
+  // 获取启用的扩展key列表
+  const enabledExtensionKeys = extensionStore.enabledExtensions
+    .map(ext => ext.key)
+    .filter((key): key is string => key !== undefined);
   
-  Manager.updateKeymap(view, keybindingStore.keyBindings, enabledExtensionIds);
+  Manager.updateKeymap(view, keybindingStore.keyBindings, enabledExtensionKeys);
 };
 
 // 导出相关模块

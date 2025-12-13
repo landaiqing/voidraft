@@ -1,13 +1,15 @@
 <template>
   <div class="windows-titlebar" style="--wails-draggable:drag">
-    <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent>
+    <div class="titlebar-content" @dblclick="handleToggleMaximize" @contextmenu.prevent>
       <div class="titlebar-icon">
         <img src="/appicon.png" alt="voidraft"/>
       </div>
-      <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
+      <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title" :title="fullTitleText">
+        {{ titleText }}
+      </div>
       <!-- 标签页容器区域 -->
       <div class="titlebar-tabs" v-if="tabStore.isTabsEnabled && !isInSettings" style="--wails-draggable:drag">
-        <TabContainer />
+        <TabContainer/>
       </div>
       <!-- 设置页面标题 -->
       <div v-if="isInSettings" class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
@@ -24,7 +26,7 @@
 
       <button
           class="titlebar-button maximize-button"
-          @click="toggleMaximize"
+          @click="handleToggleMaximize"
           :title="isMaximized ? t('titlebar.restore') : t('titlebar.maximize')"
       >
         <span class="titlebar-icon" v-html="maximizeIcon"></span>
@@ -45,84 +47,44 @@
 import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useRoute} from 'vue-router';
-import * as runtime from '@wailsio/runtime';
 import {useDocumentStore} from '@/stores/documentStore';
+import {useTabStore} from '@/stores/tabStore';
 import TabContainer from '@/components/tabs/TabContainer.vue';
-import {useTabStore} from "@/stores/tabStore";
+import {
+  minimizeWindow,
+  toggleMaximize,
+  closeWindow,
+  getMaximizedState,
+  generateTitleText,
+  generateFullTitleText
+} from './index';
 
-const tabStore = useTabStore();
 const {t} = useI18n();
 const route = useRoute();
-const isMaximized = ref(false);
+const tabStore = useTabStore();
 const documentStore = useDocumentStore();
 
-// 计算属性用于图标，减少重复渲染
+const isMaximized = ref(false);
 const maximizeIcon = computed(() => isMaximized.value ? '&#xE923;' : '&#xE922;');
-
-// 判断是否在设置页面
 const isInSettings = computed(() => route.path.startsWith('/settings'));
 
-// 计算标题文本
 const titleText = computed(() => {
-  if (isInSettings.value) {
-    return `voidraft - ` + t('settings.title');
-  }
-  const currentDoc = documentStore.currentDocument;
-  if (currentDoc) {
-    // 限制文档标题长度，避免标题栏换行
-    const maxTitleLength = 30;
-    const truncatedTitle = currentDoc.title.length > maxTitleLength 
-      ? currentDoc.title.substring(0, maxTitleLength) + '...' 
-      : currentDoc.title;
-    return `voidraft - ${truncatedTitle}`;
-  }
-  return 'voidraft';
+  if (isInSettings.value) return `voidraft - ${t('settings.title')}`;
+  return generateTitleText(documentStore.currentDocument?.title);
 });
 
-// 计算完整标题文本（用于tooltip）
 const fullTitleText = computed(() => {
-  if (isInSettings.value) {
-    return `voidraft - ` + t('settings.title');
-  }
-  const currentDoc = documentStore.currentDocument;
-  return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
+  if (isInSettings.value) return `voidraft - ${t('settings.title')}`;
+  return generateFullTitleText(documentStore.currentDocument?.title);
 });
 
-const minimizeWindow = async () => {
-  try {
-    await runtime.Window.Minimise();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const toggleMaximize = async () => {
-  try {
-    await runtime.Window.ToggleMaximise();
-    await checkMaximizedState();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const closeWindow = async () => {
-  try {
-    await runtime.Window.Close();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const checkMaximizedState = async () => {
-  try {
-    isMaximized.value = await runtime.Window.IsMaximised();
-  } catch (error) {
-    console.error(error);
-  }
+const handleToggleMaximize = async () => {
+  await toggleMaximize();
+  isMaximized.value = await getMaximizedState();
 };
 
 onMounted(async () => {
-  await checkMaximizedState();
+  isMaximized.value = await getMaximizedState();
 });
 </script>
 
@@ -152,7 +114,7 @@ onMounted(async () => {
   font-size: 12px;
   font-weight: 400;
   cursor: default;
-  min-width: 0; /* 允许内容收缩 */
+  min-width: 0;
 
   -webkit-context-menu: none;
   -moz-context-menu: none;
@@ -178,7 +140,6 @@ onMounted(async () => {
   overflow: hidden;
   margin-left: 8px;
   min-width: 0;
-  //margin-right: 8px;
 }
 
 .titlebar-controls {

@@ -191,15 +191,14 @@ export class MemoryStats {
  * MigrationProgress 迁移进度信息
  */
 export class MigrationProgress {
-    "status": MigrationStatus;
+    /**
+     * 0-100
+     */
     "progress": number;
     "error"?: string;
 
     /** Creates a new MigrationProgress instance. */
     constructor($$source: Partial<MigrationProgress> = {}) {
-        if (!("status" in $$source)) {
-            this["status"] = ("" as MigrationStatus);
-        }
         if (!("progress" in $$source)) {
             this["progress"] = 0;
         }
@@ -215,20 +214,6 @@ export class MigrationProgress {
         return new MigrationProgress($$parsedSource as Partial<MigrationProgress>);
     }
 }
-
-/**
- * MigrationStatus 迁移状态
- */
-export enum MigrationStatus {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    MigrationStatusMigrating = "migrating",
-    MigrationStatusCompleted = "completed",
-    MigrationStatusFailed = "failed",
-};
 
 /**
  * OSInfo 操作系统信息

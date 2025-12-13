@@ -4,7 +4,6 @@ import {EditorView} from '@codemirror/view';
 import {EditorState, Extension} from '@codemirror/state';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
-import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import {DocumentService, ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {ensureSyntaxTree} from "@codemirror/language";
 import {createBasicSetup} from '@/views/editor/basic/basicSetup';
@@ -28,7 +27,6 @@ import {AsyncManager} from '@/common/utils/asyncManager';
 import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
-import {createHttpClientExtension} from "@/views/editor/extensions/httpclient";
 import {createDebounce} from '@/common/utils/debounce';
 
 export interface DocumentStats {
@@ -93,84 +91,6 @@ export const useEditorStore = defineStore('editor', () => {
         }
     }, { delay: 500 }); // 500ms 内的多次输入只清理一次
 
-    // === 私有方法 ===
-
-    /**
-     * 检查位置是否在代码块分隔符区域内
-     */
-    const isPositionInDelimiter = (view: EditorView, pos: number): boolean => {
-        try {
-            const blocks = view.state.field(blockState, false);
-            if (!blocks) return false;
-            
-            for (const block of blocks) {
-                if (pos >= block.delimiter.from && pos < block.delimiter.to) {
-                    return true;
-                }
-            }
-            return false;
-        } catch {
-            return false;
-        }
-    };
-
-    /**
-     * 调整光标位置到有效的内容区域
-     * 如果位置在分隔符内，移动到该块的内容开始位置
-     */
-    const adjustCursorPosition = (view: EditorView, pos: number): number => {
-        try {
-            const blocks = view.state.field(blockState, false);
-            if (!blocks || blocks.length === 0) return pos;
-
-            // 如果位置在分隔符内，移动到该块的内容开始位置
-            for (const block of blocks) {
-                if (pos >= block.delimiter.from && pos < block.delimiter.to) {
-                    return block.content.from;
-                }
-            }
-            
-            return pos;
-        } catch {
-            return pos;
-        }
-    };
-
-    /**
-     * 恢复编辑器的光标位置（自动滚动到光标处）
-     */
-    const restoreEditorState = (instance: EditorInstance, documentId: number): void => {
-        const savedState = instance.editorState;
-        
-        if (savedState) {
-            // 有保存的状态，恢复光标位置
-            let pos = Math.min(savedState.cursorPos, instance.view.state.doc.length);
-            
-            // 确保位置不在分隔符上
-            if (isPositionInDelimiter(instance.view, pos)) {
-                pos = adjustCursorPosition(instance.view, pos);
-            }
-            
-            // 修复：设置光标位置并居中滚动（更好的用户体验）
-            instance.view.dispatch({
-                selection: {anchor: pos, head: pos},
-                effects: EditorView.scrollIntoView(pos, {
-                    y: "center",  // 垂直居中显示
-                    yMargin: 100   // 上下留一些边距
-                })
-            });
-        } else {
-            // 首次打开或没有记录，光标在文档末尾
-            const docLength = instance.view.state.doc.length;
-            instance.view.dispatch({
-                selection: {anchor: docLength, head: docLength},
-                effects: EditorView.scrollIntoView(docLength, {
-                    y: "center",
-                    yMargin: 100
-                })
-            });
-        }
-    };
 
     // 缓存化的语法树确保方法
     const ensureSyntaxTreeCached = (view: EditorView, documentId: number): void => {
@@ -245,7 +165,7 @@ export const useEditorStore = defineStore('editor', () => {
             increaseFontSize: () => configStore.increaseFontSizeLocal(),
             decreaseFontSize: () => configStore.decreaseFontSizeLocal(),
             onSave: () => configStore.saveFontSize(),
-            saveDelay: 500
+            saveDelay: 1000
         });
 
         // 统计扩展
@@ -259,9 +179,6 @@ export const useEditorStore = defineStore('editor', () => {
             showBackground: true,
             enableAutoDetection: true
         });
-
-        const httpExtension = createHttpClientExtension();
-
 
         // 再次检查操作有效性
         if (!operationManager.isOperationValid(operationId, documentId)) {
@@ -277,7 +194,7 @@ export const useEditorStore = defineStore('editor', () => {
         }
 
         // 动态扩展，传递文档ID以便扩展管理器可以预初始化
-        const dynamicExtensions = await createDynamicExtensions(documentId);
+        const dynamicExtensions = await createDynamicExtensions();
 
         // 最终检查操作有效性
         if (!operationManager.isOperationValid(operationId, documentId)) {
@@ -296,7 +213,6 @@ export const useEditorStore = defineStore('editor', () => {
             contentChangeExtension,
             codeBlockExtension,
             ...dynamicExtensions,
-            ...httpExtension,
         ];
 
         // 创建编辑器状态
@@ -320,7 +236,6 @@ export const useEditorStore = defineStore('editor', () => {
             lastModified: new Date(),
             autoSaveTimer: createTimerManager(),
             syntaxTreeCache: null,
-            // 修复：创建实例时从 documentStore 读取持久化的编辑器状态
             editorState: documentStore.documentStates[documentId]
         };
 
@@ -401,9 +316,6 @@ export const useEditorStore = defineStore('editor', () => {
             //使用 nextTick + requestAnimationFrame 确保 DOM 完全渲染
             nextTick(() => {
                 requestAnimationFrame(() => {
-                    // 恢复编辑器状态（光标位置和滚动位置）
-                    restoreEditorState(instance, documentId);
-                    
                     // 聚焦编辑器
                     instance.view.focus();
                     
@@ -433,7 +345,6 @@ export const useEditorStore = defineStore('editor', () => {
                 instance.isDirty = false;
                 instance.lastModified = new Date();
             }
-            // 如果内容在保存期间被修改了，保持 isDirty 状态
 
             return true;
         } catch (error) {
@@ -462,15 +373,14 @@ export const useEditorStore = defineStore('editor', () => {
         }, getAutoSaveDelay());
     };
 
-    // === 公共API ===
 
     // 设置编辑器容器
     const setEditorContainer = (container: HTMLElement | null) => {
         containerElement.value = container;
 
         // 如果设置容器时已有当前文档，立即加载编辑器
-        if (container && documentStore.currentDocument) {
-            loadEditor(documentStore.currentDocument.id, documentStore.currentDocument.content);
+        if (container && documentStore.currentDocument && documentStore.currentDocument.id !== undefined) {
+            loadEditor(documentStore.currentDocument.id, documentStore.currentDocument.content || '');
         }
     };
 
@@ -696,20 +606,20 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 更新扩展
-    const updateExtension = async (id: ExtensionID, enabled: boolean, config?: any) => {
-        // 如果只是更新启用状态
-        if (config === undefined) {
-            await ExtensionService.UpdateExtensionEnabled(id, enabled);
-        } else {
-            // 如果需要更新配置
-            await ExtensionService.UpdateExtensionState(id, enabled, config);
+    const updateExtension = async (key: string, enabled: boolean, config?: any) => {
+        // 更新启用状态
+        await ExtensionService.UpdateExtensionEnabled(key, enabled);
+        
+        // 如果需要更新配置
+        if (config !== undefined) {
+            await ExtensionService.UpdateExtensionConfig(key, config);
         }
 
         // 更新前端编辑器扩展 - 应用于所有实例
         const manager = getExtensionManager();
         if (manager) {
             // 直接更新前端扩展至所有视图
-            manager.updateExtension(id, enabled, config);
+            manager.updateExtension(key, enabled, config);
         }
 
         // 重新加载扩展配置
@@ -723,23 +633,10 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 监听文档切换
     watch(() => documentStore.currentDocument, async (newDoc, oldDoc) => {
-        if (newDoc && containerElement.value) {
-            // 修复：在切换到新文档前，只保存旧文档的光标位置
-            if (oldDoc && oldDoc.id !== newDoc.id && currentEditor.value) {
-                const oldInstance = editorCache.get(oldDoc.id);
-                if (oldInstance) {
-                    const currentState: EditorViewState = {
-                        cursorPos: currentEditor.value.state.selection.main.head
-                    };
-                    // 同时保存到实例和 documentStore
-                    oldInstance.editorState = currentState;
-                    documentStore.documentStates[oldDoc.id] = currentState;
-                }
-            }
-            
+        if (newDoc && newDoc.id !== undefined && containerElement.value) {
             // 等待 DOM 更新完成，再加载新文档的编辑器
             await nextTick();
-            loadEditor(newDoc.id, newDoc.content);
+            loadEditor(newDoc.id, newDoc.content || '');
         }
     });
 

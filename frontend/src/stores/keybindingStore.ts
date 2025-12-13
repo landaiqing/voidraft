@@ -1,6 +1,6 @@
 import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
-import {ExtensionID, KeyBinding, KeyBindingCommand} from '@/../bindings/voidraft/internal/models/models';
+import {KeyBinding} from '@/../bindings/voidraft/internal/models/ent/models';
 import {GetAllKeyBindings} from '@/../bindings/voidraft/internal/services/keybindingservice';
 
 export const useKeybindingStore = defineStore('keybinding', () => {
@@ -14,13 +14,14 @@ export const useKeybindingStore = defineStore('keybinding', () => {
 
     // 按扩展分组的快捷键
     const keyBindingsByExtension = computed(() => {
-        const groups = new Map<ExtensionID, KeyBinding[]>();
+        const groups = new Map<string, KeyBinding[]>();
 
         for (const binding of keyBindings.value) {
-            if (!groups.has(binding.extension)) {
-                groups.set(binding.extension, []);
+            const ext = binding.extension || '';
+            if (!groups.has(ext)) {
+                groups.set(ext, []);
             }
-            groups.get(binding.extension)!.push(binding);
+            groups.get(ext)!.push(binding);
         }
 
         return groups;
@@ -28,13 +29,13 @@ export const useKeybindingStore = defineStore('keybinding', () => {
 
     // 获取指定扩展的快捷键
     const getKeyBindingsByExtension = computed(() =>
-        (extension: ExtensionID) =>
+        (extension: string) =>
             keyBindings.value.filter(kb => kb.extension === extension)
     );
 
     // 按命令获取快捷键
     const getKeyBindingByCommand = computed(() =>
-        (command: KeyBindingCommand) =>
+        (command: string) =>
             keyBindings.value.find(kb => kb.command === command)
     );
 
@@ -42,13 +43,14 @@ export const useKeybindingStore = defineStore('keybinding', () => {
      * 从后端加载快捷键配置
      */
     const loadKeyBindings = async (): Promise<void> => {
-        keyBindings.value = await GetAllKeyBindings();
+        const result = await GetAllKeyBindings();
+        keyBindings.value = result.filter((kb): kb is KeyBinding => kb !== null);
     };
 
     /**
      * 检查是否存在指定命令的快捷键
      */
-    const hasCommand = (command: KeyBindingCommand): boolean => {
+    const hasCommand = (command: string): boolean => {
         return keyBindings.value.some(kb => kb.command === command && kb.enabled);
     };
 
@@ -57,9 +59,11 @@ export const useKeybindingStore = defineStore('keybinding', () => {
      * 获取扩展相关的所有扩展ID
      */
     const getAllExtensionIds = computed(() => {
-        const extensionIds = new Set<ExtensionID>();
+        const extensionIds = new Set<string>();
         for (const binding of keyBindings.value) {
-            extensionIds.add(binding.extension);
+            if (binding.extension) {
+                extensionIds.add(binding.extension);
+            }
         }
         return Array.from(extensionIds);
     });

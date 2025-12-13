@@ -140,7 +140,6 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.systemService),
 		application.NewService(sm.hotkeyService),
 		application.NewService(sm.dialogService),
-		application.NewService(sm.trayService),
 		application.NewService(sm.startupService),
 		application.NewService(sm.selfUpdateService),
 		application.NewService(sm.translationService),

@@ -52,7 +52,7 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 	}
 
 	// 获取文档信息
-	doc, err := ws.documentService.GetDocumentByID(documentID)
+	doc, err := ws.documentService.GetDocumentByID(context.Background(), int(documentID))
 	if err != nil {
 		return fmt.Errorf("failed to get document: %w", err)
 	}

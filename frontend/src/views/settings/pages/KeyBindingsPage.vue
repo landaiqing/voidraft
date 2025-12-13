@@ -6,7 +6,7 @@ import { useKeybindingStore } from '@/stores/keybindingStore';
 import { useExtensionStore } from '@/stores/extensionStore';
 import { useSystemStore } from '@/stores/systemStore';
 import { getCommandDescription } from '@/views/editor/keymap/commands';
-import {KeyBindingCommand} from "@/../bindings/voidraft/internal/models";
+import { KeyBindingKey } from '@/../bindings/voidraft/internal/models/models';
 
 const { t } = useI18n();
 const keybindingStore = useKeybindingStore();
@@ -25,21 +25,21 @@ const keyBindings = computed(() => {
   const enabledExtensionIds = new Set(extensionStore.enabledExtensionIds);
   
   return keybindingStore.keyBindings
-    .filter(kb => kb.enabled && enabledExtensionIds.has(kb.extension))
+    .filter(kb => kb.enabled && (!kb.extension || enabledExtensionIds.has(kb.extension)))
     .map(kb => ({
-      id: kb.command,
-      keys: parseKeyBinding(kb.key, kb.command),
-      category: kb.extension,
-      description: getCommandDescription(kb.command) || kb.command
+      id: kb.key,
+      keys: parseKeyBinding(kb.command || '', kb.key),
+      category: kb.extension || '',
+      description: kb.key ? (getCommandDescription(kb.key) || kb.key) : ''
     }));
 });
 
 // 解析快捷键字符串为显示数组
-const parseKeyBinding = (keyStr: string, command?: string): string[] => {
+const parseKeyBinding = (keyStr: string, keyBindingKey?: string): string[] => {
   if (!keyStr) return [];
   
   // 特殊处理重做快捷键的操作系统差异
-  if (command === KeyBindingCommand.HistoryRedoCommand && keyStr === 'Mod-Shift-z') {
+  if (keyBindingKey === KeyBindingKey.HistoryRedoKeyBindingKey && keyStr === 'Mod-Shift-z') {
     if (systemStore.isMacOS) {
       return ['⌘', '⇧', 'Z']; // macOS: Cmd+Shift+Z
     } else {
@@ -48,7 +48,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
   }
   
   // 特殊处理重做选择快捷键的操作系统差异
-  if (command === KeyBindingCommand.HistoryRedoSelectionCommand && keyStr === 'Mod-Shift-u') {
+  if (keyBindingKey === KeyBindingKey.HistoryRedoSelectionKeyBindingKey && keyStr === 'Mod-Shift-u') {
     if (systemStore.isMacOS) {
       return ['⌘', '⇧', 'U']; // macOS: Cmd+Shift+U
     } else {
@@ -57,7 +57,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
   }
   
   // 特殊处理代码折叠快捷键的操作系统差异
-  if (command === KeyBindingCommand.FoldCodeCommand && keyStr === 'Ctrl-Shift-[') {
+  if (keyBindingKey === KeyBindingKey.FoldCodeKeyBindingKey && keyStr === 'Ctrl-Shift-[') {
     if (systemStore.isMacOS) {
       return ['⌘', '⌥', '[']; // macOS: Cmd+Alt+[
     } else {
@@ -65,7 +65,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.UnfoldCodeCommand && keyStr === 'Ctrl-Shift-]') {
+  if (keyBindingKey === KeyBindingKey.UnfoldCodeKeyBindingKey && keyStr === 'Ctrl-Shift-]') {
     if (systemStore.isMacOS) {
       return ['⌘', '⌥', ']']; // macOS: Cmd+Alt+]
     } else {
@@ -74,7 +74,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
   }
   
   // 特殊处理编辑快捷键的操作系统差异
-  if (command === KeyBindingCommand.CursorSyntaxLeftCommand && keyStr === 'Alt-ArrowLeft') {
+  if (keyBindingKey === KeyBindingKey.CursorSyntaxLeftKeyBindingKey && keyStr === 'Alt-ArrowLeft') {
     if (systemStore.isMacOS) {
       return ['Ctrl', '←']; // macOS: Ctrl+ArrowLeft
     } else {
@@ -82,7 +82,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.CursorSyntaxRightCommand && keyStr === 'Alt-ArrowRight') {
+  if (keyBindingKey === KeyBindingKey.CursorSyntaxRightKeyBindingKey && keyStr === 'Alt-ArrowRight') {
     if (systemStore.isMacOS) {
       return ['Ctrl', '→']; // macOS: Ctrl+ArrowRight
     } else {
@@ -90,7 +90,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.InsertBlankLineCommand && keyStr === 'Ctrl-Enter') {
+  if (keyBindingKey === KeyBindingKey.InsertBlankLineKeyBindingKey && keyStr === 'Ctrl-Enter') {
     if (systemStore.isMacOS) {
       return ['⌘', 'Enter']; // macOS: Cmd+Enter
     } else {
@@ -98,7 +98,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.SelectLineCommand && keyStr === 'Alt-l') {
+  if (keyBindingKey === KeyBindingKey.SelectLineKeyBindingKey && keyStr === 'Alt-l') {
     if (systemStore.isMacOS) {
       return ['Ctrl', 'L']; // macOS: Ctrl+l
     } else {
@@ -106,7 +106,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.SelectParentSyntaxCommand && keyStr === 'Ctrl-i') {
+  if (keyBindingKey === KeyBindingKey.SelectParentSyntaxKeyBindingKey && keyStr === 'Ctrl-i') {
     if (systemStore.isMacOS) {
       return ['⌘', 'I']; // macOS: Cmd+i
     } else {
@@ -114,7 +114,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.IndentLessCommand && keyStr === 'Ctrl-[') {
+  if (keyBindingKey === KeyBindingKey.IndentLessKeyBindingKey && keyStr === 'Ctrl-[') {
     if (systemStore.isMacOS) {
       return ['⌘', '[']; // macOS: Cmd+[
     } else {
@@ -122,7 +122,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.IndentMoreCommand && keyStr === 'Ctrl-]') {
+  if (keyBindingKey === KeyBindingKey.IndentMoreKeyBindingKey && keyStr === 'Ctrl-]') {
     if (systemStore.isMacOS) {
       return ['⌘', ']']; // macOS: Cmd+]
     } else {
@@ -130,7 +130,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.IndentSelectionCommand && keyStr === 'Ctrl-Alt-\\') {
+  if (keyBindingKey === KeyBindingKey.IndentSelectionKeyBindingKey && keyStr === 'Ctrl-Alt-\\') {
     if (systemStore.isMacOS) {
       return ['⌘', '⌥', '\\']; // macOS: Cmd+Alt+\
     } else {
@@ -138,7 +138,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.CursorMatchingBracketCommand && keyStr === 'Shift-Ctrl-\\') {
+  if (keyBindingKey === KeyBindingKey.CursorMatchingBracketKeyBindingKey && keyStr === 'Shift-Ctrl-\\') {
     if (systemStore.isMacOS) {
       return ['⇧', '⌘', '\\']; // macOS: Shift+Cmd+\
     } else {
@@ -146,7 +146,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.ToggleCommentCommand && keyStr === 'Ctrl-/') {
+  if (keyBindingKey === KeyBindingKey.ToggleCommentKeyBindingKey && keyStr === 'Ctrl-/') {
     if (systemStore.isMacOS) {
       return ['⌘', '/']; // macOS: Cmd+/
     } else {
@@ -155,7 +155,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
   }
   
   // 特殊处理删除快捷键的操作系统差异
-  if (command === KeyBindingCommand.DeleteGroupBackwardCommand && keyStr === 'Ctrl-Backspace') {
+  if (keyBindingKey === KeyBindingKey.DeleteGroupBackwardKeyBindingKey && keyStr === 'Ctrl-Backspace') {
     if (systemStore.isMacOS) {
       return ['⌘', 'Backspace']; // macOS: Cmd+Backspace
     } else {
@@ -163,7 +163,7 @@ const parseKeyBinding = (keyStr: string, command?: string): string[] => {
     }
   }
   
-  if (command === KeyBindingCommand.DeleteGroupForwardCommand && keyStr === 'Ctrl-Delete') {
+  if (keyBindingKey === KeyBindingKey.DeleteGroupForwardKeyBindingKey && keyStr === 'Ctrl-Delete') {
     if (systemStore.isMacOS) {
       return ['⌘', 'Delete']; // macOS: Cmd+Delete
     } else {

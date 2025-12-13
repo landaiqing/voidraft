@@ -33,13 +33,6 @@ export default {
     confirmDelete: 'Click again to confirm delete',
     openInNewWindow: 'Open in New Window',
     alreadyOpenInNewWindow: 'Already open in another window',
-    documentNameTooLong: 'Document name cannot exceed {max} characters',
-    documentNameRequired: 'Document name cannot be empty',
-    cannotDeleteLastDocument: 'Cannot delete the last document',
-    cannotDeleteDefaultDocument: 'Cannot delete the default document',
-    unknownTime: 'Unknown time',
-    invalidDate: 'Invalid date',
-    timeError: 'Time error',
   },
   languages: {
     'zh-CN': 'Chinese',
@@ -297,6 +290,10 @@ export default {
     highlightTrailingWhitespace: {
       name: 'Highlight Trailing Whitespace',
       description: 'Highlight trailing whitespace at the end of lines'
+    },
+    httpClient: {
+      name: 'HTTP Client',
+      description: 'Send HTTP requests directly in the editor and view responses'
     }
   },
   monitor: {

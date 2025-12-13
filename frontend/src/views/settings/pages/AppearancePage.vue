@@ -7,7 +7,7 @@ import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import { SystemThemeType, LanguageType } from '@/../bindings/voidraft/internal/models/models';
 import { createDebounce } from '@/common/utils/debounce';
-import { createTimerManager } from '@/common/utils/timerUtils';
+import { useConfirm } from '@/composables/useConfirm';
 import PickColors from 'vue-pick-colors';
 import type { ThemeColors } from '@/views/editor/theme/types';
 
@@ -21,31 +21,22 @@ const { debouncedFn: debouncedUpdateColor } = createDebounce(
   { delay: 100 }
 );
 
-const { debouncedFn: debouncedResetTheme } = createDebounce(
-  async () => {
-    const success = await themeStore.resetCurrentTheme();
-    
-    if (success) {
-      // 重新加载临时颜色
-      syncTempColors();
-      hasUnsavedChanges.value = false;
-    }
-  },
-  { delay: 300 }
-);
-
-// 创建定时器管理器
-const resetTimer = createTimerManager();
-
 // 临时颜色状态（用于编辑）
 const tempColors = ref<ThemeColors | null>(null);
 
 // 标记是否有未保存的更改
 const hasUnsavedChanges = ref(false);
 
-// 重置按钮状态
-const resetButtonState = ref({
-  confirming: false
+// 重置主题确认
+const { isConfirming: isResetConfirming, requestConfirm: requestResetConfirm } = useConfirm({
+  timeout: 3000,
+  onConfirm: async () => {
+    const success = await themeStore.resetCurrentTheme();
+    if (success) {
+      syncTempColors();
+      hasUnsavedChanges.value = false;
+    }
+  }
 });
 
 // 当前选中的主题名称
@@ -122,23 +113,6 @@ const toggleSearch = async () => {
     searchInputRef.value?.focus();
   } else {
     colorSearch.value = '';
-  }
-};
-
-// 处理重置按钮点击
-const handleResetClick = () => {
-  if (resetButtonState.value.confirming) {
-
-    debouncedResetTheme();
-
-    resetButtonState.value.confirming = false;
-    resetTimer.clear();
-  } else {
-    resetButtonState.value.confirming = true;
-    // 设置3秒后自动恢复
-    resetTimer.set(() => {
-      resetButtonState.value.confirming = false;
-    }, 3000);
   }
 };
 
@@ -295,10 +269,10 @@ const handlePickerClose = () => {
           </button>
           <button 
             v-if="!hasUnsavedChanges" 
-            :class="['reset-button', resetButtonState.confirming ? 'reset-button-confirming' : '']" 
-            @click="handleResetClick"
+            :class="['reset-button', isResetConfirming('theme') ? 'reset-button-confirming' : '']" 
+            @click="requestResetConfirm('theme')"
           >
-            {{ resetButtonState.confirming ? t('settings.confirmReset') : t('settings.resetToDefault') }}
+            {{ isResetConfirming('theme') ? t('settings.confirmReset') : t('settings.resetToDefault') }}
           </button>
           <template v-else>
             <button class="apply-button" @click="applyChanges">

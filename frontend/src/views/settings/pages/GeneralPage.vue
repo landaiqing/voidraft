@@ -2,133 +2,67 @@
 import {useConfigStore} from '@/stores/configStore';
 import {useTabStore} from '@/stores/tabStore';
 import {useI18n} from 'vue-i18n';
-import {computed, onUnmounted, ref} from 'vue';
+import {computed, ref} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import {
-  DialogService,
-  MigrationProgress,
-  MigrationService,
-  MigrationStatus
-} from '@/../bindings/voidraft/internal/services';
+import {DialogService, MigrationService} from '@/../bindings/voidraft/internal/services';
 import {useSystemStore} from "@/stores/systemStore";
+import {useConfirm, usePolling} from '@/composables';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
 const systemStore = useSystemStore();
 const tabStore = useTabStore();
-// 迁移进度状态
-const migrationProgress = ref<MigrationProgress>(new MigrationProgress({
-  status: MigrationStatus.MigrationStatusCompleted,
-  progress: 0
-}));
-
-// 轮询相关
-let pollingTimer: number | null = null;
-const isPolling = ref(false);
 
 // 进度条显示控制
-const showProgress = ref(false);
-const progressError = ref('');
-let hideProgressTimer: any = null;
+const showBar = ref(false);
+const manualError = ref('');  // 用于捕获 MigrateDirectory 抛出的错误
+let hideTimer = 0;
 
-// 开始轮询迁移进度
-const startPolling = () => {
-  if (isPolling.value) return;
-
-  isPolling.value = true;
-  showProgress.value = true;
-  progressError.value = '';
-
-  // 立即重置迁移进度状态，避免从之前的失败状态渐变
-  migrationProgress.value = new MigrationProgress({
-    status: MigrationStatus.MigrationStatusMigrating,
-    progress: 0
-  });
-
-  pollingTimer = window.setInterval(async () => {
-    try {
-      const progress = await MigrationService.GetProgress();
-      migrationProgress.value = progress;
-
-      const {status, error} = progress;
-      const isCompleted = [MigrationStatus.MigrationStatusCompleted, MigrationStatus.MigrationStatusFailed].includes(status);
-
-      if (isCompleted) {
-        stopPolling();
-
-        // 设置错误信息（如果是失败状态）
-        progressError.value = (status === MigrationStatus.MigrationStatusFailed) ? (error || 'Migration failed') : '';
-
-        const delay = status === MigrationStatus.MigrationStatusCompleted ? 3000 : 5000;
-        hideProgressTimer = setTimeout(hideProgress, delay);
+// 轮询迁移进度
+const {data: progress, error: pollError, isActive: migrating, start, stop, reset} = usePolling(
+    () => MigrationService.GetProgress(),
+    {
+      interval: 300,
+      shouldStop: ({progress, error}) => !!error || progress >= 100,
+      onStop: () => {
+        const hasError = pollError.value || progress.value?.error;
+        hideTimer = window.setTimeout(hideAll, hasError ? 5000 : 3000);
       }
-    } catch (_error) {
-      stopPolling();
-
-      // 使用常量简化错误处理
-      const errorMsg = 'Failed to get migration progress';
-      Object.assign(migrationProgress.value, {
-        status: MigrationStatus.MigrationStatusFailed,
-        progress: 0,
-        error: errorMsg
-      });
-      progressError.value = errorMsg;
-
-      hideProgressTimer = setTimeout(hideProgress, 5000);
     }
-  }, 200);
-};
-
-// 停止轮询
-const stopPolling = () => {
-  if (pollingTimer) {
-    clearInterval(pollingTimer);
-    pollingTimer = null;
-  }
-  isPolling.value = false;
-};
-
-// 隐藏进度条
-const hideProgress = () => {
-  showProgress.value = false;
-  progressError.value = '';
-
-  // 重置迁移状态，避免下次显示时状态不正确
-  migrationProgress.value = new MigrationProgress({
-    status: MigrationStatus.MigrationStatusCompleted,
-    progress: 0
-  });
-
-  if (hideProgressTimer) {
-    clearTimeout(hideProgressTimer);
-    hideProgressTimer = null;
-  }
-};
-
-// 简化的迁移状态管理
-const isMigrating = computed(() => migrationProgress.value.status === MigrationStatus.MigrationStatusMigrating);
-
-// 进度条样式 - 使用 Map 简化条件判断
-const statusClassMap = new Map([
-  [MigrationStatus.MigrationStatusMigrating, 'migrating'],
-  [MigrationStatus.MigrationStatusCompleted, 'success'],
-  [MigrationStatus.MigrationStatusFailed, 'error']
-]);
-
-const progressBarClass = computed(() =>
-    showProgress.value ? statusClassMap.get(migrationProgress.value.status) ?? '' : ''
 );
 
-const progressBarWidth = computed(() => {
-  if (!showProgress.value) return '0%';
-  return isMigrating.value ? `${migrationProgress.value.progress}%` : '100%';
+// 派生状态
+const migrationError = computed(() => manualError.value || pollError.value || progress.value?.error || '');
+const currentProgress = computed(() => progress.value?.progress ?? 0);
+
+const barClass = computed(() => {
+  if (!showBar.value) return '';
+  return migrationError.value ? 'error' : currentProgress.value >= 100 ? 'success' : 'migrating';
 });
 
-// 重置确认状态
-const resetConfirmState = ref<'idle' | 'confirming'>('idle');
-let resetConfirmTimer: any = null;
+const barWidth = computed(() => {
+  if (!showBar.value) return '0%';
+  return (migrationError.value || currentProgress.value >= 100) ? '100%' : `${currentProgress.value}%`;
+});
+
+// 隐藏进度条并清除所有状态
+const hideAll = () => {
+  clearTimeout(hideTimer);
+  hideTimer = 0;
+  showBar.value = false;
+  manualError.value = '';
+  reset();  // 清除轮询状态
+};
+
+// 重置设置确认
+const {isConfirming: isResetConfirming, requestConfirm: requestResetConfirm} = useConfirm({
+  timeout: 3000,
+  onConfirm: async () => {
+    await configStore.resetConfig();
+  }
+});
 
 // 可选键列表
 const keyOptions = [
@@ -201,7 +135,7 @@ const modifierKeys = computed(() => ({
   win: configStore.config.general.globalHotkey.win
 }));
 
-// 主键配置 - 只读计算属性
+// 主键配置
 const selectedKey = computed(() => configStore.config.general.globalHotkey.key);
 
 // 切换修饰键
@@ -218,29 +152,8 @@ const updateSelectedKey = (event: Event) => {
   configStore.setGlobalHotkey(newHotkey);
 };
 
-// 重置设置
-const resetSettings = () => {
-  if (resetConfirmState.value === 'idle') {
-    // 第一次点击，进入确认状态
-    resetConfirmState.value = 'confirming';
-    // 3秒后自动返回idle状态
-    resetConfirmTimer = setTimeout(() => {
-      resetConfirmState.value = 'idle';
-    }, 3000);
-  } else if (resetConfirmState.value === 'confirming') {
-    // 第二次点击，执行重置
-    clearTimeout(resetConfirmTimer);
-    resetConfirmState.value = 'idle';
-    confirmReset();
-  }
-};
 
-// 确认重置
-const confirmReset = async () => {
-  await configStore.resetConfig();
-};
-
-// 计算热键预览文本 - 使用现代语法简化
+// 计算热键预览文本
 const hotkeyPreview = computed(() => {
   if (!enableGlobalHotkey.value) return '';
 
@@ -261,54 +174,30 @@ const currentDataPath = computed(() => configStore.config.general.dataPath);
 
 // 选择数据存储目录
 const selectDataDirectory = async () => {
-  if (isMigrating.value) return;
-
+  if (migrating.value) return;
 
   const selectedPath = await DialogService.SelectDirectory();
+  if (!selectedPath?.trim() || selectedPath === currentDataPath.value) return;
 
-  // 检查用户是否取消了选择或路径为空
-  if (!selectedPath || !selectedPath.trim() || selectedPath === currentDataPath.value) {
-    return;
-  }
-  const oldPath = currentDataPath.value;
-  const newPath = selectedPath.trim();
+  const [oldPath, newPath] = [currentDataPath.value, selectedPath.trim()];
 
-  // 清除之前的进度状态
-  hideProgress();
+  // 清除之前的状态并开始轮询
+  hideAll();
+  showBar.value = true;
+  manualError.value = '';
+  start();
 
-  // 开始轮询迁移进度
-  startPolling();
-
-  // 开始迁移
   try {
     await MigrationService.MigrateDirectory(oldPath, newPath);
     await configStore.setDataPath(newPath);
-  } catch (error) {
-    stopPolling();
-
-    // 使用解构和默认值简化错误处理
-    const errorMsg = error?.toString() || 'Migration failed';
-    showProgress.value = true;
-
-    Object.assign(migrationProgress.value, {
-      status: MigrationStatus.MigrationStatusFailed,
-      progress: 0,
-      error: errorMsg
-    });
-    progressError.value = errorMsg;
-
-    hideProgressTimer = setTimeout(hideProgress, 5000);
+  } catch (e) {
+    stop();
+    // 设置手动捕获的错误（当轮询还没获取到错误时）
+    manualError.value = String(e).replace(/^Error:\s*/i, '') || 'Migration failed';
+    showBar.value = true;
+    hideTimer = window.setTimeout(hideAll, 5000);
   }
 };
-
-// 清理定时器
-onUnmounted(() => {
-  stopPolling();
-  hideProgress();
-  if (resetConfirmTimer) {
-    clearTimeout(resetConfirmTimer);
-  }
-});
 </script>
 
 <template>
@@ -394,24 +283,15 @@ onUnmounted(() => {
                 class="path-display-input"
                 @click="selectDataDirectory"
                 :title="t('settings.clickToSelectPath')"
-                :disabled="isMigrating"
+                :disabled="migrating"
             />
-            <!-- 简洁的进度条 -->
-            <div
-                class="progress-bar"
-                :class="[
-                { 'active': showProgress },
-                progressBarClass
-              ]"
-                :style="{ width: progressBarWidth }"
-            ></div>
+            <!-- 进度条 -->
+            <div class="progress-bar" :class="[{'active': showBar}, barClass]" :style="{width: barWidth}"/>
           </div>
 
           <!-- 错误提示 -->
           <Transition name="error-fade">
-            <div v-if="progressError" class="progress-error">
-              {{ progressError }}
-            </div>
+            <div v-if="migrationError" class="progress-error">{{ migrationError }}</div>
           </Transition>
         </div>
       </div>
@@ -421,15 +301,10 @@ onUnmounted(() => {
       <SettingItem :title="t('settings.resetAllSettings')">
         <button
             class="reset-button"
-            :class="{ 'confirming': resetConfirmState === 'confirming' }"
-            @click="resetSettings"
+            :class="{ 'confirming': isResetConfirming('reset') }"
+            @click="requestResetConfirm('reset')"
         >
-          <template v-if="resetConfirmState === 'idle'">
-            {{ t('settings.reset') }}
-          </template>
-          <template v-else-if="resetConfirmState === 'confirming'">
-            {{ t('settings.confirmReset') }}
-          </template>
+          {{ isResetConfirming('reset') ? t('settings.confirmReset') : t('settings.reset') }}
         </button>
       </SettingItem>
     </SettingSection>
@@ -656,11 +531,8 @@ onUnmounted(() => {
   }
 
   .progress-error {
-    margin-top: 6px;
     font-size: 12px;
     color: #ef4444;
-    padding: 0 2px;
-    line-height: 1.4;
     opacity: 1;
     transition: all 0.3s ease;
   }

@@ -17,7 +17,6 @@ import * as SystemService from "./systemservice.js";
 import * as TestService from "./testservice.js";
 import * as ThemeService from "./themeservice.js";
 import * as TranslationService from "./translationservice.js";
-import * as TrayService from "./trayservice.js";
 import * as WindowService from "./windowservice.js";
 export {
     BackupService,
@@ -36,7 +35,6 @@ export {
     TestService,
     ThemeService,
     TranslationService,
-    TrayService,
     WindowService
 };
 

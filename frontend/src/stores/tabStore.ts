@@ -2,7 +2,7 @@ import {defineStore} from 'pinia';
 import {computed, readonly, ref} from 'vue';
 import {useConfigStore} from './configStore';
 import {useDocumentStore} from './documentStore';
-import type {Document} from '@/../bindings/voidraft/internal/models/models';
+import type {Document} from '@/../bindings/voidraft/internal/models/ent/models';
 
 export interface Tab {
     documentId: number;  // 直接使用文档ID作为唯一标识
@@ -55,6 +55,7 @@ export const useTabStore = defineStore('tab', () => {
      */
     const addOrActivateTab = (document: Document) => {
         const documentId = document.id;
+        if (documentId === undefined) return;
 
         if (hasTab(documentId)) {
             // 标签页已存在，无需重复添加
@@ -64,7 +65,7 @@ export const useTabStore = defineStore('tab', () => {
         // 创建新标签页
         const newTab: Tab = {
             documentId,
-            title: document.title
+            title: document.title || ''
         };
 
         tabsMap.value[documentId] = newTab;

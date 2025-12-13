@@ -15,13 +15,13 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as models$0 from "../models/models.js";
+import * as ent$0 from "../models/ent/models.js";
 
 /**
- * GetThemeByName 通过名称获取主题覆盖，若不存在则返回 nil
+ * GetThemeByKey 根据Key获取主题
  */
-export function GetThemeByName(name: string): Promise<models$0.Theme | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1938954770, name) as any;
+export function GetThemeByKey(key: string): Promise<ent$0.Theme | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(808794256, key) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;
@@ -30,18 +30,10 @@ export function GetThemeByName(name: string): Promise<models$0.Theme | null> & {
 }
 
 /**
- * ResetTheme 删除指定主题的覆盖配置
+ * ResetTheme 删除主题
  */
-export function ResetTheme(name: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1806334457, name) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceShutdown 服务关闭
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1676749034) as any;
+export function ResetTheme(key: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1806334457, key) as any;
     return $resultPromise;
 }
 
@@ -54,13 +46,13 @@ export function ServiceStartup(options: application$0.ServiceOptions): Promise<v
 }
 
 /**
- * UpdateTheme 保存或更新主题覆盖
+ * UpdateTheme 保存或更新主题
  */
-export function UpdateTheme(name: string, colors: models$0.ThemeColorConfig): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(70189749, name, colors) as any;
+export function UpdateTheme(key: string, colors: { [_: string]: any }): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(70189749, key, colors) as any;
     return $resultPromise;
 }
 
 // Private type creation functions
-const $$createType0 = models$0.Theme.createFrom;
+const $$createType0 = ent$0.Theme.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);

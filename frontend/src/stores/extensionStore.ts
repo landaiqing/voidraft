@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { Extension, ExtensionID } from '@/../bindings/voidraft/internal/models/models';
+import { Extension } from '@/../bindings/voidraft/internal/models/ent/models';
 import { ExtensionService } from '@/../bindings/voidraft/internal/services';
 
 export const useExtensionStore = defineStore('extension', () => {
@@ -12,9 +12,9 @@ export const useExtensionStore = defineStore('extension', () => {
         extensions.value.filter(ext => ext.enabled)
     );
 
-    // 获取启用的扩展ID列表
+    // 获取启用的扩展ID列表 (key)
     const enabledExtensionIds = computed(() =>
-        enabledExtensions.value.map(ext => ext.id)
+        enabledExtensions.value.map(ext => ext.key).filter((k): k is string => k !== undefined)
     );
 
     /**
@@ -22,7 +22,8 @@ export const useExtensionStore = defineStore('extension', () => {
      */
     const loadExtensions = async (): Promise<void> => {
         try {
-            extensions.value = await ExtensionService.GetAllExtensions();
+            const result = await ExtensionService.GetAllExtensions();
+            extensions.value = result.filter((ext): ext is Extension => ext !== null);
         } catch (err) {
             console.error('[ExtensionStore] Failed to load extensions:', err);
         }
@@ -31,8 +32,8 @@ export const useExtensionStore = defineStore('extension', () => {
     /**
      * 获取扩展配置
      */
-    const getExtensionConfig = (id: ExtensionID): any => {
-        const extension = extensions.value.find(ext => ext.id === id);
+    const getExtensionConfig = (key: string): any => {
+        const extension = extensions.value.find(ext => ext.key === key);
         return extension?.config ?? {};
     };
 

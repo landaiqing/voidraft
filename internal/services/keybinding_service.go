@@ -2,212 +2,141 @@ package services
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"sync"
-	"time"
 	"voidraft/internal/models"
+
+	"voidraft/internal/models/ent"
+	"voidraft/internal/models/ent/keybinding"
+	"voidraft/internal/models/schema/mixin"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
-// SQL 查询语句
-const (
-	// 快捷键操作
-	sqlGetAllKeyBindings = `
-		SELECT command, extension, key, enabled, is_default 
-		FROM key_bindings 
-		ORDER BY command
-	`
-
-	sqlGetKeyBindingByCommand = `
-		SELECT command, extension, key, enabled, is_default 
-		FROM key_bindings 
-		WHERE command = ?
-	`
-
-	sqlInsertKeyBinding = `
-		INSERT INTO key_bindings (command, extension, key, enabled, is_default, created_at, updated_at) 
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-	`
-
-	sqlUpdateKeyBinding = `
-		UPDATE key_bindings 
-		SET extension = ?, key = ?, enabled = ?, updated_at = ? 
-		WHERE command = ?
-	`
-
-	sqlDeleteKeyBinding = `
-		DELETE FROM key_bindings 
-		WHERE command = ?
-	`
-
-	sqlDeleteAllKeyBindings = `
-		DELETE FROM key_bindings
-	`
-)
-
-// KeyBindingService 快捷键管理服务
+// KeyBindingService 快捷键服务
 type KeyBindingService struct {
-	databaseService *DatabaseService
-	logger          *log.LogService
-
-	mu       sync.RWMutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	initOnce sync.Once
+	db     *DatabaseService
+	logger *log.LogService
 }
 
-// KeyBindingError 快捷键错误
-type KeyBindingError struct {
-	Operation string
-	Command   string
-	Err       error
-}
-
-func (e *KeyBindingError) Error() string {
-	if e.Command != "" {
-		return fmt.Sprintf("keybinding %s for %s: %v", e.Operation, e.Command, e.Err)
-	}
-	return fmt.Sprintf("keybinding %s: %v", e.Operation, e.Err)
-}
-
-func (e *KeyBindingError) Unwrap() error {
-	return e.Err
-}
-
-func (e *KeyBindingError) Is(target error) bool {
-	var keyBindingError *KeyBindingError
-	return errors.As(target, &keyBindingError)
-}
-
-// NewKeyBindingService 创建快捷键服务实例
-func NewKeyBindingService(databaseService *DatabaseService, logger *log.LogService) *KeyBindingService {
+// NewKeyBindingService 创建快捷键服务
+func NewKeyBindingService(db *DatabaseService, logger *log.LogService) *KeyBindingService {
 	if logger == nil {
 		logger = log.New()
 	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-
-	service := &KeyBindingService{
-		databaseService: databaseService,
-		logger:          logger,
-		ctx:             ctx,
-		cancel:          cancel,
-	}
-
-	return service
+	return &KeyBindingService{db: db, logger: logger}
 }
 
-// initDatabase 初始化数据库数据
-func (kbs *KeyBindingService) initDatabase() error {
-	kbs.mu.Lock()
-	defer kbs.mu.Unlock()
+// ServiceStartup 服务启动
+func (s *KeyBindingService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	return s.SyncKeyBindings(ctx)
+}
 
-	if kbs.databaseService == nil || kbs.databaseService.db == nil {
-		return &KeyBindingError{"check_db", "", errors.New("database service not available")}
+// SyncKeyBindings 同步快捷键配置
+func (s *KeyBindingService) SyncKeyBindings(ctx context.Context) error {
+	defaults := models.NewDefaultKeyBindings()
+	definedKeys := make(map[models.KeyBindingKey]models.KeyBinding)
+	for _, kb := range defaults {
+		definedKeys[kb.Key] = kb
 	}
 
-	// 检查是否已有快捷键数据
-	var count int64
-	err := kbs.databaseService.db.QueryRow("SELECT COUNT(*) FROM key_bindings").Scan(&count)
+	// 获取数据库中已有的快捷键
+	existing, err := s.db.Client.KeyBinding.Query().All(ctx)
 	if err != nil {
-		return &KeyBindingError{"check_keybindings_count", "", err}
+		return fmt.Errorf("find key bindings error: %w", err)
 	}
 
-	// 如果没有数据，插入默认配置
-	if count == 0 {
-		if err := kbs.insertDefaultKeyBindings(); err != nil {
-			kbs.logger.Error("Failed to insert default key bindings", "error", err)
-			return err
+	existingKeys := make(map[string]bool)
+	for _, kb := range existing {
+		existingKeys[kb.Key] = true
+	}
+
+	// 批量添加缺失的快捷键
+	var builders []*ent.KeyBindingCreate
+	for key, kb := range definedKeys {
+		if !existingKeys[string(key)] {
+			create := s.db.Client.KeyBinding.Create().
+				SetKey(string(kb.Key)).
+				SetCommand(kb.Command).
+				SetEnabled(kb.Enabled)
+			if kb.Extension != "" {
+				create.SetExtension(string(kb.Extension))
+			}
+			builders = append(builders, create)
+		}
+	}
+	if len(builders) > 0 {
+		if _, err := s.db.Client.KeyBinding.CreateBulk(builders...).Save(ctx); err != nil {
+			return fmt.Errorf("bulk insert key bindings error: %w", err)
+		}
+	}
+
+	// 批量删除废弃的快捷键（硬删除）
+	var deleteIDs []int
+	for _, kb := range existing {
+		if _, ok := definedKeys[models.KeyBindingKey(kb.Key)]; !ok {
+			deleteIDs = append(deleteIDs, kb.ID)
+		}
+	}
+	if len(deleteIDs) > 0 {
+		if _, err := s.db.Client.KeyBinding.Delete().
+			Where(keybinding.IDIn(deleteIDs...)).
+			Exec(mixin.SkipSoftDelete(ctx)); err != nil {
+			return fmt.Errorf("bulk delete key bindings error: %w", err)
 		}
 	}
 
 	return nil
 }
 
-// insertDefaultKeyBindings 插入默认快捷键配置
-func (kbs *KeyBindingService) insertDefaultKeyBindings() error {
-	defaultConfig := models.NewDefaultKeyBindingConfig()
-	now := time.Now().Format("2006-01-02 15:04:05")
-
-	for _, kb := range defaultConfig.KeyBindings {
-		_, err := kbs.databaseService.db.Exec(sqlInsertKeyBinding,
-			string(kb.Command),   // 转换为字符串存储
-			string(kb.Extension), // 转换为字符串存储
-			kb.Key,
-			kb.Enabled,
-			kb.IsDefault,
-			now,
-			now,
-		)
-		if err != nil {
-			return &KeyBindingError{"insert_keybinding", string(kb.Command), err}
-		}
-	}
-
-	return nil
+// GetAllKeyBindings 获取所有快捷键
+func (s *KeyBindingService) GetAllKeyBindings(ctx context.Context) ([]*ent.KeyBinding, error) {
+	return s.db.Client.KeyBinding.Query().All(ctx)
 }
 
-// GetAllKeyBindings 获取所有快捷键配置
-func (kbs *KeyBindingService) GetAllKeyBindings() ([]models.KeyBinding, error) {
-	kbs.mu.RLock()
-	defer kbs.mu.RUnlock()
-
-	if kbs.databaseService == nil || kbs.databaseService.db == nil {
-		return nil, &KeyBindingError{"query_db", "", errors.New("database service not available")}
-	}
-
-	rows, err := kbs.databaseService.db.Query(sqlGetAllKeyBindings)
+// GetKeyBindingByKey 根据Key获取快捷键
+func (s *KeyBindingService) GetKeyBindingByKey(ctx context.Context, key string) (*ent.KeyBinding, error) {
+	kb, err := s.db.Client.KeyBinding.Query().
+		Where(keybinding.Key(key)).
+		Only(ctx)
 	if err != nil {
-		return nil, &KeyBindingError{"query_keybindings", "", err}
-	}
-	defer rows.Close()
-
-	var keyBindings []models.KeyBinding
-	for rows.Next() {
-		var kb models.KeyBinding
-		var command, extension string
-		var enabled, isDefault int
-
-		err := rows.Scan(
-			&command,
-			&extension,
-			&kb.Key,
-			&enabled,
-			&isDefault,
-		)
-
-		if err != nil {
-			return nil, &KeyBindingError{"scan_keybinding", "", err}
+		if ent.IsNotFound(err) {
+			return nil, nil
 		}
-
-		kb.Command = models.KeyBindingCommand(command)
-		kb.Extension = models.ExtensionID(extension)
-		kb.Enabled = enabled == 1
-		kb.IsDefault = isDefault == 1
-
-		keyBindings = append(keyBindings, kb)
+		return nil, fmt.Errorf("get key binding error: %w", err)
 	}
-
-	if err = rows.Err(); err != nil {
-		return nil, &KeyBindingError{"iterate_keybindings", "", err}
-	}
-
-	return keyBindings, nil
+	return kb, nil
 }
 
-// ServiceStartup 启动时调用
-func (kbs *KeyBindingService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	kbs.ctx = ctx
-	// 初始化数据库
-	var initErr error
-	kbs.initOnce.Do(func() {
-		if err := kbs.initDatabase(); err != nil {
-			kbs.logger.Error("failed to initialize keybinding database", "error", err)
-			initErr = err
-		}
-	})
-	return initErr
+// UpdateKeyBindingCommand 更新快捷键命令
+func (s *KeyBindingService) UpdateKeyBindingCommand(ctx context.Context, key string, command string) error {
+	kb, err := s.GetKeyBindingByKey(ctx, key)
+	if err != nil {
+		return err
+	}
+	if kb == nil {
+		return fmt.Errorf("key binding not found: %s", key)
+	}
+	return s.db.Client.KeyBinding.UpdateOneID(kb.ID).
+		SetCommand(command).
+		Exec(ctx)
+}
+
+// UpdateKeyBindingEnabled 更新快捷键启用状态
+func (s *KeyBindingService) UpdateKeyBindingEnabled(ctx context.Context, key string, enabled bool) error {
+	kb, err := s.GetKeyBindingByKey(ctx, key)
+	if err != nil {
+		return err
+	}
+	if kb == nil {
+		return fmt.Errorf("key binding not found: %s", key)
+	}
+	return s.db.Client.KeyBinding.UpdateOneID(kb.ID).
+		SetEnabled(enabled).
+		Exec(ctx)
+}
+
+// GetDefaultKeyBindings 获取默认快捷键配置
+func (s *KeyBindingService) GetDefaultKeyBindings() []models.KeyBinding {
+	return models.NewDefaultKeyBindings()
 }

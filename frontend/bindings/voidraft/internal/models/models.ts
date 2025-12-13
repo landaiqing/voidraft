@@ -194,58 +194,6 @@ export class ConfigMetadata {
 }
 
 /**
- * Document represents a document in the system
- */
-export class Document {
-    "id": number;
-    "title": string;
-    "content": string;
-    "createdAt": string;
-    "updatedAt": string;
-    "is_deleted": boolean;
-
-    /**
-     * 锁定标志，锁定的文档无法被删除
-     */
-    "is_locked": boolean;
-
-    /** Creates a new Document instance. */
-    constructor($$source: Partial<Document> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = 0;
-        }
-        if (!("title" in $$source)) {
-            this["title"] = "";
-        }
-        if (!("content" in $$source)) {
-            this["content"] = "";
-        }
-        if (!("createdAt" in $$source)) {
-            this["createdAt"] = "";
-        }
-        if (!("updatedAt" in $$source)) {
-            this["updatedAt"] = "";
-        }
-        if (!("is_deleted" in $$source)) {
-            this["is_deleted"] = false;
-        }
-        if (!("is_locked" in $$source)) {
-            this["is_locked"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Document instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Document {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Document($$parsedSource as Partial<Document>);
-    }
-}
-
-/**
  * EditingConfig 编辑设置配置
  */
 export class EditingConfig {
@@ -332,39 +280,20 @@ export class EditingConfig {
 }
 
 /**
- * Extension 单个扩展配置
+ * Extension 扩展配置
  */
 export class Extension {
-    /**
-     * 扩展唯一标识
-     */
-    "id": ExtensionID;
-
-    /**
-     * 是否启用
-     */
+    "key": ExtensionKey;
     "enabled": boolean;
-
-    /**
-     * 是否为默认扩展
-     */
-    "isDefault": boolean;
-
-    /**
-     * 扩展配置项
-     */
     "config": ExtensionConfig;
 
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = ("" as ExtensionID);
+        if (!("key" in $$source)) {
+            this["key"] = ("" as ExtensionKey);
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
-        }
-        if (!("isDefault" in $$source)) {
-            this["isDefault"] = false;
         }
         if (!("config" in $$source)) {
             this["config"] = ({} as ExtensionConfig);
@@ -377,10 +306,10 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField3_0 = $$createType6;
+        const $$createField2_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
-            $$parsedSource["config"] = $$createField3_0($$parsedSource["config"]);
+            $$parsedSource["config"] = $$createField2_0($$parsedSource["config"]);
         }
         return new Extension($$parsedSource as Partial<Extension>);
     }
@@ -392,9 +321,9 @@ export class Extension {
 export type ExtensionConfig = { [_: string]: any };
 
 /**
- * ExtensionID 扩展标识符
+ * ExtensionKey 扩展标识符
  */
-export enum ExtensionID {
+export enum ExtensionKey {
     /**
      * The Go zero value for the underlying type of the enum.
      */
@@ -442,7 +371,6 @@ export enum ExtensionID {
     ExtensionHighlightTrailingWhitespace = "highlightTrailingWhitespace",
 
     /**
-     * UI增强扩展
      * 小地图
      */
     ExtensionMinimap = "minimap",
@@ -458,16 +386,14 @@ export enum ExtensionID {
     ExtensionContextMenu = "contextMenu",
 
     /**
-     * 工具扩展
      * 搜索功能
      */
     ExtensionSearch = "search",
 
     /**
-     * 核心扩展
-     * 编辑器核心功能
+     * HTTP 客户端
      */
-    ExtensionEditor = "editor",
+    ExtensionHttpClient = "httpClient",
 };
 
 /**
@@ -758,47 +684,24 @@ export class HotkeyCombo {
  * KeyBinding 单个快捷键绑定
  */
 export class KeyBinding {
-    /**
-     * 快捷键动作
-     */
-    "command": KeyBindingCommand;
-
-    /**
-     * 所属扩展
-     */
-    "extension": ExtensionID;
-
-    /**
-     * 快捷键组合（如 "Mod-f", "Ctrl-Shift-p"）
-     */
-    "key": string;
-
-    /**
-     * 是否启用
-     */
+    "key": KeyBindingKey;
+    "command": string;
+    "extension": ExtensionKey;
     "enabled": boolean;
-
-    /**
-     * 是否为默认快捷键
-     */
-    "isDefault": boolean;
 
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
+        if (!("key" in $$source)) {
+            this["key"] = ("" as KeyBindingKey);
+        }
         if (!("command" in $$source)) {
-            this["command"] = ("" as KeyBindingCommand);
+            this["command"] = "";
         }
         if (!("extension" in $$source)) {
-            this["extension"] = ("" as ExtensionID);
-        }
-        if (!("key" in $$source)) {
-            this["key"] = "";
+            this["extension"] = ("" as ExtensionKey);
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
-        }
-        if (!("isDefault" in $$source)) {
-            this["isDefault"] = false;
         }
 
         Object.assign(this, $$source);
@@ -814,263 +717,258 @@ export class KeyBinding {
 }
 
 /**
- * KeyBindingCommand 快捷键命令
+ * KeyBindingKey 快捷键命令
  */
-export enum KeyBindingCommand {
+export enum KeyBindingKey {
     /**
      * The Go zero value for the underlying type of the enum.
      */
     $zero = "",
 
     /**
-     * 搜索扩展相关
      * 显示搜索
      */
-    ShowSearchCommand = "showSearch",
+    ShowSearchKeyBindingKey = "showSearch",
 
     /**
      * 隐藏搜索
      */
-    HideSearchCommand = "hideSearch",
+    HideSearchKeyBindingKey = "hideSearch",
 
     /**
-     * 代码块扩展相关
      * 块内选择全部
      */
-    BlockSelectAllCommand = "blockSelectAll",
+    BlockSelectAllKeyBindingKey = "blockSelectAll",
 
     /**
      * 在当前块后添加新块
      */
-    BlockAddAfterCurrentCommand = "blockAddAfterCurrent",
+    BlockAddAfterCurrentKeyBindingKey = "blockAddAfterCurrent",
 
     /**
      * 在最后添加新块
      */
-    BlockAddAfterLastCommand = "blockAddAfterLast",
+    BlockAddAfterLastKeyBindingKey = "blockAddAfterLast",
 
     /**
      * 在当前块前添加新块
      */
-    BlockAddBeforeCurrentCommand = "blockAddBeforeCurrent",
+    BlockAddBeforeCurrentKeyBindingKey = "blockAddBeforeCurrent",
 
     /**
      * 跳转到上一个块
      */
-    BlockGotoPreviousCommand = "blockGotoPrevious",
+    BlockGotoPreviousKeyBindingKey = "blockGotoPrevious",
 
     /**
      * 跳转到下一个块
      */
-    BlockGotoNextCommand = "blockGotoNext",
+    BlockGotoNextKeyBindingKey = "blockGotoNext",
 
     /**
      * 选择上一个块
      */
-    BlockSelectPreviousCommand = "blockSelectPrevious",
+    BlockSelectPreviousKeyBindingKey = "blockSelectPrevious",
 
     /**
      * 选择下一个块
      */
-    BlockSelectNextCommand = "blockSelectNext",
+    BlockSelectNextKeyBindingKey = "blockSelectNext",
 
     /**
      * 删除当前块
      */
-    BlockDeleteCommand = "blockDelete",
+    BlockDeleteKeyBindingKey = "blockDelete",
 
     /**
      * 向上移动当前块
      */
-    BlockMoveUpCommand = "blockMoveUp",
+    BlockMoveUpKeyBindingKey = "blockMoveUp",
 
     /**
      * 向下移动当前块
      */
-    BlockMoveDownCommand = "blockMoveDown",
+    BlockMoveDownKeyBindingKey = "blockMoveDown",
 
     /**
      * 删除行
      */
-    BlockDeleteLineCommand = "blockDeleteLine",
+    BlockDeleteLineKeyBindingKey = "blockDeleteLine",
 
     /**
      * 向上移动行
      */
-    BlockMoveLineUpCommand = "blockMoveLineUp",
+    BlockMoveLineUpKeyBindingKey = "blockMoveLineUp",
 
     /**
      * 向下移动行
      */
-    BlockMoveLineDownCommand = "blockMoveLineDown",
+    BlockMoveLineDownKeyBindingKey = "blockMoveLineDown",
 
     /**
      * 字符转置
      */
-    BlockTransposeCharsCommand = "blockTransposeChars",
+    BlockTransposeCharsKeyBindingKey = "blockTransposeChars",
 
     /**
      * 格式化代码块
      */
-    BlockFormatCommand = "blockFormat",
+    BlockFormatKeyBindingKey = "blockFormat",
 
     /**
      * 复制
      */
-    BlockCopyCommand = "blockCopy",
+    BlockCopyKeyBindingKey = "blockCopy",
 
     /**
      * 剪切
      */
-    BlockCutCommand = "blockCut",
+    BlockCutKeyBindingKey = "blockCut",
 
     /**
      * 粘贴
      */
-    BlockPasteCommand = "blockPaste",
+    BlockPasteKeyBindingKey = "blockPaste",
 
     /**
-     * 代码折叠扩展相关
      * 折叠代码
      */
-    FoldCodeCommand = "foldCode",
+    FoldCodeKeyBindingKey = "foldCode",
 
     /**
      * 展开代码
      */
-    UnfoldCodeCommand = "unfoldCode",
+    UnfoldCodeKeyBindingKey = "unfoldCode",
 
     /**
      * 折叠全部
      */
-    FoldAllCommand = "foldAll",
+    FoldAllKeyBindingKey = "foldAll",
 
     /**
      * 展开全部
      */
-    UnfoldAllCommand = "unfoldAll",
+    UnfoldAllKeyBindingKey = "unfoldAll",
 
     /**
-     * 通用编辑扩展相关
      * 光标按语法左移
      */
-    CursorSyntaxLeftCommand = "cursorSyntaxLeft",
+    CursorSyntaxLeftKeyBindingKey = "cursorSyntaxLeft",
 
     /**
      * 光标按语法右移
      */
-    CursorSyntaxRightCommand = "cursorSyntaxRight",
+    CursorSyntaxRightKeyBindingKey = "cursorSyntaxRight",
 
     /**
      * 按语法选择左侧
      */
-    SelectSyntaxLeftCommand = "selectSyntaxLeft",
+    SelectSyntaxLeftKeyBindingKey = "selectSyntaxLeft",
 
     /**
      * 按语法选择右侧
      */
-    SelectSyntaxRightCommand = "selectSyntaxRight",
+    SelectSyntaxRightKeyBindingKey = "selectSyntaxRight",
 
     /**
      * 向上复制行
      */
-    CopyLineUpCommand = "copyLineUp",
+    CopyLineUpKeyBindingKey = "copyLineUp",
 
     /**
      * 向下复制行
      */
-    CopyLineDownCommand = "copyLineDown",
+    CopyLineDownKeyBindingKey = "copyLineDown",
 
     /**
      * 插入空行
      */
-    InsertBlankLineCommand = "insertBlankLine",
+    InsertBlankLineKeyBindingKey = "insertBlankLine",
 
     /**
      * 选择行
      */
-    SelectLineCommand = "selectLine",
+    SelectLineKeyBindingKey = "selectLine",
 
     /**
      * 选择父级语法
      */
-    SelectParentSyntaxCommand = "selectParentSyntax",
+    SelectParentSyntaxKeyBindingKey = "selectParentSyntax",
 
     /**
      * 减少缩进
      */
-    IndentLessCommand = "indentLess",
+    IndentLessKeyBindingKey = "indentLess",
 
     /**
      * 增加缩进
      */
-    IndentMoreCommand = "indentMore",
+    IndentMoreKeyBindingKey = "indentMore",
 
     /**
      * 缩进选择
      */
-    IndentSelectionCommand = "indentSelection",
+    IndentSelectionKeyBindingKey = "indentSelection",
 
     /**
      * 光标到匹配括号
      */
-    CursorMatchingBracketCommand = "cursorMatchingBracket",
+    CursorMatchingBracketKeyBindingKey = "cursorMatchingBracket",
 
     /**
      * 切换注释
      */
-    ToggleCommentCommand = "toggleComment",
+    ToggleCommentKeyBindingKey = "toggleComment",
 
     /**
      * 切换块注释
      */
-    ToggleBlockCommentCommand = "toggleBlockComment",
+    ToggleBlockCommentKeyBindingKey = "toggleBlockComment",
 
     /**
      * 插入新行并缩进
      */
-    InsertNewlineAndIndentCommand = "insertNewlineAndIndent",
+    InsertNewlineAndIndentKeyBindingKey = "insertNewlineAndIndent",
 
     /**
      * 向后删除字符
      */
-    DeleteCharBackwardCommand = "deleteCharBackward",
+    DeleteCharBackwardKeyBindingKey = "deleteCharBackward",
 
     /**
      * 向前删除字符
      */
-    DeleteCharForwardCommand = "deleteCharForward",
+    DeleteCharForwardKeyBindingKey = "deleteCharForward",
 
     /**
      * 向后删除组
      */
-    DeleteGroupBackwardCommand = "deleteGroupBackward",
+    DeleteGroupBackwardKeyBindingKey = "deleteGroupBackward",
 
     /**
      * 向前删除组
      */
-    DeleteGroupForwardCommand = "deleteGroupForward",
+    DeleteGroupForwardKeyBindingKey = "deleteGroupForward",
 
     /**
-     * 历史记录扩展相关
      * 撤销
      */
-    HistoryUndoCommand = "historyUndo",
+    HistoryUndoKeyBindingKey = "historyUndo",
 
     /**
      * 重做
      */
-    HistoryRedoCommand = "historyRedo",
+    HistoryRedoKeyBindingKey = "historyRedo",
 
     /**
      * 撤销选择
      */
-    HistoryUndoSelectionCommand = "historyUndoSelection",
+    HistoryUndoSelectionKeyBindingKey = "historyUndoSelection",
 
     /**
      * 重做选择
      */
-    HistoryRedoSelectionCommand = "historyRedoSelection",
+    HistoryRedoSelectionKeyBindingKey = "historyRedoSelection",
 };
 
 /**
@@ -1136,76 +1034,6 @@ export enum TabType {
      * TabTypeTab 使用Tab作为制表符
      */
     TabTypeTab = "tab",
-};
-
-/**
- * Theme 主题数据库模型
- */
-export class Theme {
-    "id": number;
-    "name": string;
-    "type": ThemeType;
-    "colors": ThemeColorConfig;
-    "isDefault": boolean;
-    "createdAt": string;
-    "updatedAt": string;
-
-    /** Creates a new Theme instance. */
-    constructor($$source: Partial<Theme> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = 0;
-        }
-        if (!("name" in $$source)) {
-            this["name"] = "";
-        }
-        if (!("type" in $$source)) {
-            this["type"] = ("" as ThemeType);
-        }
-        if (!("colors" in $$source)) {
-            this["colors"] = ({} as ThemeColorConfig);
-        }
-        if (!("isDefault" in $$source)) {
-            this["isDefault"] = false;
-        }
-        if (!("createdAt" in $$source)) {
-            this["createdAt"] = "";
-        }
-        if (!("updatedAt" in $$source)) {
-            this["updatedAt"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Theme instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Theme {
-        const $$createField3_0 = $$createType9;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("colors" in $$parsedSource) {
-            $$parsedSource["colors"] = $$createField3_0($$parsedSource["colors"]);
-        }
-        return new Theme($$parsedSource as Partial<Theme>);
-    }
-}
-
-/**
- * ThemeColorConfig 使用与前端 ThemeColors 相同的结构，存储任意主题键值
- */
-export type ThemeColorConfig = { [_: string]: any };
-
-/**
- * ThemeType 主题类型枚举
- */
-export enum ThemeType {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    ThemeTypeDark = "dark",
-    ThemeTypeLight = "light",
 };
 
 /**
@@ -1306,8 +1134,8 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType10;
-        const $$createField7_0 = $$createType11;
+        const $$createField6_0 = $$createType9;
+        const $$createField7_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
@@ -1334,11 +1162,5 @@ var $$createType6 = (function $$initCreateType6(...args): any {
 });
 const $$createType7 = $Create.Map($Create.Any, $Create.Any);
 const $$createType8 = HotkeyCombo.createFrom;
-var $$createType9 = (function $$initCreateType9(...args): any {
-    if ($$createType9 === $$initCreateType9) {
-        $$createType9 = $$createType7;
-    }
-    return $$createType9(...args);
-});
-const $$createType10 = GithubConfig.createFrom;
-const $$createType11 = GiteaConfig.createFrom;
+const $$createType9 = GithubConfig.createFrom;
+const $$createType10 = GiteaConfig.createFrom;

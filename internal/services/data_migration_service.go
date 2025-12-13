@@ -12,32 +12,23 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-)
-
-// MigrationStatus 迁移状态
-type MigrationStatus string
-
-const (
-	MigrationStatusMigrating MigrationStatus = "migrating"
-	MigrationStatusCompleted MigrationStatus = "completed"
-	MigrationStatusFailed    MigrationStatus = "failed"
 )
 
 // MigrationProgress 迁移进度信息
 type MigrationProgress struct {
-	Status   MigrationStatus `json:"status"`
-	Progress float64         `json:"progress"`
-	Error    string          `json:"error,omitempty"`
+	Progress float64 `json:"progress"` // 0-100
+	Error    string  `json:"error,omitempty"`
 }
 
 // MigrationService 迁移服务
 type MigrationService struct {
 	logger    *log.LogService
 	dbService *DatabaseService
-	mu        sync.RWMutex
 	progress  atomic.Value // stores MigrationProgress
 
+	mu     sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -47,18 +38,11 @@ func NewMigrationService(dbService *DatabaseService, logger *log.LogService) *Mi
 	if logger == nil {
 		logger = log.New()
 	}
-
 	ms := &MigrationService{
 		logger:    logger,
 		dbService: dbService,
 	}
-
-	// 初始化进度
-	ms.progress.Store(MigrationProgress{
-		Status:   MigrationStatusCompleted,
-		Progress: 0,
-	})
-
+	ms.progress.Store(MigrationProgress{})
 	return ms
 }
 
@@ -67,9 +51,15 @@ func (ms *MigrationService) GetProgress() MigrationProgress {
 	return ms.progress.Load().(MigrationProgress)
 }
 
-// updateProgress 更新进度
-func (ms *MigrationService) updateProgress(progress MigrationProgress) {
-	ms.progress.Store(progress)
+// setProgress 设置进度
+func (ms *MigrationService) setProgress(progress float64) {
+	ms.progress.Store(MigrationProgress{Progress: progress})
+}
+
+// fail 标记失败并返回错误
+func (ms *MigrationService) fail(err error) error {
+	ms.progress.Store(MigrationProgress{Error: err.Error()})
+	return err
 }
 
 // MigrateDirectory 迁移目录
@@ -77,118 +67,84 @@ func (ms *MigrationService) MigrateDirectory(srcPath, dstPath string) error {
 	// 创建可取消的上下文
 	ctx, cancel := context.WithCancel(context.Background())
 	ms.mu.Lock()
-	ms.ctx = ctx
-	ms.cancel = cancel
+	ms.ctx, ms.cancel = ctx, cancel
 	ms.mu.Unlock()
 
 	defer func() {
 		ms.mu.Lock()
-		ms.cancel = nil
-		ms.ctx = nil
+		ms.ctx, ms.cancel = nil, nil
 		ms.mu.Unlock()
 	}()
 
-	// 初始化进度
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 0,
-	})
+	ms.setProgress(0)
 
 	// 预检查
-	if err := ms.preCheck(srcPath, dstPath); err != nil {
-		if err == errNoMigrationNeeded {
-			ms.updateProgress(MigrationProgress{
-				Status:   MigrationStatusCompleted,
-				Progress: 100,
-			})
-			return nil
-		}
-		return ms.failWithError(err)
+	needMigrate, err := ms.preCheck(srcPath, dstPath)
+	if err != nil {
+		return ms.fail(err)
+	}
+	if !needMigrate {
+		ms.setProgress(100)
+		return nil
 	}
 
 	// 迁移前断开数据库连接
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 10,
-	})
-
+	ms.setProgress(10)
 	if ms.dbService != nil {
 		if err := ms.dbService.ServiceShutdown(); err != nil {
 			ms.logger.Error("Failed to close database connection", "error", err)
 		}
 	}
 
+	// 确保失败时恢复数据库连接
+	defer func() {
+		if ms.dbService != nil {
+			if err := ms.dbService.ServiceStartup(ctx, application.ServiceOptions{}); err != nil {
+				ms.logger.Error("Failed to reconnect database", "error", err)
+			}
+		}
+	}()
+
 	// 执行原子迁移
 	if err := ms.atomicMove(ctx, srcPath, dstPath); err != nil {
-		return ms.failWithError(err)
+		return ms.fail(err)
 	}
 
-	// 迁移完成后重新连接数据库
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 95,
-	})
-
-	if ms.dbService != nil {
-		if err := ms.dbService.initDatabase(); err != nil {
-			return ms.failWithError(fmt.Errorf("failed to reconnect database: %v", err))
-		}
-	}
-
-	// 迁移完成
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusCompleted,
-		Progress: 100,
-	})
-
+	ms.setProgress(100)
 	return nil
 }
 
-var errNoMigrationNeeded = fmt.Errorf("no migration needed")
-
-// preCheck 预检查
-func (ms *MigrationService) preCheck(srcPath, dstPath string) error {
-	// 检查源目录是否存在
+// preCheck 预检查，返回是否需要迁移
+func (ms *MigrationService) preCheck(srcPath, dstPath string) (bool, error) {
+	// 源目录不存在，无需迁移
 	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
-		return errNoMigrationNeeded
+		return false, nil
 	}
 
-	// 如果路径相同，不需要迁移
+	// 路径相同，无需迁移
 	srcAbs, _ := filepath.Abs(srcPath)
 	dstAbs, _ := filepath.Abs(dstPath)
 	if srcAbs == dstAbs {
-		return errNoMigrationNeeded
+		return false, nil
 	}
 
-	// 检查目标路径是否是源路径的子目录
-	if ms.isSubDirectory(srcAbs, dstAbs) {
-		return fmt.Errorf("target path cannot be a subdirectory of source path")
+	// 目标不能是源的子目录
+	if isSubDir(srcAbs, dstAbs) {
+		return false, fmt.Errorf("target path cannot be a subdirectory of source path")
 	}
 
-	return nil
-}
-
-// failWithError 失败并记录错误
-func (ms *MigrationService) failWithError(err error) error {
-	ms.updateProgress(MigrationProgress{
-		Status: MigrationStatusFailed,
-		Error:  err.Error(),
-	})
-	return err
+	return true, nil
 }
 
 // atomicMove 原子移动目录
 func (ms *MigrationService) atomicMove(ctx context.Context, srcPath, dstPath string) error {
-	// 检查是否取消
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
-	// 确保目标目录的父目录存在
+	// 确保目标父目录存在
 	if err := os.MkdirAll(filepath.Dir(dstPath), 0755); err != nil {
-		return fmt.Errorf("failed to create target parent directory: %v", err)
+		return fmt.Errorf("failed to create target parent directory: %w", err)
 	}
 
 	// 检查目标路径
@@ -196,132 +152,100 @@ func (ms *MigrationService) atomicMove(ctx context.Context, srcPath, dstPath str
 		return err
 	}
 
-	// 尝试直接重命名
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 20,
-	})
+	ms.setProgress(20)
 
+	// 尝试直接重命名（同一文件系统时最快）
 	if err := os.Rename(srcPath, dstPath); err == nil {
-		// 重命名成功，更新进度到90%
-		ms.updateProgress(MigrationProgress{
-			Status:   MigrationStatusMigrating,
-			Progress: 90,
-		})
+		ms.setProgress(90)
 		ms.logger.Info("Directory migration completed using direct rename", "src", srcPath, "dst", dstPath)
 		return nil
 	}
 
-	// 重命名失败，使用压缩迁移
+	// 重命名失败（跨文件系统），使用压缩迁移
 	ms.logger.Info("Direct rename failed, using compress migration", "src", srcPath, "dst", dstPath)
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 30,
-	})
+	ms.setProgress(30)
 
 	return ms.compressMove(ctx, srcPath, dstPath)
 }
 
-// checkTargetPath 检查目标路径
+// checkTargetPath 检查目标路径是否可用
 func (ms *MigrationService) checkTargetPath(dstPath string) error {
 	stat, err := os.Stat(dstPath)
 	if os.IsNotExist(err) {
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("failed to check target path: %v", err)
+		return fmt.Errorf("failed to check target path: %w", err)
 	}
-
 	if !stat.IsDir() {
 		return fmt.Errorf("target path exists but is not a directory")
 	}
 
-	isEmpty, err := ms.isDirectoryEmpty(dstPath)
+	isEmpty, err := isDirEmpty(dstPath)
 	if err != nil {
-		return fmt.Errorf("failed to check target directory: %v", err)
+		return fmt.Errorf("failed to check target directory: %w", err)
 	}
 	if !isEmpty {
 		return fmt.Errorf("target directory is not empty")
 	}
-
 	return nil
 }
 
 // compressMove 压缩迁移
 func (ms *MigrationService) compressMove(ctx context.Context, srcPath, dstPath string) error {
-	tempZipFile := filepath.Join(os.TempDir(),
-		fmt.Sprintf("voidraft_migration_%d.zip", time.Now().UnixNano()))
-
-	defer os.Remove(tempZipFile)
+	tempZip := filepath.Join(os.TempDir(), fmt.Sprintf("voidraft_migration_%d.zip", time.Now().UnixNano()))
+	defer os.Remove(tempZip)
 
 	// 压缩源目录
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 40,
-	})
-
-	if err := ms.compressDirectory(ctx, srcPath, tempZipFile); err != nil {
-		return fmt.Errorf("failed to compress source directory: %v", err)
+	ms.setProgress(40)
+	if err := ms.compressDir(ctx, srcPath, tempZip); err != nil {
+		return fmt.Errorf("failed to compress source directory: %w", err)
 	}
 
 	// 解压到目标位置
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 70,
-	})
-
-	if err := ms.extractToDirectory(ctx, tempZipFile, dstPath); err != nil {
-		return fmt.Errorf("failed to extract to target location: %v", err)
+	ms.setProgress(70)
+	if err := ms.extractZip(ctx, tempZip, dstPath); err != nil {
+		return fmt.Errorf("failed to extract to target location: %w", err)
 	}
 
-	// 检查是否取消
-	select {
-	case <-ctx.Done():
+	// 检查取消
+	if err := ctx.Err(); err != nil {
 		os.RemoveAll(dstPath)
-		return ctx.Err()
-	default:
+		return err
 	}
 
-	// 验证迁移是否成功
+	// 验证迁移结果
 	if err := ms.verifyMigration(dstPath); err != nil {
-		// 迁移验证失败，清理目标目录
 		os.RemoveAll(dstPath)
-		return fmt.Errorf("migration verification failed: %v", err)
+		return fmt.Errorf("migration verification failed: %w", err)
 	}
 
 	// 删除源目录
-	ms.updateProgress(MigrationProgress{
-		Status:   MigrationStatusMigrating,
-		Progress: 90,
-	})
+	ms.setProgress(90)
 	os.RemoveAll(srcPath)
 	return nil
 }
 
-// compressDirectory 压缩目录到zip文件
-func (ms *MigrationService) compressDirectory(ctx context.Context, srcDir, zipFile string) error {
-	zipWriter, err := os.Create(zipFile)
+// compressDir 压缩目录到zip文件
+func (ms *MigrationService) compressDir(ctx context.Context, srcDir, zipPath string) error {
+	zipFile, err := os.Create(zipPath)
 	if err != nil {
 		return err
 	}
-	defer zipWriter.Close()
+	defer zipFile.Close()
 
-	zw := zip.NewWriter(zipWriter)
+	zw := zip.NewWriter(zipFile)
 	defer zw.Close()
 
-	return filepath.Walk(srcDir, func(filePath string, info os.FileInfo, err error) error {
+	return filepath.Walk(srcDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
-
-		// 检查是否取消
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+		if err := ctx.Err(); err != nil {
+			return err
 		}
 
-		relPath, err := filepath.Rel(srcDir, filePath)
+		relPath, err := filepath.Rel(srcDir, path)
 		if err != nil || relPath == "." {
 			return err
 		}
@@ -345,27 +269,21 @@ func (ms *MigrationService) compressDirectory(ctx context.Context, srcDir, zipFi
 		}
 
 		if !info.IsDir() {
-			return ms.copyFileToZip(filePath, writer)
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			_, err = io.Copy(writer, file)
+			return err
 		}
 		return nil
 	})
 }
 
-// copyFileToZip 复制文件到zip
-func (ms *MigrationService) copyFileToZip(filePath string, writer io.Writer) error {
-	file, err := os.Open(filePath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	_, err = io.Copy(writer, file)
-	return err
-}
-
-// extractToDirectory 从zip文件解压到目录
-func (ms *MigrationService) extractToDirectory(ctx context.Context, zipFile, dstDir string) error {
-	reader, err := zip.OpenReader(zipFile)
+// extractZip 解压zip文件到目录
+func (ms *MigrationService) extractZip(ctx context.Context, zipPath, dstDir string) error {
+	reader, err := zip.OpenReader(zipPath)
 	if err != nil {
 		return err
 	}
@@ -376,27 +294,22 @@ func (ms *MigrationService) extractToDirectory(ctx context.Context, zipFile, dst
 	}
 
 	for _, file := range reader.File {
-		// 检查是否取消
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-
-		if err := ms.extractSingleFile(file, dstDir); err != nil {
+		if err := extractFile(file, dstDir); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-// extractSingleFile 解压单个文件
-func (ms *MigrationService) extractSingleFile(file *zip.File, dstDir string) error {
+// extractFile 解压单个文件
+func extractFile(file *zip.File, dstDir string) error {
 	dstPath := filepath.Join(dstDir, file.Name)
 
 	// 安全检查：防止zip slip攻击
-	if !strings.HasPrefix(dstPath, filepath.Clean(dstDir)+string(os.PathSeparator)) {
+	if !strings.HasPrefix(filepath.Clean(dstPath), filepath.Clean(dstDir)+string(os.PathSeparator)) {
 		return fmt.Errorf("invalid file path in archive: %s", file.Name)
 	}
 
@@ -424,45 +337,23 @@ func (ms *MigrationService) extractSingleFile(file *zip.File, dstDir string) err
 	return err
 }
 
-// isDirectoryEmpty 检查目录是否为空
-func (ms *MigrationService) isDirectoryEmpty(dirPath string) (bool, error) {
-	f, err := os.Open(dirPath)
-	if err != nil {
-		return false, err
-	}
-	defer f.Close()
-
-	_, err = f.Readdir(1)
-	return err == io.EOF, nil
-}
-
-// isSubDirectory 检查target是否是parent的子目录
-func (ms *MigrationService) isSubDirectory(parent, target string) bool {
-	parent = filepath.Clean(parent) + string(filepath.Separator)
-	target = filepath.Clean(target) + string(filepath.Separator)
-	return len(target) > len(parent) && strings.HasPrefix(target, parent)
-}
-
-// verifyMigration 验证迁移是否成功
+// verifyMigration 验证迁移结果
 func (ms *MigrationService) verifyMigration(dstPath string) error {
-	// 检查目标目录是否存在
-	dstStat, err := os.Stat(dstPath)
+	stat, err := os.Stat(dstPath)
 	if err != nil {
-		return fmt.Errorf("target directory does not exist: %v", err)
+		return fmt.Errorf("target directory does not exist: %w", err)
 	}
-	if !dstStat.IsDir() {
+	if !stat.IsDir() {
 		return fmt.Errorf("target path is not a directory")
 	}
 
-	// 简单验证：检查目标目录是否非空
-	isEmpty, err := ms.isDirectoryEmpty(dstPath)
+	isEmpty, err := isDirEmpty(dstPath)
 	if err != nil {
-		return fmt.Errorf("failed to check target directory: %v", err)
+		return fmt.Errorf("failed to check target directory: %w", err)
 	}
 	if isEmpty {
 		return fmt.Errorf("target directory is empty after migration")
 	}
-
 	return nil
 }
 
@@ -475,12 +366,30 @@ func (ms *MigrationService) CancelMigration() error {
 		ms.cancel()
 		return nil
 	}
-
 	return fmt.Errorf("no active migration to cancel")
 }
 
 // ServiceShutdown 服务关闭
 func (ms *MigrationService) ServiceShutdown() error {
-	ms.CancelMigration()
+	_ = ms.CancelMigration()
 	return nil
+}
+
+// isDirEmpty 检查目录是否为空
+func isDirEmpty(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	_, err = f.Readdir(1)
+	return err == io.EOF, nil
+}
+
+// isSubDir 检查target是否是parent的子目录
+func isSubDir(parent, target string) bool {
+	parent = filepath.Clean(parent) + string(filepath.Separator)
+	target = filepath.Clean(target) + string(filepath.Separator)
+	return len(target) > len(parent) && strings.HasPrefix(target, parent)
 }

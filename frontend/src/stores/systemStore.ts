@@ -38,7 +38,7 @@ export const useSystemStore = defineStore('system', () => {
     });
 
     // 初始化系统信息
-    const initializeSystemInfo = async (): Promise<void> => {
+    const initSystemInfo = async (): Promise<void> => {
         if (isLoading.value) return;
 
         isLoading.value = true;
@@ -102,7 +102,7 @@ export const useSystemStore = defineStore('system', () => {
         titleBarHeight,
 
         // 方法
-        initializeSystemInfo,
+        initSystemInfo,
         setWindowOnTop,
         toggleWindowOnTop,
         resetWindowOnTop,

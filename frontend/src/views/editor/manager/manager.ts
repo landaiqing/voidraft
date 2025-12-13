@@ -1,6 +1,6 @@
 import {Compartment, Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
-import {Extension as ExtensionConfig, ExtensionID} from '@/../bindings/voidraft/internal/models/models';
+import {Extension as ExtensionConfig} from '@/../bindings/voidraft/internal/models/ent/models';
 import {ExtensionDefinition, ExtensionState} from './types';
 
 /**
@@ -8,10 +8,10 @@ import {ExtensionDefinition, ExtensionState} from './types';
  * 负责注册、初始化与同步所有动态扩展
  */
 export class Manager {
-    private extensionStates = new Map<ExtensionID, ExtensionState>();
+    private extensionStates = new Map<string, ExtensionState>();
     private views = new Map<number, EditorView>();
 
-    registerExtension(id: ExtensionID, definition: ExtensionDefinition): void {
+    registerExtension(id: string, definition: ExtensionDefinition): void {
         const existingState = this.extensionStates.get(id);
         if (existingState) {
             existingState.definition = definition;
@@ -34,10 +34,11 @@ export class Manager {
 
     initExtensions(extensionConfigs: ExtensionConfig[]): void {
         for (const config of extensionConfigs) {
-            const state = this.extensionStates.get(config.id);
+            if (!config.key) continue;
+            const state = this.extensionStates.get(config.key);
             if (!state) continue;
             const resolvedConfig = this.cloneConfig(config.config ?? state.definition.defaultConfig ?? {});
-            this.commitExtensionState(state, config.enabled, resolvedConfig);
+            this.commitExtensionState(state, config.enabled ?? false, resolvedConfig);
         }
     }
 
@@ -54,7 +55,7 @@ export class Manager {
         this.applyAllExtensionsToView(view);
     }
 
-    updateExtension(id: ExtensionID, enabled: boolean, config?: any): void {
+    updateExtension(id: string, enabled: boolean, config?: any): void {
         const state = this.extensionStates.get(id);
         if (!state) return;
 
@@ -93,7 +94,7 @@ export class Manager {
         }
     }
 
-    private applyExtensionToAllViews(id: ExtensionID): void {
+    private applyExtensionToAllViews(id: string): void {
         const state = this.extensionStates.get(id);
         if (!state) return;
 

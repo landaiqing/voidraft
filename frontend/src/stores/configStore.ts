@@ -161,7 +161,7 @@ export const useConfigStore = defineStore('config', () => {
 
 
     // 初始化语言设置
-    const initializeLanguage = async (): Promise<void> => {
+    const initLanguage = async (): Promise<void> => {
         try {
             // 如果配置未加载，先加载配置
             if (!state.configLoaded) {
@@ -210,7 +210,7 @@ export const useConfigStore = defineStore('config', () => {
 
         // 语言相关方法
         setLanguage,
-        initializeLanguage,
+        initLanguage,
 
         // 主题相关方法
         setSystemTheme,

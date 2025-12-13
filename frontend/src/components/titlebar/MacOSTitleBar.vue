@@ -1,10 +1,10 @@
 <template>
   <div class="macos-titlebar" style="--wails-draggable:drag" @contextmenu.prevent>
     <div class="titlebar-controls" style="--wails-draggable:no-drag" @contextmenu.prevent>
-      <button 
-        class="titlebar-button close-button" 
-        @click="closeWindow"
-        :title="t('titlebar.close')"
+      <button
+          class="titlebar-button close-button"
+          @click="closeWindow"
+          :title="t('titlebar.close')"
       >
         <div class="button-icon">
           <svg width="6" height="6" viewBox="0 0 6 6" v-show="showControlIcons">
@@ -12,11 +12,11 @@
           </svg>
         </div>
       </button>
-      
-      <button 
-        class="titlebar-button minimize-button" 
-        @click="minimizeWindow"
-        :title="t('titlebar.minimize')"
+
+      <button
+          class="titlebar-button minimize-button"
+          @click="minimizeWindow"
+          :title="t('titlebar.minimize')"
       >
         <div class="button-icon">
           <svg width="8" height="1" viewBox="0 0 8 1" v-show="showControlIcons">
@@ -24,11 +24,11 @@
           </svg>
         </div>
       </button>
-      
-      <button 
-        class="titlebar-button maximize-button" 
-        @click="toggleMaximize"
-        :title="isMaximized ? t('titlebar.restore') : t('titlebar.maximize')"
+
+      <button
+          class="titlebar-button maximize-button"
+          @click="handleToggleMaximize"
+          :title="isMaximized ? t('titlebar.restore') : t('titlebar.maximize')"
       >
         <div class="button-icon">
           <svg width="6" height="6" viewBox="0 0 6 6" v-show="showControlIcons && !isMaximized">
@@ -42,98 +42,61 @@
         </div>
       </button>
     </div>
-    
+
     <!-- 标签页容器区域 -->
     <div class="titlebar-tabs" v-if="tabStore.isTabsEnabled && !isInSettings" style="--wails-draggable:drag">
-      <TabContainer />
+      <TabContainer/>
     </div>
-    
-    <div class="titlebar-content" @dblclick="toggleMaximize" @contextmenu.prevent v-if="!tabStore.isTabsEnabled || isInSettings">
+
+    <div class="titlebar-content" @dblclick="handleToggleMaximize" @contextmenu.prevent
+         v-if="!tabStore.isTabsEnabled || isInSettings">
       <div class="titlebar-title" :title="fullTitleText">{{ titleText }}</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
-import * as runtime from '@wailsio/runtime';
-import { useDocumentStore } from '@/stores/documentStore';
+import {computed, onMounted, ref} from 'vue';
+import {useI18n} from 'vue-i18n';
+import {useRoute} from 'vue-router';
+import {useDocumentStore} from '@/stores/documentStore';
+import {useTabStore} from '@/stores/tabStore';
 import TabContainer from '@/components/tabs/TabContainer.vue';
-import { useTabStore } from "@/stores/tabStore";
+import {
+  minimizeWindow,
+  toggleMaximize,
+  closeWindow,
+  getMaximizedState,
+  generateTitleText,
+  generateFullTitleText
+} from './index';
 
-const tabStore = useTabStore();
-const { t } = useI18n();
+const {t} = useI18n();
 const route = useRoute();
-const isMaximized = ref(false);
-const showControlIcons = ref(false);
+const tabStore = useTabStore();
 const documentStore = useDocumentStore();
 
-// 判断是否在设置页面
+const isMaximized = ref(false);
+const showControlIcons = ref(false);
 const isInSettings = computed(() => route.path.startsWith('/settings'));
 
-const minimizeWindow = async () => {
-  try {
-    await runtime.Window.Minimise();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const toggleMaximize = async () => {
-  try {
-    await runtime.Window.ToggleMaximise();
-    await checkMaximizedState();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const closeWindow = async () => {
-  try {
-    await runtime.Window.Close();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const checkMaximizedState = async () => {
-  try {
-    isMaximized.value = await runtime.Window.IsMaximised();
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-// 计算标题文本
 const titleText = computed(() => {
-  if (isInSettings.value) {
-    return `voidraft - ` + t('settings.title');
-  }
-  const currentDoc = documentStore.currentDocument;
-  if (currentDoc) {
-    // 限制文档标题长度，避免标题栏换行
-    const maxTitleLength = 30;
-    const truncatedTitle = currentDoc.title.length > maxTitleLength 
-      ? currentDoc.title.substring(0, maxTitleLength) + '...' 
-      : currentDoc.title;
-    return `voidraft - ${truncatedTitle}`;
-  }
-  return 'voidraft';
+  if (isInSettings.value) return `voidraft - ${t('settings.title')}`;
+  return generateTitleText(documentStore.currentDocument?.title);
 });
 
-// 计算完整标题文本（用于tooltip）
 const fullTitleText = computed(() => {
-  if (isInSettings.value) {
-    return `voidraft - ` + t('settings.title');
-  }
-  const currentDoc = documentStore.currentDocument;
-  return currentDoc ? `voidraft - ${currentDoc.title}` : 'voidraft';
+  if (isInSettings.value) return `voidraft - ${t('settings.title')}`;
+  return generateFullTitleText(documentStore.currentDocument?.title);
 });
+
+const handleToggleMaximize = async () => {
+  await toggleMaximize();
+  isMaximized.value = await getMaximizedState();
+};
 
 onMounted(async () => {
-  await checkMaximizedState();
+  isMaximized.value = await getMaximizedState();
 });
 </script>
 
@@ -147,11 +110,11 @@ onMounted(async () => {
   -webkit-user-select: none;
   width: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui, sans-serif;
-  
+
   -webkit-context-menu: none;
   -moz-context-menu: none;
   context-menu: none;
-  
+
   &:hover {
     .titlebar-button {
       .button-icon {
@@ -168,7 +131,7 @@ onMounted(async () => {
   padding-left: 8px;
   gap: 8px;
   flex-shrink: 0;
-  
+
   -webkit-context-menu: none;
   -moz-context-menu: none;
   context-menu: none;
@@ -187,7 +150,7 @@ onMounted(async () => {
   padding: 0;
   margin: 0;
   position: relative;
-  
+
   .button-icon {
     opacity: 0;
     transition: opacity 0.2s ease;
@@ -198,7 +161,7 @@ onMounted(async () => {
     height: 100%;
     color: rgba(0, 0, 0, 0.7);
   }
-  
+
   &:hover .button-icon {
     opacity: 1;
   }
@@ -206,11 +169,11 @@ onMounted(async () => {
 
 .close-button {
   background: #ff5f57;
-  
+
   &:hover {
     background: #ff453a;
   }
-  
+
   &:active {
     background: #d7463f;
   }
@@ -218,11 +181,11 @@ onMounted(async () => {
 
 .minimize-button {
   background: #ffbd2e;
-  
+
   &:hover {
     background: #ffb524;
   }
-  
+
   &:active {
     background: #e6a220;
   }
@@ -230,11 +193,11 @@ onMounted(async () => {
 
 .maximize-button {
   background: #28ca42;
-  
+
   &:hover {
     background: #1ebe36;
   }
-  
+
   &:active {
     background: #1ba932;
   }
@@ -247,7 +210,7 @@ onMounted(async () => {
   flex: 1;
   cursor: default;
   min-width: 0;
-  
+
   -webkit-context-menu: none;
   -moz-context-menu: none;
   context-menu: none;
@@ -261,34 +224,32 @@ onMounted(async () => {
   margin-left: 8px;
   margin-right: 8px;
   min-width: 0;
-  overflow: visible; /* 允许TabContainer内部处理滚动 */
-  
-  /* 确保TabContainer能够正确处理滚动 */
+  overflow: visible;
+
   :deep(.tab-container) {
     width: 100%;
     height: 100%;
   }
-  
+
   :deep(.tab-bar) {
     width: 100%;
     height: 100%;
   }
-  
+
   :deep(.tab-scroll-wrapper) {
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    
+
     &::-webkit-scrollbar {
       display: none;
     }
   }
-  
-  /* 确保底部线条能够正确显示 */
+
   :deep(.tab-item) {
     position: relative;
-    
+
     &::after {
       content: '';
       position: absolute;
@@ -319,11 +280,11 @@ onMounted(async () => {
     background: var(--toolbar-bg, #2d2d2d);
     border-bottom-color: var(--toolbar-border, rgba(255, 255, 255, 0.1));
   }
-  
+
   .titlebar-title {
     color: var(--toolbar-text, #fff);
   }
-  
+
   .titlebar-button .button-icon {
     color: rgba(255, 255, 255, 0.8);
   }

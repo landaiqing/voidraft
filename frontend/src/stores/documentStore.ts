@@ -2,12 +2,11 @@ import {defineStore} from 'pinia';
 import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
-import {Document} from '@/../bindings/voidraft/internal/models/models';
+import {Document} from '@/../bindings/voidraft/internal/models/ent/models';
 import {useTabStore} from "@/stores/tabStore";
 import type {EditorViewState} from '@/stores/editorStore';
 
 export const useDocumentStore = defineStore('document', () => {
-    const DEFAULT_DOCUMENT_ID = ref<number>(1); // 默认草稿文档ID
 
     // === 核心状态 ===
     const documents = ref<Record<number, Document>>({});
@@ -15,7 +14,6 @@ export const useDocumentStore = defineStore('document', () => {
     const currentDocument = ref<Document | null>(null);
 
     // === 编辑器状态持久化 ===
-    // 修复：使用统一的 EditorViewState 类型定义
     const documentStates = ref<Record<number, EditorViewState>>({});
 
     // === UI状态 ===
@@ -26,15 +24,18 @@ export const useDocumentStore = defineStore('document', () => {
     // === 计算属性 ===
     const documentList = computed(() =>
         Object.values(documents.value).sort((a, b) => {
-            return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+            const timeA = a.updated_at ? new Date(a.updated_at).getTime() : 0;
+            const timeB = b.updated_at ? new Date(b.updated_at).getTime() : 0;
+            return timeB - timeA;
         })
     );
 
-    // === 私有方法 ===
     const setDocuments = (docs: Document[]) => {
         documents.value = {};
         docs.forEach(doc => {
-            documents.value[doc.id] = doc;
+            if (doc.id !== undefined) {
+                documents.value[doc.id] = doc;
+            }
         });
     };
 
@@ -64,15 +65,7 @@ export const useDocumentStore = defineStore('document', () => {
         clearError();
     };
 
-    const toggleDocumentSelector = () => {
-        if (showDocumentSelector.value) {
-            closeDocumentSelector();
-        } else {
-            openDocumentSelector();
-        }
-    };
 
-    // === 文档操作方法 ===
 
     // 在新窗口中打开文档
     const openDocumentInNewWindow = async (docId: number): Promise<boolean> => {
@@ -94,7 +87,7 @@ export const useDocumentStore = defineStore('document', () => {
     const createNewDocument = async (title: string): Promise<Document | null> => {
         try {
             const doc = await DocumentService.CreateDocument(title);
-            if (doc) {
+            if (doc && doc.id !== undefined) {
                 documents.value[doc.id] = doc;
                 return doc;
             }
@@ -123,8 +116,6 @@ export const useDocumentStore = defineStore('document', () => {
     // 打开文档
     const openDocument = async (docId: number): Promise<boolean> => {
         try {
-            closeDocumentSelector();
-
             // 获取完整文档数据
             const doc = await DocumentService.GetDocumentByID(docId);
             if (!doc) {
@@ -150,12 +141,12 @@ export const useDocumentStore = defineStore('document', () => {
             const doc = documents.value[docId];
             if (doc) {
                 doc.title = title;
-                doc.updatedAt = new Date().toISOString();
+                doc.updated_at = new Date().toISOString();
             }
 
             if (currentDocument.value?.id === docId) {
                 currentDocument.value.title = title;
-                currentDocument.value.updatedAt = new Date().toISOString();
+                currentDocument.value.updated_at = new Date().toISOString();
             }
 
             // 同步更新标签页标题
@@ -172,11 +163,6 @@ export const useDocumentStore = defineStore('document', () => {
     // 删除文档
     const deleteDocument = async (docId: number): Promise<boolean> => {
         try {
-            // 检查是否是默认文档（使用ID判断）
-            if (docId === DEFAULT_DOCUMENT_ID.value) {
-                return false;
-            }
-
             await DocumentService.DeleteDocument(docId);
 
             // 更新本地状态
@@ -191,7 +177,7 @@ export const useDocumentStore = defineStore('document', () => {
             // 如果删除的是当前文档，切换到第一个可用文档
             if (currentDocumentId.value === docId) {
                 const availableDocs = Object.values(documents.value);
-                if (availableDocs.length > 0) {
+                if (availableDocs.length > 0 && availableDocs[0].id !== undefined) {
                     await openDocument(availableDocs[0].id);
                 } else {
                     currentDocumentId.value = null;
@@ -218,8 +204,10 @@ export const useDocumentStore = defineStore('document', () => {
                 // 如果URL中没有指定文档ID，则使用持久化的文档ID
                 await openDocument(currentDocumentId.value);
             } else {
-                // 否则打开默认文档
-                await openDocument(DEFAULT_DOCUMENT_ID.value);
+                // 否则打开第一个文档
+                if (documents.value[0].id) {
+                    await openDocument(documents.value[0].id);
+                }
             }
         } catch (error) {
             console.error('Failed to initialize document store:', error);
@@ -227,7 +215,6 @@ export const useDocumentStore = defineStore('document', () => {
     };
 
     return {
-        DEFAULT_DOCUMENT_ID,
         // 状态
         documents,
         documentList,
@@ -247,7 +234,6 @@ export const useDocumentStore = defineStore('document', () => {
         deleteDocument,
         openDocumentSelector,
         closeDocumentSelector,
-        toggleDocumentSelector,
         setError,
         clearError,
         initialize,

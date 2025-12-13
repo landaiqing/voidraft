@@ -1,5 +1,4 @@
 import {Manager} from './manager';
-import {ExtensionID} from '@/../bindings/voidraft/internal/models/models';
 import i18n from '@/i18n';
 import {ExtensionDefinition} from './types';
 import {Prec} from '@codemirror/state';
@@ -15,6 +14,8 @@ import {foldGutter} from "@codemirror/language";
 import {highlightActiveLineGutter, highlightWhitespace, highlightTrailingWhitespace} from "@codemirror/view";
 import createEditorContextMenu from '../extensions/contextMenu';
 import {blockLineNumbers} from '../extensions/codeblock';
+import {createHttpClientExtension} from '../extensions/httpclient';
+import {ExtensionKey} from '@/../bindings/voidraft/internal/models/models';
 
 type ExtensionEntry = {
     definition: ExtensionDefinition
@@ -22,35 +23,36 @@ type ExtensionEntry = {
     descriptionKey: string
 };
 
-type RegisteredExtensionID = Exclude<ExtensionID, ExtensionID.$zero | ExtensionID.ExtensionEditor>;
+// 排除 $zero 的有效扩展 Key 类型
+type ValidExtensionKey = Exclude<ExtensionKey, ExtensionKey.$zero>;
 
 const defineExtension = (create: (config: any) => any, defaultConfig: Record<string, any> = {}): ExtensionDefinition => ({
     create,
     defaultConfig
 });
 
-const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
-    [ExtensionID.ExtensionRainbowBrackets]: {
+const EXTENSION_REGISTRY: Record<ValidExtensionKey, ExtensionEntry> = {
+    [ExtensionKey.ExtensionRainbowBrackets]: {
         definition: defineExtension(() => rainbowBrackets()),
         displayNameKey: 'extensions.rainbowBrackets.name',
         descriptionKey: 'extensions.rainbowBrackets.description'
     },
-    [ExtensionID.ExtensionHyperlink]: {
+    [ExtensionKey.ExtensionHyperlink]: {
         definition: defineExtension(() => hyperLink),
         displayNameKey: 'extensions.hyperlink.name',
         descriptionKey: 'extensions.hyperlink.description'
     },
-    [ExtensionID.ExtensionColorSelector]: {
+    [ExtensionKey.ExtensionColorSelector]: {
         definition: defineExtension(() => color),
         displayNameKey: 'extensions.colorSelector.name',
         descriptionKey: 'extensions.colorSelector.description'
     },
-    [ExtensionID.ExtensionTranslator]: {
+    [ExtensionKey.ExtensionTranslator]: {
         definition: defineExtension(() => createTranslatorExtension()),
         displayNameKey: 'extensions.translator.name',
         descriptionKey: 'extensions.translator.description'
     },
-    [ExtensionID.ExtensionMinimap]: {
+    [ExtensionKey.ExtensionMinimap]: {
         definition: defineExtension((config: any) => minimap({
             displayText: config?.displayText ?? 'characters',
             showOverlay: config?.showOverlay ?? 'always',
@@ -63,85 +65,90 @@ const EXTENSION_REGISTRY: Record<RegisteredExtensionID, ExtensionEntry> = {
         displayNameKey: 'extensions.minimap.name',
         descriptionKey: 'extensions.minimap.description'
     },
-    [ExtensionID.ExtensionSearch]: {
+    [ExtensionKey.ExtensionSearch]: {
         definition: defineExtension(() => vscodeSearch),
         displayNameKey: 'extensions.search.name',
         descriptionKey: 'extensions.search.description'
     },
-    [ExtensionID.ExtensionFold]: {
+    [ExtensionKey.ExtensionFold]: {
         definition: defineExtension(() => Prec.low(foldGutter())),
         displayNameKey: 'extensions.fold.name',
         descriptionKey: 'extensions.fold.description'
     },
-    [ExtensionID.ExtensionMarkdown]: {
+    [ExtensionKey.ExtensionMarkdown]: {
         definition: defineExtension(() => markdownExtensions),
         displayNameKey: 'extensions.markdown.name',
         descriptionKey: 'extensions.markdown.description'
     },
-    [ExtensionID.ExtensionLineNumbers]: {
+    [ExtensionKey.ExtensionLineNumbers]: {
         definition: defineExtension(() => Prec.high([blockLineNumbers, highlightActiveLineGutter()])),
         displayNameKey: 'extensions.lineNumbers.name',
         descriptionKey: 'extensions.lineNumbers.description'
     },
-    [ExtensionID.ExtensionContextMenu]: {
+    [ExtensionKey.ExtensionContextMenu]: {
         definition: defineExtension(() => createEditorContextMenu()),
         displayNameKey: 'extensions.contextMenu.name',
         descriptionKey: 'extensions.contextMenu.description'
     },
-    [ExtensionID.ExtensionHighlightWhitespace]: {
+    [ExtensionKey.ExtensionHighlightWhitespace]: {
         definition: defineExtension(() => highlightWhitespace()),
         displayNameKey: 'extensions.highlightWhitespace.name',
         descriptionKey: 'extensions.highlightWhitespace.description'
     },
-    [ExtensionID.ExtensionHighlightTrailingWhitespace]: {
+    [ExtensionKey.ExtensionHighlightTrailingWhitespace]: {
         definition: defineExtension(() => highlightTrailingWhitespace()),
         displayNameKey: 'extensions.highlightTrailingWhitespace.name',
         descriptionKey: 'extensions.highlightTrailingWhitespace.description'
+    },
+    [ExtensionKey.ExtensionHttpClient]: {
+        definition: defineExtension(() => createHttpClientExtension()),
+        displayNameKey: 'extensions.httpClient.name',
+        descriptionKey: 'extensions.httpClient.description'
     }
-} as const;
+};
 
-const isRegisteredExtension = (id: ExtensionID): id is RegisteredExtensionID =>
-    Object.prototype.hasOwnProperty.call(EXTENSION_REGISTRY, id);
+const isRegisteredExtension = (key: string): key is ValidExtensionKey =>
+    Object.prototype.hasOwnProperty.call(EXTENSION_REGISTRY, key);
 
-const getRegistryEntry = (id: ExtensionID): ExtensionEntry | undefined => {
-    if (!isRegisteredExtension(id)) {
+const getRegistryEntry = (key: string): ExtensionEntry | undefined => {
+    if (!isRegisteredExtension(key)) {
         return undefined;
     }
-    return EXTENSION_REGISTRY[id];
+    return EXTENSION_REGISTRY[key];
 };
 
 export function registerAllExtensions(manager: Manager): void {
-    (Object.entries(EXTENSION_REGISTRY) as [RegisteredExtensionID, ExtensionEntry][]).forEach(([id, entry]) => {
+    (Object.entries(EXTENSION_REGISTRY) as [ValidExtensionKey, ExtensionEntry][]).forEach(([id, entry]) => {
         manager.registerExtension(id, entry.definition);
     });
 }
 
-export function getExtensionDisplayName(id: ExtensionID): string {
-    const entry = getRegistryEntry(id);
-    return entry?.displayNameKey ? i18n.global.t(entry.displayNameKey) : id;
+export function getExtensionDisplayName(key: string): string {
+    const entry = getRegistryEntry(key);
+    return entry?.displayNameKey ? i18n.global.t(entry.displayNameKey) : key;
 }
 
-export function getExtensionDescription(id: ExtensionID): string {
-    const entry = getRegistryEntry(id);
+export function getExtensionDescription(key: string): string {
+    const entry = getRegistryEntry(key);
     return entry?.descriptionKey ? i18n.global.t(entry.descriptionKey) : '';
 }
 
-function getExtensionDefinition(id: ExtensionID): ExtensionDefinition | undefined {
-    return getRegistryEntry(id)?.definition;
+function getExtensionDefinition(key: string): ExtensionDefinition | undefined {
+    return getRegistryEntry(key)?.definition;
 }
 
-export function getExtensionDefaultConfig(id: ExtensionID): any {
-    const definition = getExtensionDefinition(id);
+export function getExtensionDefaultConfig(key: string): any {
+    const definition = getExtensionDefinition(key);
     if (!definition) return {};
     return cloneConfig(definition.defaultConfig);
 }
 
-export function hasExtensionConfig(id: ExtensionID): boolean {
-    return Object.keys(getExtensionDefaultConfig(id)).length > 0;
+export function hasExtensionConfig(key: string): boolean {
+    return Object.keys(getExtensionDefaultConfig(key)).length > 0;
 }
 
-export function getAllExtensionIds(): ExtensionID[] {
-    return Object.keys(EXTENSION_REGISTRY) as RegisteredExtensionID[];
+export function getAllExtensionIds(): string[] {
+    return Object.keys(EXTENSION_REGISTRY);
 }
 
 const cloneConfig = (config: any) => {

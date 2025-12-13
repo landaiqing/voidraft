@@ -20,8 +20,6 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 
 	"voidraft/internal/models"
-
-	_ "modernc.org/sqlite"
 )
 
 const (
@@ -223,20 +221,20 @@ func (s *BackupService) getAuthMethod(config *models.GitBackupConfig) (transport
 
 // serializeDatabase 序列化数据库到文件
 func (s *BackupService) serializeDatabase(repoPath string) error {
-	if s.dbService == nil || s.dbService.db == nil {
-		return errors.New("database service not available")
-	}
-
-	binFilePath := filepath.Join(repoPath, dbSerializeFile)
-
-	// 使用 VACUUM INTO 创建数据库副本，不影响现有连接
-	s.dbService.mu.RLock()
-	_, err := s.dbService.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", binFilePath))
-	s.dbService.mu.RUnlock()
-
-	if err != nil {
-		return fmt.Errorf("creating database backup: %w", err)
-	}
+	//if s.dbService == nil || s.dbService.Engine == nil {
+	//	return errors.New("database service not available")
+	//}
+	//
+	//binFilePath := filepath.Join(repoPath, dbSerializeFile)
+	//
+	//// 使用 VACUUM INTO 创建数据库副本，不影响现有连接
+	//s.dbService.mu.RLock()
+	//_, err := s.dbService.db.Exec(fmt.Sprintf("VACUUM INTO '%s'", binFilePath))
+	//s.dbService.mu.RUnlock()
+	//
+	//if err != nil {
+	//	return fmt.Errorf("creating database backup: %w", err)
+	//}
 
 	return nil
 }

@@ -2,12 +2,12 @@ package services
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
-	"time"
-	"voidraft/internal/models"
+
+	"voidraft/internal/models/ent"
+	"voidraft/internal/models/ent/theme"
+	"voidraft/internal/models/schema/mixin"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
@@ -15,152 +15,90 @@ import (
 
 // ThemeService 主题服务
 type ThemeService struct {
-	databaseService *DatabaseService
-	logger          *log.LogService
-	ctx             context.Context
+	db     *DatabaseService
+	logger *log.LogService
 }
 
-// NewThemeService 创建新的主题服务
-func NewThemeService(databaseService *DatabaseService, logger *log.LogService) *ThemeService {
+// NewThemeService 创建主题服务
+func NewThemeService(db *DatabaseService, logger *log.LogService) *ThemeService {
 	if logger == nil {
 		logger = log.New()
 	}
-
-	return &ThemeService{
-		databaseService: databaseService,
-		logger:          logger,
-	}
+	return &ThemeService{db: db, logger: logger}
 }
 
 // ServiceStartup 服务启动
-func (ts *ThemeService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	ts.ctx = ctx
+func (s *ThemeService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
 	return nil
 }
 
-// getDB 获取数据库连接
-func (ts *ThemeService) getDB() *sql.DB {
-	return ts.databaseService.db
-}
-
-// GetThemeByName 通过名称获取主题覆盖，若不存在则返回 nil
-func (ts *ThemeService) GetThemeByName(name string) (*models.Theme, error) {
-	db := ts.getDB()
-	if db == nil {
-		return nil, fmt.Errorf("database not available")
-	}
-
-	trimmed := strings.TrimSpace(name)
+// GetThemeByKey 根据Key获取主题
+func (s *ThemeService) GetThemeByKey(ctx context.Context, key string) (*ent.Theme, error) {
+	trimmed := strings.TrimSpace(key)
 	if trimmed == "" {
-		return nil, fmt.Errorf("theme name cannot be empty")
+		return nil, fmt.Errorf("theme key cannot be empty")
 	}
 
-	query := `
-		SELECT id, name, type, colors, is_default, created_at, updated_at 
-		FROM themes 
-		WHERE name = ?
-		LIMIT 1
-	`
-
-	theme := &models.Theme{}
-	err := db.QueryRow(query, trimmed).Scan(
-		&theme.ID,
-		&theme.Name,
-		&theme.Type,
-		&theme.Colors,
-		&theme.IsDefault,
-		&theme.CreatedAt,
-		&theme.UpdatedAt,
-	)
-
+	t, err := s.db.Client.Theme.Query().
+		Where(theme.Key(trimmed)).
+		Only(ctx)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if ent.IsNotFound(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("failed to query theme: %w", err)
+		return nil, fmt.Errorf("get theme error: %w", err)
 	}
-
-	return theme, nil
+	return t, nil
 }
 
-// UpdateTheme 保存或更新主题覆盖
-func (ts *ThemeService) UpdateTheme(name string, colors models.ThemeColorConfig) error {
-	db := ts.getDB()
-	if db == nil {
-		return fmt.Errorf("database not available")
-	}
-
-	trimmed := strings.TrimSpace(name)
+// UpdateTheme 保存或更新主题
+func (s *ThemeService) UpdateTheme(ctx context.Context, key string, colors map[string]interface{}) error {
+	trimmed := strings.TrimSpace(key)
 	if trimmed == "" {
-		return fmt.Errorf("theme name cannot be empty")
+		return fmt.Errorf("theme key cannot be empty")
 	}
 
 	if colors == nil {
-		colors = models.ThemeColorConfig{}
+		colors = map[string]interface{}{}
 	}
-	colors["themeName"] = trimmed
 
-	themeType := models.ThemeTypeDark
+	// 判断主题类型
+	themeType := theme.TypeDark
 	if raw, ok := colors["dark"].(bool); ok && !raw {
-		themeType = models.ThemeTypeLight
+		themeType = theme.TypeLight
 	}
 
-	now := time.Now().Format("2006-01-02 15:04:05")
-
-	existing, err := ts.GetThemeByName(trimmed)
+	existing, err := s.GetThemeByKey(ctx, trimmed)
 	if err != nil {
 		return err
 	}
 
 	if existing == nil {
-		_, err = db.Exec(
-			`INSERT INTO themes (name, type, colors, is_default, created_at, updated_at) VALUES (?, ?, ?, 0, ?, ?)`,
-			trimmed,
-			themeType,
-			colors,
-			now,
-			now,
-		)
-		if err != nil {
-			return fmt.Errorf("failed to insert theme: %w", err)
-		}
-		return nil
+		// 插入新主题
+		_, err = s.db.Client.Theme.Create().
+			SetKey(trimmed).
+			SetType(themeType).
+			SetColors(colors).
+			Save(ctx)
+		return err
 	}
 
-	_, err = db.Exec(
-		`UPDATE themes SET type = ?, colors = ?, updated_at = ? WHERE name = ?`,
-		themeType,
-		colors,
-		now,
-		trimmed,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to update theme: %w", err)
-	}
-
-	return nil
+	// 更新现有主题
+	return s.db.Client.Theme.UpdateOneID(existing.ID).
+		SetType(themeType).
+		SetColors(colors).
+		Exec(ctx)
 }
 
-// ResetTheme 删除指定主题的覆盖配置
-func (ts *ThemeService) ResetTheme(name string) error {
-	db := ts.getDB()
-	if db == nil {
-		return fmt.Errorf("database not available")
-	}
-
-	trimmed := strings.TrimSpace(name)
+// ResetTheme 删除主题
+func (s *ThemeService) ResetTheme(ctx context.Context, key string) error {
+	trimmed := strings.TrimSpace(key)
 	if trimmed == "" {
-		return fmt.Errorf("theme name cannot be empty")
+		return fmt.Errorf("theme key cannot be empty")
 	}
 
-	if _, err := db.Exec(`DELETE FROM themes WHERE name = ?`, trimmed); err != nil {
-		return fmt.Errorf("failed to reset theme: %w", err)
-	}
-
-	return nil
-}
-
-// ServiceShutdown 服务关闭
-func (ts *ThemeService) ServiceShutdown() error {
-	return nil
+	_, err := s.db.Client.Theme.Delete().
+		Where(theme.Key(trimmed)).
+		Exec(mixin.SkipSoftDelete(ctx))
+	return err
 }

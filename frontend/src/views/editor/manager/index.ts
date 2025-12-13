@@ -12,9 +12,8 @@ const extensionManager = new Manager();
 /**
  * 异步创建动态扩展
  * 确保扩展配置已加载
- * @param _documentId 可选的文档ID，用于提前初始化视图
  */
-export const createDynamicExtensions = async (_documentId?: number): Promise<Extension[]> => {
+export const createDynamicExtensions = async (): Promise<Extension[]> => {
     const extensionStore = useExtensionStore();
 
     // 注册所有扩展工厂

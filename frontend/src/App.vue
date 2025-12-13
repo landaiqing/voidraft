@@ -19,13 +19,13 @@ onBeforeMount(async () => {
   // 并行初始化配置、系统信息和快捷键配置
   await Promise.all([
     configStore.initConfig(),
-    systemStore.initializeSystemInfo(),
+    systemStore.initSystemInfo(),
     keybindingStore.loadKeyBindings(),
   ]);
   
   // 初始化语言和主题
-  await configStore.initializeLanguage();
-  await themeStore.initializeTheme();
+  await configStore.initLanguage();
+  await themeStore.initTheme();
   await translationStore.loadTranslators();
 
   // 启动时检查更新
