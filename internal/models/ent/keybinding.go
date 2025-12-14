@@ -16,19 +16,21 @@ type KeyBinding struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// 创建时间
+	// UUID for cross-device sync (UUIDv7)
+	UUID string `json:"uuid"`
+	// creation time
 	CreatedAt string `json:"created_at"`
-	// 最后更新时间
+	// update time
 	UpdatedAt string `json:"updated_at"`
-	// 删除时间，NULL表示未删除
+	// deleted at
 	DeletedAt *string `json:"deleted_at,omitempty"`
-	// 快捷键标识符
+	// key binding key
 	Key string `json:"key"`
-	// 快捷键命令
+	// key binding command
 	Command string `json:"command"`
-	// 所属扩展标识符
+	// key binding extension
 	Extension string `json:"extension,omitempty"`
-	// 是否启用
+	// key binding enabled
 	Enabled      bool `json:"enabled"`
 	selectValues sql.SelectValues
 }
@@ -42,7 +44,7 @@ func (*KeyBinding) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case keybinding.FieldID:
 			values[i] = new(sql.NullInt64)
-		case keybinding.FieldCreatedAt, keybinding.FieldUpdatedAt, keybinding.FieldDeletedAt, keybinding.FieldKey, keybinding.FieldCommand, keybinding.FieldExtension:
+		case keybinding.FieldUUID, keybinding.FieldCreatedAt, keybinding.FieldUpdatedAt, keybinding.FieldDeletedAt, keybinding.FieldKey, keybinding.FieldCommand, keybinding.FieldExtension:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -65,6 +67,12 @@ func (_m *KeyBinding) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
+		case keybinding.FieldUUID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field uuid", values[i])
+			} else if value.Valid {
+				_m.UUID = value.String
+			}
 		case keybinding.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -144,6 +152,9 @@ func (_m *KeyBinding) String() string {
 	var builder strings.Builder
 	builder.WriteString("KeyBinding(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("uuid=")
+	builder.WriteString(_m.UUID)
+	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)
 	builder.WriteString(", ")

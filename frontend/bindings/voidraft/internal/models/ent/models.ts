@@ -19,37 +19,45 @@ export class Document {
     "id"?: number;
 
     /**
-     * 创建时间
+     * UUID for cross-device sync (UUIDv7)
+     */
+    "uuid": string;
+
+    /**
+     * creation time
      */
     "created_at": string;
 
     /**
-     * 最后更新时间
+     * update time
      */
     "updated_at": string;
 
     /**
-     * 删除时间，NULL表示未删除
+     * deleted at
      */
     "deleted_at"?: string | null;
 
     /**
-     * 文档标题
+     * document title
      */
     "title": string;
 
     /**
-     * 文档内容
+     * document content
      */
     "content": string;
 
     /**
-     * 是否锁定
+     * document locked status
      */
     "locked": boolean;
 
     /** Creates a new Document instance. */
     constructor($$source: Partial<Document> = {}) {
+        if (!("uuid" in $$source)) {
+            this["uuid"] = "";
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
         }
@@ -88,37 +96,45 @@ export class Extension {
     "id"?: number;
 
     /**
-     * 创建时间
+     * UUID for cross-device sync (UUIDv7)
+     */
+    "uuid": string;
+
+    /**
+     * creation time
      */
     "created_at": string;
 
     /**
-     * 最后更新时间
+     * update time
      */
     "updated_at": string;
 
     /**
-     * 删除时间，NULL表示未删除
+     * deleted at
      */
     "deleted_at"?: string | null;
 
     /**
-     * 扩展标识符
+     * extension key
      */
     "key": string;
 
     /**
-     * 是否启用
+     * extension enabled or not
      */
     "enabled": boolean;
 
     /**
-     * 扩展配置
+     * extension config
      */
     "config": { [_: string]: any };
 
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
+        if (!("uuid" in $$source)) {
+            this["uuid"] = "";
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
         }
@@ -142,10 +158,10 @@ export class Extension {
      * Creates a new Extension instance from a string or object.
      */
     static createFrom($$source: any = {}): Extension {
-        const $$createField6_0 = $$createType0;
+        const $$createField7_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("config" in $$parsedSource) {
-            $$parsedSource["config"] = $$createField6_0($$parsedSource["config"]);
+            $$parsedSource["config"] = $$createField7_0($$parsedSource["config"]);
         }
         return new Extension($$parsedSource as Partial<Extension>);
     }
@@ -161,42 +177,50 @@ export class KeyBinding {
     "id"?: number;
 
     /**
-     * 创建时间
+     * UUID for cross-device sync (UUIDv7)
+     */
+    "uuid": string;
+
+    /**
+     * creation time
      */
     "created_at": string;
 
     /**
-     * 最后更新时间
+     * update time
      */
     "updated_at": string;
 
     /**
-     * 删除时间，NULL表示未删除
+     * deleted at
      */
     "deleted_at"?: string | null;
 
     /**
-     * 快捷键标识符
+     * key binding key
      */
     "key": string;
 
     /**
-     * 快捷键命令
+     * key binding command
      */
     "command": string;
 
     /**
-     * 所属扩展标识符
+     * key binding extension
      */
     "extension"?: string;
 
     /**
-     * 是否启用
+     * key binding enabled
      */
     "enabled": boolean;
 
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
+        if (!("uuid" in $$source)) {
+            this["uuid"] = "";
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
         }
@@ -235,37 +259,45 @@ export class Theme {
     "id"?: number;
 
     /**
-     * 创建时间
+     * UUID for cross-device sync (UUIDv7)
+     */
+    "uuid": string;
+
+    /**
+     * creation time
      */
     "created_at": string;
 
     /**
-     * 最后更新时间
+     * update time
      */
     "updated_at": string;
 
     /**
-     * 删除时间，NULL表示未删除
+     * deleted at
      */
     "deleted_at"?: string | null;
 
     /**
-     * 主题标识符
+     * theme key
      */
     "key": string;
 
     /**
-     * 主题类型
+     * theme type
      */
     "type": theme$0.Type;
 
     /**
-     * 主题颜色配置
+     * theme colors
      */
     "colors": { [_: string]: any };
 
     /** Creates a new Theme instance. */
     constructor($$source: Partial<Theme> = {}) {
+        if (!("uuid" in $$source)) {
+            this["uuid"] = "";
+        }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
         }
@@ -289,10 +321,10 @@ export class Theme {
      * Creates a new Theme instance from a string or object.
      */
     static createFrom($$source: any = {}): Theme {
-        const $$createField6_0 = $$createType0;
+        const $$createField7_0 = $$createType0;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("colors" in $$parsedSource) {
-            $$parsedSource["colors"] = $$createField6_0($$parsedSource["colors"]);
+            $$parsedSource["colors"] = $$createField7_0($$parsedSource["colors"]);
         }
         return new Theme($$parsedSource as Partial<Theme>);
     }

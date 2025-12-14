@@ -25,6 +25,7 @@ func (Document) Annotations() []schema.Annotation {
 // Mixin of the Document.
 func (Document) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixin.UUIDMixin{},
 		mixin.TimeMixin{},
 		mixin.SoftDeleteMixin{},
 	}

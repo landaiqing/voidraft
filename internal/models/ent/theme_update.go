@@ -167,6 +167,9 @@ func (_u *ThemeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
+	if _u.mutation.UUIDCleared() {
+		_spec.ClearField(theme.FieldUUID, field.TypeString)
+	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(theme.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -378,6 +381,9 @@ func (_u *ThemeUpdateOne) sqlSave(ctx context.Context) (_node *Theme, err error)
 				ps[i](selector)
 			}
 		}
+	}
+	if _u.mutation.UUIDCleared() {
+		_spec.ClearField(theme.FieldUUID, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(theme.FieldUpdatedAt, field.TypeString, value)

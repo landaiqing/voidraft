@@ -14,20 +14,14 @@ export class Manager {
     /**
      * 将后端快捷键配置转换为CodeMirror快捷键绑定
      * @param keyBindings 后端快捷键配置列表
-     * @param enabledExtensions 启用的扩展key列表，如果不提供则使用所有启用的快捷键
      * @returns 转换结果
      */
-    static convertToKeyBindings(keyBindings: KeyBindingConfig[], enabledExtensions?: string[]): KeymapResult {
+    static convertToKeyBindings(keyBindings: KeyBindingConfig[]): KeymapResult {
         const result: KeyBinding[] = [];
 
         for (const binding of keyBindings) {
             // 跳过禁用的快捷键
             if (!binding.enabled) {
-                continue;
-            }
-
-            // 如果提供了扩展列表，则只处理启用扩展的快捷键
-            if (enabledExtensions && binding.extension && !enabledExtensions.includes(binding.extension)) {
                 continue;
             }
 
@@ -59,13 +53,10 @@ export class Manager {
     /**
      * 创建CodeMirror快捷键扩展
      * @param keyBindings 后端快捷键配置列表
-     * @param enabledExtensions 启用的扩展key列表
      * @returns CodeMirror扩展
      */
-    static createKeymapExtension(keyBindings: KeyBindingConfig[], enabledExtensions?: string[]): Extension {
-        const {keyBindings: cmKeyBindings} =
-            this.convertToKeyBindings(keyBindings, enabledExtensions);
-
+    static createKeymapExtension(keyBindings: KeyBindingConfig[]): Extension {
+        const {keyBindings: cmKeyBindings} = this.convertToKeyBindings(keyBindings);
         return this.compartment.of(keymap.of(cmKeyBindings));
     }
 
@@ -73,12 +64,9 @@ export class Manager {
      * 动态更新快捷键扩展
      * @param view 编辑器视图
      * @param keyBindings 后端快捷键配置列表
-     * @param enabledExtensions 启用的扩展key列表
      */
-    static updateKeymap(view: any, keyBindings: KeyBindingConfig[], enabledExtensions: string[]): void {
-        const {keyBindings: cmKeyBindings} =
-            this.convertToKeyBindings(keyBindings, enabledExtensions);
-
+    static updateKeymap(view: any, keyBindings: KeyBindingConfig[]): void {
+        const {keyBindings: cmKeyBindings} = this.convertToKeyBindings(keyBindings);
         view.dispatch({
             effects: this.compartment.reconfigure(keymap.of(cmKeyBindings))
         });

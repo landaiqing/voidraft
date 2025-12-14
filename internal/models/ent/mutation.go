@@ -38,6 +38,7 @@ type DocumentMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	uuid          *string
 	created_at    *string
 	updated_at    *string
 	deleted_at    *string
@@ -146,6 +147,55 @@ func (m *DocumentMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetUUID sets the "uuid" field.
+func (m *DocumentMutation) SetUUID(s string) {
+	m.uuid = &s
+}
+
+// UUID returns the value of the "uuid" field in the mutation.
+func (m *DocumentMutation) UUID() (r string, exists bool) {
+	v := m.uuid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUUID returns the old "uuid" field's value of the Document entity.
+// If the Document object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *DocumentMutation) OldUUID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUUID: %w", err)
+	}
+	return oldValue.UUID, nil
+}
+
+// ClearUUID clears the value of the "uuid" field.
+func (m *DocumentMutation) ClearUUID() {
+	m.uuid = nil
+	m.clearedFields[document.FieldUUID] = struct{}{}
+}
+
+// UUIDCleared returns if the "uuid" field was cleared in this mutation.
+func (m *DocumentMutation) UUIDCleared() bool {
+	_, ok := m.clearedFields[document.FieldUUID]
+	return ok
+}
+
+// ResetUUID resets all changes to the "uuid" field.
+func (m *DocumentMutation) ResetUUID() {
+	m.uuid = nil
+	delete(m.clearedFields, document.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -424,7 +474,10 @@ func (m *DocumentMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DocumentMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
+	if m.uuid != nil {
+		fields = append(fields, document.FieldUUID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, document.FieldCreatedAt)
 	}
@@ -451,6 +504,8 @@ func (m *DocumentMutation) Fields() []string {
 // schema.
 func (m *DocumentMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case document.FieldUUID:
+		return m.UUID()
 	case document.FieldCreatedAt:
 		return m.CreatedAt()
 	case document.FieldUpdatedAt:
@@ -472,6 +527,8 @@ func (m *DocumentMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *DocumentMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case document.FieldUUID:
+		return m.OldUUID(ctx)
 	case document.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case document.FieldUpdatedAt:
@@ -493,6 +550,13 @@ func (m *DocumentMutation) OldField(ctx context.Context, name string) (ent.Value
 // type.
 func (m *DocumentMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case document.FieldUUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUUID(v)
+		return nil
 	case document.FieldCreatedAt:
 		v, ok := value.(string)
 		if !ok {
@@ -565,6 +629,9 @@ func (m *DocumentMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *DocumentMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(document.FieldUUID) {
+		fields = append(fields, document.FieldUUID)
+	}
 	if m.FieldCleared(document.FieldDeletedAt) {
 		fields = append(fields, document.FieldDeletedAt)
 	}
@@ -585,6 +652,9 @@ func (m *DocumentMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *DocumentMutation) ClearField(name string) error {
 	switch name {
+	case document.FieldUUID:
+		m.ClearUUID()
+		return nil
 	case document.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -599,6 +669,9 @@ func (m *DocumentMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *DocumentMutation) ResetField(name string) error {
 	switch name {
+	case document.FieldUUID:
+		m.ResetUUID()
+		return nil
 	case document.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -675,6 +748,7 @@ type ExtensionMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	uuid          *string
 	created_at    *string
 	updated_at    *string
 	deleted_at    *string
@@ -783,6 +857,55 @@ func (m *ExtensionMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetUUID sets the "uuid" field.
+func (m *ExtensionMutation) SetUUID(s string) {
+	m.uuid = &s
+}
+
+// UUID returns the value of the "uuid" field in the mutation.
+func (m *ExtensionMutation) UUID() (r string, exists bool) {
+	v := m.uuid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUUID returns the old "uuid" field's value of the Extension entity.
+// If the Extension object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ExtensionMutation) OldUUID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUUID: %w", err)
+	}
+	return oldValue.UUID, nil
+}
+
+// ClearUUID clears the value of the "uuid" field.
+func (m *ExtensionMutation) ClearUUID() {
+	m.uuid = nil
+	m.clearedFields[extension.FieldUUID] = struct{}{}
+}
+
+// UUIDCleared returns if the "uuid" field was cleared in this mutation.
+func (m *ExtensionMutation) UUIDCleared() bool {
+	_, ok := m.clearedFields[extension.FieldUUID]
+	return ok
+}
+
+// ResetUUID resets all changes to the "uuid" field.
+func (m *ExtensionMutation) ResetUUID() {
+	m.uuid = nil
+	delete(m.clearedFields, extension.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1061,7 +1184,10 @@ func (m *ExtensionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ExtensionMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
+	if m.uuid != nil {
+		fields = append(fields, extension.FieldUUID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, extension.FieldCreatedAt)
 	}
@@ -1088,6 +1214,8 @@ func (m *ExtensionMutation) Fields() []string {
 // schema.
 func (m *ExtensionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case extension.FieldUUID:
+		return m.UUID()
 	case extension.FieldCreatedAt:
 		return m.CreatedAt()
 	case extension.FieldUpdatedAt:
@@ -1109,6 +1237,8 @@ func (m *ExtensionMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ExtensionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case extension.FieldUUID:
+		return m.OldUUID(ctx)
 	case extension.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case extension.FieldUpdatedAt:
@@ -1130,6 +1260,13 @@ func (m *ExtensionMutation) OldField(ctx context.Context, name string) (ent.Valu
 // type.
 func (m *ExtensionMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case extension.FieldUUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUUID(v)
+		return nil
 	case extension.FieldCreatedAt:
 		v, ok := value.(string)
 		if !ok {
@@ -1202,6 +1339,9 @@ func (m *ExtensionMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ExtensionMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(extension.FieldUUID) {
+		fields = append(fields, extension.FieldUUID)
+	}
 	if m.FieldCleared(extension.FieldDeletedAt) {
 		fields = append(fields, extension.FieldDeletedAt)
 	}
@@ -1222,6 +1362,9 @@ func (m *ExtensionMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ExtensionMutation) ClearField(name string) error {
 	switch name {
+	case extension.FieldUUID:
+		m.ClearUUID()
+		return nil
 	case extension.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -1236,6 +1379,9 @@ func (m *ExtensionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ExtensionMutation) ResetField(name string) error {
 	switch name {
+	case extension.FieldUUID:
+		m.ResetUUID()
+		return nil
 	case extension.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -1312,6 +1458,7 @@ type KeyBindingMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	uuid          *string
 	created_at    *string
 	updated_at    *string
 	deleted_at    *string
@@ -1421,6 +1568,55 @@ func (m *KeyBindingMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetUUID sets the "uuid" field.
+func (m *KeyBindingMutation) SetUUID(s string) {
+	m.uuid = &s
+}
+
+// UUID returns the value of the "uuid" field in the mutation.
+func (m *KeyBindingMutation) UUID() (r string, exists bool) {
+	v := m.uuid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUUID returns the old "uuid" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldUUID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUUID: %w", err)
+	}
+	return oldValue.UUID, nil
+}
+
+// ClearUUID clears the value of the "uuid" field.
+func (m *KeyBindingMutation) ClearUUID() {
+	m.uuid = nil
+	m.clearedFields[keybinding.FieldUUID] = struct{}{}
+}
+
+// UUIDCleared returns if the "uuid" field was cleared in this mutation.
+func (m *KeyBindingMutation) UUIDCleared() bool {
+	_, ok := m.clearedFields[keybinding.FieldUUID]
+	return ok
+}
+
+// ResetUUID resets all changes to the "uuid" field.
+func (m *KeyBindingMutation) ResetUUID() {
+	m.uuid = nil
+	delete(m.clearedFields, keybinding.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1735,7 +1931,10 @@ func (m *KeyBindingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KeyBindingMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
+	if m.uuid != nil {
+		fields = append(fields, keybinding.FieldUUID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, keybinding.FieldCreatedAt)
 	}
@@ -1765,6 +1964,8 @@ func (m *KeyBindingMutation) Fields() []string {
 // schema.
 func (m *KeyBindingMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case keybinding.FieldUUID:
+		return m.UUID()
 	case keybinding.FieldCreatedAt:
 		return m.CreatedAt()
 	case keybinding.FieldUpdatedAt:
@@ -1788,6 +1989,8 @@ func (m *KeyBindingMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *KeyBindingMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case keybinding.FieldUUID:
+		return m.OldUUID(ctx)
 	case keybinding.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case keybinding.FieldUpdatedAt:
@@ -1811,6 +2014,13 @@ func (m *KeyBindingMutation) OldField(ctx context.Context, name string) (ent.Val
 // type.
 func (m *KeyBindingMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case keybinding.FieldUUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUUID(v)
+		return nil
 	case keybinding.FieldCreatedAt:
 		v, ok := value.(string)
 		if !ok {
@@ -1890,6 +2100,9 @@ func (m *KeyBindingMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *KeyBindingMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(keybinding.FieldUUID) {
+		fields = append(fields, keybinding.FieldUUID)
+	}
 	if m.FieldCleared(keybinding.FieldDeletedAt) {
 		fields = append(fields, keybinding.FieldDeletedAt)
 	}
@@ -1910,6 +2123,9 @@ func (m *KeyBindingMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *KeyBindingMutation) ClearField(name string) error {
 	switch name {
+	case keybinding.FieldUUID:
+		m.ClearUUID()
+		return nil
 	case keybinding.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -1924,6 +2140,9 @@ func (m *KeyBindingMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *KeyBindingMutation) ResetField(name string) error {
 	switch name {
+	case keybinding.FieldUUID:
+		m.ResetUUID()
+		return nil
 	case keybinding.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -2003,6 +2222,7 @@ type ThemeMutation struct {
 	op            Op
 	typ           string
 	id            *int
+	uuid          *string
 	created_at    *string
 	updated_at    *string
 	deleted_at    *string
@@ -2111,6 +2331,55 @@ func (m *ThemeMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetUUID sets the "uuid" field.
+func (m *ThemeMutation) SetUUID(s string) {
+	m.uuid = &s
+}
+
+// UUID returns the value of the "uuid" field in the mutation.
+func (m *ThemeMutation) UUID() (r string, exists bool) {
+	v := m.uuid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUUID returns the old "uuid" field's value of the Theme entity.
+// If the Theme object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ThemeMutation) OldUUID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUUID: %w", err)
+	}
+	return oldValue.UUID, nil
+}
+
+// ClearUUID clears the value of the "uuid" field.
+func (m *ThemeMutation) ClearUUID() {
+	m.uuid = nil
+	m.clearedFields[theme.FieldUUID] = struct{}{}
+}
+
+// UUIDCleared returns if the "uuid" field was cleared in this mutation.
+func (m *ThemeMutation) UUIDCleared() bool {
+	_, ok := m.clearedFields[theme.FieldUUID]
+	return ok
+}
+
+// ResetUUID resets all changes to the "uuid" field.
+func (m *ThemeMutation) ResetUUID() {
+	m.uuid = nil
+	delete(m.clearedFields, theme.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -2389,7 +2658,10 @@ func (m *ThemeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ThemeMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 7)
+	if m.uuid != nil {
+		fields = append(fields, theme.FieldUUID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, theme.FieldCreatedAt)
 	}
@@ -2416,6 +2688,8 @@ func (m *ThemeMutation) Fields() []string {
 // schema.
 func (m *ThemeMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case theme.FieldUUID:
+		return m.UUID()
 	case theme.FieldCreatedAt:
 		return m.CreatedAt()
 	case theme.FieldUpdatedAt:
@@ -2437,6 +2711,8 @@ func (m *ThemeMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ThemeMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case theme.FieldUUID:
+		return m.OldUUID(ctx)
 	case theme.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case theme.FieldUpdatedAt:
@@ -2458,6 +2734,13 @@ func (m *ThemeMutation) OldField(ctx context.Context, name string) (ent.Value, e
 // type.
 func (m *ThemeMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case theme.FieldUUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUUID(v)
+		return nil
 	case theme.FieldCreatedAt:
 		v, ok := value.(string)
 		if !ok {
@@ -2530,6 +2813,9 @@ func (m *ThemeMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ThemeMutation) ClearedFields() []string {
 	var fields []string
+	if m.FieldCleared(theme.FieldUUID) {
+		fields = append(fields, theme.FieldUUID)
+	}
 	if m.FieldCleared(theme.FieldDeletedAt) {
 		fields = append(fields, theme.FieldDeletedAt)
 	}
@@ -2550,6 +2836,9 @@ func (m *ThemeMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ThemeMutation) ClearField(name string) error {
 	switch name {
+	case theme.FieldUUID:
+		m.ClearUUID()
+		return nil
 	case theme.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -2564,6 +2853,9 @@ func (m *ThemeMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ThemeMutation) ResetField(name string) error {
 	switch name {
+	case theme.FieldUUID:
+		m.ResetUUID()
+		return nil
 	case theme.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil

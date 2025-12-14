@@ -24,6 +24,7 @@ func (Theme) Annotations() []schema.Annotation {
 // Mixin of the Theme.
 func (Theme) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixin.UUIDMixin{},
 		mixin.TimeMixin{},
 		mixin.SoftDeleteMixin{},
 	}

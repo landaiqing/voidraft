@@ -162,6 +162,9 @@ func (_u *ExtensionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
+	if _u.mutation.UUIDCleared() {
+		_spec.ClearField(extension.FieldUUID, field.TypeString)
+	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(extension.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -368,6 +371,9 @@ func (_u *ExtensionUpdateOne) sqlSave(ctx context.Context) (_node *Extension, er
 				ps[i](selector)
 			}
 		}
+	}
+	if _u.mutation.UUIDCleared() {
+		_spec.ClearField(extension.FieldUUID, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(extension.FieldUpdatedAt, field.TypeString, value)

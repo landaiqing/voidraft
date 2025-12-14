@@ -25,6 +25,7 @@ func (Extension) Annotations() []schema.Annotation {
 // Mixin of the Extension.
 func (Extension) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixin.UUIDMixin{},
 		mixin.TimeMixin{},
 		mixin.SoftDeleteMixin{},
 	}

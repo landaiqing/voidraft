@@ -17,6 +17,14 @@ func NowString() string {
 	return time.Now().Format(TimeFormat)
 }
 
+// skipAutoUpdateKey context key for skipping auto update
+type skipAutoUpdateKey struct{}
+
+// SkipAutoUpdate 返回跳过自动更新 updated_at 的 context
+func SkipAutoUpdate(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipAutoUpdateKey{}, true)
+}
+
 // TimeMixin 时间字段混入
 // created_at: 创建时间
 // updated_at: 更新时间（自动更新）
@@ -44,6 +52,10 @@ func (TimeMixin) Hooks() []ent.Hook {
 	return []ent.Hook{
 		func(next ent.Mutator) ent.Mutator {
 			return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				// 跳过自动更新（用于同步导入场景）
+				if ctx.Value(skipAutoUpdateKey{}) != nil {
+					return next.Mutate(ctx, m)
+				}
 				// 只在更新操作时设置 updated_at
 				if m.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
 					if setter, ok := m.(interface{ SetUpdatedAt(string) }); ok {

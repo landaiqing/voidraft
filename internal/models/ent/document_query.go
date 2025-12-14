@@ -265,12 +265,12 @@ func (_q *DocumentQuery) Clone() *DocumentQuery {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Document.Query().
-//		GroupBy(document.FieldCreatedAt).
+//		GroupBy(document.FieldUUID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *DocumentQuery) GroupBy(field string, fields ...string) *DocumentGroupBy {
@@ -288,11 +288,11 @@ func (_q *DocumentQuery) GroupBy(field string, fields ...string) *DocumentGroupB
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //	}
 //
 //	client.Document.Query().
-//		Select(document.FieldCreatedAt).
+//		Select(document.FieldUUID).
 //		Scan(ctx, &v)
 func (_q *DocumentQuery) Select(fields ...string) *DocumentSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

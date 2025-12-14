@@ -12,6 +12,8 @@ const (
 	Label = "document"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldUUID holds the string denoting the uuid field in the database.
+	FieldUUID = "uuid"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -31,6 +33,7 @@ const (
 // Columns holds all SQL columns for document fields.
 var Columns = []string{
 	FieldID,
+	FieldUUID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldDeletedAt,
@@ -57,6 +60,8 @@ func ValidColumn(column string) bool {
 var (
 	Hooks        [2]ent.Hook
 	Interceptors [1]ent.Interceptor
+	// DefaultUUID holds the default value on creation for the "uuid" field.
+	DefaultUUID func() string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() string
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -75,6 +80,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByUUID orders the results by the uuid field.
+func ByUUID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUUID, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

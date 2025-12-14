@@ -19,6 +19,20 @@ type KeyBindingCreate struct {
 	hooks    []Hook
 }
 
+// SetUUID sets the "uuid" field.
+func (_c *KeyBindingCreate) SetUUID(v string) *KeyBindingCreate {
+	_c.mutation.SetUUID(v)
+	return _c
+}
+
+// SetNillableUUID sets the "uuid" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableUUID(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetUUID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *KeyBindingCreate) SetCreatedAt(v string) *KeyBindingCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -138,6 +152,13 @@ func (_c *KeyBindingCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *KeyBindingCreate) defaults() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		if keybinding.DefaultUUID == nil {
+			return fmt.Errorf("ent: uninitialized keybinding.DefaultUUID (forgotten import ent/runtime?)")
+		}
+		v := keybinding.DefaultUUID()
+		_c.mutation.SetUUID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if keybinding.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized keybinding.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -217,6 +238,10 @@ func (_c *KeyBindingCreate) createSpec() (*KeyBinding, *sqlgraph.CreateSpec) {
 		_node = &KeyBinding{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(keybinding.Table, sqlgraph.NewFieldSpec(keybinding.FieldID, field.TypeInt))
 	)
+	if value, ok := _c.mutation.UUID(); ok {
+		_spec.SetField(keybinding.FieldUUID, field.TypeString, value)
+		_node.UUID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(keybinding.FieldCreatedAt, field.TypeString, value)
 		_node.CreatedAt = value

@@ -265,12 +265,12 @@ func (_q *ExtensionQuery) Clone() *ExtensionQuery {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Extension.Query().
-//		GroupBy(extension.FieldCreatedAt).
+//		GroupBy(extension.FieldUUID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *ExtensionQuery) GroupBy(field string, fields ...string) *ExtensionGroupBy {
@@ -288,11 +288,11 @@ func (_q *ExtensionQuery) GroupBy(field string, fields ...string) *ExtensionGrou
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //	}
 //
 //	client.Extension.Query().
-//		Select(extension.FieldCreatedAt).
+//		Select(extension.FieldUUID).
 //		Scan(ctx, &v)
 func (_q *ExtensionQuery) Select(fields ...string) *ExtensionSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

@@ -19,6 +19,20 @@ type ExtensionCreate struct {
 	hooks    []Hook
 }
 
+// SetUUID sets the "uuid" field.
+func (_c *ExtensionCreate) SetUUID(v string) *ExtensionCreate {
+	_c.mutation.SetUUID(v)
+	return _c
+}
+
+// SetNillableUUID sets the "uuid" field if the given value is not nil.
+func (_c *ExtensionCreate) SetNillableUUID(v *string) *ExtensionCreate {
+	if v != nil {
+		_c.SetUUID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *ExtensionCreate) SetCreatedAt(v string) *ExtensionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -124,6 +138,13 @@ func (_c *ExtensionCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *ExtensionCreate) defaults() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		if extension.DefaultUUID == nil {
+			return fmt.Errorf("ent: uninitialized extension.DefaultUUID (forgotten import ent/runtime?)")
+		}
+		v := extension.DefaultUUID()
+		_c.mutation.SetUUID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if extension.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized extension.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -190,6 +211,10 @@ func (_c *ExtensionCreate) createSpec() (*Extension, *sqlgraph.CreateSpec) {
 		_node = &Extension{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(extension.Table, sqlgraph.NewFieldSpec(extension.FieldID, field.TypeInt))
 	)
+	if value, ok := _c.mutation.UUID(); ok {
+		_spec.SetField(extension.FieldUUID, field.TypeString, value)
+		_node.UUID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(extension.FieldCreatedAt, field.TypeString, value)
 		_node.CreatedAt = value

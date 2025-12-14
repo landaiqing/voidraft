@@ -194,6 +194,9 @@ func (_u *KeyBindingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			}
 		}
 	}
+	if _u.mutation.UUIDCleared() {
+		_spec.ClearField(keybinding.FieldUUID, field.TypeString)
+	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(keybinding.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -435,6 +438,9 @@ func (_u *KeyBindingUpdateOne) sqlSave(ctx context.Context) (_node *KeyBinding, 
 				ps[i](selector)
 			}
 		}
+	}
+	if _u.mutation.UUIDCleared() {
+		_spec.ClearField(keybinding.FieldUUID, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(keybinding.FieldUpdatedAt, field.TypeString, value)

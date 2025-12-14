@@ -28,6 +28,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "Document",
 		Fields: map[string]*sqlgraph.FieldSpec{
+			document.FieldUUID:      {Type: field.TypeString, Column: document.FieldUUID},
 			document.FieldCreatedAt: {Type: field.TypeString, Column: document.FieldCreatedAt},
 			document.FieldUpdatedAt: {Type: field.TypeString, Column: document.FieldUpdatedAt},
 			document.FieldDeletedAt: {Type: field.TypeString, Column: document.FieldDeletedAt},
@@ -47,6 +48,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "Extension",
 		Fields: map[string]*sqlgraph.FieldSpec{
+			extension.FieldUUID:      {Type: field.TypeString, Column: extension.FieldUUID},
 			extension.FieldCreatedAt: {Type: field.TypeString, Column: extension.FieldCreatedAt},
 			extension.FieldUpdatedAt: {Type: field.TypeString, Column: extension.FieldUpdatedAt},
 			extension.FieldDeletedAt: {Type: field.TypeString, Column: extension.FieldDeletedAt},
@@ -66,6 +68,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "KeyBinding",
 		Fields: map[string]*sqlgraph.FieldSpec{
+			keybinding.FieldUUID:      {Type: field.TypeString, Column: keybinding.FieldUUID},
 			keybinding.FieldCreatedAt: {Type: field.TypeString, Column: keybinding.FieldCreatedAt},
 			keybinding.FieldUpdatedAt: {Type: field.TypeString, Column: keybinding.FieldUpdatedAt},
 			keybinding.FieldDeletedAt: {Type: field.TypeString, Column: keybinding.FieldDeletedAt},
@@ -86,6 +89,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "Theme",
 		Fields: map[string]*sqlgraph.FieldSpec{
+			theme.FieldUUID:      {Type: field.TypeString, Column: theme.FieldUUID},
 			theme.FieldCreatedAt: {Type: field.TypeString, Column: theme.FieldCreatedAt},
 			theme.FieldUpdatedAt: {Type: field.TypeString, Column: theme.FieldUpdatedAt},
 			theme.FieldDeletedAt: {Type: field.TypeString, Column: theme.FieldDeletedAt},
@@ -141,6 +145,11 @@ func (f *DocumentFilter) Where(p entql.P) {
 // WhereID applies the entql int predicate on the id field.
 func (f *DocumentFilter) WhereID(p entql.IntP) {
 	f.Where(p.Field(document.FieldID))
+}
+
+// WhereUUID applies the entql string predicate on the uuid field.
+func (f *DocumentFilter) WhereUUID(p entql.StringP) {
+	f.Where(p.Field(document.FieldUUID))
 }
 
 // WhereCreatedAt applies the entql string predicate on the created_at field.
@@ -213,6 +222,11 @@ func (f *ExtensionFilter) WhereID(p entql.IntP) {
 	f.Where(p.Field(extension.FieldID))
 }
 
+// WhereUUID applies the entql string predicate on the uuid field.
+func (f *ExtensionFilter) WhereUUID(p entql.StringP) {
+	f.Where(p.Field(extension.FieldUUID))
+}
+
 // WhereCreatedAt applies the entql string predicate on the created_at field.
 func (f *ExtensionFilter) WhereCreatedAt(p entql.StringP) {
 	f.Where(p.Field(extension.FieldCreatedAt))
@@ -281,6 +295,11 @@ func (f *KeyBindingFilter) Where(p entql.P) {
 // WhereID applies the entql int predicate on the id field.
 func (f *KeyBindingFilter) WhereID(p entql.IntP) {
 	f.Where(p.Field(keybinding.FieldID))
+}
+
+// WhereUUID applies the entql string predicate on the uuid field.
+func (f *KeyBindingFilter) WhereUUID(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldUUID))
 }
 
 // WhereCreatedAt applies the entql string predicate on the created_at field.
@@ -356,6 +375,11 @@ func (f *ThemeFilter) Where(p entql.P) {
 // WhereID applies the entql int predicate on the id field.
 func (f *ThemeFilter) WhereID(p entql.IntP) {
 	f.Where(p.Field(theme.FieldID))
+}
+
+// WhereUUID applies the entql string predicate on the uuid field.
+func (f *ThemeFilter) WhereUUID(p entql.StringP) {
+	f.Where(p.Field(theme.FieldUUID))
 }
 
 // WhereCreatedAt applies the entql string predicate on the created_at field.

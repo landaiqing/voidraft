@@ -25,6 +25,7 @@ func (KeyBinding) Annotations() []schema.Annotation {
 // Mixin of the KeyBinding.
 func (KeyBinding) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixin.UUIDMixin{},
 		mixin.TimeMixin{},
 		mixin.SoftDeleteMixin{},
 	}

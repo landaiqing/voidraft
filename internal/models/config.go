@@ -208,7 +208,7 @@ func NewDefaultAppConfig() *AppConfig {
 		},
 		Appearance: AppearanceConfig{
 			Language:     LangEnUS,
-			SystemTheme:  SystemThemeAuto,
+			SystemTheme:  SystemThemeDark,
 			CurrentTheme: "default-dark", // 默认使用 default-dark 主题
 		},
 		Updates: UpdatesConfig{

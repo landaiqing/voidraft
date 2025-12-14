@@ -17,17 +17,19 @@ type Extension struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// 创建时间
+	// UUID for cross-device sync (UUIDv7)
+	UUID string `json:"uuid"`
+	// creation time
 	CreatedAt string `json:"created_at"`
-	// 最后更新时间
+	// update time
 	UpdatedAt string `json:"updated_at"`
-	// 删除时间，NULL表示未删除
+	// deleted at
 	DeletedAt *string `json:"deleted_at,omitempty"`
-	// 扩展标识符
+	// extension key
 	Key string `json:"key"`
-	// 是否启用
+	// extension enabled or not
 	Enabled bool `json:"enabled"`
-	// 扩展配置
+	// extension config
 	Config       map[string]interface{} `json:"config"`
 	selectValues sql.SelectValues
 }
@@ -43,7 +45,7 @@ func (*Extension) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case extension.FieldID:
 			values[i] = new(sql.NullInt64)
-		case extension.FieldCreatedAt, extension.FieldUpdatedAt, extension.FieldDeletedAt, extension.FieldKey:
+		case extension.FieldUUID, extension.FieldCreatedAt, extension.FieldUpdatedAt, extension.FieldDeletedAt, extension.FieldKey:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -66,6 +68,12 @@ func (_m *Extension) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
+		case extension.FieldUUID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field uuid", values[i])
+			} else if value.Valid {
+				_m.UUID = value.String
+			}
 		case extension.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -141,6 +149,9 @@ func (_m *Extension) String() string {
 	var builder strings.Builder
 	builder.WriteString("Extension(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("uuid=")
+	builder.WriteString(_m.UUID)
+	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)
 	builder.WriteString(", ")

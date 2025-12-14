@@ -12,6 +12,7 @@ var (
 	// DocumentsColumns holds the columns for the "documents" table.
 	DocumentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
@@ -26,30 +27,36 @@ var (
 		PrimaryKey: []*schema.Column{DocumentsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "document_deleted_at",
-				Unique:  false,
-				Columns: []*schema.Column{DocumentsColumns[3]},
-			},
-			{
-				Name:    "document_title",
-				Unique:  false,
-				Columns: []*schema.Column{DocumentsColumns[4]},
-			},
-			{
-				Name:    "document_created_at",
+				Name:    "document_uuid",
 				Unique:  false,
 				Columns: []*schema.Column{DocumentsColumns[1]},
 			},
 			{
-				Name:    "document_updated_at",
+				Name:    "document_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{DocumentsColumns[4]},
+			},
+			{
+				Name:    "document_title",
+				Unique:  false,
+				Columns: []*schema.Column{DocumentsColumns[5]},
+			},
+			{
+				Name:    "document_created_at",
 				Unique:  false,
 				Columns: []*schema.Column{DocumentsColumns[2]},
+			},
+			{
+				Name:    "document_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{DocumentsColumns[3]},
 			},
 		},
 	}
 	// ExtensionsColumns holds the columns for the "extensions" table.
 	ExtensionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
@@ -64,20 +71,26 @@ var (
 		PrimaryKey: []*schema.Column{ExtensionsColumns[0]},
 		Indexes: []*schema.Index{
 			{
+				Name:    "extension_uuid",
+				Unique:  false,
+				Columns: []*schema.Column{ExtensionsColumns[1]},
+			},
+			{
 				Name:    "extension_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{ExtensionsColumns[3]},
+				Columns: []*schema.Column{ExtensionsColumns[4]},
 			},
 			{
 				Name:    "extension_enabled",
 				Unique:  false,
-				Columns: []*schema.Column{ExtensionsColumns[5]},
+				Columns: []*schema.Column{ExtensionsColumns[6]},
 			},
 		},
 	}
 	// KeyBindingsColumns holds the columns for the "key_bindings" table.
 	KeyBindingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
@@ -93,25 +106,31 @@ var (
 		PrimaryKey: []*schema.Column{KeyBindingsColumns[0]},
 		Indexes: []*schema.Index{
 			{
+				Name:    "keybinding_uuid",
+				Unique:  false,
+				Columns: []*schema.Column{KeyBindingsColumns[1]},
+			},
+			{
 				Name:    "keybinding_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{KeyBindingsColumns[3]},
+				Columns: []*schema.Column{KeyBindingsColumns[4]},
 			},
 			{
 				Name:    "keybinding_extension",
 				Unique:  false,
-				Columns: []*schema.Column{KeyBindingsColumns[6]},
+				Columns: []*schema.Column{KeyBindingsColumns[7]},
 			},
 			{
 				Name:    "keybinding_enabled",
 				Unique:  false,
-				Columns: []*schema.Column{KeyBindingsColumns[7]},
+				Columns: []*schema.Column{KeyBindingsColumns[8]},
 			},
 		},
 	}
 	// ThemesColumns holds the columns for the "themes" table.
 	ThemesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
@@ -126,9 +145,14 @@ var (
 		PrimaryKey: []*schema.Column{ThemesColumns[0]},
 		Indexes: []*schema.Index{
 			{
+				Name:    "theme_uuid",
+				Unique:  false,
+				Columns: []*schema.Column{ThemesColumns[1]},
+			},
+			{
 				Name:    "theme_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{ThemesColumns[3]},
+				Columns: []*schema.Column{ThemesColumns[4]},
 			},
 		},
 	}

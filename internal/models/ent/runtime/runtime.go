@@ -15,22 +15,28 @@ import (
 // to their package variables.
 func init() {
 	documentMixin := schema.Document{}.Mixin()
-	documentMixinHooks0 := documentMixin[0].Hooks()
 	documentMixinHooks1 := documentMixin[1].Hooks()
-	document.Hooks[0] = documentMixinHooks0[0]
-	document.Hooks[1] = documentMixinHooks1[0]
-	documentMixinInters1 := documentMixin[1].Interceptors()
-	document.Interceptors[0] = documentMixinInters1[0]
+	documentMixinHooks2 := documentMixin[2].Hooks()
+	document.Hooks[0] = documentMixinHooks1[0]
+	document.Hooks[1] = documentMixinHooks2[0]
+	documentMixinInters2 := documentMixin[2].Interceptors()
+	document.Interceptors[0] = documentMixinInters2[0]
 	documentMixinFields0 := documentMixin[0].Fields()
 	_ = documentMixinFields0
+	documentMixinFields1 := documentMixin[1].Fields()
+	_ = documentMixinFields1
 	documentFields := schema.Document{}.Fields()
 	_ = documentFields
+	// documentDescUUID is the schema descriptor for uuid field.
+	documentDescUUID := documentMixinFields0[0].Descriptor()
+	// document.DefaultUUID holds the default value on creation for the uuid field.
+	document.DefaultUUID = documentDescUUID.Default.(func() string)
 	// documentDescCreatedAt is the schema descriptor for created_at field.
-	documentDescCreatedAt := documentMixinFields0[0].Descriptor()
+	documentDescCreatedAt := documentMixinFields1[0].Descriptor()
 	// document.DefaultCreatedAt holds the default value on creation for the created_at field.
 	document.DefaultCreatedAt = documentDescCreatedAt.Default.(func() string)
 	// documentDescUpdatedAt is the schema descriptor for updated_at field.
-	documentDescUpdatedAt := documentMixinFields0[1].Descriptor()
+	documentDescUpdatedAt := documentMixinFields1[1].Descriptor()
 	// document.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	document.DefaultUpdatedAt = documentDescUpdatedAt.Default.(func() string)
 	// documentDescTitle is the schema descriptor for title field.
@@ -60,22 +66,28 @@ func init() {
 	// document.DefaultLocked holds the default value on creation for the locked field.
 	document.DefaultLocked = documentDescLocked.Default.(bool)
 	extensionMixin := schema.Extension{}.Mixin()
-	extensionMixinHooks0 := extensionMixin[0].Hooks()
 	extensionMixinHooks1 := extensionMixin[1].Hooks()
-	extension.Hooks[0] = extensionMixinHooks0[0]
-	extension.Hooks[1] = extensionMixinHooks1[0]
-	extensionMixinInters1 := extensionMixin[1].Interceptors()
-	extension.Interceptors[0] = extensionMixinInters1[0]
+	extensionMixinHooks2 := extensionMixin[2].Hooks()
+	extension.Hooks[0] = extensionMixinHooks1[0]
+	extension.Hooks[1] = extensionMixinHooks2[0]
+	extensionMixinInters2 := extensionMixin[2].Interceptors()
+	extension.Interceptors[0] = extensionMixinInters2[0]
 	extensionMixinFields0 := extensionMixin[0].Fields()
 	_ = extensionMixinFields0
+	extensionMixinFields1 := extensionMixin[1].Fields()
+	_ = extensionMixinFields1
 	extensionFields := schema.Extension{}.Fields()
 	_ = extensionFields
+	// extensionDescUUID is the schema descriptor for uuid field.
+	extensionDescUUID := extensionMixinFields0[0].Descriptor()
+	// extension.DefaultUUID holds the default value on creation for the uuid field.
+	extension.DefaultUUID = extensionDescUUID.Default.(func() string)
 	// extensionDescCreatedAt is the schema descriptor for created_at field.
-	extensionDescCreatedAt := extensionMixinFields0[0].Descriptor()
+	extensionDescCreatedAt := extensionMixinFields1[0].Descriptor()
 	// extension.DefaultCreatedAt holds the default value on creation for the created_at field.
 	extension.DefaultCreatedAt = extensionDescCreatedAt.Default.(func() string)
 	// extensionDescUpdatedAt is the schema descriptor for updated_at field.
-	extensionDescUpdatedAt := extensionMixinFields0[1].Descriptor()
+	extensionDescUpdatedAt := extensionMixinFields1[1].Descriptor()
 	// extension.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	extension.DefaultUpdatedAt = extensionDescUpdatedAt.Default.(func() string)
 	// extensionDescKey is the schema descriptor for key field.
@@ -101,22 +113,28 @@ func init() {
 	// extension.DefaultEnabled holds the default value on creation for the enabled field.
 	extension.DefaultEnabled = extensionDescEnabled.Default.(bool)
 	keybindingMixin := schema.KeyBinding{}.Mixin()
-	keybindingMixinHooks0 := keybindingMixin[0].Hooks()
 	keybindingMixinHooks1 := keybindingMixin[1].Hooks()
-	keybinding.Hooks[0] = keybindingMixinHooks0[0]
-	keybinding.Hooks[1] = keybindingMixinHooks1[0]
-	keybindingMixinInters1 := keybindingMixin[1].Interceptors()
-	keybinding.Interceptors[0] = keybindingMixinInters1[0]
+	keybindingMixinHooks2 := keybindingMixin[2].Hooks()
+	keybinding.Hooks[0] = keybindingMixinHooks1[0]
+	keybinding.Hooks[1] = keybindingMixinHooks2[0]
+	keybindingMixinInters2 := keybindingMixin[2].Interceptors()
+	keybinding.Interceptors[0] = keybindingMixinInters2[0]
 	keybindingMixinFields0 := keybindingMixin[0].Fields()
 	_ = keybindingMixinFields0
+	keybindingMixinFields1 := keybindingMixin[1].Fields()
+	_ = keybindingMixinFields1
 	keybindingFields := schema.KeyBinding{}.Fields()
 	_ = keybindingFields
+	// keybindingDescUUID is the schema descriptor for uuid field.
+	keybindingDescUUID := keybindingMixinFields0[0].Descriptor()
+	// keybinding.DefaultUUID holds the default value on creation for the uuid field.
+	keybinding.DefaultUUID = keybindingDescUUID.Default.(func() string)
 	// keybindingDescCreatedAt is the schema descriptor for created_at field.
-	keybindingDescCreatedAt := keybindingMixinFields0[0].Descriptor()
+	keybindingDescCreatedAt := keybindingMixinFields1[0].Descriptor()
 	// keybinding.DefaultCreatedAt holds the default value on creation for the created_at field.
 	keybinding.DefaultCreatedAt = keybindingDescCreatedAt.Default.(func() string)
 	// keybindingDescUpdatedAt is the schema descriptor for updated_at field.
-	keybindingDescUpdatedAt := keybindingMixinFields0[1].Descriptor()
+	keybindingDescUpdatedAt := keybindingMixinFields1[1].Descriptor()
 	// keybinding.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	keybinding.DefaultUpdatedAt = keybindingDescUpdatedAt.Default.(func() string)
 	// keybindingDescKey is the schema descriptor for key field.
@@ -164,22 +182,28 @@ func init() {
 	// keybinding.DefaultEnabled holds the default value on creation for the enabled field.
 	keybinding.DefaultEnabled = keybindingDescEnabled.Default.(bool)
 	themeMixin := schema.Theme{}.Mixin()
-	themeMixinHooks0 := themeMixin[0].Hooks()
 	themeMixinHooks1 := themeMixin[1].Hooks()
-	theme.Hooks[0] = themeMixinHooks0[0]
-	theme.Hooks[1] = themeMixinHooks1[0]
-	themeMixinInters1 := themeMixin[1].Interceptors()
-	theme.Interceptors[0] = themeMixinInters1[0]
+	themeMixinHooks2 := themeMixin[2].Hooks()
+	theme.Hooks[0] = themeMixinHooks1[0]
+	theme.Hooks[1] = themeMixinHooks2[0]
+	themeMixinInters2 := themeMixin[2].Interceptors()
+	theme.Interceptors[0] = themeMixinInters2[0]
 	themeMixinFields0 := themeMixin[0].Fields()
 	_ = themeMixinFields0
+	themeMixinFields1 := themeMixin[1].Fields()
+	_ = themeMixinFields1
 	themeFields := schema.Theme{}.Fields()
 	_ = themeFields
+	// themeDescUUID is the schema descriptor for uuid field.
+	themeDescUUID := themeMixinFields0[0].Descriptor()
+	// theme.DefaultUUID holds the default value on creation for the uuid field.
+	theme.DefaultUUID = themeDescUUID.Default.(func() string)
 	// themeDescCreatedAt is the schema descriptor for created_at field.
-	themeDescCreatedAt := themeMixinFields0[0].Descriptor()
+	themeDescCreatedAt := themeMixinFields1[0].Descriptor()
 	// theme.DefaultCreatedAt holds the default value on creation for the created_at field.
 	theme.DefaultCreatedAt = themeDescCreatedAt.Default.(func() string)
 	// themeDescUpdatedAt is the schema descriptor for updated_at field.
-	themeDescUpdatedAt := themeMixinFields0[1].Descriptor()
+	themeDescUpdatedAt := themeMixinFields1[1].Descriptor()
 	// theme.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	theme.DefaultUpdatedAt = themeDescUpdatedAt.Default.(func() string)
 	// themeDescKey is the schema descriptor for key field.

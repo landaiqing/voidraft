@@ -17,17 +17,19 @@ type Theme struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
-	// 创建时间
+	// UUID for cross-device sync (UUIDv7)
+	UUID string `json:"uuid"`
+	// creation time
 	CreatedAt string `json:"created_at"`
-	// 最后更新时间
+	// update time
 	UpdatedAt string `json:"updated_at"`
-	// 删除时间，NULL表示未删除
+	// deleted at
 	DeletedAt *string `json:"deleted_at,omitempty"`
-	// 主题标识符
+	// theme key
 	Key string `json:"key"`
-	// 主题类型
+	// theme type
 	Type theme.Type `json:"type"`
-	// 主题颜色配置
+	// theme colors
 	Colors       map[string]interface{} `json:"colors"`
 	selectValues sql.SelectValues
 }
@@ -41,7 +43,7 @@ func (*Theme) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case theme.FieldID:
 			values[i] = new(sql.NullInt64)
-		case theme.FieldCreatedAt, theme.FieldUpdatedAt, theme.FieldDeletedAt, theme.FieldKey, theme.FieldType:
+		case theme.FieldUUID, theme.FieldCreatedAt, theme.FieldUpdatedAt, theme.FieldDeletedAt, theme.FieldKey, theme.FieldType:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -64,6 +66,12 @@ func (_m *Theme) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
+		case theme.FieldUUID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field uuid", values[i])
+			} else if value.Valid {
+				_m.UUID = value.String
+			}
 		case theme.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -139,6 +147,9 @@ func (_m *Theme) String() string {
 	var builder strings.Builder
 	builder.WriteString("Theme(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("uuid=")
+	builder.WriteString(_m.UUID)
+	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)
 	builder.WriteString(", ")

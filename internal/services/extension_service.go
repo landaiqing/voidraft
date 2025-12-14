@@ -7,6 +7,7 @@ import (
 
 	"voidraft/internal/models/ent"
 	"voidraft/internal/models/ent/extension"
+	"voidraft/internal/models/ent/keybinding"
 	"voidraft/internal/models/schema/mixin"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -113,9 +114,23 @@ func (s *ExtensionService) UpdateExtensionEnabled(ctx context.Context, key strin
 	if ext == nil {
 		return fmt.Errorf("extension not found: %s", key)
 	}
-	return s.db.Client.Extension.UpdateOneID(ext.ID).
+
+	// 更新扩展状态
+	if err := s.db.Client.Extension.UpdateOneID(ext.ID).
 		SetEnabled(enabled).
-		Exec(ctx)
+		Exec(ctx); err != nil {
+		return err
+	}
+
+	// 同步更新该扩展关联的快捷键启用状态
+	if _, err := s.db.Client.KeyBinding.Update().
+		Where(keybinding.Extension(key)).
+		SetEnabled(enabled).
+		Save(ctx); err != nil {
+		return fmt.Errorf("update keybindings for extension %s error: %w", key, err)
+	}
+
+	return nil
 }
 
 // UpdateExtensionConfig 更新扩展配置

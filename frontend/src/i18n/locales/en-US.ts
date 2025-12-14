@@ -46,7 +46,7 @@ export default {
   keybindings: {
     headers: {
       shortcut: 'Shortcut',
-      category: 'Category',
+      extension: 'Extension',
       description: 'Description'
     },
     commands: {
@@ -227,14 +227,10 @@ export default {
       sshKeyPassphrase: 'SSH Key Passphrase',
       sshKeyPassphrasePlaceholder: 'Enter SSH key passphrase',
       backupOperations: 'Backup Operations',
-      pushToRemote: 'Push to Remote',
-      pushing: 'Pushing...',
+      syncToRemote: 'Sync to Remote',
+      syncing: 'Syncing...',
       actions: {
-        push: 'Push',
-      },
-      status: {
-        success: 'Success',
-        failed: 'Failed'
+        sync: 'Sync',
       }
     },
   },

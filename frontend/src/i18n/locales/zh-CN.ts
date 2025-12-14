@@ -46,7 +46,7 @@ export default {
   keybindings: {
     headers: {
       shortcut: '快捷键',
-      category: '分类',
+      extension: '扩展',
       description: '描述'
     },
     commands: {
@@ -229,14 +229,10 @@ export default {
       sshKeyPassphrase: 'SSH密钥密码',
       sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
       backupOperations: '备份操作',
-      pushToRemote: '推送到远程',
-      pushing: '推送中...',
+      syncToRemote: '同步到远程',
+      syncing: '同步中...',
       actions: {
-        push: '推送',
-      },
-      status: {
-        success: '成功',
-        failed: '失败'
+        sync: '同步',
       }
     },
   },

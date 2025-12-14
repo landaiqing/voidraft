@@ -19,6 +19,20 @@ type DocumentCreate struct {
 	hooks    []Hook
 }
 
+// SetUUID sets the "uuid" field.
+func (_c *DocumentCreate) SetUUID(v string) *DocumentCreate {
+	_c.mutation.SetUUID(v)
+	return _c
+}
+
+// SetNillableUUID sets the "uuid" field if the given value is not nil.
+func (_c *DocumentCreate) SetNillableUUID(v *string) *DocumentCreate {
+	if v != nil {
+		_c.SetUUID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *DocumentCreate) SetCreatedAt(v string) *DocumentCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -132,6 +146,13 @@ func (_c *DocumentCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *DocumentCreate) defaults() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		if document.DefaultUUID == nil {
+			return fmt.Errorf("ent: uninitialized document.DefaultUUID (forgotten import ent/runtime?)")
+		}
+		v := document.DefaultUUID()
+		_c.mutation.SetUUID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if document.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized document.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -202,6 +223,10 @@ func (_c *DocumentCreate) createSpec() (*Document, *sqlgraph.CreateSpec) {
 		_node = &Document{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(document.Table, sqlgraph.NewFieldSpec(document.FieldID, field.TypeInt))
 	)
+	if value, ok := _c.mutation.UUID(); ok {
+		_spec.SetField(document.FieldUUID, field.TypeString, value)
+		_node.UUID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(document.FieldCreatedAt, field.TypeString, value)
 		_node.CreatedAt = value

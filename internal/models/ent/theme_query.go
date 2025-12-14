@@ -265,12 +265,12 @@ func (_q *ThemeQuery) Clone() *ThemeQuery {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Theme.Query().
-//		GroupBy(theme.FieldCreatedAt).
+//		GroupBy(theme.FieldUUID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *ThemeQuery) GroupBy(field string, fields ...string) *ThemeGroupBy {
@@ -288,11 +288,11 @@ func (_q *ThemeQuery) GroupBy(field string, fields ...string) *ThemeGroupBy {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //	}
 //
 //	client.Theme.Query().
-//		Select(theme.FieldCreatedAt).
+//		Select(theme.FieldUUID).
 //		Scan(ctx, &v)
 func (_q *ThemeQuery) Select(fields ...string) *ThemeSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

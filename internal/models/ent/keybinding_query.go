@@ -265,12 +265,12 @@ func (_q *KeyBindingQuery) Clone() *KeyBindingQuery {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.KeyBinding.Query().
-//		GroupBy(keybinding.FieldCreatedAt).
+//		GroupBy(keybinding.FieldUUID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *KeyBindingQuery) GroupBy(field string, fields ...string) *KeyBindingGroupBy {
@@ -288,11 +288,11 @@ func (_q *KeyBindingQuery) GroupBy(field string, fields ...string) *KeyBindingGr
 // Example:
 //
 //	var v []struct {
-//		CreatedAt string `json:"created_at"`
+//		UUID string `json:"uuid"`
 //	}
 //
 //	client.KeyBinding.Query().
-//		Select(keybinding.FieldCreatedAt).
+//		Select(keybinding.FieldUUID).
 //		Scan(ctx, &v)
 func (_q *KeyBindingQuery) Select(fields ...string) *KeyBindingSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

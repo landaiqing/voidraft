@@ -3,33 +3,27 @@ import { useI18n } from 'vue-i18n';
 import { onMounted, computed } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import { useKeybindingStore } from '@/stores/keybindingStore';
-import { useExtensionStore } from '@/stores/extensionStore';
 import { useSystemStore } from '@/stores/systemStore';
 import { getCommandDescription } from '@/views/editor/keymap/commands';
 import { KeyBindingKey } from '@/../bindings/voidraft/internal/models/models';
 
 const { t } = useI18n();
 const keybindingStore = useKeybindingStore();
-const extensionStore = useExtensionStore();
 const systemStore = useSystemStore();
 
 // 加载数据
 onMounted(async () => {
   await keybindingStore.loadKeyBindings();
-  await extensionStore.loadExtensions();
 });
 
 // 从store中获取快捷键数据并转换为显示格式
 const keyBindings = computed(() => {
-  // 只显示启用扩展的快捷键
-  const enabledExtensionIds = new Set(extensionStore.enabledExtensionIds);
-  
   return keybindingStore.keyBindings
-    .filter(kb => kb.enabled && (!kb.extension || enabledExtensionIds.has(kb.extension)))
+    .filter(kb => kb.enabled)
     .map(kb => ({
-      id: kb.key,
-      keys: parseKeyBinding(kb.command || '', kb.key),
-      category: kb.extension || '',
+      key: kb.key,
+      command: parseKeyBinding(kb.command || '', kb.key),
+      extension: kb.extension || '',
       description: kb.key ? (getCommandDescription(kb.key) || kb.key) : ''
     }));
 });
@@ -204,25 +198,25 @@ const parseKeyBinding = (keyStr: string, keyBindingKey?: string): string[] => {
       <div class="key-bindings-container">
         <div class="key-bindings-header">
           <div class="keybinding-col">{{ t('keybindings.headers.shortcut') }}</div>
-          <div class="category-col">{{ t('keybindings.headers.category') }}</div>
+          <div class="extension-col">{{ t('keybindings.headers.extension') }}</div>
           <div class="description-col">{{ t('keybindings.headers.description') }}</div>
         </div>
         
         <div
           v-for="binding in keyBindings"
-          :key="binding.id"
+          :key="binding.key"
           class="key-binding-row"
         >
           <div class="keybinding-col">
             <span 
-              v-for="(key, index) in binding.keys" 
+              v-for="(key, index) in binding.command"
               :key="index"
               class="key-badge"
             >
               {{ key }}
             </span>
           </div>
-          <div class="category-col">{{ binding.category }}</div>
+          <div class="extension-col">{{ binding.extension }}</div>
           <div class="description-col">{{ binding.description }}</div>
         </div>
       </div>
@@ -276,7 +270,7 @@ const parseKeyBinding = (keyStr: string, keyBindingKey?: string): string[] => {
     }
   }
   
-  .category-col {
+  .extension-col {
     width: 80px;
     padding: 0 10px 0 0;
     font-size: 13px;
