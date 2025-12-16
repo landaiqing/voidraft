@@ -28,6 +28,7 @@ env:
 jobs:
   # 准备构建配置
   prepare:
+    permissions: {}
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
