@@ -26,9 +26,7 @@ function formatKeyBinding(keyBinding: string): string {
 
   return keyBinding
     .replace("Mod", isMac ? "Cmd" : "Ctrl")
-    .replace("Shift", "Shift")
     .replace("Alt", isMac ? "Option" : "Alt")
-    .replace("Ctrl", isMac ? "Ctrl" : "Ctrl")
     .replace(/-/g, " + ");
 }
 
