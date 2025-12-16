@@ -15,18 +15,6 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 /**
- * GetOpenWindows 获取所有打开的文档窗口
- */
-export function GetOpenWindows(): Promise<application$0.Window[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1464997251) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType0($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
  * IsDocumentWindowOpen 检查指定文档的窗口是否已打开
  */
 export function IsDocumentWindowOpen(documentID: number): Promise<boolean> & { cancel(): void } {
@@ -57,6 +45,3 @@ export function ServiceStartup(options: application$0.ServiceOptions): Promise<v
     let $resultPromise = $Call.ByID(2432987694, options) as any;
     return $resultPromise;
 }
-
-// Private type creation functions
-const $$createType0 = $Create.Array($Create.Any);

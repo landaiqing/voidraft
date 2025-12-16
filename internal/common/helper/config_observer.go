@@ -1,4 +1,4 @@
-package services
+package helper
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
+
+const pathSeparator = '.'
 
 // ObserverCallback 观察者回调函数
 type ObserverCallback func(oldValue, newValue interface{})
@@ -49,6 +51,8 @@ func NewConfigObserver(logger *log.LogService) *ConfigObserver {
 }
 
 // Watch 注册配置变更监听器
+// 支持前缀监听：注册 "generate" 可以监听 "generate.xxx"、"generate.yyy" 等所有子路径的变化
+// 返回取消函数，调用后停止监听
 func (co *ConfigObserver) Watch(path string, callback ObserverCallback) CancelFunc {
 	// 生成唯一ID
 	id := fmt.Sprintf("obs_%d", co.nextObserverID.Add(1))
@@ -103,36 +107,91 @@ func (co *ConfigObserver) removeObserver(path, id string) {
 	}
 }
 
-// Notify 通知指定路径的所有观察者
+// Notify 通知指定路径及其所有父路径的观察者
+// 支持前缀监听：当 "generate.xxx" 变化时，同时通知监听 "generate" 的观察者
+// 通知顺序：精确匹配 -> 父路径（从近到远）
 func (co *ConfigObserver) Notify(path string, oldValue, newValue interface{}) {
-	// 获取该路径的所有观察者（拷贝以避免并发问题）
 	co.observerMu.RLock()
-	observers := co.observers[path]
-	if len(observers) == 0 {
-		co.observerMu.RUnlock()
+	callbacks := co.collectCallbacks(path)
+	co.observerMu.RUnlock()
+
+	if len(callbacks) == 0 {
 		return
 	}
 
-	// 拷贝观察者列表
-	callbacks := make([]ObserverCallback, len(observers))
-	for i, obs := range observers {
-		callbacks[i] = obs.callback
-	}
-	co.observerMu.RUnlock()
-
-	// 在独立 goroutine 中执行回调
+	// 执行所有回调
 	for _, callback := range callbacks {
 		co.executeCallback(callback, oldValue, newValue)
 	}
 }
 
-// NotifyAll 通知所有匹配前缀的观察者
+// collectCallbacks 收集指定路径及其所有父路径的观察者回调
+// 调用者必须持有读锁
+func (co *ConfigObserver) collectCallbacks(path string) []ObserverCallback {
+	if path == "" {
+		return nil
+	}
+
+	var callbacks []ObserverCallback
+
+	// 1. 收集精确匹配的观察者
+	if observers := co.observers[path]; len(observers) > 0 {
+		callbacks = make([]ObserverCallback, 0, len(observers)*2)
+		for _, obs := range observers {
+			callbacks = append(callbacks, obs.callback)
+		}
+	}
+
+	// 2. 收集父路径的观察者（从后向前遍历，避免 strings.Split 的内存分配）
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == pathSeparator {
+			parentPath := path[:i]
+			if observers := co.observers[parentPath]; len(observers) > 0 {
+				if callbacks == nil {
+					callbacks = make([]ObserverCallback, 0, len(observers))
+				}
+				for _, obs := range observers {
+					callbacks = append(callbacks, obs.callback)
+				}
+			}
+		}
+	}
+
+	return callbacks
+}
+
+// NotifyAll 批量通知所有匹配路径的观察者
 func (co *ConfigObserver) NotifyAll(changes map[string]struct {
 	OldValue interface{}
 	NewValue interface{}
 }) {
+	if len(changes) == 0 {
+		return
+	}
+
+	type callbackTask struct {
+		callback ObserverCallback
+		oldValue interface{}
+		newValue interface{}
+	}
+
+	// 只获取一次读锁，收集所有回调
+	co.observerMu.RLock()
+	var tasks []callbackTask
 	for path, change := range changes {
-		co.Notify(path, change.OldValue, change.NewValue)
+		for _, cb := range co.collectCallbacks(path) {
+			tasks = append(tasks, callbackTask{
+				callback: cb,
+				oldValue: change.OldValue,
+				newValue: change.NewValue,
+			})
+		}
+	}
+	co.observerMu.RUnlock()
+
+	// 执行所有回调
+	for _, task := range tasks {
+		co.executeCallback(task.callback, task.oldValue, task.newValue)
 	}
 }
 

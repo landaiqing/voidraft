@@ -24,9 +24,10 @@ type MigrationProgress struct {
 
 // MigrationService 迁移服务
 type MigrationService struct {
-	logger    *log.LogService
-	dbService *DatabaseService
-	progress  atomic.Value // stores MigrationProgress
+	logger        *log.LogService
+	dbService     *DatabaseService
+	configService *ConfigService
+	progress      atomic.Value // stores MigrationProgress
 
 	mu     sync.Mutex
 	ctx    context.Context
@@ -34,13 +35,14 @@ type MigrationService struct {
 }
 
 // NewMigrationService 创建迁移服务
-func NewMigrationService(dbService *DatabaseService, logger *log.LogService) *MigrationService {
+func NewMigrationService(dbService *DatabaseService, configService *ConfigService, logger *log.LogService) *MigrationService {
 	if logger == nil {
 		logger = log.New()
 	}
 	ms := &MigrationService{
-		logger:    logger,
-		dbService: dbService,
+		logger:        logger,
+		dbService:     dbService,
+		configService: configService,
 	}
 	ms.progress.Store(MigrationProgress{})
 	return ms
@@ -94,9 +96,12 @@ func (ms *MigrationService) MigrateDirectory(srcPath, dstPath string) error {
 		if err := ms.dbService.ServiceShutdown(); err != nil {
 			ms.logger.Error("Failed to close database connection", "error", err)
 		}
+
+		// 等待文件句柄释放（Windows 特有问题）
+		time.Sleep(200 * time.Millisecond)
 	}
 
-	// 确保失败时恢复数据库连接
+	// 确保恢复数据库连接
 	defer func() {
 		if ms.dbService != nil {
 			if err := ms.dbService.ServiceStartup(ctx, application.ServiceOptions{}); err != nil {
@@ -110,15 +115,57 @@ func (ms *MigrationService) MigrateDirectory(srcPath, dstPath string) error {
 		return ms.fail(err)
 	}
 
+	// 迁移成功后，立即更新配置到新路径
+	if ms.configService != nil {
+		if err := ms.configService.Set("general.dataPath", dstPath); err != nil {
+			return ms.fail(fmt.Errorf("migration succeeded but failed to update config: %w", err))
+		}
+	}
+
 	ms.setProgress(100)
 	return nil
 }
 
 // preCheck 预检查，返回是否需要迁移
 func (ms *MigrationService) preCheck(srcPath, dstPath string) (bool, error) {
-	// 源目录不存在，无需迁移
-	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+	// 检查源目录状态
+	srcStat, srcErr := os.Stat(srcPath)
+	srcNotExist := os.IsNotExist(srcErr)
+
+	// 检查目标目录状态
+	dstStat, dstErr := os.Stat(dstPath)
+	dstNotExist := os.IsNotExist(dstErr)
+
+	// 1：源目录不存在
+	if srcNotExist {
+		// 如果目标目录存在且有内容，说明迁移已经完成
+		if !dstNotExist && dstStat.IsDir() {
+			isEmpty, err := isDirEmpty(dstPath)
+			if err == nil && !isEmpty {
+				ms.logger.Info("Migration already completed, source not exist but target has content", "dst", dstPath)
+				return false, nil // 无需迁移
+			}
+		}
+		// 源不存在且目标也不存在/为空，无需迁移
 		return false, nil
+	}
+
+	// 2. 源目录存在但为空
+	if srcStat.IsDir() {
+		srcEmpty, err := isDirEmpty(srcPath)
+		if err == nil && srcEmpty {
+			// 源为空，目标有内容 → 迁移已完成
+			if !dstNotExist && dstStat.IsDir() {
+				dstEmpty, _ := isDirEmpty(dstPath)
+				if !dstEmpty {
+					ms.logger.Info("Migration already completed, source is empty but target has content", "dst", dstPath)
+					return false, nil
+				}
+			}
+			// 源为空，目标也为空 → 无需迁移
+			ms.logger.Info("Both source and target are empty, no migration needed")
+			return false, nil
+		}
 	}
 
 	// 路径相同，无需迁移

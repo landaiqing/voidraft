@@ -2,16 +2,28 @@
 import {useConfigStore} from '@/stores/configStore';
 import {useTabStore} from '@/stores/tabStore';
 import {useI18n} from 'vue-i18n';
-import {computed, ref} from 'vue';
+import {computed, ref, onMounted} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
-import {DialogService, MigrationService} from '@/../bindings/voidraft/internal/services';
+import {DialogService, HotkeyService, MigrationService} from '@/../bindings/voidraft/internal/services';
 import {useSystemStore} from "@/stores/systemStore";
 import {useConfirm, usePolling} from '@/composables';
 
 const {t} = useI18n();
-const configStore = useConfigStore();
+const {
+  config: {general},
+  resetConfig,
+  setAlwaysOnTop,
+  setDataPath,
+  setEnableGlobalHotkey,
+  setEnableLoadingAnimation,
+  setEnableSystemTray,
+  setEnableTabs,
+  setEnableWindowSnap,
+  setGlobalHotkey,
+  setStartAtLogin
+} = useConfigStore();
 const systemStore = useSystemStore();
 const tabStore = useTabStore();
 
@@ -60,57 +72,57 @@ const hideAll = () => {
 const {isConfirming: isResetConfirming, requestConfirm: requestResetConfirm} = useConfirm({
   timeout: 3000,
   onConfirm: async () => {
-    await configStore.resetConfig();
+    await resetConfig();
   }
 });
 
-// 可选键列表
-const keyOptions = [
-  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
-  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-  'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12'
-];
+// 可选键列表 - 从后端获取系统支持的快捷键
+const keyOptions = ref<string[]>([]);
+
+// 初始化时从后端获取支持的键列表
+onMounted(async () => {
+  keyOptions.value = await HotkeyService.GetSupportedKeys();
+});
 
 // 计算属性 - 启用全局热键
 const enableGlobalHotkey = computed({
-  get: () => configStore.config.general.enableGlobalHotkey,
-  set: (value: boolean) => configStore.setEnableGlobalHotkey(value)
+  get: () => general.enableGlobalHotkey,
+  set: (value: boolean) => setEnableGlobalHotkey(value)
 });
 
 // 计算属性 - 窗口始终置顶
 const alwaysOnTop = computed({
-  get: () => configStore.config.general.alwaysOnTop,
+  get: () => general.alwaysOnTop,
   set: async (value: boolean) => {
     // 先更新配置
-    await configStore.setAlwaysOnTop(value);
+    await setAlwaysOnTop(value);
     await systemStore.setWindowOnTop(value);
   }
 });
 
 // 计算属性 - 启用系统托盘
 const enableSystemTray = computed({
-  get: () => configStore.config.general.enableSystemTray,
-  set: (value: boolean) => configStore.setEnableSystemTray(value)
+  get: () => general.enableSystemTray,
+  set: (value: boolean) => setEnableSystemTray(value)
 });
 
 // 计算属性 - 启用窗口吸附
 const enableWindowSnap = computed({
-  get: () => configStore.config.general.enableWindowSnap,
-  set: (value: boolean) => configStore.setEnableWindowSnap(value)
+  get: () => general.enableWindowSnap,
+  set: (value: boolean) => setEnableWindowSnap(value)
 });
 
 // 计算属性 - 启用加载动画
 const enableLoadingAnimation = computed({
-  get: () => configStore.config.general.enableLoadingAnimation,
-  set: (value: boolean) => configStore.setEnableLoadingAnimation(value)
+  get: () => general.enableLoadingAnimation,
+  set: (value: boolean) => setEnableLoadingAnimation(value)
 });
 
 // 计算属性 - 启用标签页
 const enableTabs = computed({
-  get: () => configStore.config.general.enableTabs,
+  get: () => general.enableTabs,
   set: async (value: boolean) => {
-    await configStore.setEnableTabs(value);
+    await setEnableTabs(value);
     if (value) {
       // 开启tabs功能时，初始化当前文档到标签页
       tabStore.initializeTab();
@@ -123,33 +135,33 @@ const enableTabs = computed({
 
 // 计算属性 - 开机启动
 const startAtLogin = computed({
-  get: () => configStore.config.general.startAtLogin,
-  set: (value: boolean) => configStore.setStartAtLogin(value)
+  get: () => general.startAtLogin,
+  set: (value: boolean) => setStartAtLogin(value)
 });
 
 // 修饰键配置 - 只读计算属性
 const modifierKeys = computed(() => ({
-  ctrl: configStore.config.general.globalHotkey.ctrl,
-  shift: configStore.config.general.globalHotkey.shift,
-  alt: configStore.config.general.globalHotkey.alt,
-  win: configStore.config.general.globalHotkey.win
+  ctrl: general.globalHotkey.ctrl,
+  shift: general.globalHotkey.shift,
+  alt: general.globalHotkey.alt,
+  win: general.globalHotkey.win
 }));
 
 // 主键配置
-const selectedKey = computed(() => configStore.config.general.globalHotkey.key);
+const selectedKey = computed(() => general.globalHotkey.key);
 
 // 切换修饰键
 const toggleModifier = (key: 'ctrl' | 'shift' | 'alt' | 'win') => {
-  const currentHotkey = configStore.config.general.globalHotkey;
+  const currentHotkey = general.globalHotkey;
   const newHotkey = {...currentHotkey, [key]: !currentHotkey[key]};
-  configStore.setGlobalHotkey(newHotkey);
+  setGlobalHotkey(newHotkey);
 };
 
 // 更新选择的键
 const updateSelectedKey = (event: Event) => {
   const select = event.target as HTMLSelectElement;
-  const newHotkey = {...configStore.config.general.globalHotkey, key: select.value};
-  configStore.setGlobalHotkey(newHotkey);
+  const newHotkey = {...general.globalHotkey, key: select.value};
+  setGlobalHotkey(newHotkey);
 };
 
 
@@ -157,7 +169,7 @@ const updateSelectedKey = (event: Event) => {
 const hotkeyPreview = computed(() => {
   if (!enableGlobalHotkey.value) return '';
 
-  const {ctrl, shift, alt, win, key} = configStore.config.general.globalHotkey;
+  const {ctrl, shift, alt, win, key} = general.globalHotkey;
   const modifiers = [
     ctrl && 'Ctrl',
     shift && 'Shift',
@@ -170,7 +182,7 @@ const hotkeyPreview = computed(() => {
 });
 
 // 数据路径配置
-const currentDataPath = computed(() => configStore.config.general.dataPath);
+const currentDataPath = computed(() => general.dataPath);
 
 // 选择数据存储目录
 const selectDataDirectory = async () => {
@@ -189,7 +201,7 @@ const selectDataDirectory = async () => {
 
   try {
     await MigrationService.MigrateDirectory(oldPath, newPath);
-    await configStore.setDataPath(newPath);
+    await setDataPath(newPath);
   } catch (e) {
     stop();
     // 设置手动捕获的错误（当轮询还没获取到错误时）
@@ -314,10 +326,6 @@ const selectDataDirectory = async () => {
 </template>
 
 <style scoped lang="scss">
-.settings-page {
-  //max-width: 800px;
-}
-
 .hotkey-selector {
   padding: 15px 0 5px 20px;
   transition: all 0.3s ease;

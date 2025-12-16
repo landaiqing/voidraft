@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"voidraft/internal/common/helper"
 
 	"github.com/go-git/go-git/v5"
 	gitConfig "github.com/go-git/go-git/v5/config"
@@ -61,7 +62,7 @@ type BackupService struct {
 	autoBackupStop   chan bool
 	autoBackupWg     sync.WaitGroup
 	mu               sync.Mutex
-	cancelObserver   CancelFunc
+	cancelObservers  []helper.CancelFunc
 }
 
 // NewBackupService 创建新的备份服务实例
@@ -74,7 +75,11 @@ func NewBackupService(configService *ConfigService, dbService *DatabaseService, 
 }
 
 func (s *BackupService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	s.cancelObserver = s.configService.Watch("backup.enabled", s.onBackupConfigChange)
+	// 监听 backup 配置变化
+	s.cancelObservers = []helper.CancelFunc{
+		s.configService.Watch("backup", s.onBackupConfigChange),
+		s.configService.Watch("general.dataPath", s.onDataPathChange),
+	}
 	if err := s.Initialize(); err != nil {
 		s.logger.Error("initializing backup service: %v", err)
 	}
@@ -89,6 +94,12 @@ func (s *BackupService) onBackupConfigChange(oldValue, newValue interface{}) {
 	_ = s.HandleConfigChange(&config.Backup)
 }
 
+func (s *BackupService) onDataPathChange(oldValue, newValue interface{}) {
+	if err := s.Reinitialize(); err != nil {
+		s.logger.Error("Failed to reinitialize backup service after data path change: %v", err)
+	}
+}
+
 // Initialize 初始化备份服务
 func (s *BackupService) Initialize() error {
 	config, repoPath, err := s.getConfigAndPath()
@@ -100,7 +111,7 @@ func (s *BackupService) Initialize() error {
 		return nil
 	}
 
-	// 仓库地址为空时不初始化（等待用户配置）
+	// 仓库地址为空时不初始化
 	if strings.TrimSpace(config.RepoURL) == "" {
 		return nil
 	}
@@ -1196,8 +1207,10 @@ func (s *BackupService) HandleConfigChange(config *models.GitBackupConfig) error
 
 // ServiceShutdown 服务关闭
 func (s *BackupService) ServiceShutdown() {
-	if s.cancelObserver != nil {
-		s.cancelObserver()
+	for _, cancel := range s.cancelObservers {
+		if cancel != nil {
+			cancel()
+		}
 	}
 	s.StopAutoBackup()
 }

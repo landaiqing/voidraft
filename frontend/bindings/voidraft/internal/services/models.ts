@@ -13,12 +13,6 @@ import * as http$0 from "../../../net/http/models.js";
 import * as time$0 from "../../../time/models.js";
 
 /**
- * CancelFunc 取消订阅函数
- * 调用此函数可以取消对配置的监听
- */
-export type CancelFunc = any;
-
-/**
  * HttpRequest HTTP请求结构
  */
 export class HttpRequest {
@@ -250,11 +244,6 @@ export class OSInfo {
         return new OSInfo($$parsedSource as Partial<OSInfo>);
     }
 }
-
-/**
- * ObserverCallback 观察者回调函数
- */
-export type ObserverCallback = any;
 
 /**
  * SelfUpdateResult 自我更新结果

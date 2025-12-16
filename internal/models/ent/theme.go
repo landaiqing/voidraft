@@ -18,7 +18,7 @@ type Theme struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// UUID for cross-device sync (UUIDv7)
-	UUID string `json:"uuid"`
+	UUID *string `json:"uuid"`
 	// creation time
 	CreatedAt string `json:"created_at"`
 	// update time
@@ -70,7 +70,8 @@ func (_m *Theme) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field uuid", values[i])
 			} else if value.Valid {
-				_m.UUID = value.String
+				_m.UUID = new(string)
+				*_m.UUID = value.String
 			}
 		case theme.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -147,8 +148,10 @@ func (_m *Theme) String() string {
 	var builder strings.Builder
 	builder.WriteString("Theme(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	builder.WriteString("uuid=")
-	builder.WriteString(_m.UUID)
+	if v := _m.UUID; v != nil {
+		builder.WriteString("uuid=")
+		builder.WriteString(*v)
+	}
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)

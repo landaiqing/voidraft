@@ -213,7 +213,7 @@ func (_c *ExtensionCreate) createSpec() (*Extension, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(extension.FieldUUID, field.TypeString, value)
-		_node.UUID = value
+		_node.UUID = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(extension.FieldCreatedAt, field.TypeString, value)

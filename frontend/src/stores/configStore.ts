@@ -248,7 +248,7 @@ export const useConfigStore = defineStore('config', () => {
         setFontWeight: (value: string) => updateConfig('fontWeight', value),
 
         // 路径操作
-        setDataPath: (value: string) => updateConfig('dataPath', value),
+        setDataPath: (value: string) => updateConfigLocal('dataPath', value),
 
         // 保存配置相关方法
         setAutoSaveDelay: (value: number) => updateConfig('autoSaveDelay', value),

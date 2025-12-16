@@ -166,7 +166,7 @@ func (m *DocumentMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the Document entity.
 // If the Document object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DocumentMutation) OldUUID(ctx context.Context) (v string, err error) {
+func (m *DocumentMutation) OldUUID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -876,7 +876,7 @@ func (m *ExtensionMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the Extension entity.
 // If the Extension object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ExtensionMutation) OldUUID(ctx context.Context) (v string, err error) {
+func (m *ExtensionMutation) OldUUID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -1587,7 +1587,7 @@ func (m *KeyBindingMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the KeyBinding entity.
 // If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KeyBindingMutation) OldUUID(ctx context.Context) (v string, err error) {
+func (m *KeyBindingMutation) OldUUID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -2350,7 +2350,7 @@ func (m *ThemeMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the Theme entity.
 // If the Theme object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ThemeMutation) OldUUID(ctx context.Context) (v string, err error) {
+func (m *ThemeMutation) OldUUID(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}

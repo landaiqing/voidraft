@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 	"voidraft/internal/common/helper"
 	"voidraft/internal/common/hotkey"
 	"voidraft/internal/models"
@@ -33,7 +32,7 @@ type HotkeyService struct {
 	isShutdown atomic.Bool
 
 	// 配置观察者取消函数
-	cancelObservers []CancelFunc
+	cancelObservers []helper.CancelFunc
 }
 
 // NewHotkeyService 创建热键服务实例
@@ -61,7 +60,7 @@ func (hs *HotkeyService) ServiceStartup(ctx context.Context, options application
 // Initialize 初始化热键服务
 func (hs *HotkeyService) Initialize() error {
 	// 注册配置监听
-	hs.cancelObservers = []CancelFunc{
+	hs.cancelObservers = []helper.CancelFunc{
 		hs.configService.Watch("general.enableGlobalHotkey", hs.onHotkeyConfigChange),
 		hs.configService.Watch("general.globalHotkey", hs.onHotkeyConfigChange),
 	}
@@ -84,11 +83,14 @@ func (hs *HotkeyService) onHotkeyConfigChange(oldValue, newValue interface{}) {
 	// 重新加载配置
 	config, err := hs.configService.GetConfig()
 	if err != nil {
+		hs.logger.Error("failed to get config", "error", err)
 		return
 	}
 
 	// 更新热键
-	_ = hs.UpdateHotkey(config.General.EnableGlobalHotkey, &config.General.GlobalHotkey)
+	if err := hs.UpdateHotkey(config.General.EnableGlobalHotkey, &config.General.GlobalHotkey); err != nil {
+		hs.logger.Error("failed to update hotkey", "error", err)
+	}
 }
 
 // RegisterHotkey 注册全局热键
@@ -101,22 +103,34 @@ func (hs *HotkeyService) RegisterHotkey(combo *models.HotkeyCombo) error {
 		return errors.New("invalid hotkey combination")
 	}
 
-	// 如果已注册，先取消
-	if hs.registered.Load() {
-		_ = hs.UnregisterHotkey()
-	}
-
 	// 转换为 hotkey 库的格式
 	key, mods, err := hs.convertHotkey(combo)
 	if err != nil {
 		return fmt.Errorf("convert hotkey: %w", err)
 	}
 
-	hs.mu.Lock()
+	// 如果已注册，异步清理旧热键
+	if hs.registered.Load() {
+		hs.mu.RLock()
+		oldHk := hs.hk
+		hs.mu.RUnlock()
+
+		if oldHk != nil {
+			// 异步清理，不阻塞当前流程
+			go func() {
+				if err := oldHk.Close(); err != nil {
+					hs.logger.Error("failed to close old hotkey (ignored)", "error", err)
+				}
+			}()
+		}
+	}
+
 	// 创建新的热键实例
+	hs.mu.Lock()
 	hs.hk = hotkey.New(mods, key)
 	if err := hs.hk.Register(); err != nil {
 		hs.mu.Unlock()
+		hs.logger.Error("failed to register hotkey", "error", err)
 		return fmt.Errorf("register hotkey: %w", err)
 	}
 
@@ -141,34 +155,22 @@ func (hs *HotkeyService) UnregisterHotkey() error {
 	hs.registered.Store(false)
 
 	// 获取热键实例的引用
-	hs.mu.RLock()
+	hs.mu.Lock()
 	hk := hs.hk
-	hs.mu.RUnlock()
+	hs.hk = nil
+	hs.currentHotkey = nil
+	hs.mu.Unlock()
 
 	if hk == nil {
 		return nil
 	}
 
-	// 调用 Close() 确保完全清理
-	_ = hk.Close()
-
-	// 等待监听 goroutine 退出
-	done := make(chan struct{})
+	// 异步清理
 	go func() {
-		hs.wg.Wait()
-		close(done)
+		if err := hk.Close(); err != nil {
+			hs.logger.Error("failed to close hotkey (ignored)", "error", err)
+		}
 	}()
-
-	select {
-	case <-done:
-	case <-time.After(2 * time.Second):
-	}
-
-	// 清理状态
-	hs.mu.Lock()
-	hs.hk = nil
-	hs.currentHotkey = nil
-	hs.mu.Unlock()
 
 	return nil
 }
@@ -321,6 +323,24 @@ func (hs *HotkeyService) showAllWindows() {
 	}
 }
 
+// GetSupportedKeys 返回系统支持的快捷键列表
+func (hs *HotkeyService) GetSupportedKeys() []string {
+	// 返回当前系统支持的所有键
+	// 这个列表与 convertKey 方法中的 keyMap 保持一致
+	return []string{
+		// 字母键
+		"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+		"N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z",
+		// 数字键
+		"0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
+		// 功能键
+		"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+		// 特殊键
+		"Space", "Tab", "Enter", "Escape", "Delete",
+		"ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight",
+	}
+}
+
 // isValidHotkey 验证热键组合
 func (hs *HotkeyService) isValidHotkey(combo *models.HotkeyCombo) bool {
 	if combo == nil || combo.Key == "" {
@@ -331,24 +351,6 @@ func (hs *HotkeyService) isValidHotkey(combo *models.HotkeyCombo) bool {
 		return false
 	}
 	return true
-}
-
-// GetCurrentHotkey 获取当前热键
-func (hs *HotkeyService) GetCurrentHotkey() *models.HotkeyCombo {
-	hs.mu.RLock()
-	defer hs.mu.RUnlock()
-
-	if hs.currentHotkey == nil {
-		return nil
-	}
-
-	return &models.HotkeyCombo{
-		Ctrl:  hs.currentHotkey.Ctrl,
-		Shift: hs.currentHotkey.Shift,
-		Alt:   hs.currentHotkey.Alt,
-		Win:   hs.currentHotkey.Win,
-		Key:   hs.currentHotkey.Key,
-	}
 }
 
 // IsRegistered 检查是否已注册

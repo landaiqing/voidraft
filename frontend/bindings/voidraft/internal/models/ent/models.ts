@@ -21,7 +21,7 @@ export class Document {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string;
+    "uuid": string | null;
 
     /**
      * creation time
@@ -56,7 +56,7 @@ export class Document {
     /** Creates a new Document instance. */
     constructor($$source: Partial<Document> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = "";
+            this["uuid"] = null;
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -98,7 +98,7 @@ export class Extension {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string;
+    "uuid": string | null;
 
     /**
      * creation time
@@ -133,7 +133,7 @@ export class Extension {
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = "";
+            this["uuid"] = null;
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -179,7 +179,7 @@ export class KeyBinding {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string;
+    "uuid": string | null;
 
     /**
      * creation time
@@ -219,7 +219,7 @@ export class KeyBinding {
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = "";
+            this["uuid"] = null;
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -261,7 +261,7 @@ export class Theme {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string;
+    "uuid": string | null;
 
     /**
      * creation time
@@ -296,7 +296,7 @@ export class Theme {
     /** Creates a new Theme instance. */
     constructor($$source: Partial<Theme> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = "";
+            this["uuid"] = null;
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";

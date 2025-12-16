@@ -240,7 +240,7 @@ func (_c *KeyBindingCreate) createSpec() (*KeyBinding, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(keybinding.FieldUUID, field.TypeString, value)
-		_node.UUID = value
+		_node.UUID = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(keybinding.FieldCreatedAt, field.TypeString, value)

@@ -113,7 +113,7 @@ func (ws *WindowService) onWindowClosing(documentID int64) {
 }
 
 // GetOpenWindows 获取所有打开的文档窗口
-func (ws *WindowService) GetOpenWindows() []application.Window {
+func (ws *WindowService) getOpenWindows() []application.Window {
 	app := application.Get()
 	return app.Window.GetAll()
 }
@@ -130,7 +130,7 @@ func (ws *WindowService) IsDocumentWindowOpen(documentID int64) bool {
 func (ws *WindowService) ServiceShutdown() error {
 	// 从吸附服务中取消注册所有窗口
 	if ws.windowSnapService != nil {
-		windows := ws.GetOpenWindows()
+		windows := ws.getOpenWindows()
 		for _, window := range windows {
 			if documentID, err := strconv.ParseInt(window.Name(), 10, 64); err == nil {
 				ws.windowSnapService.UnregisterWindow(documentID)

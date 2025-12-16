@@ -18,12 +18,12 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as models$0 from "../models/models.js";
 
 /**
- * GetCurrentHotkey 获取当前热键
+ * GetSupportedKeys 返回系统支持的快捷键列表
  */
-export function GetCurrentHotkey(): Promise<models$0.HotkeyCombo | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2572811187) as any;
+export function GetSupportedKeys(): Promise<string[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1511528650) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
+        return $$createType0($result);
     }) as any;
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
@@ -86,5 +86,4 @@ export function UpdateHotkey(enable: boolean, combo: models$0.HotkeyCombo | null
 }
 
 // Private type creation functions
-const $$createType0 = models$0.HotkeyCombo.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
+const $$createType0 = $Create.Array($Create.Any);

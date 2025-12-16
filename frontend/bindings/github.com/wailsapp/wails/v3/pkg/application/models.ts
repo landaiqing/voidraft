@@ -61,5 +61,3 @@ export class ServiceOptions {
         return new ServiceOptions($$parsedSource as Partial<ServiceOptions>);
     }
 }
-
-export type Window = any;

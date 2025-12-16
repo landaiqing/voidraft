@@ -2,33 +2,31 @@ package services
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"github.com/wailsapp/wails/v3/pkg/application"
 	"os"
 	"path/filepath"
-	"strings"
+	"reflect"
 	"sync"
 	"time"
+	"voidraft/internal/common/helper"
 	"voidraft/internal/models"
 
 	jsonparser "github.com/knadh/koanf/parsers/json"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/providers/structs"
 	"github.com/knadh/koanf/v2"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
 // ConfigService 应用配置服务
 type ConfigService struct {
-	koanf        *koanf.Koanf    // koanf 实例
-	logger       *log.LogService // 日志服务
-	configDir    string          // 配置目录
-	settingsPath string          // 设置文件路径
-	mu           sync.RWMutex    // 读写锁
-	fileProvider *file.File      // 文件提供器，用于监听
-
-	observer *ConfigObserver
+	koanf        *koanf.Koanf
+	logger       *log.LogService
+	configDir    string
+	settingsPath string
+	mu           sync.RWMutex
+	observer     *helper.ConfigObserver
 
 	// 配置迁移器
 	configMigrator *ConfigMigrator
@@ -36,49 +34,29 @@ type ConfigService struct {
 
 // NewConfigService 创建新的配置服务实例
 func NewConfigService(logger *log.LogService) *ConfigService {
-	// 获取用户主目录
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		panic(fmt.Errorf("unable to get the user's home directory: %w", err))
 	}
 
-	// 设置配置目录和设置文件路径
 	configDir := filepath.Join(homeDir, ".voidraft", "config")
 	settingsPath := filepath.Join(configDir, "settings.json")
-
-	observerService := NewConfigObserver(logger)
-
-	configMigrator := NewConfigMigrator(logger, configDir, "settings", settingsPath)
 
 	return &ConfigService{
 		logger:         logger,
 		configDir:      configDir,
 		settingsPath:   settingsPath,
 		koanf:          koanf.New("."),
-		observer:       observerService,
-		configMigrator: configMigrator,
+		observer:       helper.NewConfigObserver(logger),
+		configMigrator: NewConfigMigrator(logger, configDir, "settings", settingsPath),
 	}
 }
 
-// ServiceStartup initializes the service when the application starts
+// ServiceStartup 服务启动时初始化
 func (cs *ConfigService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	err := cs.initConfig()
-	if err != nil {
+	if err := cs.initConfig(); err != nil {
 		panic(err)
 	}
-	// 启动配置文件监听
-	cs.startWatching()
-	return nil
-}
-
-// setDefaults 设置默认配置
-func (cs *ConfigService) setDefaults() error {
-	defaultConfig := models.NewDefaultAppConfig()
-
-	if err := cs.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -87,15 +65,38 @@ func (cs *ConfigService) initConfig() error {
 	cs.mu.Lock()
 	defer cs.mu.Unlock()
 
-	// 检查配置文件是否存在
+	// 确保配置目录存在
+	if err := os.MkdirAll(cs.configDir, 0755); err != nil {
+		return fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// 配置文件不存在，创建默认配置
 	if _, err := os.Stat(cs.settingsPath); os.IsNotExist(err) {
 		return cs.createDefaultConfig()
 	}
 
-	// 配置文件存在，直接加载现有配置
-	cs.fileProvider = file.Provider(cs.settingsPath)
-	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
-		return err
+	// 加载现有配置
+	if err := cs.koanf.Load(file.Provider(cs.settingsPath), jsonparser.Parser()); err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	return nil
+}
+
+// createDefaultConfig 创建默认配置
+func (cs *ConfigService) createDefaultConfig() error {
+	// 重置 koanf 实例
+	cs.koanf = koanf.New(".")
+
+	// 加载默认配置
+	defaultConfig := models.NewDefaultAppConfig()
+	if err := cs.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
+		return fmt.Errorf("failed to load default config: %w", err)
+	}
+
+	// 写入配置文件
+	if err := cs.writeConfigToFile(); err != nil {
+		return fmt.Errorf("failed to write default config: %w", err)
 	}
 
 	return nil
@@ -107,65 +108,12 @@ func (cs *ConfigService) MigrateConfig() error {
 		return nil
 	}
 
+	cs.mu.Lock()
+	defer cs.mu.Unlock()
+
 	defaultConfig := models.NewDefaultAppConfig()
 	_, err := cs.configMigrator.AutoMigrate(defaultConfig, cs.koanf)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// createDefaultConfig 创建默认配置文件
-func (cs *ConfigService) createDefaultConfig() error {
-	// 确保配置目录存在
-	if err := os.MkdirAll(cs.configDir, 0755); err != nil {
-		return err
-	}
-
-	if err := cs.setDefaults(); err != nil {
-		return err
-	}
-
-	if err := cs.writeConfigToFile(); err != nil {
-		return err
-	}
-
-	// 创建文件提供器
-	cs.fileProvider = file.Provider(cs.settingsPath)
-
-	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
-		return err
-	}
-	return nil
-}
-
-// startWatching 启动配置文件监听
-func (cs *ConfigService) startWatching() {
-	if cs.fileProvider == nil {
-		return
-	}
-	cs.fileProvider.Watch(func(event interface{}, err error) {
-		if err != nil {
-			return
-		}
-
-		cs.mu.Lock()
-		oldSnapshot := cs.createConfigSnapshot()
-		cs.koanf.Load(cs.fileProvider, jsonparser.Parser())
-		newSnapshot := cs.createConfigSnapshot()
-		cs.mu.Unlock()
-
-		// 检测配置变更并通知观察者
-		cs.notifyChanges(oldSnapshot, newSnapshot)
-	})
-
-}
-
-// stopWatching 停止配置文件监听
-func (cs *ConfigService) stopWatching() {
-	if cs.fileProvider != nil {
-		cs.fileProvider.Unwatch()
-	}
+	return err
 }
 
 // GetConfig 获取完整应用配置
@@ -177,45 +125,7 @@ func (cs *ConfigService) GetConfig() (*models.AppConfig, error) {
 	if err := cs.koanf.UnmarshalWithConf("", &config, koanf.UnmarshalConf{Tag: "json"}); err != nil {
 		return nil, err
 	}
-
 	return &config, nil
-}
-
-// Set 设置配置项
-func (cs *ConfigService) Set(key string, value interface{}) error {
-	cs.mu.Lock()
-
-	// 获取旧值用于回滚
-	oldValue := cs.koanf.Get(key)
-
-	// 设置值到koanf
-	cs.koanf.Set(key, value)
-
-	// 更新时间戳
-	newTimestamp := time.Now().Format(time.RFC3339)
-	cs.koanf.Set("metadata.lastUpdated", newTimestamp)
-
-	// 将配置写回文件
-	err := cs.writeConfigToFile()
-
-	if err != nil {
-		// 写文件失败，回滚内存状态
-		if oldValue != nil {
-			cs.koanf.Set(key, oldValue)
-		} else {
-			cs.koanf.Delete(key)
-		}
-		cs.mu.Unlock()
-		return err
-	}
-
-	cs.mu.Unlock()
-
-	if cs.observer != nil {
-		cs.observer.Notify(key, oldValue, value)
-	}
-
-	return nil
 }
 
 // Get 获取配置项
@@ -225,118 +135,113 @@ func (cs *ConfigService) Get(key string) interface{} {
 	return cs.koanf.Get(key)
 }
 
-// ResetConfig 强制重置所有配置为默认值
+// Set 设置配置项
+func (cs *ConfigService) Set(key string, value interface{}) error {
+	cs.mu.Lock()
+
+	// 获取旧值
+	oldValue := cs.koanf.Get(key)
+
+	// 值未变化，直接返回
+	if reflect.DeepEqual(oldValue, value) {
+		cs.mu.Unlock()
+		return nil
+	}
+
+	// 设置新值
+	err := cs.koanf.Set(key, value)
+	if err != nil {
+		cs.mu.Unlock()
+		return err
+	}
+	err = cs.koanf.Set("metadata.lastUpdated", time.Now().Format(time.RFC3339))
+	if err != nil {
+		cs.mu.Unlock()
+		return err
+	}
+
+	// 写入文件
+	if err = cs.writeConfigToFile(); err != nil {
+		cs.mu.Unlock()
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	cs.mu.Unlock()
+
+	// 通知观察者
+	if cs.observer != nil {
+		cs.observer.Notify(key, oldValue, value)
+	} else {
+		cs.logger.Error("config observer is nil")
+	}
+
+	return nil
+}
+
+// ResetConfig 重置所有配置为默认值
 func (cs *ConfigService) ResetConfig() error {
 	cs.mu.Lock()
 
 	// 保存旧配置快照
-	oldSnapshot := cs.createConfigSnapshot()
+	oldSnapshot := cs.createSnapshot()
 
-	// 停止文件监听
-	if cs.fileProvider != nil {
-		cs.fileProvider.Unwatch()
-		cs.fileProvider = nil
-	}
-
-	// 设置默认配置
-	if err := cs.setDefaults(); err != nil {
+	// 重置为默认配置
+	cs.koanf = koanf.New(".")
+	defaultConfig := models.NewDefaultAppConfig()
+	if err := cs.koanf.Load(structs.Provider(defaultConfig, "json"), nil); err != nil {
 		cs.mu.Unlock()
-		return err
+		return fmt.Errorf("failed to load default config: %w", err)
 	}
 
 	// 写入配置文件
 	if err := cs.writeConfigToFile(); err != nil {
 		cs.mu.Unlock()
-		return err
+		return fmt.Errorf("failed to write config: %w", err)
 	}
 
-	// 重新创建koanf实例
-	cs.koanf = koanf.New(".")
-
-	// 重新加载默认配置到koanf
-	if err := cs.setDefaults(); err != nil {
-		cs.mu.Unlock()
-		return err
-	}
-
-	// 重新创建文件提供器
-	cs.fileProvider = file.Provider(cs.settingsPath)
-
-	// 重新加载配置文件
-	if err := cs.koanf.Load(cs.fileProvider, jsonparser.Parser()); err != nil {
-		cs.mu.Unlock()
-		return err
-	}
-
-	newSnapshot := cs.createConfigSnapshot()
+	newSnapshot := cs.createSnapshot()
 	cs.mu.Unlock()
 
-	// 重新启动文件监听
-	cs.startWatching()
-
-	// 检测配置变更并通知观察者
+	// 通知配置变更
 	cs.notifyChanges(oldSnapshot, newSnapshot)
 
 	return nil
 }
 
-// writeConfigToFile 将配置写回JSON文件
+// writeConfigToFile 将配置写入文件
 func (cs *ConfigService) writeConfigToFile() error {
 	configBytes, err := cs.koanf.Marshal(jsonparser.Parser())
 	if err != nil {
 		return err
 	}
-
-	if err := os.WriteFile(cs.settingsPath, configBytes, 0644); err != nil {
-		return err
-	}
-
-	return nil
+	return os.WriteFile(cs.settingsPath, configBytes, 0644)
 }
 
 // Watch 注册配置变更监听器
-func (cs *ConfigService) Watch(path string, callback ObserverCallback) CancelFunc {
+func (cs *ConfigService) Watch(path string, callback helper.ObserverCallback) helper.CancelFunc {
 	return cs.observer.Watch(path, callback)
 }
 
 // WatchWithContext 使用 Context 注册监听器
-func (cs *ConfigService) WatchWithContext(ctx context.Context, path string, callback ObserverCallback) {
+func (cs *ConfigService) WatchWithContext(ctx context.Context, path string, callback helper.ObserverCallback) {
 	cs.observer.WatchWithContext(ctx, path, callback)
 }
 
-// createConfigSnapshot 创建当前配置的快照（调用者需确保已持有锁）
-func (cs *ConfigService) createConfigSnapshot() map[string]interface{} {
+// createSnapshotLocked 创建配置快照
+func (cs *ConfigService) createSnapshot() map[string]interface{} {
 	snapshot := make(map[string]interface{})
-	allKeys := cs.koanf.All()
-	flattenMap("", allKeys, snapshot)
-	return snapshot
-}
-
-// flattenMap 递归展平嵌套的 map（使用 strings.Builder 优化字符串拼接）
-func flattenMap(prefix string, data map[string]interface{}, result map[string]interface{}) {
-	var builder strings.Builder
-	for key, value := range data {
-		builder.Reset()
-		if prefix != "" {
-			builder.WriteString(prefix)
-			builder.WriteString(".")
-		}
-		builder.WriteString(key)
-		fullKey := builder.String()
-
-		if valueMap, ok := value.(map[string]interface{}); ok {
-			// 递归处理嵌套 map
-			flattenMap(fullKey, valueMap, result)
-		} else {
-			// 保存叶子节点
-			result[fullKey] = value
-		}
+	for _, key := range cs.koanf.Keys() {
+		snapshot[key] = cs.koanf.Get(key)
 	}
+	return snapshot
 }
 
 // notifyChanges 检测配置变更并通知观察者
 func (cs *ConfigService) notifyChanges(oldSnapshot, newSnapshot map[string]interface{}) {
-	// 检测变更
+	if cs.observer == nil {
+		return
+	}
+
 	changes := make(map[string]struct {
 		OldValue interface{}
 		NewValue interface{}
@@ -345,14 +250,11 @@ func (cs *ConfigService) notifyChanges(oldSnapshot, newSnapshot map[string]inter
 	// 检查新增和修改的键
 	for key, newValue := range newSnapshot {
 		oldValue, exists := oldSnapshot[key]
-		if !exists || !isEqual(oldValue, newValue) {
+		if !exists || !reflect.DeepEqual(oldValue, newValue) {
 			changes[key] = struct {
 				OldValue interface{}
 				NewValue interface{}
-			}{
-				OldValue: oldValue,
-				NewValue: newValue,
-			}
+			}{oldValue, newValue}
 		}
 	}
 
@@ -362,29 +264,18 @@ func (cs *ConfigService) notifyChanges(oldSnapshot, newSnapshot map[string]inter
 			changes[key] = struct {
 				OldValue interface{}
 				NewValue interface{}
-			}{
-				OldValue: oldValue,
-				NewValue: nil,
-			}
+			}{oldValue, nil}
 		}
 	}
 
-	// 通知所有变更
-	if cs.observer != nil && len(changes) > 0 {
+	// 批量通知
+	if len(changes) > 0 {
 		cs.observer.NotifyAll(changes)
 	}
 }
 
-// isEqual 值相等比较
-func isEqual(a, b interface{}) bool {
-	aJSON, _ := json.Marshal(a)
-	bJSON, _ := json.Marshal(b)
-	return string(aJSON) == string(bJSON)
-}
-
 // ServiceShutdown 关闭服务
 func (cs *ConfigService) ServiceShutdown() error {
-	cs.stopWatching()
 	if cs.observer != nil {
 		cs.observer.Shutdown()
 	}

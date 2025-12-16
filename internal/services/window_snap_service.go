@@ -91,7 +91,7 @@ type WindowSnapService struct {
 	windowMoveUnhooks map[int64]func() // documentID -> 子窗口移动监听清理函数
 
 	// 配置观察者取消函数
-	cancelObserver CancelFunc
+	cancelObserver helper.CancelFunc
 }
 
 // NewWindowSnapService 创建新的窗口吸附服务实例

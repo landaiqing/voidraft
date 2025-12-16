@@ -15,11 +15,10 @@ import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as models$0 from "../models/models.js";
-
+import * as helper$0 from "../common/helper/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as $models from "./models.js";
+import * as models$0 from "../models/models.js";
 
 /**
  * Get 获取配置项
@@ -50,7 +49,7 @@ export function MigrateConfig(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * ResetConfig 强制重置所有配置为默认值
+ * ResetConfig 重置所有配置为默认值
  */
 export function ResetConfig(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3593047389) as any;
@@ -66,7 +65,7 @@ export function ServiceShutdown(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * ServiceStartup initializes the service when the application starts
+ * ServiceStartup 服务启动时初始化
  */
 export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3311949428, options) as any;
@@ -84,7 +83,7 @@ export function Set(key: string, value: any): Promise<void> & { cancel(): void }
 /**
  * Watch 注册配置变更监听器
  */
-export function Watch(path: string, callback: $models.ObserverCallback): Promise<$models.CancelFunc> & { cancel(): void } {
+export function Watch(path: string, callback: helper$0.ObserverCallback): Promise<helper$0.CancelFunc> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1143583035, path, callback) as any;
     return $resultPromise;
 }
@@ -92,7 +91,7 @@ export function Watch(path: string, callback: $models.ObserverCallback): Promise
 /**
  * WatchWithContext 使用 Context 注册监听器
  */
-export function WatchWithContext(path: string, callback: $models.ObserverCallback): Promise<void> & { cancel(): void } {
+export function WatchWithContext(path: string, callback: helper$0.ObserverCallback): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1454973098, path, callback) as any;
     return $resultPromise;
 }

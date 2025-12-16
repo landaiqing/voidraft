@@ -5,6 +5,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
+	"log/slog"
 )
 
 // ServiceManager 服务管理器，负责协调各个服务
@@ -36,7 +37,9 @@ type ServiceManager struct {
 // NewServiceManager 创建新的服务管理器实例
 func NewServiceManager() *ServiceManager {
 	// 初始化日志服务
-	logger := log.New()
+	logger := log.NewWithConfig(&log.Config{
+		LogLevel: slog.LevelDebug,
+	})
 
 	// 初始化badge服务
 	badgeService := dock.New()
@@ -51,7 +54,7 @@ func NewServiceManager() *ServiceManager {
 	databaseService := NewDatabaseService(configService, logger)
 
 	// 初始化迁移服务
-	migrationService := NewMigrationService(databaseService, logger)
+	migrationService := NewMigrationService(databaseService, configService, logger)
 
 	// 初始化文档服务
 	documentService := NewDocumentService(databaseService, logger)

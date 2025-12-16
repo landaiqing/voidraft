@@ -206,7 +206,7 @@ func (_c *ThemeCreate) createSpec() (*Theme, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(theme.FieldUUID, field.TypeString, value)
-		_node.UUID = value
+		_node.UUID = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(theme.FieldCreatedAt, field.TypeString, value)

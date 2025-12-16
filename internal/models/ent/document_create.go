@@ -225,7 +225,7 @@ func (_c *DocumentCreate) createSpec() (*Document, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(document.FieldUUID, field.TypeString, value)
-		_node.UUID = value
+		_node.UUID = &value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(document.FieldCreatedAt, field.TypeString, value)
