@@ -70,12 +70,11 @@ export const useDocumentStore = defineStore('document', () => {
     // 在新窗口中打开文档
     const openDocumentInNewWindow = async (docId: number): Promise<boolean> => {
         try {
-            await OpenDocumentWindow(docId);
             const tabStore = useTabStore();
             if (tabStore.isTabsEnabled && tabStore.hasTab(docId)) {
                 tabStore.closeTab(docId);
             }
-            
+            await OpenDocumentWindow(docId);
             return true;
         } catch (error) {
             console.error('Failed to open document in new window:', error);
