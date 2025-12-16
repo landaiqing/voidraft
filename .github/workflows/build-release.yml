@@ -84,6 +84,8 @@ jobs:
           fi
 
   build:
+    permissions:
+      contents: read
     needs: prepare
     if: ${{ fromJson(needs.prepare.outputs.matrix).include[0] != null }}
     strategy:
