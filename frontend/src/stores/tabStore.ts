@@ -156,10 +156,10 @@ export const useTabStore = defineStore('tab', () => {
      */
     const validateTabs = () => {
         const validDocIds = Object.keys(documentStore.documents).map(Number);
-        
+
         // 找出无效的标签页（文档已被删除）
         const invalidTabIds = tabOrder.value.filter(docId => !validDocIds.includes(docId));
-        
+
         if (invalidTabIds.length > 0) {
             // 批量清理无效标签页
             invalidTabIds.forEach(docId => {
@@ -175,7 +175,7 @@ export const useTabStore = defineStore('tab', () => {
     const initializeTab = () => {
         // 先验证并清理无效的标签页（处理持久化的脏数据）
         validateTabs();
-        
+
         if (isTabsEnabled.value) {
             const currentDoc = documentStore.currentDocument;
             if (currentDoc) {
@@ -254,7 +254,7 @@ export const useTabStore = defineStore('tab', () => {
     return {
         tabsMap,
         tabOrder,
-        
+
         // 状态
         tabs: readonly(tabs),
         draggedTabId,
@@ -283,9 +283,5 @@ export const useTabStore = defineStore('tab', () => {
         getTab
     };
 }, {
-    persist: {
-        key: 'voidraft-tabs',
-        storage: localStorage,
-        pick: ['tabsMap', 'tabOrder'],
-    },
+    persist: false,
 });

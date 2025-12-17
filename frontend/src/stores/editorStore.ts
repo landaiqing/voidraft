@@ -13,6 +13,7 @@ import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/b
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
 import {createWheelZoomExtension} from '@/views/editor/basic/wheelZoomExtension';
+import {createCursorPositionExtension, scrollToCursor} from '@/views/editor/basic/cursorPositionExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {
     createDynamicExtensions,
@@ -21,7 +22,7 @@ import {
     setExtensionManagerView
 } from '@/views/editor/manager';
 import {useExtensionStore} from './extensionStore';
-import createCodeBlockExtension, {blockState} from "@/views/editor/extensions/codeblock";
+import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
 import {LruCache} from '@/common/utils/lruCache';
 import {AsyncManager} from '@/common/utils/asyncManager';
 import {generateContentHash} from "@/common/utils/hashUtils";
@@ -35,7 +36,7 @@ export interface DocumentStats {
     selectedCharacters: number;
 }
 
-// 修复：只保存光标位置，恢复时自动滚动到光标处（更简单可靠）
+// 修复：只保存光标位置，恢复时自动滚动到光标处
 export interface EditorViewState {
     cursorPos: number;
 }
@@ -180,6 +181,9 @@ export const useEditorStore = defineStore('editor', () => {
             enableAutoDetection: true
         });
 
+        // 光标位置持久化扩展
+        const cursorPositionExtension = createCursorPositionExtension(documentId);
+
         // 再次检查操作有效性
         if (!operationManager.isOperationValid(operationId, documentId)) {
             throw new Error('Operation cancelled');
@@ -212,13 +216,23 @@ export const useEditorStore = defineStore('editor', () => {
             statsExtension,
             contentChangeExtension,
             codeBlockExtension,
+            cursorPositionExtension,
             ...dynamicExtensions,
         ];
 
-        // 创建编辑器状态
+        // 获取保存的光标位置
+        const savedState = documentStore.documentStates[documentId];
+        const docLength = content.length;
+        const initialCursorPos = savedState?.cursorPos !== undefined 
+            ? Math.min(savedState.cursorPos, docLength) 
+            : docLength;
+
+
+        // 创建编辑器状态，设置初始光标位置
         const state = EditorState.create({
             doc: content,
-            extensions
+            extensions,
+            selection: { anchor: initialCursorPos, head: initialCursorPos }
         });
 
         return new EditorView({
@@ -316,6 +330,9 @@ export const useEditorStore = defineStore('editor', () => {
             //使用 nextTick + requestAnimationFrame 确保 DOM 完全渲染
             nextTick(() => {
                 requestAnimationFrame(() => {
+                    // 滚动到当前光标位置
+                    scrollToCursor(instance.view);
+                    
                     // 聚焦编辑器
                     instance.view.focus();
                     
@@ -487,15 +504,6 @@ export const useEditorStore = defineStore('editor', () => {
                     await saveEditorContent(documentId);
                 }
 
-                // 保存光标位置
-                if (instance.view && instance.view.state) {
-                    const currentState: EditorViewState = {
-                        cursorPos: instance.view.state.selection.main.head
-                    };
-                    // 保存到 documentStore 用于持久化
-                    documentStore.documentStates[documentId] = currentState;
-                }
-
                 // 清除自动保存定时器
                 instance.autoSaveTimer.clear();
 
@@ -578,22 +586,10 @@ export const useEditorStore = defineStore('editor', () => {
         operationManager.cancelAllOperations();
         
         editorCache.clear((_documentId, instance) => {
-            // 修复：清空前只保存光标位置
-            if (instance.view) {
-                const currentState: EditorViewState = {
-                    cursorPos: instance.view.state.selection.main.head
-                };
-                // 同时保存到实例和 documentStore
-                instance.editorState = currentState;
-                documentStore.documentStates[instance.documentId] = currentState;
-            }
-            
             // 清除自动保存定时器
             instance.autoSaveTimer.clear();
-            
             // 从扩展管理器移除
             removeExtensionManagerView(instance.documentId);
-            
             // 移除DOM元素
             if (instance.view.dom.parentElement) {
                 instance.view.dom.remove();
