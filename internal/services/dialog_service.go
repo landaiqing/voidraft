@@ -26,7 +26,7 @@ func NewDialogService(logger *log.LogService) *DialogService {
 
 // SelectDirectory 打开目录选择对话框
 func (ds *DialogService) SelectDirectory() (string, error) {
-	dialog := application.OpenFileDialog()
+	dialog := application.OpenFileDialogStruct{}
 	dialog.SetOptions(&application.OpenFileDialogOptions{
 		// 目录选择配置
 		CanChooseDirectories:    true,  // 允许选择目录
@@ -67,7 +67,7 @@ func (ds *DialogService) SelectDirectory() (string, error) {
 
 // SelectFile 打开文件选择对话框
 func (ds *DialogService) SelectFile() (string, error) {
-	dialog := application.OpenFileDialog()
+	dialog := application.OpenFileDialogStruct{}
 	dialog.SetOptions(&application.OpenFileDialogOptions{
 		// 目录选择配置
 		CanChooseDirectories:    false, // 允许选择目录
