@@ -275,6 +275,9 @@ export const useConfigStore = defineStore('config', () => {
         // 标签页配置相关方法
         setEnableTabs: (value: boolean) => updateConfig('enableTabs', value),
 
+        // 快捷键模式配置相关方法
+        setKeymapMode: (value: any) => updateConfig('keymapMode', value),
+
         // 更新配置相关方法
         setAutoUpdate: (value: boolean) => updateConfig('autoUpdate', value),
 

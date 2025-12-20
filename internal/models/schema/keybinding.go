@@ -34,26 +34,58 @@ func (KeyBinding) Mixin() []ent.Mixin {
 // Fields of the KeyBinding.
 func (KeyBinding) Fields() []ent.Field {
 	return []ent.Field{
+		field.String("name").
+			MaxLen(100).
+			NotEmpty().
+			StructTag(`json:"name"`).
+			Comment("command identifier"),
+
+		field.String("type").
+			MaxLen(20).
+			Default("standard").
+			StructTag(`json:"type"`).
+			Comment("keybinding type: standard or emacs"),
+
 		field.String("key").
 			MaxLen(100).
-			NotEmpty().
-			Unique().
-			StructTag(`json:"key"`).
-			Comment("key binding key"),
-		field.String("command").
-			MaxLen(100).
-			NotEmpty().
-			StructTag(`json:"command"`).
-			Comment("key binding command"),
-		field.String("extension").
+			Optional().
+			StructTag(`json:"key,omitempty"`).
+			Comment("universal keybinding (cross-platform)"),
+		field.String("macos").
 			MaxLen(100).
 			Optional().
-			StructTag(`json:"extension,omitempty"`).
-			Comment("key binding extension"),
+			StructTag(`json:"macos,omitempty"`).
+			Comment("macOS specific keybinding"),
+		field.String("windows").
+			MaxLen(100).
+			Optional().
+			StructTag(`json:"windows,omitempty"`).
+			Comment("Windows specific keybinding"),
+		field.String("linux").
+			MaxLen(100).
+			Optional().
+			StructTag(`json:"linux,omitempty"`).
+			Comment("Linux specific keybinding"),
+
+		field.String("extension").
+			MaxLen(100).
+			NotEmpty().
+			StructTag(`json:"extension"`).
+			Comment("extension name (functional category)"),
 		field.Bool("enabled").
 			Default(true).
 			StructTag(`json:"enabled"`).
-			Comment("key binding enabled"),
+			Comment("whether this keybinding is enabled"),
+
+		field.Bool("prevent_default").
+			Default(true).
+			StructTag(`json:"preventDefault"`).
+			Comment("prevent browser default behavior"),
+		field.String("scope").
+			MaxLen(100).
+			Default("editor").
+			StructTag(`json:"scope,omitempty"`).
+			Comment("keybinding scope (default: editor)"),
 	}
 }
 
@@ -65,7 +97,10 @@ func (KeyBinding) Edges() []ent.Edge {
 // Indexes of the KeyBinding.
 func (KeyBinding) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("extension"),
-		index.Fields("enabled"),
+		index.Fields("name"),                  // 命令标识符索引
+		index.Fields("type"),                  // 类型索引
+		index.Fields("type", "name").Unique(), // 类型+命令的联合唯一索引
+		index.Fields("extension"),             // 扩展索引
+		index.Fields("enabled"),               // 启用状态索引
 	}
 }

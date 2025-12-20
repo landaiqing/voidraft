@@ -62,16 +62,16 @@ func (_u *ExtensionUpdate) ClearDeletedAt() *ExtensionUpdate {
 	return _u
 }
 
-// SetKey sets the "key" field.
-func (_u *ExtensionUpdate) SetKey(v string) *ExtensionUpdate {
-	_u.mutation.SetKey(v)
+// SetName sets the "name" field.
+func (_u *ExtensionUpdate) SetName(v string) *ExtensionUpdate {
+	_u.mutation.SetName(v)
 	return _u
 }
 
-// SetNillableKey sets the "key" field if the given value is not nil.
-func (_u *ExtensionUpdate) SetNillableKey(v *string) *ExtensionUpdate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (_u *ExtensionUpdate) SetNillableName(v *string) *ExtensionUpdate {
 	if v != nil {
-		_u.SetKey(*v)
+		_u.SetName(*v)
 	}
 	return _u
 }
@@ -136,9 +136,9 @@ func (_u *ExtensionUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ExtensionUpdate) check() error {
-	if v, ok := _u.mutation.Key(); ok {
-		if err := extension.KeyValidator(v); err != nil {
-			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Extension.key": %w`, err)}
+	if v, ok := _u.mutation.Name(); ok {
+		if err := extension.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Extension.name": %w`, err)}
 		}
 	}
 	return nil
@@ -162,9 +162,6 @@ func (_u *ExtensionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(extension.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(extension.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -174,8 +171,8 @@ func (_u *ExtensionUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(extension.FieldDeletedAt, field.TypeString)
 	}
-	if value, ok := _u.mutation.Key(); ok {
-		_spec.SetField(extension.FieldKey, field.TypeString, value)
+	if value, ok := _u.mutation.Name(); ok {
+		_spec.SetField(extension.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(extension.FieldEnabled, field.TypeBool, value)
@@ -242,16 +239,16 @@ func (_u *ExtensionUpdateOne) ClearDeletedAt() *ExtensionUpdateOne {
 	return _u
 }
 
-// SetKey sets the "key" field.
-func (_u *ExtensionUpdateOne) SetKey(v string) *ExtensionUpdateOne {
-	_u.mutation.SetKey(v)
+// SetName sets the "name" field.
+func (_u *ExtensionUpdateOne) SetName(v string) *ExtensionUpdateOne {
+	_u.mutation.SetName(v)
 	return _u
 }
 
-// SetNillableKey sets the "key" field if the given value is not nil.
-func (_u *ExtensionUpdateOne) SetNillableKey(v *string) *ExtensionUpdateOne {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (_u *ExtensionUpdateOne) SetNillableName(v *string) *ExtensionUpdateOne {
 	if v != nil {
-		_u.SetKey(*v)
+		_u.SetName(*v)
 	}
 	return _u
 }
@@ -329,9 +326,9 @@ func (_u *ExtensionUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ExtensionUpdateOne) check() error {
-	if v, ok := _u.mutation.Key(); ok {
-		if err := extension.KeyValidator(v); err != nil {
-			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Extension.key": %w`, err)}
+	if v, ok := _u.mutation.Name(); ok {
+		if err := extension.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Extension.name": %w`, err)}
 		}
 	}
 	return nil
@@ -372,9 +369,6 @@ func (_u *ExtensionUpdateOne) sqlSave(ctx context.Context) (_node *Extension, er
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(extension.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(extension.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -384,8 +378,8 @@ func (_u *ExtensionUpdateOne) sqlSave(ctx context.Context) (_node *Extension, er
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(extension.FieldDeletedAt, field.TypeString)
 	}
-	if value, ok := _u.mutation.Key(); ok {
-		_spec.SetField(extension.FieldKey, field.TypeString, value)
+	if value, ok := _u.mutation.Name(); ok {
+		_spec.SetField(extension.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(extension.FieldEnabled, field.TypeBool, value)

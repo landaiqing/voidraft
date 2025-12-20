@@ -29,6 +29,7 @@ import {generateContentHash} from "@/common/utils/hashUtils";
 import {createTimerManager, type TimerManager} from '@/common/utils/timerUtils';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {createDebounce} from '@/common/utils/debounce';
+import {useKeybindingStore} from "@/stores/keybindingStore";
 
 export interface DocumentStats {
     lines: number;
@@ -602,28 +603,30 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 更新扩展
-    const updateExtension = async (key: string, enabled: boolean, config?: any) => {
+    const updateExtension = async (id: number, enabled: boolean, config?: any) => {
         // 更新启用状态
-        await ExtensionService.UpdateExtensionEnabled(key, enabled);
+        await ExtensionService.UpdateExtensionEnabled(id, enabled);
         
         // 如果需要更新配置
         if (config !== undefined) {
-            await ExtensionService.UpdateExtensionConfig(key, config);
+            await ExtensionService.UpdateExtensionConfig(id, config);
         }
+
+        // 重新加载扩展配置
+        await extensionStore.loadExtensions();
+        
+        // 获取更新后的扩展名称
+        const extension = extensionStore.extensions.find(ext => ext.id === id);
+        if (!extension) return;
 
         // 更新前端编辑器扩展 - 应用于所有实例
         const manager = getExtensionManager();
         if (manager) {
             // 直接更新前端扩展至所有视图
-            manager.updateExtension(key, enabled, config);
+            manager.updateExtension(extension.name, enabled, config);
         }
 
-        // 重新加载扩展配置
-        await extensionStore.loadExtensions();
-        if (manager) {
-            manager.initExtensions(extensionStore.extensions);
-        }
-
+        await useKeybindingStore().loadKeyBindings();
         await applyKeymapSettings();
     };
 

@@ -868,8 +868,8 @@ func (s *BackupService) createExtension(ctx context.Context, client *ent.Client,
 	if v, ok := record[extension.FieldUUID].(string); ok {
 		builder.SetUUID(v)
 	}
-	if v, ok := record[extension.FieldKey].(string); ok {
-		builder.SetKey(v)
+	if v, ok := record[extension.FieldName].(string); ok {
+		builder.SetName(v)
 	}
 	if v, ok := record[extension.FieldEnabled].(bool); ok {
 		builder.SetEnabled(v)
@@ -891,8 +891,8 @@ func (s *BackupService) createExtension(ctx context.Context, client *ent.Client,
 
 func (s *BackupService) updateExtension(ctx context.Context, client *ent.Client, id int, record map[string]interface{}) error {
 	builder := client.Extension.UpdateOneID(id)
-	if v, ok := record[extension.FieldKey].(string); ok {
-		builder.SetKey(v)
+	if v, ok := record[extension.FieldName].(string); ok {
+		builder.SetName(v)
 	}
 	if v, ok := record[extension.FieldEnabled].(bool); ok {
 		builder.SetEnabled(v)
@@ -954,17 +954,32 @@ func (s *BackupService) createKeyBinding(ctx context.Context, client *ent.Client
 	if v, ok := record[keybinding.FieldUUID].(string); ok {
 		builder.SetUUID(v)
 	}
+	if v, ok := record[keybinding.FieldName].(string); ok {
+		builder.SetName(v)
+	}
 	if v, ok := record[keybinding.FieldKey].(string); ok {
 		builder.SetKey(v)
 	}
-	if v, ok := record[keybinding.FieldCommand].(string); ok {
-		builder.SetCommand(v)
+	if v, ok := record[keybinding.FieldMacos].(string); ok {
+		builder.SetMacos(v)
+	}
+	if v, ok := record[keybinding.FieldWindows].(string); ok {
+		builder.SetWindows(v)
+	}
+	if v, ok := record[keybinding.FieldLinux].(string); ok {
+		builder.SetLinux(v)
 	}
 	if v, ok := record[keybinding.FieldExtension].(string); ok {
 		builder.SetExtension(v)
 	}
 	if v, ok := record[keybinding.FieldEnabled].(bool); ok {
 		builder.SetEnabled(v)
+	}
+	if v, ok := record[keybinding.FieldPreventDefault].(bool); ok {
+		builder.SetPreventDefault(v)
+	}
+	if v, ok := record[keybinding.FieldScope].(string); ok {
+		builder.SetScope(v)
 	}
 	if v, ok := record[keybinding.FieldCreatedAt].(string); ok {
 		builder.SetCreatedAt(v)
@@ -980,17 +995,32 @@ func (s *BackupService) createKeyBinding(ctx context.Context, client *ent.Client
 
 func (s *BackupService) updateKeyBinding(ctx context.Context, client *ent.Client, id int, record map[string]interface{}) error {
 	builder := client.KeyBinding.UpdateOneID(id)
+	if v, ok := record[keybinding.FieldName].(string); ok {
+		builder.SetName(v)
+	}
 	if v, ok := record[keybinding.FieldKey].(string); ok {
 		builder.SetKey(v)
 	}
-	if v, ok := record[keybinding.FieldCommand].(string); ok {
-		builder.SetCommand(v)
+	if v, ok := record[keybinding.FieldMacos].(string); ok {
+		builder.SetMacos(v)
+	}
+	if v, ok := record[keybinding.FieldWindows].(string); ok {
+		builder.SetWindows(v)
+	}
+	if v, ok := record[keybinding.FieldLinux].(string); ok {
+		builder.SetLinux(v)
 	}
 	if v, ok := record[keybinding.FieldExtension].(string); ok {
 		builder.SetExtension(v)
 	}
 	if v, ok := record[keybinding.FieldEnabled].(bool); ok {
 		builder.SetEnabled(v)
+	}
+	if v, ok := record[keybinding.FieldPreventDefault].(bool); ok {
+		builder.SetPreventDefault(v)
+	}
+	if v, ok := record[keybinding.FieldScope].(string); ok {
+		builder.SetScope(v)
 	}
 	if v, ok := record[keybinding.FieldUpdatedAt].(string); ok {
 		builder.SetUpdatedAt(v)
@@ -1046,8 +1076,8 @@ func (s *BackupService) createTheme(ctx context.Context, client *ent.Client, rec
 	if v, ok := record[theme.FieldUUID].(string); ok {
 		builder.SetUUID(v)
 	}
-	if v, ok := record[theme.FieldKey].(string); ok {
-		builder.SetKey(v)
+	if v, ok := record[theme.FieldName].(string); ok {
+		builder.SetName(v)
 	}
 	if v, ok := record[theme.FieldType].(string); ok {
 		builder.SetType(theme.Type(v))
@@ -1069,8 +1099,8 @@ func (s *BackupService) createTheme(ctx context.Context, client *ent.Client, rec
 
 func (s *BackupService) updateTheme(ctx context.Context, client *ent.Client, id int, record map[string]interface{}) error {
 	builder := client.Theme.UpdateOneID(id)
-	if v, ok := record[theme.FieldKey].(string); ok {
-		builder.SetKey(v)
+	if v, ok := record[theme.FieldName].(string); ok {
+		builder.SetName(v)
 	}
 	if v, ok := record[theme.FieldType].(string); ok {
 		builder.SetType(theme.Type(v))

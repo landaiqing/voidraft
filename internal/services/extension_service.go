@@ -36,9 +36,9 @@ func (s *ExtensionService) ServiceStartup(ctx context.Context, options applicati
 // SyncExtensions 同步扩展配置
 func (s *ExtensionService) SyncExtensions(ctx context.Context) error {
 	defaults := models.NewDefaultExtensions()
-	definedKeys := make(map[models.ExtensionKey]models.Extension)
+	definedKeys := make(map[models.ExtensionName]models.Extension)
 	for _, ext := range defaults {
-		definedKeys[ext.Key] = ext
+		definedKeys[ext.Name] = ext
 	}
 
 	// 获取数据库中已有的扩展
@@ -49,7 +49,7 @@ func (s *ExtensionService) SyncExtensions(ctx context.Context) error {
 
 	existingKeys := make(map[string]bool)
 	for _, ext := range existing {
-		existingKeys[ext.Key] = true
+		existingKeys[ext.Name] = true
 	}
 
 	// 批量添加缺失的扩展
@@ -57,7 +57,7 @@ func (s *ExtensionService) SyncExtensions(ctx context.Context) error {
 	for key, ext := range definedKeys {
 		if !existingKeys[string(key)] {
 			builders = append(builders, s.db.Client.Extension.Create().
-				SetKey(string(ext.Key)).
+				SetName(string(ext.Name)).
 				SetEnabled(ext.Enabled).
 				SetConfig(ext.Config))
 		}
@@ -71,7 +71,7 @@ func (s *ExtensionService) SyncExtensions(ctx context.Context) error {
 	// 批量删除废弃的扩展
 	var deleteIDs []int
 	for _, ext := range existing {
-		if _, ok := definedKeys[models.ExtensionKey(ext.Key)]; !ok {
+		if _, ok := definedKeys[models.ExtensionName(ext.Name)]; !ok {
 			deleteIDs = append(deleteIDs, ext.ID)
 		}
 	}
@@ -86,15 +86,15 @@ func (s *ExtensionService) SyncExtensions(ctx context.Context) error {
 	return nil
 }
 
-// GetAllExtensions 获取所有扩展
-func (s *ExtensionService) GetAllExtensions(ctx context.Context) ([]*ent.Extension, error) {
+// GetExtensions 获取所有扩展
+func (s *ExtensionService) GetExtensions(ctx context.Context) ([]*ent.Extension, error) {
 	return s.db.Client.Extension.Query().All(ctx)
 }
 
-// GetExtensionByKey 根据Key获取扩展
-func (s *ExtensionService) GetExtensionByKey(ctx context.Context, key string) (*ent.Extension, error) {
+// GetExtensionByID 根据ID获取扩展
+func (s *ExtensionService) GetExtensionByID(ctx context.Context, id int) (*ent.Extension, error) {
 	ext, err := s.db.Client.Extension.Query().
-		Where(extension.Key(key)).
+		Where(extension.ID(id)).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -106,13 +106,13 @@ func (s *ExtensionService) GetExtensionByKey(ctx context.Context, key string) (*
 }
 
 // UpdateExtensionEnabled 更新扩展启用状态
-func (s *ExtensionService) UpdateExtensionEnabled(ctx context.Context, key string, enabled bool) error {
-	ext, err := s.GetExtensionByKey(ctx, key)
+func (s *ExtensionService) UpdateExtensionEnabled(ctx context.Context, id int, enabled bool) error {
+	ext, err := s.GetExtensionByID(ctx, id)
 	if err != nil {
 		return err
 	}
 	if ext == nil {
-		return fmt.Errorf("extension not found: %s", key)
+		return fmt.Errorf("extension not found: %d", id)
 	}
 
 	// 更新扩展状态
@@ -124,23 +124,23 @@ func (s *ExtensionService) UpdateExtensionEnabled(ctx context.Context, key strin
 
 	// 同步更新该扩展关联的快捷键启用状态
 	if _, err := s.db.Client.KeyBinding.Update().
-		Where(keybinding.Extension(key)).
+		Where(keybinding.Extension(ext.Name)).
 		SetEnabled(enabled).
 		Save(ctx); err != nil {
-		return fmt.Errorf("update keybindings for extension %s error: %w", key, err)
+		return fmt.Errorf("update keybindings for extension %s error: %w", ext.Name, err)
 	}
 
 	return nil
 }
 
 // UpdateExtensionConfig 更新扩展配置
-func (s *ExtensionService) UpdateExtensionConfig(ctx context.Context, key string, config map[string]interface{}) error {
-	ext, err := s.GetExtensionByKey(ctx, key)
+func (s *ExtensionService) UpdateExtensionConfig(ctx context.Context, id int, config map[string]interface{}) error {
+	ext, err := s.GetExtensionByID(ctx, id)
 	if err != nil {
 		return err
 	}
 	if ext == nil {
-		return fmt.Errorf("extension not found: %s", key)
+		return fmt.Errorf("extension not found: %d", id)
 	}
 	return s.db.Client.Extension.UpdateOneID(ext.ID).
 		SetConfig(config).
@@ -148,31 +148,46 @@ func (s *ExtensionService) UpdateExtensionConfig(ctx context.Context, key string
 }
 
 // ResetExtensionConfig 重置单个扩展到默认状态
-func (s *ExtensionService) ResetExtensionConfig(ctx context.Context, key string) error {
-	defaults := models.NewDefaultExtensions()
-	var defaultExt *models.Extension
-	for _, ext := range defaults {
-		if string(ext.Key) == key {
-			defaultExt = &ext
-			break
-		}
-	}
-	if defaultExt == nil {
-		return fmt.Errorf("default extension not found: %s", key)
-	}
-
-	ext, err := s.GetExtensionByKey(ctx, key)
+func (s *ExtensionService) ResetExtensionConfig(ctx context.Context, id int) error {
+	ext, err := s.GetExtensionByID(ctx, id)
 	if err != nil {
 		return err
 	}
 	if ext == nil {
-		return fmt.Errorf("extension not found: %s", key)
+		return fmt.Errorf("extension not found: %d", id)
+	}
+
+	defaults := models.NewDefaultExtensions()
+	var defaultExt *models.Extension
+	for _, defExt := range defaults {
+		if string(defExt.Name) == ext.Name {
+			defaultExt = &defExt
+			break
+		}
+	}
+	if defaultExt == nil {
+		return fmt.Errorf("default extension not found: %s", ext.Name)
 	}
 
 	return s.db.Client.Extension.UpdateOneID(ext.ID).
 		SetEnabled(defaultExt.Enabled).
 		SetConfig(defaultExt.Config).
 		Exec(ctx)
+}
+
+// GetExtensionConfig 获取扩展配置
+func (s *ExtensionService) GetExtensionConfig(ctx context.Context, id int) (map[string]interface{}, error) {
+	ext, err := s.GetExtensionByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if ext == nil {
+		return nil, fmt.Errorf("extension not found: %d", id)
+	}
+	if ext.Config == nil {
+		return make(map[string]interface{}), nil
+	}
+	return ext.Config, nil
 }
 
 // GetDefaultExtensions 获取默认扩展配置（用于前端绑定生成）

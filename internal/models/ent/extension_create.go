@@ -75,9 +75,9 @@ func (_c *ExtensionCreate) SetNillableDeletedAt(v *string) *ExtensionCreate {
 	return _c
 }
 
-// SetKey sets the "key" field.
-func (_c *ExtensionCreate) SetKey(v string) *ExtensionCreate {
-	_c.mutation.SetKey(v)
+// SetName sets the "name" field.
+func (_c *ExtensionCreate) SetName(v string) *ExtensionCreate {
+	_c.mutation.SetName(v)
 	return _c
 }
 
@@ -168,18 +168,21 @@ func (_c *ExtensionCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *ExtensionCreate) check() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		return &ValidationError{Name: "uuid", err: errors.New(`ent: missing required field "Extension.uuid"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Extension.created_at"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Extension.updated_at"`)}
 	}
-	if _, ok := _c.mutation.Key(); !ok {
-		return &ValidationError{Name: "key", err: errors.New(`ent: missing required field "Extension.key"`)}
+	if _, ok := _c.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Extension.name"`)}
 	}
-	if v, ok := _c.mutation.Key(); ok {
-		if err := extension.KeyValidator(v); err != nil {
-			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Extension.key": %w`, err)}
+	if v, ok := _c.mutation.Name(); ok {
+		if err := extension.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Extension.name": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
@@ -213,7 +216,7 @@ func (_c *ExtensionCreate) createSpec() (*Extension, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(extension.FieldUUID, field.TypeString, value)
-		_node.UUID = &value
+		_node.UUID = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(extension.FieldCreatedAt, field.TypeString, value)
@@ -227,9 +230,9 @@ func (_c *ExtensionCreate) createSpec() (*Extension, *sqlgraph.CreateSpec) {
 		_spec.SetField(extension.FieldDeletedAt, field.TypeString, value)
 		_node.DeletedAt = &value
 	}
-	if value, ok := _c.mutation.Key(); ok {
-		_spec.SetField(extension.FieldKey, field.TypeString, value)
-		_node.Key = value
+	if value, ok := _c.mutation.Name(); ok {
+		_spec.SetField(extension.FieldName, field.TypeString, value)
+		_node.Name = value
 	}
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(extension.FieldEnabled, field.TypeBool, value)

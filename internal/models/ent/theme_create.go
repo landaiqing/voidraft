@@ -75,9 +75,9 @@ func (_c *ThemeCreate) SetNillableDeletedAt(v *string) *ThemeCreate {
 	return _c
 }
 
-// SetKey sets the "key" field.
-func (_c *ThemeCreate) SetKey(v string) *ThemeCreate {
-	_c.mutation.SetKey(v)
+// SetName sets the "name" field.
+func (_c *ThemeCreate) SetName(v string) *ThemeCreate {
+	_c.mutation.SetName(v)
 	return _c
 }
 
@@ -156,18 +156,21 @@ func (_c *ThemeCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *ThemeCreate) check() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		return &ValidationError{Name: "uuid", err: errors.New(`ent: missing required field "Theme.uuid"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Theme.created_at"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Theme.updated_at"`)}
 	}
-	if _, ok := _c.mutation.Key(); !ok {
-		return &ValidationError{Name: "key", err: errors.New(`ent: missing required field "Theme.key"`)}
+	if _, ok := _c.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Theme.name"`)}
 	}
-	if v, ok := _c.mutation.Key(); ok {
-		if err := theme.KeyValidator(v); err != nil {
-			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Theme.key": %w`, err)}
+	if v, ok := _c.mutation.Name(); ok {
+		if err := theme.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Theme.name": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.GetType(); !ok {
@@ -206,7 +209,7 @@ func (_c *ThemeCreate) createSpec() (*Theme, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(theme.FieldUUID, field.TypeString, value)
-		_node.UUID = &value
+		_node.UUID = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(theme.FieldCreatedAt, field.TypeString, value)
@@ -220,9 +223,9 @@ func (_c *ThemeCreate) createSpec() (*Theme, *sqlgraph.CreateSpec) {
 		_spec.SetField(theme.FieldDeletedAt, field.TypeString, value)
 		_node.DeletedAt = &value
 	}
-	if value, ok := _c.mutation.Key(); ok {
-		_spec.SetField(theme.FieldKey, field.TypeString, value)
-		_node.Key = value
+	if value, ok := _c.mutation.Name(); ok {
+		_spec.SetField(theme.FieldName, field.TypeString, value)
+		_node.Name = value
 	}
 	if value, ok := _c.mutation.GetType(); ok {
 		_spec.SetField(theme.FieldType, field.TypeEnum, value)

@@ -62,16 +62,16 @@ func (_u *ThemeUpdate) ClearDeletedAt() *ThemeUpdate {
 	return _u
 }
 
-// SetKey sets the "key" field.
-func (_u *ThemeUpdate) SetKey(v string) *ThemeUpdate {
-	_u.mutation.SetKey(v)
+// SetName sets the "name" field.
+func (_u *ThemeUpdate) SetName(v string) *ThemeUpdate {
+	_u.mutation.SetName(v)
 	return _u
 }
 
-// SetNillableKey sets the "key" field if the given value is not nil.
-func (_u *ThemeUpdate) SetNillableKey(v *string) *ThemeUpdate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (_u *ThemeUpdate) SetNillableName(v *string) *ThemeUpdate {
 	if v != nil {
-		_u.SetKey(*v)
+		_u.SetName(*v)
 	}
 	return _u
 }
@@ -136,9 +136,9 @@ func (_u *ThemeUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ThemeUpdate) check() error {
-	if v, ok := _u.mutation.Key(); ok {
-		if err := theme.KeyValidator(v); err != nil {
-			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Theme.key": %w`, err)}
+	if v, ok := _u.mutation.Name(); ok {
+		if err := theme.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Theme.name": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.GetType(); ok {
@@ -167,9 +167,6 @@ func (_u *ThemeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(theme.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(theme.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -179,8 +176,8 @@ func (_u *ThemeUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(theme.FieldDeletedAt, field.TypeString)
 	}
-	if value, ok := _u.mutation.Key(); ok {
-		_spec.SetField(theme.FieldKey, field.TypeString, value)
+	if value, ok := _u.mutation.Name(); ok {
+		_spec.SetField(theme.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(theme.FieldType, field.TypeEnum, value)
@@ -247,16 +244,16 @@ func (_u *ThemeUpdateOne) ClearDeletedAt() *ThemeUpdateOne {
 	return _u
 }
 
-// SetKey sets the "key" field.
-func (_u *ThemeUpdateOne) SetKey(v string) *ThemeUpdateOne {
-	_u.mutation.SetKey(v)
+// SetName sets the "name" field.
+func (_u *ThemeUpdateOne) SetName(v string) *ThemeUpdateOne {
+	_u.mutation.SetName(v)
 	return _u
 }
 
-// SetNillableKey sets the "key" field if the given value is not nil.
-func (_u *ThemeUpdateOne) SetNillableKey(v *string) *ThemeUpdateOne {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (_u *ThemeUpdateOne) SetNillableName(v *string) *ThemeUpdateOne {
 	if v != nil {
-		_u.SetKey(*v)
+		_u.SetName(*v)
 	}
 	return _u
 }
@@ -334,9 +331,9 @@ func (_u *ThemeUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *ThemeUpdateOne) check() error {
-	if v, ok := _u.mutation.Key(); ok {
-		if err := theme.KeyValidator(v); err != nil {
-			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "Theme.key": %w`, err)}
+	if v, ok := _u.mutation.Name(); ok {
+		if err := theme.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "Theme.name": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.GetType(); ok {
@@ -382,9 +379,6 @@ func (_u *ThemeUpdateOne) sqlSave(ctx context.Context) (_node *Theme, err error)
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(theme.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(theme.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -394,8 +388,8 @@ func (_u *ThemeUpdateOne) sqlSave(ctx context.Context) (_node *Theme, err error)
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(theme.FieldDeletedAt, field.TypeString)
 	}
-	if value, ok := _u.mutation.Key(); ok {
-		_spec.SetField(theme.FieldKey, field.TypeString, value)
+	if value, ok := _u.mutation.Name(); ok {
+		_spec.SetField(theme.FieldName, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.GetType(); ok {
 		_spec.SetField(theme.FieldType, field.TypeEnum, value)

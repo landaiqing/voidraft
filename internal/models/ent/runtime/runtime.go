@@ -90,18 +90,18 @@ func init() {
 	extensionDescUpdatedAt := extensionMixinFields1[1].Descriptor()
 	// extension.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	extension.DefaultUpdatedAt = extensionDescUpdatedAt.Default.(func() string)
-	// extensionDescKey is the schema descriptor for key field.
-	extensionDescKey := extensionFields[0].Descriptor()
-	// extension.KeyValidator is a validator for the "key" field. It is called by the builders before save.
-	extension.KeyValidator = func() func(string) error {
-		validators := extensionDescKey.Validators
+	// extensionDescName is the schema descriptor for name field.
+	extensionDescName := extensionFields[0].Descriptor()
+	// extension.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	extension.NameValidator = func() func(string) error {
+		validators := extensionDescName.Validators
 		fns := [...]func(string) error{
 			validators[0].(func(string) error),
 			validators[1].(func(string) error),
 		}
-		return func(key string) error {
+		return func(name string) error {
 			for _, fn := range fns {
-				if err := fn(key); err != nil {
+				if err := fn(name); err != nil {
 					return err
 				}
 			}
@@ -137,50 +137,78 @@ func init() {
 	keybindingDescUpdatedAt := keybindingMixinFields1[1].Descriptor()
 	// keybinding.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	keybinding.DefaultUpdatedAt = keybindingDescUpdatedAt.Default.(func() string)
+	// keybindingDescName is the schema descriptor for name field.
+	keybindingDescName := keybindingFields[0].Descriptor()
+	// keybinding.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	keybinding.NameValidator = func() func(string) error {
+		validators := keybindingDescName.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(name string) error {
+			for _, fn := range fns {
+				if err := fn(name); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// keybindingDescType is the schema descriptor for type field.
+	keybindingDescType := keybindingFields[1].Descriptor()
+	// keybinding.DefaultType holds the default value on creation for the type field.
+	keybinding.DefaultType = keybindingDescType.Default.(string)
+	// keybinding.TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	keybinding.TypeValidator = keybindingDescType.Validators[0].(func(string) error)
 	// keybindingDescKey is the schema descriptor for key field.
-	keybindingDescKey := keybindingFields[0].Descriptor()
+	keybindingDescKey := keybindingFields[2].Descriptor()
 	// keybinding.KeyValidator is a validator for the "key" field. It is called by the builders before save.
-	keybinding.KeyValidator = func() func(string) error {
-		validators := keybindingDescKey.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(key string) error {
-			for _, fn := range fns {
-				if err := fn(key); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
-	// keybindingDescCommand is the schema descriptor for command field.
-	keybindingDescCommand := keybindingFields[1].Descriptor()
-	// keybinding.CommandValidator is a validator for the "command" field. It is called by the builders before save.
-	keybinding.CommandValidator = func() func(string) error {
-		validators := keybindingDescCommand.Validators
-		fns := [...]func(string) error{
-			validators[0].(func(string) error),
-			validators[1].(func(string) error),
-		}
-		return func(command string) error {
-			for _, fn := range fns {
-				if err := fn(command); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-	}()
+	keybinding.KeyValidator = keybindingDescKey.Validators[0].(func(string) error)
+	// keybindingDescMacos is the schema descriptor for macos field.
+	keybindingDescMacos := keybindingFields[3].Descriptor()
+	// keybinding.MacosValidator is a validator for the "macos" field. It is called by the builders before save.
+	keybinding.MacosValidator = keybindingDescMacos.Validators[0].(func(string) error)
+	// keybindingDescWindows is the schema descriptor for windows field.
+	keybindingDescWindows := keybindingFields[4].Descriptor()
+	// keybinding.WindowsValidator is a validator for the "windows" field. It is called by the builders before save.
+	keybinding.WindowsValidator = keybindingDescWindows.Validators[0].(func(string) error)
+	// keybindingDescLinux is the schema descriptor for linux field.
+	keybindingDescLinux := keybindingFields[5].Descriptor()
+	// keybinding.LinuxValidator is a validator for the "linux" field. It is called by the builders before save.
+	keybinding.LinuxValidator = keybindingDescLinux.Validators[0].(func(string) error)
 	// keybindingDescExtension is the schema descriptor for extension field.
-	keybindingDescExtension := keybindingFields[2].Descriptor()
+	keybindingDescExtension := keybindingFields[6].Descriptor()
 	// keybinding.ExtensionValidator is a validator for the "extension" field. It is called by the builders before save.
-	keybinding.ExtensionValidator = keybindingDescExtension.Validators[0].(func(string) error)
+	keybinding.ExtensionValidator = func() func(string) error {
+		validators := keybindingDescExtension.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(extension string) error {
+			for _, fn := range fns {
+				if err := fn(extension); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
 	// keybindingDescEnabled is the schema descriptor for enabled field.
-	keybindingDescEnabled := keybindingFields[3].Descriptor()
+	keybindingDescEnabled := keybindingFields[7].Descriptor()
 	// keybinding.DefaultEnabled holds the default value on creation for the enabled field.
 	keybinding.DefaultEnabled = keybindingDescEnabled.Default.(bool)
+	// keybindingDescPreventDefault is the schema descriptor for prevent_default field.
+	keybindingDescPreventDefault := keybindingFields[8].Descriptor()
+	// keybinding.DefaultPreventDefault holds the default value on creation for the prevent_default field.
+	keybinding.DefaultPreventDefault = keybindingDescPreventDefault.Default.(bool)
+	// keybindingDescScope is the schema descriptor for scope field.
+	keybindingDescScope := keybindingFields[9].Descriptor()
+	// keybinding.DefaultScope holds the default value on creation for the scope field.
+	keybinding.DefaultScope = keybindingDescScope.Default.(string)
+	// keybinding.ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
+	keybinding.ScopeValidator = keybindingDescScope.Validators[0].(func(string) error)
 	themeMixin := schema.Theme{}.Mixin()
 	themeMixinHooks1 := themeMixin[1].Hooks()
 	themeMixinHooks2 := themeMixin[2].Hooks()
@@ -206,18 +234,18 @@ func init() {
 	themeDescUpdatedAt := themeMixinFields1[1].Descriptor()
 	// theme.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	theme.DefaultUpdatedAt = themeDescUpdatedAt.Default.(func() string)
-	// themeDescKey is the schema descriptor for key field.
-	themeDescKey := themeFields[0].Descriptor()
-	// theme.KeyValidator is a validator for the "key" field. It is called by the builders before save.
-	theme.KeyValidator = func() func(string) error {
-		validators := themeDescKey.Validators
+	// themeDescName is the schema descriptor for name field.
+	themeDescName := themeFields[0].Descriptor()
+	// theme.NameValidator is a validator for the "name" field. It is called by the builders before save.
+	theme.NameValidator = func() func(string) error {
+		validators := themeDescName.Validators
 		fns := [...]func(string) error{
 			validators[0].(func(string) error),
 			validators[1].(func(string) error),
 		}
-		return func(key string) error {
+		return func(name string) error {
 			for _, fn := range fns {
-				if err := fn(key); err != nil {
+				if err := fn(name); err != nil {
 					return err
 				}
 			}

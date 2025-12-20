@@ -73,14 +73,34 @@ func DeletedAt(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldEQ(FieldDeletedAt, v))
 }
 
+// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
+func Name(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldName, v))
+}
+
+// Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
+func Type(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldType, v))
+}
+
 // Key applies equality check predicate on the "key" field. It's identical to KeyEQ.
 func Key(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldEQ(FieldKey, v))
 }
 
-// Command applies equality check predicate on the "command" field. It's identical to CommandEQ.
-func Command(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldEQ(FieldCommand, v))
+// Macos applies equality check predicate on the "macos" field. It's identical to MacosEQ.
+func Macos(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldMacos, v))
+}
+
+// Windows applies equality check predicate on the "windows" field. It's identical to WindowsEQ.
+func Windows(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldWindows, v))
+}
+
+// Linux applies equality check predicate on the "linux" field. It's identical to LinuxEQ.
+func Linux(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldLinux, v))
 }
 
 // Extension applies equality check predicate on the "extension" field. It's identical to ExtensionEQ.
@@ -91,6 +111,16 @@ func Extension(v string) predicate.KeyBinding {
 // Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
 func Enabled(v bool) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldEQ(FieldEnabled, v))
+}
+
+// PreventDefault applies equality check predicate on the "prevent_default" field. It's identical to PreventDefaultEQ.
+func PreventDefault(v bool) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldPreventDefault, v))
+}
+
+// Scope applies equality check predicate on the "scope" field. It's identical to ScopeEQ.
+func Scope(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldScope, v))
 }
 
 // UUIDEQ applies the EQ predicate on the "uuid" field.
@@ -146,16 +176,6 @@ func UUIDHasPrefix(v string) predicate.KeyBinding {
 // UUIDHasSuffix applies the HasSuffix predicate on the "uuid" field.
 func UUIDHasSuffix(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldHasSuffix(FieldUUID, v))
-}
-
-// UUIDIsNil applies the IsNil predicate on the "uuid" field.
-func UUIDIsNil() predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldIsNull(FieldUUID))
-}
-
-// UUIDNotNil applies the NotNil predicate on the "uuid" field.
-func UUIDNotNil() predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldNotNull(FieldUUID))
 }
 
 // UUIDEqualFold applies the EqualFold predicate on the "uuid" field.
@@ -373,6 +393,136 @@ func DeletedAtContainsFold(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldContainsFold(FieldDeletedAt, v))
 }
 
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldName, v))
+}
+
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldName, v))
+}
+
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIn(FieldName, vs...))
+}
+
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotIn(FieldName, vs...))
+}
+
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGT(FieldName, v))
+}
+
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGTE(FieldName, v))
+}
+
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLT(FieldName, v))
+}
+
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLTE(FieldName, v))
+}
+
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContains(FieldName, v))
+}
+
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasPrefix(FieldName, v))
+}
+
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasSuffix(FieldName, v))
+}
+
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEqualFold(FieldName, v))
+}
+
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContainsFold(FieldName, v))
+}
+
+// TypeEQ applies the EQ predicate on the "type" field.
+func TypeEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldType, v))
+}
+
+// TypeNEQ applies the NEQ predicate on the "type" field.
+func TypeNEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldType, v))
+}
+
+// TypeIn applies the In predicate on the "type" field.
+func TypeIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIn(FieldType, vs...))
+}
+
+// TypeNotIn applies the NotIn predicate on the "type" field.
+func TypeNotIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotIn(FieldType, vs...))
+}
+
+// TypeGT applies the GT predicate on the "type" field.
+func TypeGT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGT(FieldType, v))
+}
+
+// TypeGTE applies the GTE predicate on the "type" field.
+func TypeGTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGTE(FieldType, v))
+}
+
+// TypeLT applies the LT predicate on the "type" field.
+func TypeLT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLT(FieldType, v))
+}
+
+// TypeLTE applies the LTE predicate on the "type" field.
+func TypeLTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLTE(FieldType, v))
+}
+
+// TypeContains applies the Contains predicate on the "type" field.
+func TypeContains(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContains(FieldType, v))
+}
+
+// TypeHasPrefix applies the HasPrefix predicate on the "type" field.
+func TypeHasPrefix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasPrefix(FieldType, v))
+}
+
+// TypeHasSuffix applies the HasSuffix predicate on the "type" field.
+func TypeHasSuffix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasSuffix(FieldType, v))
+}
+
+// TypeEqualFold applies the EqualFold predicate on the "type" field.
+func TypeEqualFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEqualFold(FieldType, v))
+}
+
+// TypeContainsFold applies the ContainsFold predicate on the "type" field.
+func TypeContainsFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContainsFold(FieldType, v))
+}
+
 // KeyEQ applies the EQ predicate on the "key" field.
 func KeyEQ(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldEQ(FieldKey, v))
@@ -428,6 +578,16 @@ func KeyHasSuffix(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldHasSuffix(FieldKey, v))
 }
 
+// KeyIsNil applies the IsNil predicate on the "key" field.
+func KeyIsNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIsNull(FieldKey))
+}
+
+// KeyNotNil applies the NotNil predicate on the "key" field.
+func KeyNotNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotNull(FieldKey))
+}
+
 // KeyEqualFold applies the EqualFold predicate on the "key" field.
 func KeyEqualFold(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldEqualFold(FieldKey, v))
@@ -438,69 +598,229 @@ func KeyContainsFold(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldContainsFold(FieldKey, v))
 }
 
-// CommandEQ applies the EQ predicate on the "command" field.
-func CommandEQ(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldEQ(FieldCommand, v))
+// MacosEQ applies the EQ predicate on the "macos" field.
+func MacosEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldMacos, v))
 }
 
-// CommandNEQ applies the NEQ predicate on the "command" field.
-func CommandNEQ(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldNEQ(FieldCommand, v))
+// MacosNEQ applies the NEQ predicate on the "macos" field.
+func MacosNEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldMacos, v))
 }
 
-// CommandIn applies the In predicate on the "command" field.
-func CommandIn(vs ...string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldIn(FieldCommand, vs...))
+// MacosIn applies the In predicate on the "macos" field.
+func MacosIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIn(FieldMacos, vs...))
 }
 
-// CommandNotIn applies the NotIn predicate on the "command" field.
-func CommandNotIn(vs ...string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldNotIn(FieldCommand, vs...))
+// MacosNotIn applies the NotIn predicate on the "macos" field.
+func MacosNotIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotIn(FieldMacos, vs...))
 }
 
-// CommandGT applies the GT predicate on the "command" field.
-func CommandGT(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldGT(FieldCommand, v))
+// MacosGT applies the GT predicate on the "macos" field.
+func MacosGT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGT(FieldMacos, v))
 }
 
-// CommandGTE applies the GTE predicate on the "command" field.
-func CommandGTE(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldGTE(FieldCommand, v))
+// MacosGTE applies the GTE predicate on the "macos" field.
+func MacosGTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGTE(FieldMacos, v))
 }
 
-// CommandLT applies the LT predicate on the "command" field.
-func CommandLT(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldLT(FieldCommand, v))
+// MacosLT applies the LT predicate on the "macos" field.
+func MacosLT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLT(FieldMacos, v))
 }
 
-// CommandLTE applies the LTE predicate on the "command" field.
-func CommandLTE(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldLTE(FieldCommand, v))
+// MacosLTE applies the LTE predicate on the "macos" field.
+func MacosLTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLTE(FieldMacos, v))
 }
 
-// CommandContains applies the Contains predicate on the "command" field.
-func CommandContains(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldContains(FieldCommand, v))
+// MacosContains applies the Contains predicate on the "macos" field.
+func MacosContains(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContains(FieldMacos, v))
 }
 
-// CommandHasPrefix applies the HasPrefix predicate on the "command" field.
-func CommandHasPrefix(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldHasPrefix(FieldCommand, v))
+// MacosHasPrefix applies the HasPrefix predicate on the "macos" field.
+func MacosHasPrefix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasPrefix(FieldMacos, v))
 }
 
-// CommandHasSuffix applies the HasSuffix predicate on the "command" field.
-func CommandHasSuffix(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldHasSuffix(FieldCommand, v))
+// MacosHasSuffix applies the HasSuffix predicate on the "macos" field.
+func MacosHasSuffix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasSuffix(FieldMacos, v))
 }
 
-// CommandEqualFold applies the EqualFold predicate on the "command" field.
-func CommandEqualFold(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldEqualFold(FieldCommand, v))
+// MacosIsNil applies the IsNil predicate on the "macos" field.
+func MacosIsNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIsNull(FieldMacos))
 }
 
-// CommandContainsFold applies the ContainsFold predicate on the "command" field.
-func CommandContainsFold(v string) predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldContainsFold(FieldCommand, v))
+// MacosNotNil applies the NotNil predicate on the "macos" field.
+func MacosNotNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotNull(FieldMacos))
+}
+
+// MacosEqualFold applies the EqualFold predicate on the "macos" field.
+func MacosEqualFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEqualFold(FieldMacos, v))
+}
+
+// MacosContainsFold applies the ContainsFold predicate on the "macos" field.
+func MacosContainsFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContainsFold(FieldMacos, v))
+}
+
+// WindowsEQ applies the EQ predicate on the "windows" field.
+func WindowsEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldWindows, v))
+}
+
+// WindowsNEQ applies the NEQ predicate on the "windows" field.
+func WindowsNEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldWindows, v))
+}
+
+// WindowsIn applies the In predicate on the "windows" field.
+func WindowsIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIn(FieldWindows, vs...))
+}
+
+// WindowsNotIn applies the NotIn predicate on the "windows" field.
+func WindowsNotIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotIn(FieldWindows, vs...))
+}
+
+// WindowsGT applies the GT predicate on the "windows" field.
+func WindowsGT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGT(FieldWindows, v))
+}
+
+// WindowsGTE applies the GTE predicate on the "windows" field.
+func WindowsGTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGTE(FieldWindows, v))
+}
+
+// WindowsLT applies the LT predicate on the "windows" field.
+func WindowsLT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLT(FieldWindows, v))
+}
+
+// WindowsLTE applies the LTE predicate on the "windows" field.
+func WindowsLTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLTE(FieldWindows, v))
+}
+
+// WindowsContains applies the Contains predicate on the "windows" field.
+func WindowsContains(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContains(FieldWindows, v))
+}
+
+// WindowsHasPrefix applies the HasPrefix predicate on the "windows" field.
+func WindowsHasPrefix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasPrefix(FieldWindows, v))
+}
+
+// WindowsHasSuffix applies the HasSuffix predicate on the "windows" field.
+func WindowsHasSuffix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasSuffix(FieldWindows, v))
+}
+
+// WindowsIsNil applies the IsNil predicate on the "windows" field.
+func WindowsIsNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIsNull(FieldWindows))
+}
+
+// WindowsNotNil applies the NotNil predicate on the "windows" field.
+func WindowsNotNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotNull(FieldWindows))
+}
+
+// WindowsEqualFold applies the EqualFold predicate on the "windows" field.
+func WindowsEqualFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEqualFold(FieldWindows, v))
+}
+
+// WindowsContainsFold applies the ContainsFold predicate on the "windows" field.
+func WindowsContainsFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContainsFold(FieldWindows, v))
+}
+
+// LinuxEQ applies the EQ predicate on the "linux" field.
+func LinuxEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldLinux, v))
+}
+
+// LinuxNEQ applies the NEQ predicate on the "linux" field.
+func LinuxNEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldLinux, v))
+}
+
+// LinuxIn applies the In predicate on the "linux" field.
+func LinuxIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIn(FieldLinux, vs...))
+}
+
+// LinuxNotIn applies the NotIn predicate on the "linux" field.
+func LinuxNotIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotIn(FieldLinux, vs...))
+}
+
+// LinuxGT applies the GT predicate on the "linux" field.
+func LinuxGT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGT(FieldLinux, v))
+}
+
+// LinuxGTE applies the GTE predicate on the "linux" field.
+func LinuxGTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGTE(FieldLinux, v))
+}
+
+// LinuxLT applies the LT predicate on the "linux" field.
+func LinuxLT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLT(FieldLinux, v))
+}
+
+// LinuxLTE applies the LTE predicate on the "linux" field.
+func LinuxLTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLTE(FieldLinux, v))
+}
+
+// LinuxContains applies the Contains predicate on the "linux" field.
+func LinuxContains(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContains(FieldLinux, v))
+}
+
+// LinuxHasPrefix applies the HasPrefix predicate on the "linux" field.
+func LinuxHasPrefix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasPrefix(FieldLinux, v))
+}
+
+// LinuxHasSuffix applies the HasSuffix predicate on the "linux" field.
+func LinuxHasSuffix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasSuffix(FieldLinux, v))
+}
+
+// LinuxIsNil applies the IsNil predicate on the "linux" field.
+func LinuxIsNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIsNull(FieldLinux))
+}
+
+// LinuxNotNil applies the NotNil predicate on the "linux" field.
+func LinuxNotNil() predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotNull(FieldLinux))
+}
+
+// LinuxEqualFold applies the EqualFold predicate on the "linux" field.
+func LinuxEqualFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEqualFold(FieldLinux, v))
+}
+
+// LinuxContainsFold applies the ContainsFold predicate on the "linux" field.
+func LinuxContainsFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContainsFold(FieldLinux, v))
 }
 
 // ExtensionEQ applies the EQ predicate on the "extension" field.
@@ -558,16 +878,6 @@ func ExtensionHasSuffix(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldHasSuffix(FieldExtension, v))
 }
 
-// ExtensionIsNil applies the IsNil predicate on the "extension" field.
-func ExtensionIsNil() predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldIsNull(FieldExtension))
-}
-
-// ExtensionNotNil applies the NotNil predicate on the "extension" field.
-func ExtensionNotNil() predicate.KeyBinding {
-	return predicate.KeyBinding(sql.FieldNotNull(FieldExtension))
-}
-
 // ExtensionEqualFold applies the EqualFold predicate on the "extension" field.
 func ExtensionEqualFold(v string) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldEqualFold(FieldExtension, v))
@@ -586,6 +896,81 @@ func EnabledEQ(v bool) predicate.KeyBinding {
 // EnabledNEQ applies the NEQ predicate on the "enabled" field.
 func EnabledNEQ(v bool) predicate.KeyBinding {
 	return predicate.KeyBinding(sql.FieldNEQ(FieldEnabled, v))
+}
+
+// PreventDefaultEQ applies the EQ predicate on the "prevent_default" field.
+func PreventDefaultEQ(v bool) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldPreventDefault, v))
+}
+
+// PreventDefaultNEQ applies the NEQ predicate on the "prevent_default" field.
+func PreventDefaultNEQ(v bool) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldPreventDefault, v))
+}
+
+// ScopeEQ applies the EQ predicate on the "scope" field.
+func ScopeEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEQ(FieldScope, v))
+}
+
+// ScopeNEQ applies the NEQ predicate on the "scope" field.
+func ScopeNEQ(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNEQ(FieldScope, v))
+}
+
+// ScopeIn applies the In predicate on the "scope" field.
+func ScopeIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldIn(FieldScope, vs...))
+}
+
+// ScopeNotIn applies the NotIn predicate on the "scope" field.
+func ScopeNotIn(vs ...string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldNotIn(FieldScope, vs...))
+}
+
+// ScopeGT applies the GT predicate on the "scope" field.
+func ScopeGT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGT(FieldScope, v))
+}
+
+// ScopeGTE applies the GTE predicate on the "scope" field.
+func ScopeGTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldGTE(FieldScope, v))
+}
+
+// ScopeLT applies the LT predicate on the "scope" field.
+func ScopeLT(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLT(FieldScope, v))
+}
+
+// ScopeLTE applies the LTE predicate on the "scope" field.
+func ScopeLTE(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldLTE(FieldScope, v))
+}
+
+// ScopeContains applies the Contains predicate on the "scope" field.
+func ScopeContains(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContains(FieldScope, v))
+}
+
+// ScopeHasPrefix applies the HasPrefix predicate on the "scope" field.
+func ScopeHasPrefix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasPrefix(FieldScope, v))
+}
+
+// ScopeHasSuffix applies the HasSuffix predicate on the "scope" field.
+func ScopeHasSuffix(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldHasSuffix(FieldScope, v))
+}
+
+// ScopeEqualFold applies the EqualFold predicate on the "scope" field.
+func ScopeEqualFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldEqualFold(FieldScope, v))
+}
+
+// ScopeContainsFold applies the ContainsFold predicate on the "scope" field.
+func ScopeContainsFold(v string) predicate.KeyBinding {
+	return predicate.KeyBinding(sql.FieldContainsFold(FieldScope, v))
 }
 
 // And groups predicates with the AND operator between them.

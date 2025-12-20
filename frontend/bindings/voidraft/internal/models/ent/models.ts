@@ -21,7 +21,7 @@ export class Document {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string | null;
+    "uuid": string;
 
     /**
      * creation time
@@ -56,7 +56,7 @@ export class Document {
     /** Creates a new Document instance. */
     constructor($$source: Partial<Document> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = null;
+            this["uuid"] = "";
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -98,7 +98,7 @@ export class Extension {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string | null;
+    "uuid": string;
 
     /**
      * creation time
@@ -116,9 +116,9 @@ export class Extension {
     "deleted_at"?: string | null;
 
     /**
-     * extension key
+     * extension name
      */
-    "key": string;
+    "name": string;
 
     /**
      * extension enabled or not
@@ -133,7 +133,7 @@ export class Extension {
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = null;
+            this["uuid"] = "";
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -141,8 +141,8 @@ export class Extension {
         if (!("updated_at" in $$source)) {
             this["updated_at"] = "";
         }
-        if (!("key" in $$source)) {
-            this["key"] = "";
+        if (!("name" in $$source)) {
+            this["name"] = "";
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
@@ -179,7 +179,7 @@ export class KeyBinding {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string | null;
+    "uuid": string;
 
     /**
      * creation time
@@ -197,29 +197,59 @@ export class KeyBinding {
     "deleted_at"?: string | null;
 
     /**
-     * key binding key
+     * command identifier
      */
-    "key": string;
+    "name": string;
 
     /**
-     * key binding command
+     * keybinding type: standard or emacs
      */
-    "command": string;
+    "type": string;
 
     /**
-     * key binding extension
+     * universal keybinding (cross-platform)
      */
-    "extension"?: string;
+    "key"?: string;
 
     /**
-     * key binding enabled
+     * macOS specific keybinding
+     */
+    "macos"?: string;
+
+    /**
+     * Windows specific keybinding
+     */
+    "windows"?: string;
+
+    /**
+     * Linux specific keybinding
+     */
+    "linux"?: string;
+
+    /**
+     * extension name (functional category)
+     */
+    "extension": string;
+
+    /**
+     * whether this keybinding is enabled
      */
     "enabled": boolean;
+
+    /**
+     * prevent browser default behavior
+     */
+    "preventDefault": boolean;
+
+    /**
+     * keybinding scope (default: editor)
+     */
+    "scope"?: string;
 
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = null;
+            this["uuid"] = "";
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -227,14 +257,20 @@ export class KeyBinding {
         if (!("updated_at" in $$source)) {
             this["updated_at"] = "";
         }
-        if (!("key" in $$source)) {
-            this["key"] = "";
+        if (!("name" in $$source)) {
+            this["name"] = "";
         }
-        if (!("command" in $$source)) {
-            this["command"] = "";
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("extension" in $$source)) {
+            this["extension"] = "";
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
+        }
+        if (!("preventDefault" in $$source)) {
+            this["preventDefault"] = false;
         }
 
         Object.assign(this, $$source);
@@ -261,7 +297,7 @@ export class Theme {
     /**
      * UUID for cross-device sync (UUIDv7)
      */
-    "uuid": string | null;
+    "uuid": string;
 
     /**
      * creation time
@@ -279,9 +315,9 @@ export class Theme {
     "deleted_at"?: string | null;
 
     /**
-     * theme key
+     * theme name
      */
-    "key": string;
+    "name": string;
 
     /**
      * theme type
@@ -296,7 +332,7 @@ export class Theme {
     /** Creates a new Theme instance. */
     constructor($$source: Partial<Theme> = {}) {
         if (!("uuid" in $$source)) {
-            this["uuid"] = null;
+            this["uuid"] = "";
         }
         if (!("created_at" in $$source)) {
             this["created_at"] = "";
@@ -304,8 +340,8 @@ export class Theme {
         if (!("updated_at" in $$source)) {
             this["updated_at"] = "";
         }
-        if (!("key" in $$source)) {
-            this["key"] = "";
+        if (!("name" in $$source)) {
+            this["name"] = "";
         }
         if (!("type" in $$source)) {
             this["type"] = ("" as theme$0.Type);

@@ -166,7 +166,7 @@ func (m *DocumentMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the Document entity.
 // If the Document object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DocumentMutation) OldUUID(ctx context.Context) (v *string, err error) {
+func (m *DocumentMutation) OldUUID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -180,22 +180,9 @@ func (m *DocumentMutation) OldUUID(ctx context.Context) (v *string, err error) {
 	return oldValue.UUID, nil
 }
 
-// ClearUUID clears the value of the "uuid" field.
-func (m *DocumentMutation) ClearUUID() {
-	m.uuid = nil
-	m.clearedFields[document.FieldUUID] = struct{}{}
-}
-
-// UUIDCleared returns if the "uuid" field was cleared in this mutation.
-func (m *DocumentMutation) UUIDCleared() bool {
-	_, ok := m.clearedFields[document.FieldUUID]
-	return ok
-}
-
 // ResetUUID resets all changes to the "uuid" field.
 func (m *DocumentMutation) ResetUUID() {
 	m.uuid = nil
-	delete(m.clearedFields, document.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -629,9 +616,6 @@ func (m *DocumentMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *DocumentMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(document.FieldUUID) {
-		fields = append(fields, document.FieldUUID)
-	}
 	if m.FieldCleared(document.FieldDeletedAt) {
 		fields = append(fields, document.FieldDeletedAt)
 	}
@@ -652,9 +636,6 @@ func (m *DocumentMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *DocumentMutation) ClearField(name string) error {
 	switch name {
-	case document.FieldUUID:
-		m.ClearUUID()
-		return nil
 	case document.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -752,7 +733,7 @@ type ExtensionMutation struct {
 	created_at    *string
 	updated_at    *string
 	deleted_at    *string
-	key           *string
+	name          *string
 	enabled       *bool
 	_config       *map[string]interface{}
 	clearedFields map[string]struct{}
@@ -876,7 +857,7 @@ func (m *ExtensionMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the Extension entity.
 // If the Extension object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ExtensionMutation) OldUUID(ctx context.Context) (v *string, err error) {
+func (m *ExtensionMutation) OldUUID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -890,22 +871,9 @@ func (m *ExtensionMutation) OldUUID(ctx context.Context) (v *string, err error) 
 	return oldValue.UUID, nil
 }
 
-// ClearUUID clears the value of the "uuid" field.
-func (m *ExtensionMutation) ClearUUID() {
-	m.uuid = nil
-	m.clearedFields[extension.FieldUUID] = struct{}{}
-}
-
-// UUIDCleared returns if the "uuid" field was cleared in this mutation.
-func (m *ExtensionMutation) UUIDCleared() bool {
-	_, ok := m.clearedFields[extension.FieldUUID]
-	return ok
-}
-
 // ResetUUID resets all changes to the "uuid" field.
 func (m *ExtensionMutation) ResetUUID() {
 	m.uuid = nil
-	delete(m.clearedFields, extension.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1029,40 +997,40 @@ func (m *ExtensionMutation) ResetDeletedAt() {
 	delete(m.clearedFields, extension.FieldDeletedAt)
 }
 
-// SetKey sets the "key" field.
-func (m *ExtensionMutation) SetKey(s string) {
-	m.key = &s
+// SetName sets the "name" field.
+func (m *ExtensionMutation) SetName(s string) {
+	m.name = &s
 }
 
-// Key returns the value of the "key" field in the mutation.
-func (m *ExtensionMutation) Key() (r string, exists bool) {
-	v := m.key
+// Name returns the value of the "name" field in the mutation.
+func (m *ExtensionMutation) Name() (r string, exists bool) {
+	v := m.name
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldKey returns the old "key" field's value of the Extension entity.
+// OldName returns the old "name" field's value of the Extension entity.
 // If the Extension object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ExtensionMutation) OldKey(ctx context.Context) (v string, err error) {
+func (m *ExtensionMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldKey is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldKey requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldKey: %w", err)
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
 	}
-	return oldValue.Key, nil
+	return oldValue.Name, nil
 }
 
-// ResetKey resets all changes to the "key" field.
-func (m *ExtensionMutation) ResetKey() {
-	m.key = nil
+// ResetName resets all changes to the "name" field.
+func (m *ExtensionMutation) ResetName() {
+	m.name = nil
 }
 
 // SetEnabled sets the "enabled" field.
@@ -1197,8 +1165,8 @@ func (m *ExtensionMutation) Fields() []string {
 	if m.deleted_at != nil {
 		fields = append(fields, extension.FieldDeletedAt)
 	}
-	if m.key != nil {
-		fields = append(fields, extension.FieldKey)
+	if m.name != nil {
+		fields = append(fields, extension.FieldName)
 	}
 	if m.enabled != nil {
 		fields = append(fields, extension.FieldEnabled)
@@ -1222,8 +1190,8 @@ func (m *ExtensionMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case extension.FieldDeletedAt:
 		return m.DeletedAt()
-	case extension.FieldKey:
-		return m.Key()
+	case extension.FieldName:
+		return m.Name()
 	case extension.FieldEnabled:
 		return m.Enabled()
 	case extension.FieldConfig:
@@ -1245,8 +1213,8 @@ func (m *ExtensionMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldUpdatedAt(ctx)
 	case extension.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
-	case extension.FieldKey:
-		return m.OldKey(ctx)
+	case extension.FieldName:
+		return m.OldName(ctx)
 	case extension.FieldEnabled:
 		return m.OldEnabled(ctx)
 	case extension.FieldConfig:
@@ -1288,12 +1256,12 @@ func (m *ExtensionMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDeletedAt(v)
 		return nil
-	case extension.FieldKey:
+	case extension.FieldName:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetKey(v)
+		m.SetName(v)
 		return nil
 	case extension.FieldEnabled:
 		v, ok := value.(bool)
@@ -1339,9 +1307,6 @@ func (m *ExtensionMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ExtensionMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(extension.FieldUUID) {
-		fields = append(fields, extension.FieldUUID)
-	}
 	if m.FieldCleared(extension.FieldDeletedAt) {
 		fields = append(fields, extension.FieldDeletedAt)
 	}
@@ -1362,9 +1327,6 @@ func (m *ExtensionMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ExtensionMutation) ClearField(name string) error {
 	switch name {
-	case extension.FieldUUID:
-		m.ClearUUID()
-		return nil
 	case extension.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -1391,8 +1353,8 @@ func (m *ExtensionMutation) ResetField(name string) error {
 	case extension.FieldDeletedAt:
 		m.ResetDeletedAt()
 		return nil
-	case extension.FieldKey:
-		m.ResetKey()
+	case extension.FieldName:
+		m.ResetName()
 		return nil
 	case extension.FieldEnabled:
 		m.ResetEnabled()
@@ -1455,21 +1417,27 @@ func (m *ExtensionMutation) ResetEdge(name string) error {
 // KeyBindingMutation represents an operation that mutates the KeyBinding nodes in the graph.
 type KeyBindingMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	uuid          *string
-	created_at    *string
-	updated_at    *string
-	deleted_at    *string
-	key           *string
-	command       *string
-	extension     *string
-	enabled       *bool
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*KeyBinding, error)
-	predicates    []predicate.KeyBinding
+	op              Op
+	typ             string
+	id              *int
+	uuid            *string
+	created_at      *string
+	updated_at      *string
+	deleted_at      *string
+	name            *string
+	_type           *string
+	key             *string
+	macos           *string
+	windows         *string
+	linux           *string
+	extension       *string
+	enabled         *bool
+	prevent_default *bool
+	scope           *string
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*KeyBinding, error)
+	predicates      []predicate.KeyBinding
 }
 
 var _ ent.Mutation = (*KeyBindingMutation)(nil)
@@ -1587,7 +1555,7 @@ func (m *KeyBindingMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the KeyBinding entity.
 // If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KeyBindingMutation) OldUUID(ctx context.Context) (v *string, err error) {
+func (m *KeyBindingMutation) OldUUID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -1601,22 +1569,9 @@ func (m *KeyBindingMutation) OldUUID(ctx context.Context) (v *string, err error)
 	return oldValue.UUID, nil
 }
 
-// ClearUUID clears the value of the "uuid" field.
-func (m *KeyBindingMutation) ClearUUID() {
-	m.uuid = nil
-	m.clearedFields[keybinding.FieldUUID] = struct{}{}
-}
-
-// UUIDCleared returns if the "uuid" field was cleared in this mutation.
-func (m *KeyBindingMutation) UUIDCleared() bool {
-	_, ok := m.clearedFields[keybinding.FieldUUID]
-	return ok
-}
-
 // ResetUUID resets all changes to the "uuid" field.
 func (m *KeyBindingMutation) ResetUUID() {
 	m.uuid = nil
-	delete(m.clearedFields, keybinding.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1740,6 +1695,78 @@ func (m *KeyBindingMutation) ResetDeletedAt() {
 	delete(m.clearedFields, keybinding.FieldDeletedAt)
 }
 
+// SetName sets the "name" field.
+func (m *KeyBindingMutation) SetName(s string) {
+	m.name = &s
+}
+
+// Name returns the value of the "name" field in the mutation.
+func (m *KeyBindingMutation) Name() (r string, exists bool) {
+	v := m.name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldName returns the old "name" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
+	}
+	return oldValue.Name, nil
+}
+
+// ResetName resets all changes to the "name" field.
+func (m *KeyBindingMutation) ResetName() {
+	m.name = nil
+}
+
+// SetType sets the "type" field.
+func (m *KeyBindingMutation) SetType(s string) {
+	m._type = &s
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *KeyBindingMutation) GetType() (r string, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *KeyBindingMutation) ResetType() {
+	m._type = nil
+}
+
 // SetKey sets the "key" field.
 func (m *KeyBindingMutation) SetKey(s string) {
 	m.key = &s
@@ -1771,45 +1798,169 @@ func (m *KeyBindingMutation) OldKey(ctx context.Context) (v string, err error) {
 	return oldValue.Key, nil
 }
 
+// ClearKey clears the value of the "key" field.
+func (m *KeyBindingMutation) ClearKey() {
+	m.key = nil
+	m.clearedFields[keybinding.FieldKey] = struct{}{}
+}
+
+// KeyCleared returns if the "key" field was cleared in this mutation.
+func (m *KeyBindingMutation) KeyCleared() bool {
+	_, ok := m.clearedFields[keybinding.FieldKey]
+	return ok
+}
+
 // ResetKey resets all changes to the "key" field.
 func (m *KeyBindingMutation) ResetKey() {
 	m.key = nil
+	delete(m.clearedFields, keybinding.FieldKey)
 }
 
-// SetCommand sets the "command" field.
-func (m *KeyBindingMutation) SetCommand(s string) {
-	m.command = &s
+// SetMacos sets the "macos" field.
+func (m *KeyBindingMutation) SetMacos(s string) {
+	m.macos = &s
 }
 
-// Command returns the value of the "command" field in the mutation.
-func (m *KeyBindingMutation) Command() (r string, exists bool) {
-	v := m.command
+// Macos returns the value of the "macos" field in the mutation.
+func (m *KeyBindingMutation) Macos() (r string, exists bool) {
+	v := m.macos
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldCommand returns the old "command" field's value of the KeyBinding entity.
+// OldMacos returns the old "macos" field's value of the KeyBinding entity.
 // If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *KeyBindingMutation) OldCommand(ctx context.Context) (v string, err error) {
+func (m *KeyBindingMutation) OldMacos(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCommand is only allowed on UpdateOne operations")
+		return v, errors.New("OldMacos is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCommand requires an ID field in the mutation")
+		return v, errors.New("OldMacos requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCommand: %w", err)
+		return v, fmt.Errorf("querying old value for OldMacos: %w", err)
 	}
-	return oldValue.Command, nil
+	return oldValue.Macos, nil
 }
 
-// ResetCommand resets all changes to the "command" field.
-func (m *KeyBindingMutation) ResetCommand() {
-	m.command = nil
+// ClearMacos clears the value of the "macos" field.
+func (m *KeyBindingMutation) ClearMacos() {
+	m.macos = nil
+	m.clearedFields[keybinding.FieldMacos] = struct{}{}
+}
+
+// MacosCleared returns if the "macos" field was cleared in this mutation.
+func (m *KeyBindingMutation) MacosCleared() bool {
+	_, ok := m.clearedFields[keybinding.FieldMacos]
+	return ok
+}
+
+// ResetMacos resets all changes to the "macos" field.
+func (m *KeyBindingMutation) ResetMacos() {
+	m.macos = nil
+	delete(m.clearedFields, keybinding.FieldMacos)
+}
+
+// SetWindows sets the "windows" field.
+func (m *KeyBindingMutation) SetWindows(s string) {
+	m.windows = &s
+}
+
+// Windows returns the value of the "windows" field in the mutation.
+func (m *KeyBindingMutation) Windows() (r string, exists bool) {
+	v := m.windows
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWindows returns the old "windows" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldWindows(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWindows is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWindows requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWindows: %w", err)
+	}
+	return oldValue.Windows, nil
+}
+
+// ClearWindows clears the value of the "windows" field.
+func (m *KeyBindingMutation) ClearWindows() {
+	m.windows = nil
+	m.clearedFields[keybinding.FieldWindows] = struct{}{}
+}
+
+// WindowsCleared returns if the "windows" field was cleared in this mutation.
+func (m *KeyBindingMutation) WindowsCleared() bool {
+	_, ok := m.clearedFields[keybinding.FieldWindows]
+	return ok
+}
+
+// ResetWindows resets all changes to the "windows" field.
+func (m *KeyBindingMutation) ResetWindows() {
+	m.windows = nil
+	delete(m.clearedFields, keybinding.FieldWindows)
+}
+
+// SetLinux sets the "linux" field.
+func (m *KeyBindingMutation) SetLinux(s string) {
+	m.linux = &s
+}
+
+// Linux returns the value of the "linux" field in the mutation.
+func (m *KeyBindingMutation) Linux() (r string, exists bool) {
+	v := m.linux
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLinux returns the old "linux" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldLinux(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLinux is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLinux requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLinux: %w", err)
+	}
+	return oldValue.Linux, nil
+}
+
+// ClearLinux clears the value of the "linux" field.
+func (m *KeyBindingMutation) ClearLinux() {
+	m.linux = nil
+	m.clearedFields[keybinding.FieldLinux] = struct{}{}
+}
+
+// LinuxCleared returns if the "linux" field was cleared in this mutation.
+func (m *KeyBindingMutation) LinuxCleared() bool {
+	_, ok := m.clearedFields[keybinding.FieldLinux]
+	return ok
+}
+
+// ResetLinux resets all changes to the "linux" field.
+func (m *KeyBindingMutation) ResetLinux() {
+	m.linux = nil
+	delete(m.clearedFields, keybinding.FieldLinux)
 }
 
 // SetExtension sets the "extension" field.
@@ -1843,22 +1994,9 @@ func (m *KeyBindingMutation) OldExtension(ctx context.Context) (v string, err er
 	return oldValue.Extension, nil
 }
 
-// ClearExtension clears the value of the "extension" field.
-func (m *KeyBindingMutation) ClearExtension() {
-	m.extension = nil
-	m.clearedFields[keybinding.FieldExtension] = struct{}{}
-}
-
-// ExtensionCleared returns if the "extension" field was cleared in this mutation.
-func (m *KeyBindingMutation) ExtensionCleared() bool {
-	_, ok := m.clearedFields[keybinding.FieldExtension]
-	return ok
-}
-
 // ResetExtension resets all changes to the "extension" field.
 func (m *KeyBindingMutation) ResetExtension() {
 	m.extension = nil
-	delete(m.clearedFields, keybinding.FieldExtension)
 }
 
 // SetEnabled sets the "enabled" field.
@@ -1897,6 +2035,78 @@ func (m *KeyBindingMutation) ResetEnabled() {
 	m.enabled = nil
 }
 
+// SetPreventDefault sets the "prevent_default" field.
+func (m *KeyBindingMutation) SetPreventDefault(b bool) {
+	m.prevent_default = &b
+}
+
+// PreventDefault returns the value of the "prevent_default" field in the mutation.
+func (m *KeyBindingMutation) PreventDefault() (r bool, exists bool) {
+	v := m.prevent_default
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPreventDefault returns the old "prevent_default" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldPreventDefault(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPreventDefault is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPreventDefault requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPreventDefault: %w", err)
+	}
+	return oldValue.PreventDefault, nil
+}
+
+// ResetPreventDefault resets all changes to the "prevent_default" field.
+func (m *KeyBindingMutation) ResetPreventDefault() {
+	m.prevent_default = nil
+}
+
+// SetScope sets the "scope" field.
+func (m *KeyBindingMutation) SetScope(s string) {
+	m.scope = &s
+}
+
+// Scope returns the value of the "scope" field in the mutation.
+func (m *KeyBindingMutation) Scope() (r string, exists bool) {
+	v := m.scope
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldScope returns the old "scope" field's value of the KeyBinding entity.
+// If the KeyBinding object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *KeyBindingMutation) OldScope(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldScope is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldScope requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldScope: %w", err)
+	}
+	return oldValue.Scope, nil
+}
+
+// ResetScope resets all changes to the "scope" field.
+func (m *KeyBindingMutation) ResetScope() {
+	m.scope = nil
+}
+
 // Where appends a list predicates to the KeyBindingMutation builder.
 func (m *KeyBindingMutation) Where(ps ...predicate.KeyBinding) {
 	m.predicates = append(m.predicates, ps...)
@@ -1931,7 +2141,7 @@ func (m *KeyBindingMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *KeyBindingMutation) Fields() []string {
-	fields := make([]string, 0, 8)
+	fields := make([]string, 0, 14)
 	if m.uuid != nil {
 		fields = append(fields, keybinding.FieldUUID)
 	}
@@ -1944,17 +2154,35 @@ func (m *KeyBindingMutation) Fields() []string {
 	if m.deleted_at != nil {
 		fields = append(fields, keybinding.FieldDeletedAt)
 	}
+	if m.name != nil {
+		fields = append(fields, keybinding.FieldName)
+	}
+	if m._type != nil {
+		fields = append(fields, keybinding.FieldType)
+	}
 	if m.key != nil {
 		fields = append(fields, keybinding.FieldKey)
 	}
-	if m.command != nil {
-		fields = append(fields, keybinding.FieldCommand)
+	if m.macos != nil {
+		fields = append(fields, keybinding.FieldMacos)
+	}
+	if m.windows != nil {
+		fields = append(fields, keybinding.FieldWindows)
+	}
+	if m.linux != nil {
+		fields = append(fields, keybinding.FieldLinux)
 	}
 	if m.extension != nil {
 		fields = append(fields, keybinding.FieldExtension)
 	}
 	if m.enabled != nil {
 		fields = append(fields, keybinding.FieldEnabled)
+	}
+	if m.prevent_default != nil {
+		fields = append(fields, keybinding.FieldPreventDefault)
+	}
+	if m.scope != nil {
+		fields = append(fields, keybinding.FieldScope)
 	}
 	return fields
 }
@@ -1972,14 +2200,26 @@ func (m *KeyBindingMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case keybinding.FieldDeletedAt:
 		return m.DeletedAt()
+	case keybinding.FieldName:
+		return m.Name()
+	case keybinding.FieldType:
+		return m.GetType()
 	case keybinding.FieldKey:
 		return m.Key()
-	case keybinding.FieldCommand:
-		return m.Command()
+	case keybinding.FieldMacos:
+		return m.Macos()
+	case keybinding.FieldWindows:
+		return m.Windows()
+	case keybinding.FieldLinux:
+		return m.Linux()
 	case keybinding.FieldExtension:
 		return m.Extension()
 	case keybinding.FieldEnabled:
 		return m.Enabled()
+	case keybinding.FieldPreventDefault:
+		return m.PreventDefault()
+	case keybinding.FieldScope:
+		return m.Scope()
 	}
 	return nil, false
 }
@@ -1997,14 +2237,26 @@ func (m *KeyBindingMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldUpdatedAt(ctx)
 	case keybinding.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
+	case keybinding.FieldName:
+		return m.OldName(ctx)
+	case keybinding.FieldType:
+		return m.OldType(ctx)
 	case keybinding.FieldKey:
 		return m.OldKey(ctx)
-	case keybinding.FieldCommand:
-		return m.OldCommand(ctx)
+	case keybinding.FieldMacos:
+		return m.OldMacos(ctx)
+	case keybinding.FieldWindows:
+		return m.OldWindows(ctx)
+	case keybinding.FieldLinux:
+		return m.OldLinux(ctx)
 	case keybinding.FieldExtension:
 		return m.OldExtension(ctx)
 	case keybinding.FieldEnabled:
 		return m.OldEnabled(ctx)
+	case keybinding.FieldPreventDefault:
+		return m.OldPreventDefault(ctx)
+	case keybinding.FieldScope:
+		return m.OldScope(ctx)
 	}
 	return nil, fmt.Errorf("unknown KeyBinding field %s", name)
 }
@@ -2042,6 +2294,20 @@ func (m *KeyBindingMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDeletedAt(v)
 		return nil
+	case keybinding.FieldName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetName(v)
+		return nil
+	case keybinding.FieldType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
 	case keybinding.FieldKey:
 		v, ok := value.(string)
 		if !ok {
@@ -2049,12 +2315,26 @@ func (m *KeyBindingMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetKey(v)
 		return nil
-	case keybinding.FieldCommand:
+	case keybinding.FieldMacos:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetCommand(v)
+		m.SetMacos(v)
+		return nil
+	case keybinding.FieldWindows:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWindows(v)
+		return nil
+	case keybinding.FieldLinux:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLinux(v)
 		return nil
 	case keybinding.FieldExtension:
 		v, ok := value.(string)
@@ -2069,6 +2349,20 @@ func (m *KeyBindingMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEnabled(v)
+		return nil
+	case keybinding.FieldPreventDefault:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPreventDefault(v)
+		return nil
+	case keybinding.FieldScope:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetScope(v)
 		return nil
 	}
 	return fmt.Errorf("unknown KeyBinding field %s", name)
@@ -2100,14 +2394,20 @@ func (m *KeyBindingMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *KeyBindingMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(keybinding.FieldUUID) {
-		fields = append(fields, keybinding.FieldUUID)
-	}
 	if m.FieldCleared(keybinding.FieldDeletedAt) {
 		fields = append(fields, keybinding.FieldDeletedAt)
 	}
-	if m.FieldCleared(keybinding.FieldExtension) {
-		fields = append(fields, keybinding.FieldExtension)
+	if m.FieldCleared(keybinding.FieldKey) {
+		fields = append(fields, keybinding.FieldKey)
+	}
+	if m.FieldCleared(keybinding.FieldMacos) {
+		fields = append(fields, keybinding.FieldMacos)
+	}
+	if m.FieldCleared(keybinding.FieldWindows) {
+		fields = append(fields, keybinding.FieldWindows)
+	}
+	if m.FieldCleared(keybinding.FieldLinux) {
+		fields = append(fields, keybinding.FieldLinux)
 	}
 	return fields
 }
@@ -2123,14 +2423,20 @@ func (m *KeyBindingMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *KeyBindingMutation) ClearField(name string) error {
 	switch name {
-	case keybinding.FieldUUID:
-		m.ClearUUID()
-		return nil
 	case keybinding.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
-	case keybinding.FieldExtension:
-		m.ClearExtension()
+	case keybinding.FieldKey:
+		m.ClearKey()
+		return nil
+	case keybinding.FieldMacos:
+		m.ClearMacos()
+		return nil
+	case keybinding.FieldWindows:
+		m.ClearWindows()
+		return nil
+	case keybinding.FieldLinux:
+		m.ClearLinux()
 		return nil
 	}
 	return fmt.Errorf("unknown KeyBinding nullable field %s", name)
@@ -2152,17 +2458,35 @@ func (m *KeyBindingMutation) ResetField(name string) error {
 	case keybinding.FieldDeletedAt:
 		m.ResetDeletedAt()
 		return nil
+	case keybinding.FieldName:
+		m.ResetName()
+		return nil
+	case keybinding.FieldType:
+		m.ResetType()
+		return nil
 	case keybinding.FieldKey:
 		m.ResetKey()
 		return nil
-	case keybinding.FieldCommand:
-		m.ResetCommand()
+	case keybinding.FieldMacos:
+		m.ResetMacos()
+		return nil
+	case keybinding.FieldWindows:
+		m.ResetWindows()
+		return nil
+	case keybinding.FieldLinux:
+		m.ResetLinux()
 		return nil
 	case keybinding.FieldExtension:
 		m.ResetExtension()
 		return nil
 	case keybinding.FieldEnabled:
 		m.ResetEnabled()
+		return nil
+	case keybinding.FieldPreventDefault:
+		m.ResetPreventDefault()
+		return nil
+	case keybinding.FieldScope:
+		m.ResetScope()
 		return nil
 	}
 	return fmt.Errorf("unknown KeyBinding field %s", name)
@@ -2226,7 +2550,7 @@ type ThemeMutation struct {
 	created_at    *string
 	updated_at    *string
 	deleted_at    *string
-	key           *string
+	name          *string
 	_type         *theme.Type
 	colors        *map[string]interface{}
 	clearedFields map[string]struct{}
@@ -2350,7 +2674,7 @@ func (m *ThemeMutation) UUID() (r string, exists bool) {
 // OldUUID returns the old "uuid" field's value of the Theme entity.
 // If the Theme object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ThemeMutation) OldUUID(ctx context.Context) (v *string, err error) {
+func (m *ThemeMutation) OldUUID(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
 	}
@@ -2364,22 +2688,9 @@ func (m *ThemeMutation) OldUUID(ctx context.Context) (v *string, err error) {
 	return oldValue.UUID, nil
 }
 
-// ClearUUID clears the value of the "uuid" field.
-func (m *ThemeMutation) ClearUUID() {
-	m.uuid = nil
-	m.clearedFields[theme.FieldUUID] = struct{}{}
-}
-
-// UUIDCleared returns if the "uuid" field was cleared in this mutation.
-func (m *ThemeMutation) UUIDCleared() bool {
-	_, ok := m.clearedFields[theme.FieldUUID]
-	return ok
-}
-
 // ResetUUID resets all changes to the "uuid" field.
 func (m *ThemeMutation) ResetUUID() {
 	m.uuid = nil
-	delete(m.clearedFields, theme.FieldUUID)
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -2503,40 +2814,40 @@ func (m *ThemeMutation) ResetDeletedAt() {
 	delete(m.clearedFields, theme.FieldDeletedAt)
 }
 
-// SetKey sets the "key" field.
-func (m *ThemeMutation) SetKey(s string) {
-	m.key = &s
+// SetName sets the "name" field.
+func (m *ThemeMutation) SetName(s string) {
+	m.name = &s
 }
 
-// Key returns the value of the "key" field in the mutation.
-func (m *ThemeMutation) Key() (r string, exists bool) {
-	v := m.key
+// Name returns the value of the "name" field in the mutation.
+func (m *ThemeMutation) Name() (r string, exists bool) {
+	v := m.name
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldKey returns the old "key" field's value of the Theme entity.
+// OldName returns the old "name" field's value of the Theme entity.
 // If the Theme object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ThemeMutation) OldKey(ctx context.Context) (v string, err error) {
+func (m *ThemeMutation) OldName(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldKey is only allowed on UpdateOne operations")
+		return v, errors.New("OldName is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldKey requires an ID field in the mutation")
+		return v, errors.New("OldName requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldKey: %w", err)
+		return v, fmt.Errorf("querying old value for OldName: %w", err)
 	}
-	return oldValue.Key, nil
+	return oldValue.Name, nil
 }
 
-// ResetKey resets all changes to the "key" field.
-func (m *ThemeMutation) ResetKey() {
-	m.key = nil
+// ResetName resets all changes to the "name" field.
+func (m *ThemeMutation) ResetName() {
+	m.name = nil
 }
 
 // SetType sets the "type" field.
@@ -2671,8 +2982,8 @@ func (m *ThemeMutation) Fields() []string {
 	if m.deleted_at != nil {
 		fields = append(fields, theme.FieldDeletedAt)
 	}
-	if m.key != nil {
-		fields = append(fields, theme.FieldKey)
+	if m.name != nil {
+		fields = append(fields, theme.FieldName)
 	}
 	if m._type != nil {
 		fields = append(fields, theme.FieldType)
@@ -2696,8 +3007,8 @@ func (m *ThemeMutation) Field(name string) (ent.Value, bool) {
 		return m.UpdatedAt()
 	case theme.FieldDeletedAt:
 		return m.DeletedAt()
-	case theme.FieldKey:
-		return m.Key()
+	case theme.FieldName:
+		return m.Name()
 	case theme.FieldType:
 		return m.GetType()
 	case theme.FieldColors:
@@ -2719,8 +3030,8 @@ func (m *ThemeMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldUpdatedAt(ctx)
 	case theme.FieldDeletedAt:
 		return m.OldDeletedAt(ctx)
-	case theme.FieldKey:
-		return m.OldKey(ctx)
+	case theme.FieldName:
+		return m.OldName(ctx)
 	case theme.FieldType:
 		return m.OldType(ctx)
 	case theme.FieldColors:
@@ -2762,12 +3073,12 @@ func (m *ThemeMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetDeletedAt(v)
 		return nil
-	case theme.FieldKey:
+	case theme.FieldName:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetKey(v)
+		m.SetName(v)
 		return nil
 	case theme.FieldType:
 		v, ok := value.(theme.Type)
@@ -2813,9 +3124,6 @@ func (m *ThemeMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *ThemeMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(theme.FieldUUID) {
-		fields = append(fields, theme.FieldUUID)
-	}
 	if m.FieldCleared(theme.FieldDeletedAt) {
 		fields = append(fields, theme.FieldDeletedAt)
 	}
@@ -2836,9 +3144,6 @@ func (m *ThemeMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *ThemeMutation) ClearField(name string) error {
 	switch name {
-	case theme.FieldUUID:
-		m.ClearUUID()
-		return nil
 	case theme.FieldDeletedAt:
 		m.ClearDeletedAt()
 		return nil
@@ -2865,8 +3170,8 @@ func (m *ThemeMutation) ResetField(name string) error {
 	case theme.FieldDeletedAt:
 		m.ResetDeletedAt()
 		return nil
-	case theme.FieldKey:
-		m.ResetKey()
+	case theme.FieldName:
+		m.ResetName()
 		return nil
 	case theme.FieldType:
 		m.ResetType()

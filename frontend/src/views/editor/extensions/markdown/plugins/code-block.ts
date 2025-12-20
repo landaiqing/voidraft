@@ -65,9 +65,15 @@ export function handleCodeBlock(
 	if (ctx.seen.has(nf)) return;
 	ctx.seen.add(nf);
 	ranges.push([nf, nt]);
+	
+	// When cursor/selection is in this code block, don't add any decorations
+	// This allows the selection background to be visible
+	if (inCursor) return;
 
 	const startLine = ctx.view.state.doc.lineAt(nf);
 	const endLine = ctx.view.state.doc.lineAt(nt);
+	
+	// Add background decorations for each line
 	for (let num = startLine.number; num <= endLine.number; num++) {
 		const line = ctx.view.state.doc.line(num);
 		let deco = DECO_CODEBLOCK_LINE;
@@ -76,14 +82,14 @@ export function handleCodeBlock(
 		else if (num === endLine.number) deco = DECO_CODEBLOCK_END;
 		ctx.items.push({ from: line.from, to: line.from, deco });
 	}
-	if (!inCursor) {
-		const codeInfo = node.getChild('CodeInfo');
-		const codeMarks = node.getChildren('CodeMark');
-		const language = codeInfo ? ctx.view.state.doc.sliceString(codeInfo.from, codeInfo.to).trim() : null;
-		ctx.items.push({ from: startLine.to, to: startLine.to, deco: Decoration.widget({ widget: new CodeBlockInfoWidget(nf, nt, language), side: 1 }), priority: 1 });
-		if (codeInfo) ctx.items.push({ from: codeInfo.from, to: codeInfo.to, deco: invisibleDecoration });
-		for (const mark of codeMarks) ctx.items.push({ from: mark.from, to: mark.to, deco: invisibleDecoration });
-	}
+	
+	// Add language info widget and hide code marks
+	const codeInfo = node.getChild('CodeInfo');
+	const codeMarks = node.getChildren('CodeMark');
+	const language = codeInfo ? ctx.view.state.doc.sliceString(codeInfo.from, codeInfo.to).trim() : null;
+	ctx.items.push({ from: startLine.to, to: startLine.to, deco: Decoration.widget({ widget: new CodeBlockInfoWidget(nf, nt, language), side: 1 }), priority: 1 });
+	if (codeInfo) ctx.items.push({ from: codeInfo.from, to: codeInfo.to, deco: invisibleDecoration });
+	for (const mark of codeMarks) ctx.items.push({ from: mark.from, to: mark.to, deco: invisibleDecoration });
 }
 
 /**

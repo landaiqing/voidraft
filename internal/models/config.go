@@ -103,6 +103,9 @@ type EditingConfig struct {
 	TabSize         int     `json:"tabSize"`         // Tab大小
 	TabType         TabType `json:"tabType"`         // Tab类型（空格或Tab）
 
+	// 快捷键模式
+	KeymapMode KeyBindingType `json:"keymapMode"` // 快捷键模式（standard 或 emacs）
+
 	// 保存选项
 	AutoSaveDelay int `json:"autoSaveDelay"` // 自动保存延迟（毫秒）
 }
@@ -203,6 +206,8 @@ func NewDefaultAppConfig() *AppConfig {
 			EnableTabIndent: true,
 			TabSize:         4,
 			TabType:         TabTypeTab,
+			// 快捷键模式
+			KeymapMode: Standard, // 默认使用标准模式
 			// 保存选项
 			AutoSaveDelay: 2000,
 		},

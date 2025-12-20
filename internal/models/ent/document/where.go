@@ -143,16 +143,6 @@ func UUIDHasSuffix(v string) predicate.Document {
 	return predicate.Document(sql.FieldHasSuffix(FieldUUID, v))
 }
 
-// UUIDIsNil applies the IsNil predicate on the "uuid" field.
-func UUIDIsNil() predicate.Document {
-	return predicate.Document(sql.FieldIsNull(FieldUUID))
-}
-
-// UUIDNotNil applies the NotNil predicate on the "uuid" field.
-func UUIDNotNil() predicate.Document {
-	return predicate.Document(sql.FieldNotNull(FieldUUID))
-}
-
 // UUIDEqualFold applies the EqualFold predicate on the "uuid" field.
 func UUIDEqualFold(v string) predicate.Document {
 	return predicate.Document(sql.FieldEqualFold(FieldUUID, v))

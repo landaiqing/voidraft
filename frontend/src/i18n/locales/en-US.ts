@@ -44,11 +44,18 @@ export default {
     auto: 'Follow System'
   },
   keybindings: {
+    keymapMode: 'Keymap Mode',
+    modes: {
+      standard: 'Standard Mode',
+      emacs: 'Emacs Mode'
+    },
     headers: {
       shortcut: 'Shortcut',
       extension: 'Extension',
       description: 'Description'
     },
+    resetToDefault: 'Reset to Default',
+    confirmReset: 'Confirm Reset?',
     commands: {
       showSearch: 'Show search panel',
       hideSearch: 'Hide search panel',
@@ -93,6 +100,25 @@ export default {
       insertBlankLine: 'Insert blank line',
       selectLine: 'Select line',
       selectParentSyntax: 'Select parent syntax',
+      simplifySelection: 'Simplify selection',
+      addCursorAbove: 'Add cursor above',
+      addCursorBelow: 'Add cursor below',
+      cursorGroupLeft: 'Cursor word left',
+      cursorGroupRight: 'Cursor word right',
+      selectGroupLeft: 'Select word left',
+      selectGroupRight: 'Select word right',
+      deleteToLineEnd: 'Delete to line end',
+      deleteToLineStart: 'Delete to line start',
+      cursorLineStart: 'Cursor to line start',
+      cursorLineEnd: 'Cursor to line end',
+      selectLineStart: 'Select to line start',
+      selectLineEnd: 'Select to line end',
+      cursorDocStart: 'Cursor to document start',
+      cursorDocEnd: 'Cursor to document end',
+      selectDocStart: 'Select to document start',
+      selectDocEnd: 'Select to document end',
+      selectMatchingBracket: 'Select to matching bracket',
+      splitLine: 'Split line',
       indentLess: 'Indent less',
       indentMore: 'Indent more',
       indentSelection: 'Indent selection',
@@ -104,6 +130,18 @@ export default {
       deleteCharForward: 'Delete character forward',
       deleteGroupBackward: 'Delete group backward',
       deleteGroupForward: 'Delete group forward',
+
+      // Emacs mode additional basic navigation commands
+      cursorCharLeft: 'Cursor left one character',
+      cursorCharRight: 'Cursor right one character',
+      cursorLineUp: 'Cursor up one line',
+      cursorLineDown: 'Cursor down one line',
+      cursorPageUp: 'Page up',
+      cursorPageDown: 'Page down',
+      selectCharLeft: 'Select left one character',
+      selectCharRight: 'Select right one character',
+      selectLineUp: 'Select up one line',
+      selectLineDown: 'Select down one line',
     }
   },
   tabs: {

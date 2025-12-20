@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import {computed, ref} from 'vue';
+import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useEditorStore} from '@/stores/editorStore';
 import {useExtensionStore} from '@/stores/extensionStore';
 import {ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {
-  getAllExtensionIds,
   getExtensionDefaultConfig,
   getExtensionDescription,
-  getExtensionDisplayName,
+  getExtensionDisplayName, getExtensionsMap,
   hasExtensionConfig
 } from '@/views/editor/manager/extensions';
 import SettingSection from '../components/SettingSection.vue';
@@ -19,48 +18,54 @@ const {t} = useI18n();
 const editorStore = useEditorStore();
 const extensionStore = useExtensionStore();
 
+// 页面初始化时加载扩展数据
+onMounted(async () => {
+  await extensionStore.loadExtensions();
+});
+
 // 展开状态管理
-const expandedExtensions = ref<Set<string>>(new Set());
+const expandedExtensions = ref<Set<number>>(new Set());
 
 // 获取所有可用的扩展
 const availableExtensions = computed(() => {
-  return getAllExtensionIds().map(key => {
-    const extension = extensionStore.extensions.find(ext => ext.key === key);
+  return getExtensionsMap().map(name => {
+    const extension = extensionStore.extensions.find(ext => ext.name === name);
     return {
-      id: key,
-      displayName: getExtensionDisplayName(key),
-      description: getExtensionDescription(key),
+      id: extension?.id ?? 0,
+      name: name,
+      displayName: getExtensionDisplayName(name),
+      description: getExtensionDescription(name),
       enabled: extension?.enabled || false,
-      hasConfig: hasExtensionConfig(key),
+      hasConfig: hasExtensionConfig(name),
       config: extension?.config || {},
-      defaultConfig: getExtensionDefaultConfig(key)
+      defaultConfig: getExtensionDefaultConfig(name)
     };
   });
 });
 
 // 切换展开状态
-const toggleExpanded = (extensionKey: string) => {
-  if (expandedExtensions.value.has(extensionKey)) {
-    expandedExtensions.value.delete(extensionKey);
+const toggleExpanded = (extensionId: number) => {
+  if (expandedExtensions.value.has(extensionId)) {
+    expandedExtensions.value.delete(extensionId);
   } else {
-    expandedExtensions.value.add(extensionKey);
+    expandedExtensions.value.add(extensionId);
   }
 };
 
 // 更新扩展状态
-const updateExtension = async (extensionKey: string, enabled: boolean) => {
+const updateExtension = async (extensionId: number, enabled: boolean) => {
   try {
-    await editorStore.updateExtension(extensionKey, enabled);
+    await editorStore.updateExtension(extensionId, enabled);
   } catch (error) {
     console.error('Failed to update extension:', error);
   }
 };
 
 // 更新扩展配置
-const updateExtensionConfig = async (extensionKey: string, configKey: string, value: any) => {
+const updateExtensionConfig = async (extensionId: number, configKey: string, value: any) => {
   try {
     // 获取当前扩展状态
-    const extension = extensionStore.extensions.find(ext => ext.key === extensionKey);
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
     if (!extension) return;
 
     // 更新配置
@@ -71,7 +76,7 @@ const updateExtensionConfig = async (extensionKey: string, configKey: string, va
       updatedConfig[configKey] = value;
     }
     // 使用editorStore的updateExtension方法更新，确保应用到所有编辑器实例
-    await editorStore.updateExtension(extensionKey, extension.enabled ?? false, updatedConfig);
+    await editorStore.updateExtension(extensionId, extension.enabled ?? false, updatedConfig);
 
   } catch (error) {
     console.error('Failed to update extension config:', error);
@@ -79,19 +84,19 @@ const updateExtensionConfig = async (extensionKey: string, configKey: string, va
 };
 
 // 重置扩展到默认配置
-const resetExtension = async (extensionKey: string) => {
+const resetExtension = async (extensionId: number) => {
   try {
     // 重置到默认配置
-    await ExtensionService.ResetExtensionConfig(extensionKey);
+    await ExtensionService.ResetExtensionConfig(extensionId);
 
     // 重新加载扩展状态以获取最新配置
     await extensionStore.loadExtensions();
 
     // 获取重置后的状态，立即应用到所有编辑器视图
-    const extension = extensionStore.extensions.find(ext => ext.key === extensionKey);
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
     if (extension) {
       // 通过editorStore更新，确保所有视图都能同步
-      await editorStore.updateExtension(extensionKey, extension.enabled ?? false, extension.config);
+      await editorStore.updateExtension(extensionId, extension.enabled ?? false, extension.config);
     }
   } catch (error) {
     console.error('Failed to reset extension:', error);
@@ -125,7 +130,7 @@ const formatConfigValue = (value: any): string => {
 
 
 const handleConfigInput = async (
-    extensionKey: string,
+    extensionId: number,
     configKey: string,
     defaultValue: any,
     event: Event
@@ -135,15 +140,15 @@ const handleConfigInput = async (
   const rawValue = target.value;
   const trimmedValue = rawValue.trim();
   if (!trimmedValue.length) {
-    await updateExtensionConfig(extensionKey, configKey, undefined);
+    await updateExtensionConfig(extensionId, configKey, undefined);
     return;
   }
 
   try {
     const parsedValue = JSON.parse(trimmedValue);
-    await updateExtensionConfig(extensionKey, configKey, parsedValue);
+    await updateExtensionConfig(extensionId, configKey, parsedValue);
   } catch (_error) {
-    const extension = extensionStore.extensions.find(ext => ext.key === extensionKey);
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
     const fallbackValue = getConfigValue(extension?.config, configKey, defaultValue);
     target.value = formatConfigValue(fallbackValue);
 
@@ -158,7 +163,7 @@ const handleConfigInput = async (
     <SettingSection :title="t('settings.extensions')">
       <div
           v-for="extension in availableExtensions"
-          :key="extension.id"
+          :key="extension.name"
           class="extension-item"
       >
         <!-- 扩展主项 -->

@@ -17,21 +17,33 @@ type KeyBinding struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// UUID for cross-device sync (UUIDv7)
-	UUID *string `json:"uuid"`
+	UUID string `json:"uuid"`
 	// creation time
 	CreatedAt string `json:"created_at"`
 	// update time
 	UpdatedAt string `json:"updated_at"`
 	// deleted at
 	DeletedAt *string `json:"deleted_at,omitempty"`
-	// key binding key
-	Key string `json:"key"`
-	// key binding command
-	Command string `json:"command"`
-	// key binding extension
-	Extension string `json:"extension,omitempty"`
-	// key binding enabled
-	Enabled      bool `json:"enabled"`
+	// command identifier
+	Name string `json:"name"`
+	// keybinding type: standard or emacs
+	Type string `json:"type"`
+	// universal keybinding (cross-platform)
+	Key string `json:"key,omitempty"`
+	// macOS specific keybinding
+	Macos string `json:"macos,omitempty"`
+	// Windows specific keybinding
+	Windows string `json:"windows,omitempty"`
+	// Linux specific keybinding
+	Linux string `json:"linux,omitempty"`
+	// extension name (functional category)
+	Extension string `json:"extension"`
+	// whether this keybinding is enabled
+	Enabled bool `json:"enabled"`
+	// prevent browser default behavior
+	PreventDefault bool `json:"preventDefault"`
+	// keybinding scope (default: editor)
+	Scope        string `json:"scope,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -40,11 +52,11 @@ func (*KeyBinding) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case keybinding.FieldEnabled:
+		case keybinding.FieldEnabled, keybinding.FieldPreventDefault:
 			values[i] = new(sql.NullBool)
 		case keybinding.FieldID:
 			values[i] = new(sql.NullInt64)
-		case keybinding.FieldUUID, keybinding.FieldCreatedAt, keybinding.FieldUpdatedAt, keybinding.FieldDeletedAt, keybinding.FieldKey, keybinding.FieldCommand, keybinding.FieldExtension:
+		case keybinding.FieldUUID, keybinding.FieldCreatedAt, keybinding.FieldUpdatedAt, keybinding.FieldDeletedAt, keybinding.FieldName, keybinding.FieldType, keybinding.FieldKey, keybinding.FieldMacos, keybinding.FieldWindows, keybinding.FieldLinux, keybinding.FieldExtension, keybinding.FieldScope:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -71,8 +83,7 @@ func (_m *KeyBinding) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field uuid", values[i])
 			} else if value.Valid {
-				_m.UUID = new(string)
-				*_m.UUID = value.String
+				_m.UUID = value.String
 			}
 		case keybinding.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -93,17 +104,41 @@ func (_m *KeyBinding) assignValues(columns []string, values []any) error {
 				_m.DeletedAt = new(string)
 				*_m.DeletedAt = value.String
 			}
+		case keybinding.FieldName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field name", values[i])
+			} else if value.Valid {
+				_m.Name = value.String
+			}
+		case keybinding.FieldType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field type", values[i])
+			} else if value.Valid {
+				_m.Type = value.String
+			}
 		case keybinding.FieldKey:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field key", values[i])
 			} else if value.Valid {
 				_m.Key = value.String
 			}
-		case keybinding.FieldCommand:
+		case keybinding.FieldMacos:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field command", values[i])
+				return fmt.Errorf("unexpected type %T for field macos", values[i])
 			} else if value.Valid {
-				_m.Command = value.String
+				_m.Macos = value.String
+			}
+		case keybinding.FieldWindows:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field windows", values[i])
+			} else if value.Valid {
+				_m.Windows = value.String
+			}
+		case keybinding.FieldLinux:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field linux", values[i])
+			} else if value.Valid {
+				_m.Linux = value.String
 			}
 		case keybinding.FieldExtension:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -116,6 +151,18 @@ func (_m *KeyBinding) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field enabled", values[i])
 			} else if value.Valid {
 				_m.Enabled = value.Bool
+			}
+		case keybinding.FieldPreventDefault:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field prevent_default", values[i])
+			} else if value.Valid {
+				_m.PreventDefault = value.Bool
+			}
+		case keybinding.FieldScope:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field scope", values[i])
+			} else if value.Valid {
+				_m.Scope = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -153,10 +200,8 @@ func (_m *KeyBinding) String() string {
 	var builder strings.Builder
 	builder.WriteString("KeyBinding(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	if v := _m.UUID; v != nil {
-		builder.WriteString("uuid=")
-		builder.WriteString(*v)
-	}
+	builder.WriteString("uuid=")
+	builder.WriteString(_m.UUID)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)
@@ -169,17 +214,35 @@ func (_m *KeyBinding) String() string {
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
+	builder.WriteString("name=")
+	builder.WriteString(_m.Name)
+	builder.WriteString(", ")
+	builder.WriteString("type=")
+	builder.WriteString(_m.Type)
+	builder.WriteString(", ")
 	builder.WriteString("key=")
 	builder.WriteString(_m.Key)
 	builder.WriteString(", ")
-	builder.WriteString("command=")
-	builder.WriteString(_m.Command)
+	builder.WriteString("macos=")
+	builder.WriteString(_m.Macos)
+	builder.WriteString(", ")
+	builder.WriteString("windows=")
+	builder.WriteString(_m.Windows)
+	builder.WriteString(", ")
+	builder.WriteString("linux=")
+	builder.WriteString(_m.Linux)
 	builder.WriteString(", ")
 	builder.WriteString("extension=")
 	builder.WriteString(_m.Extension)
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))
+	builder.WriteString(", ")
+	builder.WriteString("prevent_default=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PreventDefault))
+	builder.WriteString(", ")
+	builder.WriteString("scope=")
+	builder.WriteString(_m.Scope)
 	builder.WriteByte(')')
 	return builder.String()
 }

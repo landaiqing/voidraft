@@ -33,12 +33,12 @@ func (Theme) Mixin() []ent.Mixin {
 // Fields of the Theme.
 func (Theme) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("key").
+		field.String("name").
 			MaxLen(100).
 			NotEmpty().
 			Unique().
-			StructTag(`json:"key"`).
-			Comment("theme key"),
+			StructTag(`json:"name"`).
+			Comment("theme name"),
 		field.Enum("type").
 			Values("dark", "light").
 			StructTag(`json:"type"`).

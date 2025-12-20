@@ -75,29 +75,85 @@ func (_c *KeyBindingCreate) SetNillableDeletedAt(v *string) *KeyBindingCreate {
 	return _c
 }
 
+// SetName sets the "name" field.
+func (_c *KeyBindingCreate) SetName(v string) *KeyBindingCreate {
+	_c.mutation.SetName(v)
+	return _c
+}
+
+// SetType sets the "type" field.
+func (_c *KeyBindingCreate) SetType(v string) *KeyBindingCreate {
+	_c.mutation.SetType(v)
+	return _c
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableType(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetType(*v)
+	}
+	return _c
+}
+
 // SetKey sets the "key" field.
 func (_c *KeyBindingCreate) SetKey(v string) *KeyBindingCreate {
 	_c.mutation.SetKey(v)
 	return _c
 }
 
-// SetCommand sets the "command" field.
-func (_c *KeyBindingCreate) SetCommand(v string) *KeyBindingCreate {
-	_c.mutation.SetCommand(v)
+// SetNillableKey sets the "key" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableKey(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetKey(*v)
+	}
+	return _c
+}
+
+// SetMacos sets the "macos" field.
+func (_c *KeyBindingCreate) SetMacos(v string) *KeyBindingCreate {
+	_c.mutation.SetMacos(v)
+	return _c
+}
+
+// SetNillableMacos sets the "macos" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableMacos(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetMacos(*v)
+	}
+	return _c
+}
+
+// SetWindows sets the "windows" field.
+func (_c *KeyBindingCreate) SetWindows(v string) *KeyBindingCreate {
+	_c.mutation.SetWindows(v)
+	return _c
+}
+
+// SetNillableWindows sets the "windows" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableWindows(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetWindows(*v)
+	}
+	return _c
+}
+
+// SetLinux sets the "linux" field.
+func (_c *KeyBindingCreate) SetLinux(v string) *KeyBindingCreate {
+	_c.mutation.SetLinux(v)
+	return _c
+}
+
+// SetNillableLinux sets the "linux" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableLinux(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetLinux(*v)
+	}
 	return _c
 }
 
 // SetExtension sets the "extension" field.
 func (_c *KeyBindingCreate) SetExtension(v string) *KeyBindingCreate {
 	_c.mutation.SetExtension(v)
-	return _c
-}
-
-// SetNillableExtension sets the "extension" field if the given value is not nil.
-func (_c *KeyBindingCreate) SetNillableExtension(v *string) *KeyBindingCreate {
-	if v != nil {
-		_c.SetExtension(*v)
-	}
 	return _c
 }
 
@@ -111,6 +167,34 @@ func (_c *KeyBindingCreate) SetEnabled(v bool) *KeyBindingCreate {
 func (_c *KeyBindingCreate) SetNillableEnabled(v *bool) *KeyBindingCreate {
 	if v != nil {
 		_c.SetEnabled(*v)
+	}
+	return _c
+}
+
+// SetPreventDefault sets the "prevent_default" field.
+func (_c *KeyBindingCreate) SetPreventDefault(v bool) *KeyBindingCreate {
+	_c.mutation.SetPreventDefault(v)
+	return _c
+}
+
+// SetNillablePreventDefault sets the "prevent_default" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillablePreventDefault(v *bool) *KeyBindingCreate {
+	if v != nil {
+		_c.SetPreventDefault(*v)
+	}
+	return _c
+}
+
+// SetScope sets the "scope" field.
+func (_c *KeyBindingCreate) SetScope(v string) *KeyBindingCreate {
+	_c.mutation.SetScope(v)
+	return _c
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (_c *KeyBindingCreate) SetNillableScope(v *string) *KeyBindingCreate {
+	if v != nil {
+		_c.SetScope(*v)
 	}
 	return _c
 }
@@ -173,36 +257,74 @@ func (_c *KeyBindingCreate) defaults() error {
 		v := keybinding.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := _c.mutation.GetType(); !ok {
+		v := keybinding.DefaultType
+		_c.mutation.SetType(v)
+	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		v := keybinding.DefaultEnabled
 		_c.mutation.SetEnabled(v)
+	}
+	if _, ok := _c.mutation.PreventDefault(); !ok {
+		v := keybinding.DefaultPreventDefault
+		_c.mutation.SetPreventDefault(v)
+	}
+	if _, ok := _c.mutation.Scope(); !ok {
+		v := keybinding.DefaultScope
+		_c.mutation.SetScope(v)
 	}
 	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *KeyBindingCreate) check() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		return &ValidationError{Name: "uuid", err: errors.New(`ent: missing required field "KeyBinding.uuid"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "KeyBinding.created_at"`)}
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "KeyBinding.updated_at"`)}
 	}
-	if _, ok := _c.mutation.Key(); !ok {
-		return &ValidationError{Name: "key", err: errors.New(`ent: missing required field "KeyBinding.key"`)}
+	if _, ok := _c.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "KeyBinding.name"`)}
+	}
+	if v, ok := _c.mutation.Name(); ok {
+		if err := keybinding.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.name": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.GetType(); !ok {
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "KeyBinding.type"`)}
+	}
+	if v, ok := _c.mutation.GetType(); ok {
+		if err := keybinding.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.type": %w`, err)}
+		}
 	}
 	if v, ok := _c.mutation.Key(); ok {
 		if err := keybinding.KeyValidator(v); err != nil {
 			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.key": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.Command(); !ok {
-		return &ValidationError{Name: "command", err: errors.New(`ent: missing required field "KeyBinding.command"`)}
-	}
-	if v, ok := _c.mutation.Command(); ok {
-		if err := keybinding.CommandValidator(v); err != nil {
-			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.command": %w`, err)}
+	if v, ok := _c.mutation.Macos(); ok {
+		if err := keybinding.MacosValidator(v); err != nil {
+			return &ValidationError{Name: "macos", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.macos": %w`, err)}
 		}
+	}
+	if v, ok := _c.mutation.Windows(); ok {
+		if err := keybinding.WindowsValidator(v); err != nil {
+			return &ValidationError{Name: "windows", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.windows": %w`, err)}
+		}
+	}
+	if v, ok := _c.mutation.Linux(); ok {
+		if err := keybinding.LinuxValidator(v); err != nil {
+			return &ValidationError{Name: "linux", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.linux": %w`, err)}
+		}
+	}
+	if _, ok := _c.mutation.Extension(); !ok {
+		return &ValidationError{Name: "extension", err: errors.New(`ent: missing required field "KeyBinding.extension"`)}
 	}
 	if v, ok := _c.mutation.Extension(); ok {
 		if err := keybinding.ExtensionValidator(v); err != nil {
@@ -211,6 +333,17 @@ func (_c *KeyBindingCreate) check() error {
 	}
 	if _, ok := _c.mutation.Enabled(); !ok {
 		return &ValidationError{Name: "enabled", err: errors.New(`ent: missing required field "KeyBinding.enabled"`)}
+	}
+	if _, ok := _c.mutation.PreventDefault(); !ok {
+		return &ValidationError{Name: "prevent_default", err: errors.New(`ent: missing required field "KeyBinding.prevent_default"`)}
+	}
+	if _, ok := _c.mutation.Scope(); !ok {
+		return &ValidationError{Name: "scope", err: errors.New(`ent: missing required field "KeyBinding.scope"`)}
+	}
+	if v, ok := _c.mutation.Scope(); ok {
+		if err := keybinding.ScopeValidator(v); err != nil {
+			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.scope": %w`, err)}
+		}
 	}
 	return nil
 }
@@ -240,7 +373,7 @@ func (_c *KeyBindingCreate) createSpec() (*KeyBinding, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(keybinding.FieldUUID, field.TypeString, value)
-		_node.UUID = &value
+		_node.UUID = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(keybinding.FieldCreatedAt, field.TypeString, value)
@@ -254,13 +387,29 @@ func (_c *KeyBindingCreate) createSpec() (*KeyBinding, *sqlgraph.CreateSpec) {
 		_spec.SetField(keybinding.FieldDeletedAt, field.TypeString, value)
 		_node.DeletedAt = &value
 	}
+	if value, ok := _c.mutation.Name(); ok {
+		_spec.SetField(keybinding.FieldName, field.TypeString, value)
+		_node.Name = value
+	}
+	if value, ok := _c.mutation.GetType(); ok {
+		_spec.SetField(keybinding.FieldType, field.TypeString, value)
+		_node.Type = value
+	}
 	if value, ok := _c.mutation.Key(); ok {
 		_spec.SetField(keybinding.FieldKey, field.TypeString, value)
 		_node.Key = value
 	}
-	if value, ok := _c.mutation.Command(); ok {
-		_spec.SetField(keybinding.FieldCommand, field.TypeString, value)
-		_node.Command = value
+	if value, ok := _c.mutation.Macos(); ok {
+		_spec.SetField(keybinding.FieldMacos, field.TypeString, value)
+		_node.Macos = value
+	}
+	if value, ok := _c.mutation.Windows(); ok {
+		_spec.SetField(keybinding.FieldWindows, field.TypeString, value)
+		_node.Windows = value
+	}
+	if value, ok := _c.mutation.Linux(); ok {
+		_spec.SetField(keybinding.FieldLinux, field.TypeString, value)
+		_node.Linux = value
 	}
 	if value, ok := _c.mutation.Extension(); ok {
 		_spec.SetField(keybinding.FieldExtension, field.TypeString, value)
@@ -269,6 +418,14 @@ func (_c *KeyBindingCreate) createSpec() (*KeyBinding, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Enabled(); ok {
 		_spec.SetField(keybinding.FieldEnabled, field.TypeBool, value)
 		_node.Enabled = value
+	}
+	if value, ok := _c.mutation.PreventDefault(); ok {
+		_spec.SetField(keybinding.FieldPreventDefault, field.TypeBool, value)
+		_node.PreventDefault = value
+	}
+	if value, ok := _c.mutation.Scope(); ok {
+		_spec.SetField(keybinding.FieldScope, field.TypeString, value)
+		_node.Scope = value
 	}
 	return _node, _spec
 }
