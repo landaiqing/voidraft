@@ -57,7 +57,7 @@
     "@prettier/plugin-xml": "^3.4.2",
     "@replit/codemirror-lang-svelte": "^6.0.0",
     "@toml-tools/lexer": "^1.0.1",
-    "@toml-tools/parser": "^1.0.0",
+    "@toml-tools/parser": "^1.0.1",
     "@types/katex": "^0.16.7",
     "codemirror": "^6.0.2",
     "codemirror-lang-elixir": "^4.0.0",
