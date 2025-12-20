@@ -20,14 +20,26 @@ const (
 	FieldUpdatedAt = "updated_at"
 	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
 	FieldDeletedAt = "deleted_at"
+	// FieldName holds the string denoting the name field in the database.
+	FieldName = "name"
+	// FieldType holds the string denoting the type field in the database.
+	FieldType = "type"
 	// FieldKey holds the string denoting the key field in the database.
 	FieldKey = "key"
-	// FieldCommand holds the string denoting the command field in the database.
-	FieldCommand = "command"
+	// FieldMacos holds the string denoting the macos field in the database.
+	FieldMacos = "macos"
+	// FieldWindows holds the string denoting the windows field in the database.
+	FieldWindows = "windows"
+	// FieldLinux holds the string denoting the linux field in the database.
+	FieldLinux = "linux"
 	// FieldExtension holds the string denoting the extension field in the database.
 	FieldExtension = "extension"
 	// FieldEnabled holds the string denoting the enabled field in the database.
 	FieldEnabled = "enabled"
+	// FieldPreventDefault holds the string denoting the prevent_default field in the database.
+	FieldPreventDefault = "prevent_default"
+	// FieldScope holds the string denoting the scope field in the database.
+	FieldScope = "scope"
 	// Table holds the table name of the keybinding in the database.
 	Table = "key_bindings"
 )
@@ -39,10 +51,16 @@ var Columns = []string{
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldDeletedAt,
+	FieldName,
+	FieldType,
 	FieldKey,
-	FieldCommand,
+	FieldMacos,
+	FieldWindows,
+	FieldLinux,
 	FieldExtension,
 	FieldEnabled,
+	FieldPreventDefault,
+	FieldScope,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -69,14 +87,30 @@ var (
 	DefaultCreatedAt func() string
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() string
+	// NameValidator is a validator for the "name" field. It is called by the builders before save.
+	NameValidator func(string) error
+	// DefaultType holds the default value on creation for the "type" field.
+	DefaultType string
+	// TypeValidator is a validator for the "type" field. It is called by the builders before save.
+	TypeValidator func(string) error
 	// KeyValidator is a validator for the "key" field. It is called by the builders before save.
 	KeyValidator func(string) error
-	// CommandValidator is a validator for the "command" field. It is called by the builders before save.
-	CommandValidator func(string) error
+	// MacosValidator is a validator for the "macos" field. It is called by the builders before save.
+	MacosValidator func(string) error
+	// WindowsValidator is a validator for the "windows" field. It is called by the builders before save.
+	WindowsValidator func(string) error
+	// LinuxValidator is a validator for the "linux" field. It is called by the builders before save.
+	LinuxValidator func(string) error
 	// ExtensionValidator is a validator for the "extension" field. It is called by the builders before save.
 	ExtensionValidator func(string) error
 	// DefaultEnabled holds the default value on creation for the "enabled" field.
 	DefaultEnabled bool
+	// DefaultPreventDefault holds the default value on creation for the "prevent_default" field.
+	DefaultPreventDefault bool
+	// DefaultScope holds the default value on creation for the "scope" field.
+	DefaultScope string
+	// ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
+	ScopeValidator func(string) error
 )
 
 // OrderOption defines the ordering options for the KeyBinding queries.
@@ -107,14 +141,34 @@ func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
 }
 
+// ByName orders the results by the name field.
+func ByName(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldName, opts...).ToFunc()
+}
+
+// ByType orders the results by the type field.
+func ByType(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldType, opts...).ToFunc()
+}
+
 // ByKey orders the results by the key field.
 func ByKey(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldKey, opts...).ToFunc()
 }
 
-// ByCommand orders the results by the command field.
-func ByCommand(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCommand, opts...).ToFunc()
+// ByMacos orders the results by the macos field.
+func ByMacos(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldMacos, opts...).ToFunc()
+}
+
+// ByWindows orders the results by the windows field.
+func ByWindows(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldWindows, opts...).ToFunc()
+}
+
+// ByLinux orders the results by the linux field.
+func ByLinux(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLinux, opts...).ToFunc()
 }
 
 // ByExtension orders the results by the extension field.
@@ -125,4 +179,14 @@ func ByExtension(opts ...sql.OrderTermOption) OrderOption {
 // ByEnabled orders the results by the enabled field.
 func ByEnabled(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEnabled, opts...).ToFunc()
+}
+
+// ByPreventDefault orders the results by the prevent_default field.
+func ByPreventDefault(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPreventDefault, opts...).ToFunc()
+}
+
+// ByScope orders the results by the scope field.
+func ByScope(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldScope, opts...).ToFunc()
 }

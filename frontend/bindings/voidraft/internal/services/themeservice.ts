@@ -18,10 +18,10 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as ent$0 from "../models/ent/models.js";
 
 /**
- * GetThemeByKey 根据Key获取主题
+ * GetThemeByName 根据Key获取主题
  */
-export function GetThemeByKey(key: string): Promise<ent$0.Theme | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(808794256, key) as any;
+export function GetThemeByName(name: string): Promise<ent$0.Theme | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1938954770, name) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;

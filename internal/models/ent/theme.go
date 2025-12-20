@@ -18,15 +18,15 @@ type Theme struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// UUID for cross-device sync (UUIDv7)
-	UUID *string `json:"uuid"`
+	UUID string `json:"uuid"`
 	// creation time
 	CreatedAt string `json:"created_at"`
 	// update time
 	UpdatedAt string `json:"updated_at"`
 	// deleted at
 	DeletedAt *string `json:"deleted_at,omitempty"`
-	// theme key
-	Key string `json:"key"`
+	// theme name
+	Name string `json:"name"`
 	// theme type
 	Type theme.Type `json:"type"`
 	// theme colors
@@ -43,7 +43,7 @@ func (*Theme) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case theme.FieldID:
 			values[i] = new(sql.NullInt64)
-		case theme.FieldUUID, theme.FieldCreatedAt, theme.FieldUpdatedAt, theme.FieldDeletedAt, theme.FieldKey, theme.FieldType:
+		case theme.FieldUUID, theme.FieldCreatedAt, theme.FieldUpdatedAt, theme.FieldDeletedAt, theme.FieldName, theme.FieldType:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -70,8 +70,7 @@ func (_m *Theme) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field uuid", values[i])
 			} else if value.Valid {
-				_m.UUID = new(string)
-				*_m.UUID = value.String
+				_m.UUID = value.String
 			}
 		case theme.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -92,11 +91,11 @@ func (_m *Theme) assignValues(columns []string, values []any) error {
 				_m.DeletedAt = new(string)
 				*_m.DeletedAt = value.String
 			}
-		case theme.FieldKey:
+		case theme.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field key", values[i])
+				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
-				_m.Key = value.String
+				_m.Name = value.String
 			}
 		case theme.FieldType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -148,10 +147,8 @@ func (_m *Theme) String() string {
 	var builder strings.Builder
 	builder.WriteString("Theme(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	if v := _m.UUID; v != nil {
-		builder.WriteString("uuid=")
-		builder.WriteString(*v)
-	}
+	builder.WriteString("uuid=")
+	builder.WriteString(_m.UUID)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)
@@ -164,8 +161,8 @@ func (_m *Theme) String() string {
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	builder.WriteString("key=")
-	builder.WriteString(_m.Key)
+	builder.WriteString("name=")
+	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Type))

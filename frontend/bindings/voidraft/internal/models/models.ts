@@ -235,6 +235,12 @@ export class EditingConfig {
     "tabType": TabType;
 
     /**
+     * 快捷键模式
+     * 快捷键模式（standard 或 emacs）
+     */
+    "keymapMode": KeyBindingType;
+
+    /**
      * 保存选项
      * 自动保存延迟（毫秒）
      */
@@ -263,6 +269,9 @@ export class EditingConfig {
         if (!("tabType" in $$source)) {
             this["tabType"] = ("" as TabType);
         }
+        if (!("keymapMode" in $$source)) {
+            this["keymapMode"] = ("" as KeyBindingType);
+        }
         if (!("autoSaveDelay" in $$source)) {
             this["autoSaveDelay"] = 0;
         }
@@ -283,14 +292,14 @@ export class EditingConfig {
  * Extension 扩展配置
  */
 export class Extension {
-    "key": ExtensionKey;
+    "key": ExtensionName;
     "enabled": boolean;
     "config": ExtensionConfig;
 
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
         if (!("key" in $$source)) {
-            this["key"] = ("" as ExtensionKey);
+            this["key"] = ("" as ExtensionName);
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
@@ -321,79 +330,78 @@ export class Extension {
 export type ExtensionConfig = { [_: string]: any };
 
 /**
- * ExtensionKey 扩展标识符
+ * ExtensionName 扩展标识符
  */
-export enum ExtensionKey {
+export enum ExtensionName {
     /**
      * The Go zero value for the underlying type of the enum.
      */
     $zero = "",
 
     /**
-     * 编辑增强扩展
      * 彩虹括号
      */
-    ExtensionRainbowBrackets = "rainbowBrackets",
+    RainbowBrackets = "rainbowBrackets",
 
     /**
      * 超链接
      */
-    ExtensionHyperlink = "hyperlink",
+    Hyperlink = "hyperlink",
 
     /**
      * 颜色选择器
      */
-    ExtensionColorSelector = "colorSelector",
+    ColorSelector = "colorSelector",
 
     /**
      * 代码折叠
      */
-    ExtensionFold = "fold",
+    Fold = "fold",
 
     /**
      * 划词翻译
      */
-    ExtensionTranslator = "translator",
+    Translator = "translator",
 
     /**
      * Markdown渲染
      */
-    ExtensionMarkdown = "markdown",
+    Markdown = "markdown",
 
     /**
      * 显示空白字符
      */
-    ExtensionHighlightWhitespace = "highlightWhitespace",
+    HighlightWhitespace = "highlightWhitespace",
 
     /**
      * 高亮行尾空白
      */
-    ExtensionHighlightTrailingWhitespace = "highlightTrailingWhitespace",
+    HighlightTrailingWhitespace = "highlightTrailingWhitespace",
 
     /**
      * 小地图
      */
-    ExtensionMinimap = "minimap",
+    Minimap = "minimap",
 
     /**
      * 行号显示
      */
-    ExtensionLineNumbers = "lineNumbers",
+    LineNumbers = "lineNumbers",
 
     /**
      * 上下文菜单
      */
-    ExtensionContextMenu = "contextMenu",
+    ContextMenu = "contextMenu",
 
     /**
      * 搜索功能
      */
-    ExtensionSearch = "search",
+    Search = "search",
 
     /**
      * HTTP 客户端
      */
-    ExtensionHttpClient = "httpClient",
+    HttpClient = "httpClient",
 };
 
 /**
@@ -684,24 +692,72 @@ export class HotkeyCombo {
  * KeyBinding 单个快捷键绑定
  */
 export class KeyBinding {
-    "key": KeyBindingKey;
-    "command": string;
-    "extension": ExtensionKey;
+    /**
+     * 命令唯一标识符
+     */
+    "name": KeyBindingName;
+
+    /**
+     * 快捷键类型（standard 或 "emacs"）
+     */
+    "type": KeyBindingType;
+
+    /**
+     * 通用快捷键（跨平台）
+     */
+    "key"?: string;
+
+    /**
+     * macOS 专用快捷键
+     */
+    "macos"?: string;
+
+    /**
+     * windows 专用快捷键
+     */
+    "win"?: string;
+
+    /**
+     * Linux 专用快捷键
+     */
+    "linux"?: string;
+
+    /**
+     * 所属扩展
+     */
+    "extension": ExtensionName;
+
+    /**
+     * 是否启用
+     */
     "enabled": boolean;
+
+    /**
+     * 阻止浏览器默认行为
+     */
+    "preventDefault": boolean;
+
+    /**
+     * 作用域（默认 "editor"）
+     */
+    "scope"?: string;
 
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
-        if (!("key" in $$source)) {
-            this["key"] = ("" as KeyBindingKey);
+        if (!("name" in $$source)) {
+            this["name"] = ("" as KeyBindingName);
         }
-        if (!("command" in $$source)) {
-            this["command"] = "";
+        if (!("type" in $$source)) {
+            this["type"] = ("" as KeyBindingType);
         }
         if (!("extension" in $$source)) {
-            this["extension"] = ("" as ExtensionKey);
+            this["extension"] = ("" as ExtensionName);
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
+        }
+        if (!("preventDefault" in $$source)) {
+            this["preventDefault"] = false;
         }
 
         Object.assign(this, $$source);
@@ -717,9 +773,9 @@ export class KeyBinding {
 }
 
 /**
- * KeyBindingKey 快捷键命令
+ * KeyBindingName 快捷键命令标识符
  */
-export enum KeyBindingKey {
+export enum KeyBindingName {
     /**
      * The Go zero value for the underlying type of the enum.
      */
@@ -728,247 +784,409 @@ export enum KeyBindingKey {
     /**
      * 显示搜索
      */
-    ShowSearchKeyBindingKey = "showSearch",
+    ShowSearch = "showSearch",
 
     /**
      * 隐藏搜索
      */
-    HideSearchKeyBindingKey = "hideSearch",
+    HideSearch = "hideSearch",
 
     /**
      * 块内选择全部
      */
-    BlockSelectAllKeyBindingKey = "blockSelectAll",
+    BlockSelectAll = "blockSelectAll",
 
     /**
      * 在当前块后添加新块
      */
-    BlockAddAfterCurrentKeyBindingKey = "blockAddAfterCurrent",
+    BlockAddAfterCurrent = "blockAddAfterCurrent",
 
     /**
      * 在最后添加新块
      */
-    BlockAddAfterLastKeyBindingKey = "blockAddAfterLast",
+    BlockAddAfterLast = "blockAddAfterLast",
 
     /**
      * 在当前块前添加新块
      */
-    BlockAddBeforeCurrentKeyBindingKey = "blockAddBeforeCurrent",
+    BlockAddBeforeCurrent = "blockAddBeforeCurrent",
 
     /**
      * 跳转到上一个块
      */
-    BlockGotoPreviousKeyBindingKey = "blockGotoPrevious",
+    BlockGotoPrevious = "blockGotoPrevious",
 
     /**
      * 跳转到下一个块
      */
-    BlockGotoNextKeyBindingKey = "blockGotoNext",
+    BlockGotoNext = "blockGotoNext",
 
     /**
      * 选择上一个块
      */
-    BlockSelectPreviousKeyBindingKey = "blockSelectPrevious",
+    BlockSelectPrevious = "blockSelectPrevious",
 
     /**
      * 选择下一个块
      */
-    BlockSelectNextKeyBindingKey = "blockSelectNext",
+    BlockSelectNext = "blockSelectNext",
 
     /**
      * 删除当前块
      */
-    BlockDeleteKeyBindingKey = "blockDelete",
+    BlockDelete = "blockDelete",
 
     /**
      * 向上移动当前块
      */
-    BlockMoveUpKeyBindingKey = "blockMoveUp",
+    BlockMoveUp = "blockMoveUp",
 
     /**
      * 向下移动当前块
      */
-    BlockMoveDownKeyBindingKey = "blockMoveDown",
+    BlockMoveDown = "blockMoveDown",
 
     /**
      * 删除行
      */
-    BlockDeleteLineKeyBindingKey = "blockDeleteLine",
+    BlockDeleteLine = "blockDeleteLine",
 
     /**
      * 向上移动行
      */
-    BlockMoveLineUpKeyBindingKey = "blockMoveLineUp",
+    BlockMoveLineUp = "blockMoveLineUp",
 
     /**
      * 向下移动行
      */
-    BlockMoveLineDownKeyBindingKey = "blockMoveLineDown",
+    BlockMoveLineDown = "blockMoveLineDown",
 
     /**
      * 字符转置
      */
-    BlockTransposeCharsKeyBindingKey = "blockTransposeChars",
+    BlockTransposeChars = "blockTransposeChars",
 
     /**
      * 格式化代码块
      */
-    BlockFormatKeyBindingKey = "blockFormat",
+    BlockFormat = "blockFormat",
 
     /**
      * 复制
      */
-    BlockCopyKeyBindingKey = "blockCopy",
+    BlockCopy = "blockCopy",
 
     /**
      * 剪切
      */
-    BlockCutKeyBindingKey = "blockCut",
+    BlockCut = "blockCut",
 
     /**
      * 粘贴
      */
-    BlockPasteKeyBindingKey = "blockPaste",
+    BlockPaste = "blockPaste",
 
     /**
      * 折叠代码
      */
-    FoldCodeKeyBindingKey = "foldCode",
+    FoldCode = "foldCode",
 
     /**
      * 展开代码
      */
-    UnfoldCodeKeyBindingKey = "unfoldCode",
+    UnfoldCode = "unfoldCode",
 
     /**
      * 折叠全部
      */
-    FoldAllKeyBindingKey = "foldAll",
+    FoldAll = "foldAll",
 
     /**
      * 展开全部
      */
-    UnfoldAllKeyBindingKey = "unfoldAll",
+    UnfoldAll = "unfoldAll",
 
     /**
      * 光标按语法左移
      */
-    CursorSyntaxLeftKeyBindingKey = "cursorSyntaxLeft",
+    CursorSyntaxLeft = "cursorSyntaxLeft",
 
     /**
      * 光标按语法右移
      */
-    CursorSyntaxRightKeyBindingKey = "cursorSyntaxRight",
+    CursorSyntaxRight = "cursorSyntaxRight",
 
     /**
      * 按语法选择左侧
      */
-    SelectSyntaxLeftKeyBindingKey = "selectSyntaxLeft",
+    SelectSyntaxLeft = "selectSyntaxLeft",
 
     /**
      * 按语法选择右侧
      */
-    SelectSyntaxRightKeyBindingKey = "selectSyntaxRight",
+    SelectSyntaxRight = "selectSyntaxRight",
 
     /**
      * 向上复制行
      */
-    CopyLineUpKeyBindingKey = "copyLineUp",
+    CopyLineUp = "copyLineUp",
 
     /**
      * 向下复制行
      */
-    CopyLineDownKeyBindingKey = "copyLineDown",
+    CopyLineDown = "copyLineDown",
 
     /**
      * 插入空行
      */
-    InsertBlankLineKeyBindingKey = "insertBlankLine",
+    InsertBlankLine = "insertBlankLine",
 
     /**
      * 选择行
      */
-    SelectLineKeyBindingKey = "selectLine",
+    SelectLine = "selectLine",
 
     /**
      * 选择父级语法
      */
-    SelectParentSyntaxKeyBindingKey = "selectParentSyntax",
+    SelectParentSyntax = "selectParentSyntax",
+
+    /**
+     * 简化选择
+     */
+    SimplifySelection = "simplifySelection",
+
+    /**
+     * 在上方添加光标
+     */
+    AddCursorAbove = "addCursorAbove",
+
+    /**
+     * 在下方添加光标
+     */
+    AddCursorBelow = "addCursorBelow",
+
+    /**
+     * 光标按单词左移
+     */
+    CursorGroupLeft = "cursorGroupLeft",
+
+    /**
+     * 光标按单词右移
+     */
+    CursorGroupRight = "cursorGroupRight",
+
+    /**
+     * 按单词选择左侧
+     */
+    SelectGroupLeft = "selectGroupLeft",
+
+    /**
+     * 按单词选择右侧
+     */
+    SelectGroupRight = "selectGroupRight",
+
+    /**
+     * 删除到行尾
+     */
+    DeleteToLineEnd = "deleteToLineEnd",
+
+    /**
+     * 删除到行首
+     */
+    DeleteToLineStart = "deleteToLineStart",
+
+    /**
+     * 移动到行首
+     */
+    CursorLineStart = "cursorLineStart",
+
+    /**
+     * 移动到行尾
+     */
+    CursorLineEnd = "cursorLineEnd",
+
+    /**
+     * 选择到行首
+     */
+    SelectLineStart = "selectLineStart",
+
+    /**
+     * 选择到行尾
+     */
+    SelectLineEnd = "selectLineEnd",
+
+    /**
+     * 跳转到文档开头
+     */
+    CursorDocStart = "cursorDocStart",
+
+    /**
+     * 跳转到文档结尾
+     */
+    CursorDocEnd = "cursorDocEnd",
+
+    /**
+     * 选择到文档开头
+     */
+    SelectDocStart = "selectDocStart",
+
+    /**
+     * 选择到文档结尾
+     */
+    SelectDocEnd = "selectDocEnd",
+
+    /**
+     * 选择到匹配括号
+     */
+    SelectMatchingBracket = "selectMatchingBracket",
+
+    /**
+     * 分割行
+     */
+    SplitLine = "splitLine",
+
+    /**
+     * 光标左移一个字符
+     */
+    CursorCharLeft = "cursorCharLeft",
+
+    /**
+     * 光标右移一个字符
+     */
+    CursorCharRight = "cursorCharRight",
+
+    /**
+     * 光标上移一行
+     */
+    CursorLineUp = "cursorLineUp",
+
+    /**
+     * 光标下移一行
+     */
+    CursorLineDown = "cursorLineDown",
+
+    /**
+     * 向上翻页
+     */
+    CursorPageUp = "cursorPageUp",
+
+    /**
+     * 向下翻页
+     */
+    CursorPageDown = "cursorPageDown",
+
+    /**
+     * 选择左移一个字符
+     */
+    SelectCharLeft = "selectCharLeft",
+
+    /**
+     * 选择右移一个字符
+     */
+    SelectCharRight = "selectCharRight",
+
+    /**
+     * 选择上移一行
+     */
+    SelectLineUp = "selectLineUp",
+
+    /**
+     * 选择下移一行
+     */
+    SelectLineDown = "selectLineDown",
 
     /**
      * 减少缩进
      */
-    IndentLessKeyBindingKey = "indentLess",
+    IndentLess = "indentLess",
 
     /**
      * 增加缩进
      */
-    IndentMoreKeyBindingKey = "indentMore",
+    IndentMore = "indentMore",
 
     /**
      * 缩进选择
      */
-    IndentSelectionKeyBindingKey = "indentSelection",
+    IndentSelection = "indentSelection",
 
     /**
      * 光标到匹配括号
      */
-    CursorMatchingBracketKeyBindingKey = "cursorMatchingBracket",
+    CursorMatchingBracket = "cursorMatchingBracket",
 
     /**
      * 切换注释
      */
-    ToggleCommentKeyBindingKey = "toggleComment",
+    ToggleComment = "toggleComment",
 
     /**
      * 切换块注释
      */
-    ToggleBlockCommentKeyBindingKey = "toggleBlockComment",
+    ToggleBlockComment = "toggleBlockComment",
 
     /**
      * 插入新行并缩进
      */
-    InsertNewlineAndIndentKeyBindingKey = "insertNewlineAndIndent",
+    InsertNewlineAndIndent = "insertNewlineAndIndent",
 
     /**
      * 向后删除字符
      */
-    DeleteCharBackwardKeyBindingKey = "deleteCharBackward",
+    DeleteCharBackward = "deleteCharBackward",
 
     /**
      * 向前删除字符
      */
-    DeleteCharForwardKeyBindingKey = "deleteCharForward",
+    DeleteCharForward = "deleteCharForward",
 
     /**
      * 向后删除组
      */
-    DeleteGroupBackwardKeyBindingKey = "deleteGroupBackward",
+    DeleteGroupBackward = "deleteGroupBackward",
 
     /**
      * 向前删除组
      */
-    DeleteGroupForwardKeyBindingKey = "deleteGroupForward",
+    DeleteGroupForward = "deleteGroupForward",
 
     /**
      * 撤销
      */
-    HistoryUndoKeyBindingKey = "historyUndo",
+    HistoryUndo = "historyUndo",
 
     /**
      * 重做
      */
-    HistoryRedoKeyBindingKey = "historyRedo",
+    HistoryRedo = "historyRedo",
 
     /**
      * 撤销选择
      */
-    HistoryUndoSelectionKeyBindingKey = "historyUndoSelection",
+    HistoryUndoSelection = "historyUndoSelection",
 
     /**
      * 重做选择
      */
-    HistoryRedoSelectionKeyBindingKey = "historyRedoSelection",
+    HistoryRedoSelection = "historyRedoSelection",
+};
+
+export enum KeyBindingType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * standard 标准快捷键
+     */
+    Standard = "standard",
+
+    /**
+     * emacs 快捷键
+     */
+    Emacs = "emacs",
 };
 
 /**

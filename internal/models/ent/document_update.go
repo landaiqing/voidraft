@@ -170,9 +170,6 @@ func (_u *DocumentUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(document.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(document.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -387,9 +384,6 @@ func (_u *DocumentUpdateOne) sqlSave(ctx context.Context) (_node *Document, err 
 				ps[i](selector)
 			}
 		}
-	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(document.FieldUUID, field.TypeString)
 	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(document.FieldUpdatedAt, field.TypeString, value)

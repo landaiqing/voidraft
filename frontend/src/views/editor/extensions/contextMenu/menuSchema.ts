@@ -1,6 +1,6 @@
 import type { EditorView } from '@codemirror/view';
 import { EditorState } from '@codemirror/state';
-import { KeyBindingKey } from '@/../bindings/voidraft/internal/models/models';
+import { KeyBindingName } from '@/../bindings/voidraft/internal/models/models';
 
 export interface MenuContext {
   view: EditorView;
@@ -16,7 +16,7 @@ export type MenuSchemaNode =
       type?: "action";
       labelKey: string;
       command?: (view: EditorView) => boolean;
-      keyBindingKey?: KeyBindingKey;
+      keyBindingName?: KeyBindingName;
       visible?: (context: MenuContext) => boolean;
       enabled?: (context: MenuContext) => boolean;
     }
@@ -37,7 +37,7 @@ export interface RenderMenuItem {
 
 interface MenuBuildOptions {
   translate: (key: string) => string;
-  formatShortcut: (keyBindingKey?: KeyBindingKey) => string;
+  formatShortcut: (keyBindingKey?: KeyBindingName) => string;
 }
 
 const menuRegistry: MenuSchemaNode[] = [];
@@ -89,7 +89,7 @@ function convertNode(
   }
 
   const disabled = node.enabled ? !node.enabled(context) : false;
-  const shortcut = options.formatShortcut(node.keyBindingKey);
+  const shortcut = options.formatShortcut(node.keyBindingName);
 
   return {
     id: node.id,

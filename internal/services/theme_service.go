@@ -32,15 +32,15 @@ func (s *ThemeService) ServiceStartup(ctx context.Context, options application.S
 	return nil
 }
 
-// GetThemeByKey 根据Key获取主题
-func (s *ThemeService) GetThemeByKey(ctx context.Context, key string) (*ent.Theme, error) {
-	trimmed := strings.TrimSpace(key)
+// GetThemeByName 根据Key获取主题
+func (s *ThemeService) GetThemeByName(ctx context.Context, name string) (*ent.Theme, error) {
+	trimmed := strings.TrimSpace(name)
 	if trimmed == "" {
 		return nil, fmt.Errorf("theme key cannot be empty")
 	}
 
 	t, err := s.db.Client.Theme.Query().
-		Where(theme.Key(trimmed)).
+		Where(theme.Name(trimmed)).
 		Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
@@ -68,7 +68,7 @@ func (s *ThemeService) UpdateTheme(ctx context.Context, key string, colors map[s
 		themeType = theme.TypeLight
 	}
 
-	existing, err := s.GetThemeByKey(ctx, trimmed)
+	existing, err := s.GetThemeByName(ctx, trimmed)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (s *ThemeService) UpdateTheme(ctx context.Context, key string, colors map[s
 	if existing == nil {
 		// 插入新主题
 		_, err = s.db.Client.Theme.Create().
-			SetKey(trimmed).
+			SetName(trimmed).
 			SetType(themeType).
 			SetColors(colors).
 			Save(ctx)
@@ -98,7 +98,7 @@ func (s *ThemeService) ResetTheme(ctx context.Context, key string) error {
 	}
 
 	_, err := s.db.Client.Theme.Delete().
-		Where(theme.Key(trimmed)).
+		Where(theme.Name(trimmed)).
 		Exec(mixin.SkipSoftDelete(ctx))
 	return err
 }

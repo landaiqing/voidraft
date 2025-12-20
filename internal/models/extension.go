@@ -3,31 +3,30 @@ package models
 // ExtensionConfig 扩展配置项
 type ExtensionConfig map[string]interface{}
 
-// ExtensionKey 扩展标识符
-type ExtensionKey string
+// ExtensionName 扩展标识符
+type ExtensionName string
 
 // Extension 扩展配置
 type Extension struct {
-	Key     ExtensionKey    `json:"key"`
+	Name    ExtensionName   `json:"key"`
 	Enabled bool            `json:"enabled"`
 	Config  ExtensionConfig `json:"config"`
 }
 
 const (
-	// 编辑增强扩展
-	ExtensionRainbowBrackets             ExtensionKey = "rainbowBrackets"             // 彩虹括号
-	ExtensionHyperlink                   ExtensionKey = "hyperlink"                   // 超链接
-	ExtensionColorSelector               ExtensionKey = "colorSelector"               // 颜色选择器
-	ExtensionFold                        ExtensionKey = "fold"                        // 代码折叠
-	ExtensionTranslator                  ExtensionKey = "translator"                  // 划词翻译
-	ExtensionMarkdown                    ExtensionKey = "markdown"                    // Markdown渲染
-	ExtensionHighlightWhitespace         ExtensionKey = "highlightWhitespace"         // 显示空白字符
-	ExtensionHighlightTrailingWhitespace ExtensionKey = "highlightTrailingWhitespace" // 高亮行尾空白
-	ExtensionMinimap                     ExtensionKey = "minimap"                     // 小地图
-	ExtensionLineNumbers                 ExtensionKey = "lineNumbers"                 // 行号显示
-	ExtensionContextMenu                 ExtensionKey = "contextMenu"                 // 上下文菜单
-	ExtensionSearch                      ExtensionKey = "search"                      // 搜索功能
-	ExtensionHttpClient                  ExtensionKey = "httpClient"                  // HTTP 客户端
+	RainbowBrackets             ExtensionName = "rainbowBrackets"             // 彩虹括号
+	Hyperlink                   ExtensionName = "hyperlink"                   // 超链接
+	ColorSelector               ExtensionName = "colorSelector"               // 颜色选择器
+	Fold                        ExtensionName = "fold"                        // 代码折叠
+	Translator                  ExtensionName = "translator"                  // 划词翻译
+	Markdown                    ExtensionName = "markdown"                    // Markdown渲染
+	HighlightWhitespace         ExtensionName = "highlightWhitespace"         // 显示空白字符
+	HighlightTrailingWhitespace ExtensionName = "highlightTrailingWhitespace" // 高亮行尾空白
+	Minimap                     ExtensionName = "minimap"                     // 小地图
+	LineNumbers                 ExtensionName = "lineNumbers"                 // 行号显示
+	ContextMenu                 ExtensionName = "contextMenu"                 // 上下文菜单
+	Search                      ExtensionName = "search"                      // 搜索功能
+	HttpClient                  ExtensionName = "httpClient"                  // HTTP 客户端
 )
 
 // NewDefaultExtensions 创建默认扩展配置
@@ -35,49 +34,49 @@ func NewDefaultExtensions() []Extension {
 	return []Extension{
 		// 编辑增强扩展
 		{
-			Key:     ExtensionRainbowBrackets,
+			Name:    RainbowBrackets,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionHyperlink,
+			Name:    Hyperlink,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionColorSelector,
+			Name:    ColorSelector,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionFold,
+			Name:    Fold,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionTranslator,
+			Name:    Translator,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionMarkdown,
+			Name:    Markdown,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionHighlightWhitespace,
+			Name:    HighlightWhitespace,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionHighlightTrailingWhitespace,
+			Name:    HighlightTrailingWhitespace,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 
 		// UI增强扩展
 		{
-			Key:     ExtensionMinimap,
+			Name:    Minimap,
 			Enabled: true,
 			Config: ExtensionConfig{
 				"displayText": "characters",
@@ -86,24 +85,24 @@ func NewDefaultExtensions() []Extension {
 			},
 		},
 		{
-			Key:     ExtensionLineNumbers,
+			Name:    LineNumbers,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionContextMenu,
+			Name:    ContextMenu,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 
 		// 工具扩展
 		{
-			Key:     ExtensionSearch,
+			Name:    Search,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},
 		{
-			Key:     ExtensionHttpClient,
+			Name:    HttpClient,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},

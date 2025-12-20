@@ -18,15 +18,15 @@ type Extension struct {
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
 	// UUID for cross-device sync (UUIDv7)
-	UUID *string `json:"uuid"`
+	UUID string `json:"uuid"`
 	// creation time
 	CreatedAt string `json:"created_at"`
 	// update time
 	UpdatedAt string `json:"updated_at"`
 	// deleted at
 	DeletedAt *string `json:"deleted_at,omitempty"`
-	// extension key
-	Key string `json:"key"`
+	// extension name
+	Name string `json:"name"`
 	// extension enabled or not
 	Enabled bool `json:"enabled"`
 	// extension config
@@ -45,7 +45,7 @@ func (*Extension) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case extension.FieldID:
 			values[i] = new(sql.NullInt64)
-		case extension.FieldUUID, extension.FieldCreatedAt, extension.FieldUpdatedAt, extension.FieldDeletedAt, extension.FieldKey:
+		case extension.FieldUUID, extension.FieldCreatedAt, extension.FieldUpdatedAt, extension.FieldDeletedAt, extension.FieldName:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -72,8 +72,7 @@ func (_m *Extension) assignValues(columns []string, values []any) error {
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field uuid", values[i])
 			} else if value.Valid {
-				_m.UUID = new(string)
-				*_m.UUID = value.String
+				_m.UUID = value.String
 			}
 		case extension.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -94,11 +93,11 @@ func (_m *Extension) assignValues(columns []string, values []any) error {
 				_m.DeletedAt = new(string)
 				*_m.DeletedAt = value.String
 			}
-		case extension.FieldKey:
+		case extension.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field key", values[i])
+				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
-				_m.Key = value.String
+				_m.Name = value.String
 			}
 		case extension.FieldEnabled:
 			if value, ok := values[i].(*sql.NullBool); !ok {
@@ -150,10 +149,8 @@ func (_m *Extension) String() string {
 	var builder strings.Builder
 	builder.WriteString("Extension(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
-	if v := _m.UUID; v != nil {
-		builder.WriteString("uuid=")
-		builder.WriteString(*v)
-	}
+	builder.WriteString("uuid=")
+	builder.WriteString(_m.UUID)
 	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt)
@@ -166,8 +163,8 @@ func (_m *Extension) String() string {
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	builder.WriteString("key=")
-	builder.WriteString(_m.Key)
+	builder.WriteString("name=")
+	builder.WriteString(_m.Name)
 	builder.WriteString(", ")
 	builder.WriteString("enabled=")
 	builder.WriteString(fmt.Sprintf("%v", _m.Enabled))

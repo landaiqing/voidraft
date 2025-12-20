@@ -15,7 +15,7 @@ import {highlightActiveLineGutter, highlightWhitespace, highlightTrailingWhitesp
 import createEditorContextMenu from '../extensions/contextMenu';
 import {blockLineNumbers} from '../extensions/codeblock';
 import {createHttpClientExtension} from '../extensions/httpclient';
-import {ExtensionKey} from '@/../bindings/voidraft/internal/models/models';
+import {ExtensionName} from '@/../bindings/voidraft/internal/models/models';
 
 type ExtensionEntry = {
     definition: ExtensionDefinition
@@ -24,35 +24,35 @@ type ExtensionEntry = {
 };
 
 // 排除 $zero 的有效扩展 Key 类型
-type ValidExtensionKey = Exclude<ExtensionKey, ExtensionKey.$zero>;
+type ValidExtensionName = Exclude<ExtensionName, ExtensionName.$zero>;
 
 const defineExtension = (create: (config: any) => any, defaultConfig: Record<string, any> = {}): ExtensionDefinition => ({
     create,
     defaultConfig
 });
 
-const EXTENSION_REGISTRY: Record<ValidExtensionKey, ExtensionEntry> = {
-    [ExtensionKey.ExtensionRainbowBrackets]: {
+const EXTENSION_REGISTRY: Record<ValidExtensionName, ExtensionEntry> = {
+    [ExtensionName.RainbowBrackets]: {
         definition: defineExtension(() => rainbowBrackets()),
         displayNameKey: 'extensions.rainbowBrackets.name',
         descriptionKey: 'extensions.rainbowBrackets.description'
     },
-    [ExtensionKey.ExtensionHyperlink]: {
+    [ExtensionName.Hyperlink]: {
         definition: defineExtension(() => hyperLink),
         displayNameKey: 'extensions.hyperlink.name',
         descriptionKey: 'extensions.hyperlink.description'
     },
-    [ExtensionKey.ExtensionColorSelector]: {
+    [ExtensionName.ColorSelector]: {
         definition: defineExtension(() => color),
         displayNameKey: 'extensions.colorSelector.name',
         descriptionKey: 'extensions.colorSelector.description'
     },
-    [ExtensionKey.ExtensionTranslator]: {
+    [ExtensionName.Translator]: {
         definition: defineExtension(() => createTranslatorExtension()),
         displayNameKey: 'extensions.translator.name',
         descriptionKey: 'extensions.translator.description'
     },
-    [ExtensionKey.ExtensionMinimap]: {
+    [ExtensionName.Minimap]: {
         definition: defineExtension((config: any) => minimap({
             displayText: config?.displayText ?? 'characters',
             showOverlay: config?.showOverlay ?? 'always',
@@ -65,49 +65,49 @@ const EXTENSION_REGISTRY: Record<ValidExtensionKey, ExtensionEntry> = {
         displayNameKey: 'extensions.minimap.name',
         descriptionKey: 'extensions.minimap.description'
     },
-    [ExtensionKey.ExtensionSearch]: {
+    [ExtensionName.Search]: {
         definition: defineExtension(() => vscodeSearch),
         displayNameKey: 'extensions.search.name',
         descriptionKey: 'extensions.search.description'
     },
-    [ExtensionKey.ExtensionFold]: {
+    [ExtensionName.Fold]: {
         definition: defineExtension(() => Prec.low(foldGutter())),
         displayNameKey: 'extensions.fold.name',
         descriptionKey: 'extensions.fold.description'
     },
-    [ExtensionKey.ExtensionMarkdown]: {
+    [ExtensionName.Markdown]: {
         definition: defineExtension(() => markdownExtensions),
         displayNameKey: 'extensions.markdown.name',
         descriptionKey: 'extensions.markdown.description'
     },
-    [ExtensionKey.ExtensionLineNumbers]: {
+    [ExtensionName.LineNumbers]: {
         definition: defineExtension(() => Prec.high([blockLineNumbers, highlightActiveLineGutter()])),
         displayNameKey: 'extensions.lineNumbers.name',
         descriptionKey: 'extensions.lineNumbers.description'
     },
-    [ExtensionKey.ExtensionContextMenu]: {
+    [ExtensionName.ContextMenu]: {
         definition: defineExtension(() => createEditorContextMenu()),
         displayNameKey: 'extensions.contextMenu.name',
         descriptionKey: 'extensions.contextMenu.description'
     },
-    [ExtensionKey.ExtensionHighlightWhitespace]: {
+    [ExtensionName.HighlightWhitespace]: {
         definition: defineExtension(() => highlightWhitespace()),
         displayNameKey: 'extensions.highlightWhitespace.name',
         descriptionKey: 'extensions.highlightWhitespace.description'
     },
-    [ExtensionKey.ExtensionHighlightTrailingWhitespace]: {
+    [ExtensionName.HighlightTrailingWhitespace]: {
         definition: defineExtension(() => highlightTrailingWhitespace()),
         displayNameKey: 'extensions.highlightTrailingWhitespace.name',
         descriptionKey: 'extensions.highlightTrailingWhitespace.description'
     },
-    [ExtensionKey.ExtensionHttpClient]: {
+    [ExtensionName.HttpClient]: {
         definition: defineExtension(() => createHttpClientExtension()),
         displayNameKey: 'extensions.httpClient.name',
         descriptionKey: 'extensions.httpClient.description'
     }
 };
 
-const isRegisteredExtension = (key: string): key is ValidExtensionKey =>
+const isRegisteredExtension = (key: string): key is ValidExtensionName =>
     Object.prototype.hasOwnProperty.call(EXTENSION_REGISTRY, key);
 
 const getRegistryEntry = (key: string): ExtensionEntry | undefined => {
@@ -118,7 +118,7 @@ const getRegistryEntry = (key: string): ExtensionEntry | undefined => {
 };
 
 export function registerAllExtensions(manager: Manager): void {
-    (Object.entries(EXTENSION_REGISTRY) as [ValidExtensionKey, ExtensionEntry][]).forEach(([id, entry]) => {
+    (Object.entries(EXTENSION_REGISTRY) as [ValidExtensionName, ExtensionEntry][]).forEach(([id, entry]) => {
         manager.registerExtension(id, entry.definition);
     });
 }
@@ -147,7 +147,7 @@ export function hasExtensionConfig(key: string): boolean {
     return Object.keys(getExtensionDefaultConfig(key)).length > 0;
 }
 
-export function getAllExtensionIds(): string[] {
+export function getExtensionsMap(): string[] {
     return Object.keys(EXTENSION_REGISTRY);
 }
 

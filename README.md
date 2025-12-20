@@ -159,8 +159,5 @@ Welcome to Fork, Star, and contribute code.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub stars](https://img.shields.io/github/stars/landaiqing/voidraft.svg?style=social&label=Star)](https://github.com/yourusername/voidraft)
 [![GitHub forks](https://img.shields.io/github/forks/landaiqing/voidraft.svg?style=social&label=Fork)](https://github.com/yourusername/voidraft)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Flandaiqing%2Fvoidraft.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Flandaiqing%2Fvoidraft?ref=badge_shield)
 
 *Made with ❤️ by landaiqing*
-
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Flandaiqing%2Fvoidraft.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Flandaiqing%2Fvoidraft?ref=badge_large)

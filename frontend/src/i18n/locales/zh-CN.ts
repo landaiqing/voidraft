@@ -44,11 +44,18 @@ export default {
     auto: '跟随系统'
   },
   keybindings: {
+    keymapMode: '快捷键模式',
+    modes: {
+      standard: '标准模式',
+      emacs: 'Emacs 模式'
+    },
     headers: {
       shortcut: '快捷键',
       extension: '扩展',
       description: '描述'
     },
+    resetToDefault: '重置为默认',
+    confirmReset: '确认重置？',
     commands: {
       showSearch: '显示搜索面板',
       hideSearch: '隐藏搜索面板',
@@ -93,6 +100,25 @@ export default {
       insertBlankLine: '插入空行',
       selectLine: '选择行',
       selectParentSyntax: '选择父级语法',
+      simplifySelection: '简化选择',
+      addCursorAbove: '在上方添加光标',
+      addCursorBelow: '在下方添加光标',
+      cursorGroupLeft: '光标按单词左移',
+      cursorGroupRight: '光标按单词右移',
+      selectGroupLeft: '按单词选择左侧',
+      selectGroupRight: '按单词选择右侧',
+      deleteToLineEnd: '删除到行尾',
+      deleteToLineStart: '删除到行首',
+      cursorLineStart: '移动到行首',
+      cursorLineEnd: '移动到行尾',
+      selectLineStart: '选择到行首',
+      selectLineEnd: '选择到行尾',
+      cursorDocStart: '跳转到文档开头',
+      cursorDocEnd: '跳转到文档结尾',
+      selectDocStart: '选择到文档开头',
+      selectDocEnd: '选择到文档结尾',
+      selectMatchingBracket: '选择到匹配括号',
+      splitLine: '分割行',
       indentLess: '减少缩进',
       indentMore: '增加缩进',
       indentSelection: '缩进选择',
@@ -104,6 +130,18 @@ export default {
       deleteCharForward: '向前删除字符',
       deleteGroupBackward: '向后删除组',
       deleteGroupForward: '向前删除组',
+
+      // Emacs 模式额外的基础导航命令
+      cursorCharLeft: '光标左移一个字符',
+      cursorCharRight: '光标右移一个字符',
+      cursorLineUp: '光标上移一行',
+      cursorLineDown: '光标下移一行',
+      cursorPageUp: '向上翻页',
+      cursorPageDown: '向下翻页',
+      selectCharLeft: '选择左移一个字符',
+      selectCharRight: '选择右移一个字符',
+      selectLineUp: '选择上移一行',
+      selectLineDown: '选择下移一行',
     }
   },
   tabs: {

@@ -11,8 +11,8 @@ export class Manager {
     private extensionStates = new Map<string, ExtensionState>();
     private views = new Map<number, EditorView>();
 
-    registerExtension(id: string, definition: ExtensionDefinition): void {
-        const existingState = this.extensionStates.get(id);
+    registerExtension(name: string, definition: ExtensionDefinition): void {
+        const existingState = this.extensionStates.get(name);
         if (existingState) {
             existingState.definition = definition;
             if (existingState.config === undefined) {
@@ -21,8 +21,8 @@ export class Manager {
         } else {
             const compartment = new Compartment();
             const defaultConfig = this.cloneConfig(definition.defaultConfig ?? {});
-            this.extensionStates.set(id, {
-                id,
+            this.extensionStates.set(name, {
+                name,
                 definition,
                 config: defaultConfig,
                 enabled: false,
@@ -34,8 +34,8 @@ export class Manager {
 
     initExtensions(extensionConfigs: ExtensionConfig[]): void {
         for (const config of extensionConfigs) {
-            if (!config.key) continue;
-            const state = this.extensionStates.get(config.key);
+            if (!config.name) continue;
+            const state = this.extensionStates.get(config.name);
             if (!state) continue;
             const resolvedConfig = this.cloneConfig(config.config ?? state.definition.defaultConfig ?? {});
             this.commitExtensionState(state, config.enabled ?? false, resolvedConfig);
@@ -88,9 +88,9 @@ export class Manager {
             state.enabled = enabled;
             state.config = config;
             state.extension = runtimeExtension;
-            this.applyExtensionToAllViews(state.id);
+            this.applyExtensionToAllViews(state.name);
         } catch (error) {
-            console.error(`Failed to update extension ${state.id}:`, error);
+            console.error(`Failed to update extension ${state.name}:`, error);
         }
     }
 

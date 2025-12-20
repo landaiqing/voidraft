@@ -13,7 +13,7 @@ export interface ExtensionDefinition {
  * 扩展运行时状态
  */
 export interface ExtensionState {
-    id: string  // 扩展 key
+    name: string
     definition: ExtensionDefinition
     config: any
     enabled: boolean

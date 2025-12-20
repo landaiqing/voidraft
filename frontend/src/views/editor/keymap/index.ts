@@ -28,4 +28,3 @@ export const updateKeymapExtension = (view: any): void => {
 // 导出相关模块
 export { Manager } from './manager';
 export { commands, getCommandHandler, getCommandDescription, isCommandRegistered, getRegisteredCommands } from './commands';
-export type { KeyBinding, CommandHandler, CommandDefinition, KeymapResult } from './types';

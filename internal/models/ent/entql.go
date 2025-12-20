@@ -52,7 +52,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			extension.FieldCreatedAt: {Type: field.TypeString, Column: extension.FieldCreatedAt},
 			extension.FieldUpdatedAt: {Type: field.TypeString, Column: extension.FieldUpdatedAt},
 			extension.FieldDeletedAt: {Type: field.TypeString, Column: extension.FieldDeletedAt},
-			extension.FieldKey:       {Type: field.TypeString, Column: extension.FieldKey},
+			extension.FieldName:      {Type: field.TypeString, Column: extension.FieldName},
 			extension.FieldEnabled:   {Type: field.TypeBool, Column: extension.FieldEnabled},
 			extension.FieldConfig:    {Type: field.TypeJSON, Column: extension.FieldConfig},
 		},
@@ -68,14 +68,20 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "KeyBinding",
 		Fields: map[string]*sqlgraph.FieldSpec{
-			keybinding.FieldUUID:      {Type: field.TypeString, Column: keybinding.FieldUUID},
-			keybinding.FieldCreatedAt: {Type: field.TypeString, Column: keybinding.FieldCreatedAt},
-			keybinding.FieldUpdatedAt: {Type: field.TypeString, Column: keybinding.FieldUpdatedAt},
-			keybinding.FieldDeletedAt: {Type: field.TypeString, Column: keybinding.FieldDeletedAt},
-			keybinding.FieldKey:       {Type: field.TypeString, Column: keybinding.FieldKey},
-			keybinding.FieldCommand:   {Type: field.TypeString, Column: keybinding.FieldCommand},
-			keybinding.FieldExtension: {Type: field.TypeString, Column: keybinding.FieldExtension},
-			keybinding.FieldEnabled:   {Type: field.TypeBool, Column: keybinding.FieldEnabled},
+			keybinding.FieldUUID:           {Type: field.TypeString, Column: keybinding.FieldUUID},
+			keybinding.FieldCreatedAt:      {Type: field.TypeString, Column: keybinding.FieldCreatedAt},
+			keybinding.FieldUpdatedAt:      {Type: field.TypeString, Column: keybinding.FieldUpdatedAt},
+			keybinding.FieldDeletedAt:      {Type: field.TypeString, Column: keybinding.FieldDeletedAt},
+			keybinding.FieldName:           {Type: field.TypeString, Column: keybinding.FieldName},
+			keybinding.FieldType:           {Type: field.TypeString, Column: keybinding.FieldType},
+			keybinding.FieldKey:            {Type: field.TypeString, Column: keybinding.FieldKey},
+			keybinding.FieldMacos:          {Type: field.TypeString, Column: keybinding.FieldMacos},
+			keybinding.FieldWindows:        {Type: field.TypeString, Column: keybinding.FieldWindows},
+			keybinding.FieldLinux:          {Type: field.TypeString, Column: keybinding.FieldLinux},
+			keybinding.FieldExtension:      {Type: field.TypeString, Column: keybinding.FieldExtension},
+			keybinding.FieldEnabled:        {Type: field.TypeBool, Column: keybinding.FieldEnabled},
+			keybinding.FieldPreventDefault: {Type: field.TypeBool, Column: keybinding.FieldPreventDefault},
+			keybinding.FieldScope:          {Type: field.TypeString, Column: keybinding.FieldScope},
 		},
 	}
 	graph.Nodes[3] = &sqlgraph.Node{
@@ -93,7 +99,7 @@ var schemaGraph = func() *sqlgraph.Schema {
 			theme.FieldCreatedAt: {Type: field.TypeString, Column: theme.FieldCreatedAt},
 			theme.FieldUpdatedAt: {Type: field.TypeString, Column: theme.FieldUpdatedAt},
 			theme.FieldDeletedAt: {Type: field.TypeString, Column: theme.FieldDeletedAt},
-			theme.FieldKey:       {Type: field.TypeString, Column: theme.FieldKey},
+			theme.FieldName:      {Type: field.TypeString, Column: theme.FieldName},
 			theme.FieldType:      {Type: field.TypeEnum, Column: theme.FieldType},
 			theme.FieldColors:    {Type: field.TypeJSON, Column: theme.FieldColors},
 		},
@@ -242,9 +248,9 @@ func (f *ExtensionFilter) WhereDeletedAt(p entql.StringP) {
 	f.Where(p.Field(extension.FieldDeletedAt))
 }
 
-// WhereKey applies the entql string predicate on the key field.
-func (f *ExtensionFilter) WhereKey(p entql.StringP) {
-	f.Where(p.Field(extension.FieldKey))
+// WhereName applies the entql string predicate on the name field.
+func (f *ExtensionFilter) WhereName(p entql.StringP) {
+	f.Where(p.Field(extension.FieldName))
 }
 
 // WhereEnabled applies the entql bool predicate on the enabled field.
@@ -317,14 +323,34 @@ func (f *KeyBindingFilter) WhereDeletedAt(p entql.StringP) {
 	f.Where(p.Field(keybinding.FieldDeletedAt))
 }
 
+// WhereName applies the entql string predicate on the name field.
+func (f *KeyBindingFilter) WhereName(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldName))
+}
+
+// WhereType applies the entql string predicate on the type field.
+func (f *KeyBindingFilter) WhereType(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldType))
+}
+
 // WhereKey applies the entql string predicate on the key field.
 func (f *KeyBindingFilter) WhereKey(p entql.StringP) {
 	f.Where(p.Field(keybinding.FieldKey))
 }
 
-// WhereCommand applies the entql string predicate on the command field.
-func (f *KeyBindingFilter) WhereCommand(p entql.StringP) {
-	f.Where(p.Field(keybinding.FieldCommand))
+// WhereMacos applies the entql string predicate on the macos field.
+func (f *KeyBindingFilter) WhereMacos(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldMacos))
+}
+
+// WhereWindows applies the entql string predicate on the windows field.
+func (f *KeyBindingFilter) WhereWindows(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldWindows))
+}
+
+// WhereLinux applies the entql string predicate on the linux field.
+func (f *KeyBindingFilter) WhereLinux(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldLinux))
 }
 
 // WhereExtension applies the entql string predicate on the extension field.
@@ -335,6 +361,16 @@ func (f *KeyBindingFilter) WhereExtension(p entql.StringP) {
 // WhereEnabled applies the entql bool predicate on the enabled field.
 func (f *KeyBindingFilter) WhereEnabled(p entql.BoolP) {
 	f.Where(p.Field(keybinding.FieldEnabled))
+}
+
+// WherePreventDefault applies the entql bool predicate on the prevent_default field.
+func (f *KeyBindingFilter) WherePreventDefault(p entql.BoolP) {
+	f.Where(p.Field(keybinding.FieldPreventDefault))
+}
+
+// WhereScope applies the entql string predicate on the scope field.
+func (f *KeyBindingFilter) WhereScope(p entql.StringP) {
+	f.Where(p.Field(keybinding.FieldScope))
 }
 
 // addPredicate implements the predicateAdder interface.
@@ -397,9 +433,9 @@ func (f *ThemeFilter) WhereDeletedAt(p entql.StringP) {
 	f.Where(p.Field(theme.FieldDeletedAt))
 }
 
-// WhereKey applies the entql string predicate on the key field.
-func (f *ThemeFilter) WhereKey(p entql.StringP) {
-	f.Where(p.Field(theme.FieldKey))
+// WhereName applies the entql string predicate on the name field.
+func (f *ThemeFilter) WhereName(p entql.StringP) {
+	f.Where(p.Field(theme.FieldName))
 }
 
 // WhereType applies the entql string predicate on the type field.

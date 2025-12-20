@@ -21,22 +21,34 @@ import * as models$0 from "../models/models.js";
 import * as ent$0 from "../models/ent/models.js";
 
 /**
- * GetAllKeyBindings 获取所有快捷键
+ * GetDefaultKeyBindings 获取默认快捷键配置
  */
-export function GetAllKeyBindings(): Promise<(ent$0.KeyBinding | null)[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1633502882) as any;
+export function GetDefaultKeyBindings(): Promise<models$0.KeyBinding[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3843471588) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType2($result);
+        return $$createType1($result);
     }) as any;
     $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
     return $typingPromise;
 }
 
 /**
- * GetDefaultKeyBindings 获取默认快捷键配置
+ * GetKeyBindingByID 根据ID获取快捷键
  */
-export function GetDefaultKeyBindings(): Promise<models$0.KeyBinding[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3843471588) as any;
+export function GetKeyBindingByID(id: number): Promise<ent$0.KeyBinding | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1578192526, id) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType3($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * GetKeyBindings 根据类型获取快捷键
+ */
+export function GetKeyBindings(kbType: models$0.KeyBindingType): Promise<(ent$0.KeyBinding | null)[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4253885163, kbType) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType4($result);
     }) as any;
@@ -45,15 +57,11 @@ export function GetDefaultKeyBindings(): Promise<models$0.KeyBinding[]> & { canc
 }
 
 /**
- * GetKeyBindingByKey 根据Key获取快捷键
+ * ResetKeyBindings 重置所有快捷键到默认值
  */
-export function GetKeyBindingByKey(key: string): Promise<ent$0.KeyBinding | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(852938650, key) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+export function ResetKeyBindings(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4251626010) as any;
+    return $resultPromise;
 }
 
 /**
@@ -73,24 +81,24 @@ export function SyncKeyBindings(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * UpdateKeyBindingCommand 更新快捷键命令
+ * UpdateKeyBindingEnabled 更新快捷键启用状态
  */
-export function UpdateKeyBindingCommand(key: string, command: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1293670628, key, command) as any;
+export function UpdateKeyBindingEnabled(id: number, enabled: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(843626124, id, enabled) as any;
     return $resultPromise;
 }
 
 /**
- * UpdateKeyBindingEnabled 更新快捷键启用状态
+ * UpdateKeyBindingKeys 更新快捷键绑定（根据操作系统自动判断更新哪个字段）
  */
-export function UpdateKeyBindingEnabled(key: string, enabled: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(843626124, key, enabled) as any;
+export function UpdateKeyBindingKeys(id: number, key: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3432755175, id, key) as any;
     return $resultPromise;
 }
 
 // Private type creation functions
-const $$createType0 = ent$0.KeyBinding.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = models$0.KeyBinding.createFrom;
+const $$createType0 = models$0.KeyBinding.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = ent$0.KeyBinding.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
 const $$createType4 = $Create.Array($$createType3);

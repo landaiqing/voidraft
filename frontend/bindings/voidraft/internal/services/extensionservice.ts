@@ -21,34 +21,10 @@ import * as models$0 from "../models/models.js";
 import * as ent$0 from "../models/ent/models.js";
 
 /**
- * GetAllExtensions 获取所有扩展
- */
-export function GetAllExtensions(): Promise<(ent$0.Extension | null)[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3094292124) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType2($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
  * GetDefaultExtensions 获取默认扩展配置（用于前端绑定生成）
  */
 export function GetDefaultExtensions(): Promise<models$0.Extension[]> & { cancel(): void } {
     let $resultPromise = $Call.ByID(4036328166) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType4($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * GetExtensionByKey 根据Key获取扩展
- */
-export function GetExtensionByKey(key: string): Promise<ent$0.Extension | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2551065776, key) as any;
     let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
     }) as any;
@@ -57,10 +33,46 @@ export function GetExtensionByKey(key: string): Promise<ent$0.Extension | null> 
 }
 
 /**
+ * GetExtensionByID 根据ID获取扩展
+ */
+export function GetExtensionByID(id: number): Promise<ent$0.Extension | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1521424252, id) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType3($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * GetExtensionConfig 获取扩展配置
+ */
+export function GetExtensionConfig(id: number): Promise<{ [_: string]: any }> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1629559882, id) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType4($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * GetExtensions 获取所有扩展
+ */
+export function GetExtensions(): Promise<(ent$0.Extension | null)[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3179289021) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType5($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
  * ResetExtensionConfig 重置单个扩展到默认状态
  */
-export function ResetExtensionConfig(key: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3990780299, key) as any;
+export function ResetExtensionConfig(id: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3990780299, id) as any;
     return $resultPromise;
 }
 
@@ -83,22 +95,23 @@ export function SyncExtensions(): Promise<void> & { cancel(): void } {
 /**
  * UpdateExtensionConfig 更新扩展配置
  */
-export function UpdateExtensionConfig(key: string, config: { [_: string]: any }): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3184142503, key, config) as any;
+export function UpdateExtensionConfig(id: number, config: { [_: string]: any }): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3184142503, id, config) as any;
     return $resultPromise;
 }
 
 /**
  * UpdateExtensionEnabled 更新扩展启用状态
  */
-export function UpdateExtensionEnabled(key: string, enabled: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1067300094, key, enabled) as any;
+export function UpdateExtensionEnabled(id: number, enabled: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1067300094, id, enabled) as any;
     return $resultPromise;
 }
 
 // Private type creation functions
-const $$createType0 = ent$0.Extension.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = models$0.Extension.createFrom;
-const $$createType4 = $Create.Array($$createType3);
+const $$createType0 = models$0.Extension.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = ent$0.Extension.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = $Create.Map($Create.Any, $Create.Any);
+const $$createType5 = $Create.Array($$createType3);

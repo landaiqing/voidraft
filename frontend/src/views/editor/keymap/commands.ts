@@ -18,8 +18,22 @@ import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines';
 import {transposeChars} from '../extensions/codeblock';
 import {copyCommand, cutCommand, pasteCommand} from '../extensions/codeblock/copyPaste';
 import {
+    addCursorAbove,
+    addCursorBelow,
     copyLineDown,
     copyLineUp,
+    cursorCharLeft,
+    cursorCharRight,
+    cursorLineDown,
+    cursorLineUp,
+    cursorPageDown,
+    cursorPageUp,
+    cursorDocEnd,
+    cursorDocStart,
+    cursorGroupLeft,
+    cursorGroupRight,
+    cursorLineEnd,
+    cursorLineStart,
     cursorMatchingBracket,
     cursorSyntaxLeft,
     cursorSyntaxRight,
@@ -27,6 +41,8 @@ import {
     deleteCharForward,
     deleteGroupBackward,
     deleteGroupForward,
+    deleteToLineEnd,
+    deleteToLineStart,
     indentLess,
     indentMore,
     indentSelection,
@@ -34,10 +50,23 @@ import {
     insertNewlineAndIndent,
     redo,
     redoSelection,
+    selectCharLeft,
+    selectCharRight,
+    selectLineDown,
+    selectLineUp,
+    selectDocEnd,
+    selectDocStart,
+    selectGroupLeft,
+    selectGroupRight,
     selectLine,
+    selectLineEnd,
+    selectLineStart,
+    selectMatchingBracket,
     selectParentSyntax,
     selectSyntaxLeft,
     selectSyntaxRight,
+    simplifySelection,
+    splitLine,
     toggleBlockComment,
     toggleComment,
     undo,
@@ -45,9 +74,8 @@ import {
 } from '@codemirror/commands';
 import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language';
 import i18n from '@/i18n';
-import {KeyBindingKey} from '@/../bindings/voidraft/internal/models/models';
+import {KeyBindingName} from '@/../bindings/voidraft/internal/models/models';
 
-// 默认代码块扩展选项
 const defaultBlockExtensionOptions = {
     defaultBlockToken: 'text',
     defaultBlockAutoDetect: true,
@@ -58,201 +86,319 @@ const defaultBlockExtensionOptions = {
  * 将后端定义的key字段映射到具体的前端方法和翻译键
  */
 export const commands: Record<string, { handler: any; descriptionKey: string }> = {
-    [KeyBindingKey.ShowSearchKeyBindingKey]: {
+    [KeyBindingName.ShowSearch]: {
         handler: openSearchPanel,
         descriptionKey: 'keybindings.commands.showSearch'
     },
-    [KeyBindingKey.HideSearchKeyBindingKey]: {
+    [KeyBindingName.HideSearch]: {
         handler: closeSearchPanel,
         descriptionKey: 'keybindings.commands.hideSearch'
     },
-    [KeyBindingKey.BlockSelectAllKeyBindingKey]: {
+    [KeyBindingName.BlockSelectAll]: {
         handler: selectAll,
         descriptionKey: 'keybindings.commands.blockSelectAll'
     },
-    [KeyBindingKey.BlockAddAfterCurrentKeyBindingKey]: {
+    [KeyBindingName.BlockAddAfterCurrent]: {
         handler: addNewBlockAfterCurrent(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockAddAfterCurrent'
     },
-    [KeyBindingKey.BlockAddAfterLastKeyBindingKey]: {
+    [KeyBindingName.BlockAddAfterLast]: {
         handler: addNewBlockAfterLast(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockAddAfterLast'
     },
-    [KeyBindingKey.BlockAddBeforeCurrentKeyBindingKey]: {
+    [KeyBindingName.BlockAddBeforeCurrent]: {
         handler: addNewBlockBeforeCurrent(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockAddBeforeCurrent'
     },
-    [KeyBindingKey.BlockGotoPreviousKeyBindingKey]: {
+    [KeyBindingName.BlockGotoPrevious]: {
         handler: gotoPreviousBlock,
         descriptionKey: 'keybindings.commands.blockGotoPrevious'
     },
-    [KeyBindingKey.BlockGotoNextKeyBindingKey]: {
+    [KeyBindingName.BlockGotoNext]: {
         handler: gotoNextBlock,
         descriptionKey: 'keybindings.commands.blockGotoNext'
     },
-    [KeyBindingKey.BlockSelectPreviousKeyBindingKey]: {
+    [KeyBindingName.BlockSelectPrevious]: {
         handler: selectPreviousBlock,
         descriptionKey: 'keybindings.commands.blockSelectPrevious'
     },
-    [KeyBindingKey.BlockSelectNextKeyBindingKey]: {
+    [KeyBindingName.BlockSelectNext]: {
         handler: selectNextBlock,
         descriptionKey: 'keybindings.commands.blockSelectNext'
     },
-    [KeyBindingKey.BlockDeleteKeyBindingKey]: {
+    [KeyBindingName.BlockDelete]: {
         handler: deleteBlock(defaultBlockExtensionOptions),
         descriptionKey: 'keybindings.commands.blockDelete'
     },
-    [KeyBindingKey.BlockMoveUpKeyBindingKey]: {
+    [KeyBindingName.BlockMoveUp]: {
         handler: moveCurrentBlockUp,
         descriptionKey: 'keybindings.commands.blockMoveUp'
     },
-    [KeyBindingKey.BlockMoveDownKeyBindingKey]: {
+    [KeyBindingName.BlockMoveDown]: {
         handler: moveCurrentBlockDown,
         descriptionKey: 'keybindings.commands.blockMoveDown'
     },
-    [KeyBindingKey.BlockDeleteLineKeyBindingKey]: {
+    [KeyBindingName.BlockDeleteLine]: {
         handler: deleteLineCommand,
         descriptionKey: 'keybindings.commands.blockDeleteLine'
     },
-    [KeyBindingKey.BlockMoveLineUpKeyBindingKey]: {
+    [KeyBindingName.BlockMoveLineUp]: {
         handler: moveLineUp,
         descriptionKey: 'keybindings.commands.blockMoveLineUp'
     },
-    [KeyBindingKey.BlockMoveLineDownKeyBindingKey]: {
+    [KeyBindingName.BlockMoveLineDown]: {
         handler: moveLineDown,
         descriptionKey: 'keybindings.commands.blockMoveLineDown'
     },
-    [KeyBindingKey.BlockTransposeCharsKeyBindingKey]: {
+    [KeyBindingName.BlockTransposeChars]: {
         handler: transposeChars,
         descriptionKey: 'keybindings.commands.blockTransposeChars'
     },
-    [KeyBindingKey.BlockFormatKeyBindingKey]: {
+    [KeyBindingName.BlockFormat]: {
         handler: formatCurrentBlock,
         descriptionKey: 'keybindings.commands.blockFormat'
     },
-    [KeyBindingKey.BlockCopyKeyBindingKey]: {
+    [KeyBindingName.BlockCopy]: {
         handler: copyCommand,
         descriptionKey: 'keybindings.commands.blockCopy'
     },
-    [KeyBindingKey.BlockCutKeyBindingKey]: {
+    [KeyBindingName.BlockCut]: {
         handler: cutCommand,
         descriptionKey: 'keybindings.commands.blockCut'
     },
-    [KeyBindingKey.BlockPasteKeyBindingKey]: {
+    [KeyBindingName.BlockPaste]: {
         handler: pasteCommand,
         descriptionKey: 'keybindings.commands.blockPaste'
     },
-    [KeyBindingKey.HistoryUndoKeyBindingKey]: {
+    [KeyBindingName.HistoryUndo]: {
         handler: undo,
         descriptionKey: 'keybindings.commands.historyUndo'
     },
-    [KeyBindingKey.HistoryRedoKeyBindingKey]: {
+    [KeyBindingName.HistoryRedo]: {
         handler: redo,
         descriptionKey: 'keybindings.commands.historyRedo'
     },
-    [KeyBindingKey.HistoryUndoSelectionKeyBindingKey]: {
+    [KeyBindingName.HistoryUndoSelection]: {
         handler: undoSelection,
         descriptionKey: 'keybindings.commands.historyUndoSelection'
     },
-    [KeyBindingKey.HistoryRedoSelectionKeyBindingKey]: {
+    [KeyBindingName.HistoryRedoSelection]: {
         handler: redoSelection,
         descriptionKey: 'keybindings.commands.historyRedoSelection'
     },
-    [KeyBindingKey.FoldCodeKeyBindingKey]: {
+    [KeyBindingName.FoldCode]: {
         handler: foldCode,
         descriptionKey: 'keybindings.commands.foldCode'
     },
-    [KeyBindingKey.UnfoldCodeKeyBindingKey]: {
+    [KeyBindingName.UnfoldCode]: {
         handler: unfoldCode,
         descriptionKey: 'keybindings.commands.unfoldCode'
     },
-    [KeyBindingKey.FoldAllKeyBindingKey]: {
+    [KeyBindingName.FoldAll]: {
         handler: foldAll,
         descriptionKey: 'keybindings.commands.foldAll'
     },
-    [KeyBindingKey.UnfoldAllKeyBindingKey]: {
+    [KeyBindingName.UnfoldAll]: {
         handler: unfoldAll,
         descriptionKey: 'keybindings.commands.unfoldAll'
     },
-    [KeyBindingKey.CursorSyntaxLeftKeyBindingKey]: {
+    [KeyBindingName.CursorSyntaxLeft]: {
         handler: cursorSyntaxLeft,
         descriptionKey: 'keybindings.commands.cursorSyntaxLeft'
     },
-    [KeyBindingKey.CursorSyntaxRightKeyBindingKey]: {
+    [KeyBindingName.CursorSyntaxRight]: {
         handler: cursorSyntaxRight,
         descriptionKey: 'keybindings.commands.cursorSyntaxRight'
     },
-    [KeyBindingKey.SelectSyntaxLeftKeyBindingKey]: {
+    [KeyBindingName.SelectSyntaxLeft]: {
         handler: selectSyntaxLeft,
         descriptionKey: 'keybindings.commands.selectSyntaxLeft'
     },
-    [KeyBindingKey.SelectSyntaxRightKeyBindingKey]: {
+    [KeyBindingName.SelectSyntaxRight]: {
         handler: selectSyntaxRight,
         descriptionKey: 'keybindings.commands.selectSyntaxRight'
     },
-    [KeyBindingKey.CopyLineUpKeyBindingKey]: {
+    [KeyBindingName.CopyLineUp]: {
         handler: copyLineUp,
         descriptionKey: 'keybindings.commands.copyLineUp'
     },
-    [KeyBindingKey.CopyLineDownKeyBindingKey]: {
+    [KeyBindingName.CopyLineDown]: {
         handler: copyLineDown,
         descriptionKey: 'keybindings.commands.copyLineDown'
     },
-    [KeyBindingKey.InsertBlankLineKeyBindingKey]: {
+    [KeyBindingName.InsertBlankLine]: {
         handler: insertBlankLine,
         descriptionKey: 'keybindings.commands.insertBlankLine'
     },
-    [KeyBindingKey.SelectLineKeyBindingKey]: {
+    [KeyBindingName.SelectLine]: {
         handler: selectLine,
         descriptionKey: 'keybindings.commands.selectLine'
     },
-    [KeyBindingKey.SelectParentSyntaxKeyBindingKey]: {
+    [KeyBindingName.SelectParentSyntax]: {
         handler: selectParentSyntax,
         descriptionKey: 'keybindings.commands.selectParentSyntax'
     },
-    [KeyBindingKey.IndentLessKeyBindingKey]: {
+    [KeyBindingName.SimplifySelection]: {
+        handler: simplifySelection,
+        descriptionKey: 'keybindings.commands.simplifySelection'
+    },
+    [KeyBindingName.AddCursorAbove]: {
+        handler: addCursorAbove,
+        descriptionKey: 'keybindings.commands.addCursorAbove'
+    },
+    [KeyBindingName.AddCursorBelow]: {
+        handler: addCursorBelow,
+        descriptionKey: 'keybindings.commands.addCursorBelow'
+    },
+    [KeyBindingName.CursorGroupLeft]: {
+        handler: cursorGroupLeft,
+        descriptionKey: 'keybindings.commands.cursorGroupLeft'
+    },
+    [KeyBindingName.CursorGroupRight]: {
+        handler: cursorGroupRight,
+        descriptionKey: 'keybindings.commands.cursorGroupRight'
+    },
+    [KeyBindingName.SelectGroupLeft]: {
+        handler: selectGroupLeft,
+        descriptionKey: 'keybindings.commands.selectGroupLeft'
+    },
+    [KeyBindingName.SelectGroupRight]: {
+        handler: selectGroupRight,
+        descriptionKey: 'keybindings.commands.selectGroupRight'
+    },
+    [KeyBindingName.DeleteToLineEnd]: {
+        handler: deleteToLineEnd,
+        descriptionKey: 'keybindings.commands.deleteToLineEnd'
+    },
+    [KeyBindingName.DeleteToLineStart]: {
+        handler: deleteToLineStart,
+        descriptionKey: 'keybindings.commands.deleteToLineStart'
+    },
+    [KeyBindingName.CursorLineStart]: {
+        handler: cursorLineStart,
+        descriptionKey: 'keybindings.commands.cursorLineStart'
+    },
+    [KeyBindingName.CursorLineEnd]: {
+        handler: cursorLineEnd,
+        descriptionKey: 'keybindings.commands.cursorLineEnd'
+    },
+    [KeyBindingName.SelectLineStart]: {
+        handler: selectLineStart,
+        descriptionKey: 'keybindings.commands.selectLineStart'
+    },
+    [KeyBindingName.SelectLineEnd]: {
+        handler: selectLineEnd,
+        descriptionKey: 'keybindings.commands.selectLineEnd'
+    },
+    [KeyBindingName.CursorDocStart]: {
+        handler: cursorDocStart,
+        descriptionKey: 'keybindings.commands.cursorDocStart'
+    },
+    [KeyBindingName.CursorDocEnd]: {
+        handler: cursorDocEnd,
+        descriptionKey: 'keybindings.commands.cursorDocEnd'
+    },
+    [KeyBindingName.SelectDocStart]: {
+        handler: selectDocStart,
+        descriptionKey: 'keybindings.commands.selectDocStart'
+    },
+    [KeyBindingName.SelectDocEnd]: {
+        handler: selectDocEnd,
+        descriptionKey: 'keybindings.commands.selectDocEnd'
+    },
+    [KeyBindingName.SelectMatchingBracket]: {
+        handler: selectMatchingBracket,
+        descriptionKey: 'keybindings.commands.selectMatchingBracket'
+    },
+    [KeyBindingName.SplitLine]: {
+        handler: splitLine,
+        descriptionKey: 'keybindings.commands.splitLine'
+    },
+    [KeyBindingName.IndentLess]: {
         handler: indentLess,
         descriptionKey: 'keybindings.commands.indentLess'
     },
-    [KeyBindingKey.IndentMoreKeyBindingKey]: {
+    [KeyBindingName.IndentMore]: {
         handler: indentMore,
         descriptionKey: 'keybindings.commands.indentMore'
     },
-    [KeyBindingKey.IndentSelectionKeyBindingKey]: {
+    [KeyBindingName.IndentSelection]: {
         handler: indentSelection,
         descriptionKey: 'keybindings.commands.indentSelection'
     },
-    [KeyBindingKey.CursorMatchingBracketKeyBindingKey]: {
+    [KeyBindingName.CursorMatchingBracket]: {
         handler: cursorMatchingBracket,
         descriptionKey: 'keybindings.commands.cursorMatchingBracket'
     },
-    [KeyBindingKey.ToggleCommentKeyBindingKey]: {
+    [KeyBindingName.ToggleComment]: {
         handler: toggleComment,
         descriptionKey: 'keybindings.commands.toggleComment'
     },
-    [KeyBindingKey.ToggleBlockCommentKeyBindingKey]: {
+    [KeyBindingName.ToggleBlockComment]: {
         handler: toggleBlockComment,
         descriptionKey: 'keybindings.commands.toggleBlockComment'
     },
-    [KeyBindingKey.InsertNewlineAndIndentKeyBindingKey]: {
+    [KeyBindingName.InsertNewlineAndIndent]: {
         handler: insertNewlineAndIndent,
         descriptionKey: 'keybindings.commands.insertNewlineAndIndent'
     },
-    [KeyBindingKey.DeleteCharBackwardKeyBindingKey]: {
+    [KeyBindingName.DeleteCharBackward]: {
         handler: deleteCharBackward,
         descriptionKey: 'keybindings.commands.deleteCharBackward'
     },
-    [KeyBindingKey.DeleteCharForwardKeyBindingKey]: {
+    [KeyBindingName.DeleteCharForward]: {
         handler: deleteCharForward,
         descriptionKey: 'keybindings.commands.deleteCharForward'
     },
-    [KeyBindingKey.DeleteGroupBackwardKeyBindingKey]: {
+    [KeyBindingName.DeleteGroupBackward]: {
         handler: deleteGroupBackward,
         descriptionKey: 'keybindings.commands.deleteGroupBackward'
     },
-    [KeyBindingKey.DeleteGroupForwardKeyBindingKey]: {
+    [KeyBindingName.DeleteGroupForward]: {
         handler: deleteGroupForward,
         descriptionKey: 'keybindings.commands.deleteGroupForward'
+    },
+
+    // Emacs 模式额外的基础导航命令
+    [KeyBindingName.CursorCharLeft]: {
+        handler: cursorCharLeft,
+        descriptionKey: 'keybindings.commands.cursorCharLeft'
+    },
+    [KeyBindingName.CursorCharRight]: {
+        handler: cursorCharRight,
+        descriptionKey: 'keybindings.commands.cursorCharRight'
+    },
+    [KeyBindingName.CursorLineUp]: {
+        handler: cursorLineUp,
+        descriptionKey: 'keybindings.commands.cursorLineUp'
+    },
+    [KeyBindingName.CursorLineDown]: {
+        handler: cursorLineDown,
+        descriptionKey: 'keybindings.commands.cursorLineDown'
+    },
+    [KeyBindingName.CursorPageUp]: {
+        handler: cursorPageUp,
+        descriptionKey: 'keybindings.commands.cursorPageUp'
+    },
+    [KeyBindingName.CursorPageDown]: {
+        handler: cursorPageDown,
+        descriptionKey: 'keybindings.commands.cursorPageDown'
+    },
+    [KeyBindingName.SelectCharLeft]: {
+        handler: selectCharLeft,
+        descriptionKey: 'keybindings.commands.selectCharLeft'
+    },
+    [KeyBindingName.SelectCharRight]: {
+        handler: selectCharRight,
+        descriptionKey: 'keybindings.commands.selectCharRight'
+    },
+    [KeyBindingName.SelectLineUp]: {
+        handler: selectLineUp,
+        descriptionKey: 'keybindings.commands.selectLineUp'
+    },
+    [KeyBindingName.SelectLineDown]: {
+        handler: selectLineDown,
+        descriptionKey: 'keybindings.commands.selectLineDown'
     },
 };
 

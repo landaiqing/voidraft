@@ -204,8 +204,8 @@ export const useDocumentStore = defineStore('document', () => {
                 await openDocument(currentDocumentId.value);
             } else {
                 // 否则打开第一个文档
-                if (documents.value[0].id) {
-                    await openDocument(documents.value[0].id);
+                if (documentList.value[0].id) {
+                    await openDocument(documentList.value[0].id);
                 }
             }
         } catch (error) {

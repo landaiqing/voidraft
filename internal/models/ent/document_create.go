@@ -180,6 +180,9 @@ func (_c *DocumentCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *DocumentCreate) check() error {
+	if _, ok := _c.mutation.UUID(); !ok {
+		return &ValidationError{Name: "uuid", err: errors.New(`ent: missing required field "Document.uuid"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Document.created_at"`)}
 	}
@@ -225,7 +228,7 @@ func (_c *DocumentCreate) createSpec() (*Document, *sqlgraph.CreateSpec) {
 	)
 	if value, ok := _c.mutation.UUID(); ok {
 		_spec.SetField(document.FieldUUID, field.TypeString, value)
-		_node.UUID = &value
+		_node.UUID = value
 	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(document.FieldCreatedAt, field.TypeString, value)

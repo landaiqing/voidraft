@@ -12,7 +12,7 @@ var (
 	// DocumentsColumns holds the columns for the "documents" table.
 	DocumentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
@@ -56,11 +56,11 @@ var (
 	// ExtensionsColumns holds the columns for the "extensions" table.
 	ExtensionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
-		{Name: "key", Type: field.TypeString, Unique: true, Size: 100},
+		{Name: "name", Type: field.TypeString, Unique: true, Size: 100},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
 		{Name: "config", Type: field.TypeJSON, Nullable: true},
 	}
@@ -90,14 +90,20 @@ var (
 	// KeyBindingsColumns holds the columns for the "key_bindings" table.
 	KeyBindingsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
-		{Name: "key", Type: field.TypeString, Unique: true, Size: 100},
-		{Name: "command", Type: field.TypeString, Size: 100},
-		{Name: "extension", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "name", Type: field.TypeString, Size: 100},
+		{Name: "type", Type: field.TypeString, Size: 20, Default: "standard"},
+		{Name: "key", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "macos", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "windows", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "linux", Type: field.TypeString, Nullable: true, Size: 100},
+		{Name: "extension", Type: field.TypeString, Size: 100},
 		{Name: "enabled", Type: field.TypeBool, Default: true},
+		{Name: "prevent_default", Type: field.TypeBool, Default: true},
+		{Name: "scope", Type: field.TypeString, Size: 100, Default: "editor"},
 	}
 	// KeyBindingsTable holds the schema information for the "key_bindings" table.
 	KeyBindingsTable = &schema.Table{
@@ -116,25 +122,40 @@ var (
 				Columns: []*schema.Column{KeyBindingsColumns[4]},
 			},
 			{
+				Name:    "keybinding_name",
+				Unique:  false,
+				Columns: []*schema.Column{KeyBindingsColumns[5]},
+			},
+			{
+				Name:    "keybinding_type",
+				Unique:  false,
+				Columns: []*schema.Column{KeyBindingsColumns[6]},
+			},
+			{
+				Name:    "keybinding_type_name",
+				Unique:  true,
+				Columns: []*schema.Column{KeyBindingsColumns[6], KeyBindingsColumns[5]},
+			},
+			{
 				Name:    "keybinding_extension",
 				Unique:  false,
-				Columns: []*schema.Column{KeyBindingsColumns[7]},
+				Columns: []*schema.Column{KeyBindingsColumns[11]},
 			},
 			{
 				Name:    "keybinding_enabled",
 				Unique:  false,
-				Columns: []*schema.Column{KeyBindingsColumns[8]},
+				Columns: []*schema.Column{KeyBindingsColumns[12]},
 			},
 		},
 	}
 	// ThemesColumns holds the columns for the "themes" table.
 	ThemesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "uuid", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
-		{Name: "key", Type: field.TypeString, Unique: true, Size: 100},
+		{Name: "name", Type: field.TypeString, Unique: true, Size: 100},
 		{Name: "type", Type: field.TypeEnum, Enums: []string{"dark", "light"}},
 		{Name: "colors", Type: field.TypeJSON, Nullable: true},
 	}

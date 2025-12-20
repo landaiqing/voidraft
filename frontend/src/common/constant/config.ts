@@ -1,6 +1,7 @@
 import {
     AppConfig,
     AuthMethod,
+    KeyBindingType,
     LanguageType,
     SystemThemeType,
     TabType,
@@ -31,6 +32,7 @@ export const CONFIG_KEY_MAP = {
     enableTabIndent: 'editing.enableTabIndent',
     tabSize: 'editing.tabSize',
     tabType: 'editing.tabType',
+    keymapMode: 'editing.keymapMode',
     autoSaveDelay: 'editing.autoSaveDelay',
     // appearance
     language: 'appearance.language',
@@ -95,11 +97,12 @@ export const DEFAULT_CONFIG: AppConfig = {
         enableTabIndent: true,
         tabSize: CONFIG_LIMITS.tabSize.default,
         tabType: CONFIG_LIMITS.tabType.default,
+        keymapMode: KeyBindingType.Standard,
         autoSaveDelay: 5000
     },
     appearance: {
         language: LanguageType.LangZhCN,
-        systemTheme: SystemThemeType.SystemThemeAuto,
+        systemTheme: SystemThemeType.SystemThemeDark,
         currentTheme: 'default-dark'
     },
     updates: {

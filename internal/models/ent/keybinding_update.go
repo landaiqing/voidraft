@@ -62,6 +62,34 @@ func (_u *KeyBindingUpdate) ClearDeletedAt() *KeyBindingUpdate {
 	return _u
 }
 
+// SetName sets the "name" field.
+func (_u *KeyBindingUpdate) SetName(v string) *KeyBindingUpdate {
+	_u.mutation.SetName(v)
+	return _u
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillableName(v *string) *KeyBindingUpdate {
+	if v != nil {
+		_u.SetName(*v)
+	}
+	return _u
+}
+
+// SetType sets the "type" field.
+func (_u *KeyBindingUpdate) SetType(v string) *KeyBindingUpdate {
+	_u.mutation.SetType(v)
+	return _u
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillableType(v *string) *KeyBindingUpdate {
+	if v != nil {
+		_u.SetType(*v)
+	}
+	return _u
+}
+
 // SetKey sets the "key" field.
 func (_u *KeyBindingUpdate) SetKey(v string) *KeyBindingUpdate {
 	_u.mutation.SetKey(v)
@@ -76,17 +104,69 @@ func (_u *KeyBindingUpdate) SetNillableKey(v *string) *KeyBindingUpdate {
 	return _u
 }
 
-// SetCommand sets the "command" field.
-func (_u *KeyBindingUpdate) SetCommand(v string) *KeyBindingUpdate {
-	_u.mutation.SetCommand(v)
+// ClearKey clears the value of the "key" field.
+func (_u *KeyBindingUpdate) ClearKey() *KeyBindingUpdate {
+	_u.mutation.ClearKey()
 	return _u
 }
 
-// SetNillableCommand sets the "command" field if the given value is not nil.
-func (_u *KeyBindingUpdate) SetNillableCommand(v *string) *KeyBindingUpdate {
+// SetMacos sets the "macos" field.
+func (_u *KeyBindingUpdate) SetMacos(v string) *KeyBindingUpdate {
+	_u.mutation.SetMacos(v)
+	return _u
+}
+
+// SetNillableMacos sets the "macos" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillableMacos(v *string) *KeyBindingUpdate {
 	if v != nil {
-		_u.SetCommand(*v)
+		_u.SetMacos(*v)
 	}
+	return _u
+}
+
+// ClearMacos clears the value of the "macos" field.
+func (_u *KeyBindingUpdate) ClearMacos() *KeyBindingUpdate {
+	_u.mutation.ClearMacos()
+	return _u
+}
+
+// SetWindows sets the "windows" field.
+func (_u *KeyBindingUpdate) SetWindows(v string) *KeyBindingUpdate {
+	_u.mutation.SetWindows(v)
+	return _u
+}
+
+// SetNillableWindows sets the "windows" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillableWindows(v *string) *KeyBindingUpdate {
+	if v != nil {
+		_u.SetWindows(*v)
+	}
+	return _u
+}
+
+// ClearWindows clears the value of the "windows" field.
+func (_u *KeyBindingUpdate) ClearWindows() *KeyBindingUpdate {
+	_u.mutation.ClearWindows()
+	return _u
+}
+
+// SetLinux sets the "linux" field.
+func (_u *KeyBindingUpdate) SetLinux(v string) *KeyBindingUpdate {
+	_u.mutation.SetLinux(v)
+	return _u
+}
+
+// SetNillableLinux sets the "linux" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillableLinux(v *string) *KeyBindingUpdate {
+	if v != nil {
+		_u.SetLinux(*v)
+	}
+	return _u
+}
+
+// ClearLinux clears the value of the "linux" field.
+func (_u *KeyBindingUpdate) ClearLinux() *KeyBindingUpdate {
+	_u.mutation.ClearLinux()
 	return _u
 }
 
@@ -104,12 +184,6 @@ func (_u *KeyBindingUpdate) SetNillableExtension(v *string) *KeyBindingUpdate {
 	return _u
 }
 
-// ClearExtension clears the value of the "extension" field.
-func (_u *KeyBindingUpdate) ClearExtension() *KeyBindingUpdate {
-	_u.mutation.ClearExtension()
-	return _u
-}
-
 // SetEnabled sets the "enabled" field.
 func (_u *KeyBindingUpdate) SetEnabled(v bool) *KeyBindingUpdate {
 	_u.mutation.SetEnabled(v)
@@ -120,6 +194,34 @@ func (_u *KeyBindingUpdate) SetEnabled(v bool) *KeyBindingUpdate {
 func (_u *KeyBindingUpdate) SetNillableEnabled(v *bool) *KeyBindingUpdate {
 	if v != nil {
 		_u.SetEnabled(*v)
+	}
+	return _u
+}
+
+// SetPreventDefault sets the "prevent_default" field.
+func (_u *KeyBindingUpdate) SetPreventDefault(v bool) *KeyBindingUpdate {
+	_u.mutation.SetPreventDefault(v)
+	return _u
+}
+
+// SetNillablePreventDefault sets the "prevent_default" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillablePreventDefault(v *bool) *KeyBindingUpdate {
+	if v != nil {
+		_u.SetPreventDefault(*v)
+	}
+	return _u
+}
+
+// SetScope sets the "scope" field.
+func (_u *KeyBindingUpdate) SetScope(v string) *KeyBindingUpdate {
+	_u.mutation.SetScope(v)
+	return _u
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (_u *KeyBindingUpdate) SetNillableScope(v *string) *KeyBindingUpdate {
+	if v != nil {
+		_u.SetScope(*v)
 	}
 	return _u
 }
@@ -158,19 +260,44 @@ func (_u *KeyBindingUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *KeyBindingUpdate) check() error {
+	if v, ok := _u.mutation.Name(); ok {
+		if err := keybinding.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := keybinding.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Key(); ok {
 		if err := keybinding.KeyValidator(v); err != nil {
 			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.key": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Command(); ok {
-		if err := keybinding.CommandValidator(v); err != nil {
-			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.command": %w`, err)}
+	if v, ok := _u.mutation.Macos(); ok {
+		if err := keybinding.MacosValidator(v); err != nil {
+			return &ValidationError{Name: "macos", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.macos": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Windows(); ok {
+		if err := keybinding.WindowsValidator(v); err != nil {
+			return &ValidationError{Name: "windows", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.windows": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Linux(); ok {
+		if err := keybinding.LinuxValidator(v); err != nil {
+			return &ValidationError{Name: "linux", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.linux": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Extension(); ok {
 		if err := keybinding.ExtensionValidator(v); err != nil {
 			return &ValidationError{Name: "extension", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.extension": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Scope(); ok {
+		if err := keybinding.ScopeValidator(v); err != nil {
+			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.scope": %w`, err)}
 		}
 	}
 	return nil
@@ -194,9 +321,6 @@ func (_u *KeyBindingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(keybinding.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(keybinding.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -206,20 +330,47 @@ func (_u *KeyBindingUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(keybinding.FieldDeletedAt, field.TypeString)
 	}
+	if value, ok := _u.mutation.Name(); ok {
+		_spec.SetField(keybinding.FieldName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.GetType(); ok {
+		_spec.SetField(keybinding.FieldType, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.Key(); ok {
 		_spec.SetField(keybinding.FieldKey, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Command(); ok {
-		_spec.SetField(keybinding.FieldCommand, field.TypeString, value)
+	if _u.mutation.KeyCleared() {
+		_spec.ClearField(keybinding.FieldKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.Macos(); ok {
+		_spec.SetField(keybinding.FieldMacos, field.TypeString, value)
+	}
+	if _u.mutation.MacosCleared() {
+		_spec.ClearField(keybinding.FieldMacos, field.TypeString)
+	}
+	if value, ok := _u.mutation.Windows(); ok {
+		_spec.SetField(keybinding.FieldWindows, field.TypeString, value)
+	}
+	if _u.mutation.WindowsCleared() {
+		_spec.ClearField(keybinding.FieldWindows, field.TypeString)
+	}
+	if value, ok := _u.mutation.Linux(); ok {
+		_spec.SetField(keybinding.FieldLinux, field.TypeString, value)
+	}
+	if _u.mutation.LinuxCleared() {
+		_spec.ClearField(keybinding.FieldLinux, field.TypeString)
 	}
 	if value, ok := _u.mutation.Extension(); ok {
 		_spec.SetField(keybinding.FieldExtension, field.TypeString, value)
 	}
-	if _u.mutation.ExtensionCleared() {
-		_spec.ClearField(keybinding.FieldExtension, field.TypeString)
-	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(keybinding.FieldEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.PreventDefault(); ok {
+		_spec.SetField(keybinding.FieldPreventDefault, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Scope(); ok {
+		_spec.SetField(keybinding.FieldScope, field.TypeString, value)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
@@ -277,6 +428,34 @@ func (_u *KeyBindingUpdateOne) ClearDeletedAt() *KeyBindingUpdateOne {
 	return _u
 }
 
+// SetName sets the "name" field.
+func (_u *KeyBindingUpdateOne) SetName(v string) *KeyBindingUpdateOne {
+	_u.mutation.SetName(v)
+	return _u
+}
+
+// SetNillableName sets the "name" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillableName(v *string) *KeyBindingUpdateOne {
+	if v != nil {
+		_u.SetName(*v)
+	}
+	return _u
+}
+
+// SetType sets the "type" field.
+func (_u *KeyBindingUpdateOne) SetType(v string) *KeyBindingUpdateOne {
+	_u.mutation.SetType(v)
+	return _u
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillableType(v *string) *KeyBindingUpdateOne {
+	if v != nil {
+		_u.SetType(*v)
+	}
+	return _u
+}
+
 // SetKey sets the "key" field.
 func (_u *KeyBindingUpdateOne) SetKey(v string) *KeyBindingUpdateOne {
 	_u.mutation.SetKey(v)
@@ -291,17 +470,69 @@ func (_u *KeyBindingUpdateOne) SetNillableKey(v *string) *KeyBindingUpdateOne {
 	return _u
 }
 
-// SetCommand sets the "command" field.
-func (_u *KeyBindingUpdateOne) SetCommand(v string) *KeyBindingUpdateOne {
-	_u.mutation.SetCommand(v)
+// ClearKey clears the value of the "key" field.
+func (_u *KeyBindingUpdateOne) ClearKey() *KeyBindingUpdateOne {
+	_u.mutation.ClearKey()
 	return _u
 }
 
-// SetNillableCommand sets the "command" field if the given value is not nil.
-func (_u *KeyBindingUpdateOne) SetNillableCommand(v *string) *KeyBindingUpdateOne {
+// SetMacos sets the "macos" field.
+func (_u *KeyBindingUpdateOne) SetMacos(v string) *KeyBindingUpdateOne {
+	_u.mutation.SetMacos(v)
+	return _u
+}
+
+// SetNillableMacos sets the "macos" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillableMacos(v *string) *KeyBindingUpdateOne {
 	if v != nil {
-		_u.SetCommand(*v)
+		_u.SetMacos(*v)
 	}
+	return _u
+}
+
+// ClearMacos clears the value of the "macos" field.
+func (_u *KeyBindingUpdateOne) ClearMacos() *KeyBindingUpdateOne {
+	_u.mutation.ClearMacos()
+	return _u
+}
+
+// SetWindows sets the "windows" field.
+func (_u *KeyBindingUpdateOne) SetWindows(v string) *KeyBindingUpdateOne {
+	_u.mutation.SetWindows(v)
+	return _u
+}
+
+// SetNillableWindows sets the "windows" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillableWindows(v *string) *KeyBindingUpdateOne {
+	if v != nil {
+		_u.SetWindows(*v)
+	}
+	return _u
+}
+
+// ClearWindows clears the value of the "windows" field.
+func (_u *KeyBindingUpdateOne) ClearWindows() *KeyBindingUpdateOne {
+	_u.mutation.ClearWindows()
+	return _u
+}
+
+// SetLinux sets the "linux" field.
+func (_u *KeyBindingUpdateOne) SetLinux(v string) *KeyBindingUpdateOne {
+	_u.mutation.SetLinux(v)
+	return _u
+}
+
+// SetNillableLinux sets the "linux" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillableLinux(v *string) *KeyBindingUpdateOne {
+	if v != nil {
+		_u.SetLinux(*v)
+	}
+	return _u
+}
+
+// ClearLinux clears the value of the "linux" field.
+func (_u *KeyBindingUpdateOne) ClearLinux() *KeyBindingUpdateOne {
+	_u.mutation.ClearLinux()
 	return _u
 }
 
@@ -319,12 +550,6 @@ func (_u *KeyBindingUpdateOne) SetNillableExtension(v *string) *KeyBindingUpdate
 	return _u
 }
 
-// ClearExtension clears the value of the "extension" field.
-func (_u *KeyBindingUpdateOne) ClearExtension() *KeyBindingUpdateOne {
-	_u.mutation.ClearExtension()
-	return _u
-}
-
 // SetEnabled sets the "enabled" field.
 func (_u *KeyBindingUpdateOne) SetEnabled(v bool) *KeyBindingUpdateOne {
 	_u.mutation.SetEnabled(v)
@@ -335,6 +560,34 @@ func (_u *KeyBindingUpdateOne) SetEnabled(v bool) *KeyBindingUpdateOne {
 func (_u *KeyBindingUpdateOne) SetNillableEnabled(v *bool) *KeyBindingUpdateOne {
 	if v != nil {
 		_u.SetEnabled(*v)
+	}
+	return _u
+}
+
+// SetPreventDefault sets the "prevent_default" field.
+func (_u *KeyBindingUpdateOne) SetPreventDefault(v bool) *KeyBindingUpdateOne {
+	_u.mutation.SetPreventDefault(v)
+	return _u
+}
+
+// SetNillablePreventDefault sets the "prevent_default" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillablePreventDefault(v *bool) *KeyBindingUpdateOne {
+	if v != nil {
+		_u.SetPreventDefault(*v)
+	}
+	return _u
+}
+
+// SetScope sets the "scope" field.
+func (_u *KeyBindingUpdateOne) SetScope(v string) *KeyBindingUpdateOne {
+	_u.mutation.SetScope(v)
+	return _u
+}
+
+// SetNillableScope sets the "scope" field if the given value is not nil.
+func (_u *KeyBindingUpdateOne) SetNillableScope(v *string) *KeyBindingUpdateOne {
+	if v != nil {
+		_u.SetScope(*v)
 	}
 	return _u
 }
@@ -386,19 +639,44 @@ func (_u *KeyBindingUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *KeyBindingUpdateOne) check() error {
+	if v, ok := _u.mutation.Name(); ok {
+		if err := keybinding.NameValidator(v); err != nil {
+			return &ValidationError{Name: "name", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.name": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.GetType(); ok {
+		if err := keybinding.TypeValidator(v); err != nil {
+			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.type": %w`, err)}
+		}
+	}
 	if v, ok := _u.mutation.Key(); ok {
 		if err := keybinding.KeyValidator(v); err != nil {
 			return &ValidationError{Name: "key", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.key": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.Command(); ok {
-		if err := keybinding.CommandValidator(v); err != nil {
-			return &ValidationError{Name: "command", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.command": %w`, err)}
+	if v, ok := _u.mutation.Macos(); ok {
+		if err := keybinding.MacosValidator(v); err != nil {
+			return &ValidationError{Name: "macos", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.macos": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Windows(); ok {
+		if err := keybinding.WindowsValidator(v); err != nil {
+			return &ValidationError{Name: "windows", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.windows": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Linux(); ok {
+		if err := keybinding.LinuxValidator(v); err != nil {
+			return &ValidationError{Name: "linux", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.linux": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Extension(); ok {
 		if err := keybinding.ExtensionValidator(v); err != nil {
 			return &ValidationError{Name: "extension", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.extension": %w`, err)}
+		}
+	}
+	if v, ok := _u.mutation.Scope(); ok {
+		if err := keybinding.ScopeValidator(v); err != nil {
+			return &ValidationError{Name: "scope", err: fmt.Errorf(`ent: validator failed for field "KeyBinding.scope": %w`, err)}
 		}
 	}
 	return nil
@@ -439,9 +717,6 @@ func (_u *KeyBindingUpdateOne) sqlSave(ctx context.Context) (_node *KeyBinding, 
 			}
 		}
 	}
-	if _u.mutation.UUIDCleared() {
-		_spec.ClearField(keybinding.FieldUUID, field.TypeString)
-	}
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(keybinding.FieldUpdatedAt, field.TypeString, value)
 	}
@@ -451,20 +726,47 @@ func (_u *KeyBindingUpdateOne) sqlSave(ctx context.Context) (_node *KeyBinding, 
 	if _u.mutation.DeletedAtCleared() {
 		_spec.ClearField(keybinding.FieldDeletedAt, field.TypeString)
 	}
+	if value, ok := _u.mutation.Name(); ok {
+		_spec.SetField(keybinding.FieldName, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.GetType(); ok {
+		_spec.SetField(keybinding.FieldType, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.Key(); ok {
 		_spec.SetField(keybinding.FieldKey, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Command(); ok {
-		_spec.SetField(keybinding.FieldCommand, field.TypeString, value)
+	if _u.mutation.KeyCleared() {
+		_spec.ClearField(keybinding.FieldKey, field.TypeString)
+	}
+	if value, ok := _u.mutation.Macos(); ok {
+		_spec.SetField(keybinding.FieldMacos, field.TypeString, value)
+	}
+	if _u.mutation.MacosCleared() {
+		_spec.ClearField(keybinding.FieldMacos, field.TypeString)
+	}
+	if value, ok := _u.mutation.Windows(); ok {
+		_spec.SetField(keybinding.FieldWindows, field.TypeString, value)
+	}
+	if _u.mutation.WindowsCleared() {
+		_spec.ClearField(keybinding.FieldWindows, field.TypeString)
+	}
+	if value, ok := _u.mutation.Linux(); ok {
+		_spec.SetField(keybinding.FieldLinux, field.TypeString, value)
+	}
+	if _u.mutation.LinuxCleared() {
+		_spec.ClearField(keybinding.FieldLinux, field.TypeString)
 	}
 	if value, ok := _u.mutation.Extension(); ok {
 		_spec.SetField(keybinding.FieldExtension, field.TypeString, value)
 	}
-	if _u.mutation.ExtensionCleared() {
-		_spec.ClearField(keybinding.FieldExtension, field.TypeString)
-	}
 	if value, ok := _u.mutation.Enabled(); ok {
 		_spec.SetField(keybinding.FieldEnabled, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.PreventDefault(); ok {
+		_spec.SetField(keybinding.FieldPreventDefault, field.TypeBool, value)
+	}
+	if value, ok := _u.mutation.Scope(); ok {
+		_spec.SetField(keybinding.FieldScope, field.TypeString, value)
 	}
 	_spec.AddModifiers(_u.modifiers...)
 	_node = &KeyBinding{config: _u.config}

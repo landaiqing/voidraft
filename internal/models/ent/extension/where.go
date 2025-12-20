@@ -73,9 +73,9 @@ func DeletedAt(v string) predicate.Extension {
 	return predicate.Extension(sql.FieldEQ(FieldDeletedAt, v))
 }
 
-// Key applies equality check predicate on the "key" field. It's identical to KeyEQ.
-func Key(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldEQ(FieldKey, v))
+// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
+func Name(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldEQ(FieldName, v))
 }
 
 // Enabled applies equality check predicate on the "enabled" field. It's identical to EnabledEQ.
@@ -136,16 +136,6 @@ func UUIDHasPrefix(v string) predicate.Extension {
 // UUIDHasSuffix applies the HasSuffix predicate on the "uuid" field.
 func UUIDHasSuffix(v string) predicate.Extension {
 	return predicate.Extension(sql.FieldHasSuffix(FieldUUID, v))
-}
-
-// UUIDIsNil applies the IsNil predicate on the "uuid" field.
-func UUIDIsNil() predicate.Extension {
-	return predicate.Extension(sql.FieldIsNull(FieldUUID))
-}
-
-// UUIDNotNil applies the NotNil predicate on the "uuid" field.
-func UUIDNotNil() predicate.Extension {
-	return predicate.Extension(sql.FieldNotNull(FieldUUID))
 }
 
 // UUIDEqualFold applies the EqualFold predicate on the "uuid" field.
@@ -363,69 +353,69 @@ func DeletedAtContainsFold(v string) predicate.Extension {
 	return predicate.Extension(sql.FieldContainsFold(FieldDeletedAt, v))
 }
 
-// KeyEQ applies the EQ predicate on the "key" field.
-func KeyEQ(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldEQ(FieldKey, v))
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldEQ(FieldName, v))
 }
 
-// KeyNEQ applies the NEQ predicate on the "key" field.
-func KeyNEQ(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldNEQ(FieldKey, v))
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldNEQ(FieldName, v))
 }
 
-// KeyIn applies the In predicate on the "key" field.
-func KeyIn(vs ...string) predicate.Extension {
-	return predicate.Extension(sql.FieldIn(FieldKey, vs...))
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.Extension {
+	return predicate.Extension(sql.FieldIn(FieldName, vs...))
 }
 
-// KeyNotIn applies the NotIn predicate on the "key" field.
-func KeyNotIn(vs ...string) predicate.Extension {
-	return predicate.Extension(sql.FieldNotIn(FieldKey, vs...))
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.Extension {
+	return predicate.Extension(sql.FieldNotIn(FieldName, vs...))
 }
 
-// KeyGT applies the GT predicate on the "key" field.
-func KeyGT(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldGT(FieldKey, v))
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldGT(FieldName, v))
 }
 
-// KeyGTE applies the GTE predicate on the "key" field.
-func KeyGTE(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldGTE(FieldKey, v))
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldGTE(FieldName, v))
 }
 
-// KeyLT applies the LT predicate on the "key" field.
-func KeyLT(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldLT(FieldKey, v))
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldLT(FieldName, v))
 }
 
-// KeyLTE applies the LTE predicate on the "key" field.
-func KeyLTE(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldLTE(FieldKey, v))
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldLTE(FieldName, v))
 }
 
-// KeyContains applies the Contains predicate on the "key" field.
-func KeyContains(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldContains(FieldKey, v))
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldContains(FieldName, v))
 }
 
-// KeyHasPrefix applies the HasPrefix predicate on the "key" field.
-func KeyHasPrefix(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldHasPrefix(FieldKey, v))
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldHasPrefix(FieldName, v))
 }
 
-// KeyHasSuffix applies the HasSuffix predicate on the "key" field.
-func KeyHasSuffix(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldHasSuffix(FieldKey, v))
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldHasSuffix(FieldName, v))
 }
 
-// KeyEqualFold applies the EqualFold predicate on the "key" field.
-func KeyEqualFold(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldEqualFold(FieldKey, v))
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldEqualFold(FieldName, v))
 }
 
-// KeyContainsFold applies the ContainsFold predicate on the "key" field.
-func KeyContainsFold(v string) predicate.Extension {
-	return predicate.Extension(sql.FieldContainsFold(FieldKey, v))
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.Extension {
+	return predicate.Extension(sql.FieldContainsFold(FieldName, v))
 }
 
 // EnabledEQ applies the EQ predicate on the "enabled" field.

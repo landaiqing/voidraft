@@ -34,12 +34,12 @@ func (Extension) Mixin() []ent.Mixin {
 // Fields of the Extension.
 func (Extension) Fields() []ent.Field {
 	return []ent.Field{
-		field.String("key").
+		field.String("name").
 			MaxLen(100).
 			NotEmpty().
 			Unique().
-			StructTag(`json:"key"`).
-			Comment("extension key"),
+			StructTag(`json:"name"`).
+			Comment("extension name"),
 		field.Bool("enabled").
 			Default(true).
 			StructTag(`json:"enabled"`).
