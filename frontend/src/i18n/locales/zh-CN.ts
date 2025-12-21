@@ -83,6 +83,7 @@ export default {
       blockCopy: '复制',
       blockCut: '剪切',
       blockPaste: '粘贴',
+      copyBlockImage: '复制块图片',
       historyUndo: '撤销',
       historyRedo: '重做',
       historyUndoSelection: '撤销选择',
@@ -330,6 +331,11 @@ export default {
     httpClient: {
       name: 'HTTP 客户端',
       description: '在编辑器中直接发送 HTTP 请求并查看响应'
+    },
+    blockImage: {
+      name: '代码块导出图片',
+      description: '将当前代码块渲染为图片并复制到剪贴板',
+      copyMenu: '复制块为图片'
     }
   },
   monitor: {

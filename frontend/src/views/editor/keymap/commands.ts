@@ -75,6 +75,7 @@ import {
 import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language';
 import i18n from '@/i18n';
 import {KeyBindingName} from '@/../bindings/voidraft/internal/models/models';
+import {copyBlockImageCommand} from '../extensions/blockImage';
 
 const defaultBlockExtensionOptions = {
     defaultBlockToken: 'text',
@@ -169,6 +170,10 @@ export const commands: Record<string, { handler: any; descriptionKey: string }> 
     [KeyBindingName.BlockPaste]: {
         handler: pasteCommand,
         descriptionKey: 'keybindings.commands.blockPaste'
+    },
+    [KeyBindingName.CopyBlockImage]: {
+        handler: copyBlockImageCommand,
+        descriptionKey: 'keybindings.commands.copyBlockImage'
     },
     [KeyBindingName.HistoryUndo]: {
         handler: undo,

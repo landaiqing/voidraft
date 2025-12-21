@@ -402,6 +402,11 @@ export enum ExtensionName {
      * HTTP 客户端
      */
     HttpClient = "httpClient",
+
+    /**
+     * 代码块导出图片
+     */
+    BlockImage = "blockImage",
 };
 
 /**
@@ -1170,6 +1175,11 @@ export enum KeyBindingName {
      * 重做选择
      */
     HistoryRedoSelection = "historyRedoSelection",
+
+    /**
+     * 复制块为图片
+     */
+    CopyBlockImage = "copyBlockImage",
 };
 
 export enum KeyBindingType {
