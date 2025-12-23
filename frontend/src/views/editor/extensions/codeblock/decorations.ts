@@ -7,6 +7,9 @@ import { StateField, RangeSetBuilder, EditorState, Transaction } from "@codemirr
 import { blockState } from "./state";
 import { codeBlockEvent, USER_EVENTS } from "./annotation";
 
+// IME 输入状态
+let isComposing = false;
+
 /**
  * 块开始装饰组件
  */
@@ -222,9 +225,10 @@ const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) 
 
 /**
  * 防止选择在第一个块之前
- * 使用 transactionFilter 来确保选择不会在第一个块之前
  */
 const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: any) => {
+  if (isComposing) return tr;
+  
   if (tr.annotation(codeBlockEvent)) {
     return tr;
   }
@@ -256,6 +260,24 @@ const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: a
   return tr;
 });
 
+// IME 状态同步
+const imeStateSynchronizer = ViewPlugin.fromClass(
+  class {
+    constructor(view: EditorView) {
+      isComposing = view.composing || view.compositionStarted;
+    }
+
+    update(update: any) {
+      const view = update.view as EditorView;
+      isComposing = view.composing || view.compositionStarted;
+    }
+
+    destroy() {
+      isComposing = false;
+    }
+  }
+);
+
 /**
  * 获取块装饰扩展 - 简化选项
  */
@@ -271,6 +293,7 @@ export function getBlockDecorationExtensions(options: {
     atomicNoteBlock,
     preventFirstBlockFromBeingDeleted,
     preventSelectionBeforeFirstBlock,
+    imeStateSynchronizer,
   ];
 
   if (showBackground) {

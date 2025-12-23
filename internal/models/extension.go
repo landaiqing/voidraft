@@ -27,6 +27,7 @@ const (
 	ContextMenu                 ExtensionName = "contextMenu"                 // 上下文菜单
 	Search                      ExtensionName = "search"                      // 搜索功能
 	HttpClient                  ExtensionName = "httpClient"                  // HTTP 客户端
+	BlockImage                  ExtensionName = "blockImage"                  // 代码块导出图片
 )
 
 // NewDefaultExtensions 创建默认扩展配置
@@ -103,6 +104,11 @@ func NewDefaultExtensions() []Extension {
 		},
 		{
 			Name:    HttpClient,
+			Enabled: true,
+			Config:  ExtensionConfig{},
+		},
+		{
+			Name:    BlockImage,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},

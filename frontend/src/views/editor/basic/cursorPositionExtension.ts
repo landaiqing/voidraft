@@ -15,7 +15,7 @@ export function createCursorPositionExtension(documentId: number) {
             constructor(private view: EditorView) {
                 const {debouncedFn, flush} = createDebounce(
                     () => this.saveCursorPosition(),
-                    {delay: 400}
+                    {delay: 1000}
                 );
                 this.debouncedSave = {fn: debouncedFn, flush};
 

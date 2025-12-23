@@ -83,6 +83,7 @@ export default {
       blockCopy: 'Copy',
       blockCut: 'Cut',
       blockPaste: 'Paste',
+      copyBlockImage: 'Copy block image',
       historyUndo: 'Undo',
       historyRedo: 'Redo',
       historyUndoSelection: 'Undo selection',
@@ -328,6 +329,11 @@ export default {
     httpClient: {
       name: 'HTTP Client',
       description: 'Send HTTP requests directly in the editor and view responses'
+    },
+    blockImage: {
+      name: 'Block Image Export',
+      description: 'Render the current code block to an image and copy it to the clipboard',
+      copyMenu: 'Copy block as image'
     }
   },
   monitor: {

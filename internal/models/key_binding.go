@@ -103,6 +103,7 @@ const (
 	HistoryRedo            KeyBindingName = "historyRedo"            // 重做
 	HistoryUndoSelection   KeyBindingName = "historyUndoSelection"   // 撤销选择
 	HistoryRedoSelection   KeyBindingName = "historyRedoSelection"   // 重做选择
+	CopyBlockImage         KeyBindingName = "copyBlockImage"         // 复制块为图片
 )
 
 const defaultExtension = "editor"
@@ -279,6 +280,14 @@ func NewDefaultKeyBindings() []KeyBinding {
 			Type:           Standard,
 			Key:            "Mod-v",
 			Extension:      defaultExtension,
+			Enabled:        true,
+			PreventDefault: true,
+		},
+		{
+			Name:           CopyBlockImage,
+			Type:           Standard,
+			Key:            "Mod-Shift-Alt-C",
+			Extension:      BlockImage,
 			Enabled:        true,
 			PreventDefault: true,
 		},
