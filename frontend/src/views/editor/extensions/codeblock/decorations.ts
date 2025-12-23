@@ -7,12 +7,7 @@ import { StateField, RangeSetBuilder, EditorState, Transaction } from "@codemirr
 import { blockState } from "./state";
 import { codeBlockEvent, USER_EVENTS } from "./annotation";
 
-/**
- * IME 输入状态追踪
- *
- * 注意：CodeMirror 有 view.composing 和 view.compositionStarted 内置状态，
- * 但 transactionFilter 中访问不到 view，所以需要用全局变量追踪
- */
+// IME 输入状态
 let isComposing = false;
 
 /**
@@ -230,16 +225,9 @@ const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) 
 
 /**
  * 防止选择在第一个块之前
- * 使用 transactionFilter 来确保选择不会在第一个块之前
- * 
- * IME：在输入法组合输入期间（compositionstart ~ compositionend），
- * 暂时禁用选区矫正，避免与 IME 选区管理冲突导致光标跳转
  */
 const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: any) => {
-  // IME 组合输入期间不矫正选区
-  if (isComposing) {
-    return tr;
-  }
+  if (isComposing) return tr;
   
   if (tr.annotation(codeBlockEvent)) {
     return tr;
@@ -272,30 +260,20 @@ const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: a
   return tr;
 });
 
-/**
- * IME 输入监听器
- * 监听 composition 事件更新 isComposing 状态，供 transactionFilter 使用
- */
-const imeListener = ViewPlugin.fromClass(
+// IME 状态同步
+const imeStateSynchronizer = ViewPlugin.fromClass(
   class {
     constructor(view: EditorView) {
-      view.dom.addEventListener('compositionstart', this.handleCompositionStart);
-      view.dom.addEventListener('compositionend', this.handleCompositionEnd);
+      isComposing = view.composing || view.compositionStarted;
     }
 
-    handleCompositionStart = () => {
-      isComposing = true;
-    };
-
-    handleCompositionEnd = () => {
-      // 延迟重置状态，确保所有相关事务都已处理完毕
-      setTimeout(() => {
-        isComposing = false;
-      }, 0);
-    };
+    update(update: any) {
+      const view = update.view as EditorView;
+      isComposing = view.composing || view.compositionStarted;
+    }
 
     destroy() {
-
+      isComposing = false;
     }
   }
 );
@@ -315,7 +293,7 @@ export function getBlockDecorationExtensions(options: {
     atomicNoteBlock,
     preventFirstBlockFromBeingDeleted,
     preventSelectionBeforeFirstBlock,
-    imeListener, // IME 状态监听器
+    imeStateSynchronizer,
   ];
 
   if (showBackground) {

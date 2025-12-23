@@ -4,16 +4,16 @@ go 1.25
 
 require (
 	entgo.io/ent v0.14.5
-	github.com/creativeprojects/go-selfupdate v1.5.1
+	github.com/creativeprojects/go-selfupdate v1.5.2
 	github.com/go-git/go-git/v5 v5.16.4
 	github.com/google/uuid v1.6.0
 	github.com/knadh/koanf/parsers/json v1.0.0
-	github.com/knadh/koanf/providers/file v1.2.0
+	github.com/knadh/koanf/providers/file v1.2.1
 	github.com/knadh/koanf/providers/structs v1.0.0
 	github.com/knadh/koanf/v2 v2.3.0
 	github.com/mattn/go-sqlite3 v1.14.32
 	github.com/stretchr/testify v1.11.1
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.48
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.51
 	golang.org/x/net v0.48.0
 	golang.org/x/sys v0.39.0
 	golang.org/x/text v0.32.0
@@ -34,7 +34,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
-	github.com/cloudflare/circl v1.6.1 // indirect
+	github.com/cloudflare/circl v1.6.2 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
@@ -48,10 +48,10 @@ require (
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-openapi/inflect v0.21.5 // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
-	github.com/godbus/dbus/v5 v5.2.0 // indirect
+	github.com/godbus/dbus/v5 v5.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/go-github/v30 v30.1.0 // indirect
+	github.com/google/go-github/v74 v74.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
@@ -80,10 +80,10 @@ require (
 	github.com/ulikunitz/xz v0.5.15 // indirect
 	github.com/wailsapp/go-webview2 v1.0.23 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	github.com/xanzy/go-gitlab v0.115.0 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
 	github.com/zclconf/go-cty v1.17.0 // indirect
-	github.com/zclconf/go-cty-yaml v1.1.0 // indirect
+	github.com/zclconf/go-cty-yaml v1.2.0 // indirect
+	gitlab.com/gitlab-org/api/client-go v1.10.0 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20251113190631-e25ba8c21ef6 // indirect
 	golang.org/x/image v0.34.0 // indirect
