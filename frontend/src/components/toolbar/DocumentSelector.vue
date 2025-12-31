@@ -2,6 +2,7 @@
 import {computed, nextTick, reactive, ref, watch} from 'vue';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useTabStore} from '@/stores/tabStore';
+import {useEditorStore} from '@/stores/editorStore';
 import {useWindowStore} from '@/stores/windowStore';
 import {useI18n} from 'vue-i18n';
 import {useConfirm} from '@/composables';
@@ -16,6 +17,7 @@ interface DocumentItem extends Document {
 
 const documentStore = useDocumentStore();
 const tabStore = useTabStore();
+const editorStore = useEditorStore();
 const windowStore = useWindowStore();
 const {t} = useI18n();
 
@@ -103,13 +105,20 @@ const selectDoc = async (doc: Document) => {
     return;
   }
 
+
   const success = await documentStore.openDocument(doc.id);
-  if (success) {
-    if (tabStore.isTabsEnabled) {
-      tabStore.addOrActivateTab(doc);
-    }
-    closeMenu();
+  if (!success) return;
+
+  const fullDoc = documentStore.currentDocument;
+  if (fullDoc && editorStore.hasContainer) {
+    await editorStore.loadEditor(fullDoc.id!, fullDoc.content || '');
   }
+
+  if (fullDoc && tabStore.isTabsEnabled) {
+    tabStore.addOrActivateTab(fullDoc);
+  }
+
+  closeMenu();
 };
 
 const createDoc = async (title: string) => {
@@ -190,6 +199,10 @@ const openInNewWindow = async (doc: Document, event: Event) => {
   event.stopPropagation();
   if (doc.id === undefined) return;
   try {
+    // 在打开新窗口前，如果启用了标签且该文档有标签，先关闭标签
+    if (tabStore.isTabsEnabled && tabStore.hasTab(doc.id)) {
+      await tabStore.closeTab(doc.id);
+    }
     await documentStore.openDocumentInNewWindow(doc.id);
   } catch (error) {
     console.error('Failed to open document in new window:', error);

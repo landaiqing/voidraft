@@ -7,7 +7,7 @@
             v-for="tab in tabStore.tabs"
             :key="tab.documentId"
             :tab="tab"
-            :isActive="tab.documentId === tabStore.currentDocumentId"
+            :isActive="tab.documentId === documentStore.currentDocumentId"
             :canClose="tabStore.canCloseTab"
             @click="switchToTab"
             @close="closeTab"
@@ -35,8 +35,12 @@ import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import TabItem from './TabItem.vue';
 import TabContextMenu from './TabContextMenu.vue';
 import { useTabStore } from '@/stores/tabStore';
+import { useDocumentStore } from '@/stores/documentStore';
+import { useEditorStore } from '@/stores/editorStore';
 
 const tabStore = useTabStore();
+const documentStore = useDocumentStore();
+const editorStore = useEditorStore();
 
 // DOM 引用
 const tabBarRef = ref<HTMLElement>();
@@ -50,8 +54,17 @@ const contextMenuTargetId = ref<number | null>(null);
 
 
 // 标签页操作
-const switchToTab = (documentId: number) => {
-  tabStore.switchToTabAndDocument(documentId);
+const switchToTab = async (documentId: number) => {
+  await tabStore.switchToTabAndDocument(documentId);
+  
+  const doc = documentStore.currentDocument;
+  if (doc && doc.id !== undefined && editorStore.hasContainer) {
+    await editorStore.loadEditor(doc.id, doc.content || '');
+  }
+  
+  if (doc && tabStore.isTabsEnabled) {
+    tabStore.addOrActivateTab(doc);
+  }
 };
 
 const closeTab = (documentId: number) => {
@@ -150,7 +163,7 @@ onUnmounted(() => {
 });
 
 // 监听当前活跃标签页的变化
-watch(() => tabStore.currentDocumentId, () => {
+watch(() => documentStore.currentDocumentId, () => {
   scrollToActiveTab();
 });
 

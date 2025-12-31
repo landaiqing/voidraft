@@ -3,7 +3,6 @@ import {computed, ref} from 'vue';
 import {DocumentService} from '@/../bindings/voidraft/internal/services';
 import {OpenDocumentWindow} from '@/../bindings/voidraft/internal/services/windowservice';
 import {Document} from '@/../bindings/voidraft/internal/models/ent/models';
-import {useTabStore} from "@/stores/tabStore";
 import type {EditorViewState} from '@/stores/editorStore';
 
 export const useDocumentStore = defineStore('document', () => {
@@ -70,10 +69,6 @@ export const useDocumentStore = defineStore('document', () => {
     // 在新窗口中打开文档
     const openDocumentInNewWindow = async (docId: number): Promise<boolean> => {
         try {
-            const tabStore = useTabStore();
-            if (tabStore.isTabsEnabled && tabStore.hasTab(docId)) {
-                tabStore.closeTab(docId);
-            }
             await OpenDocumentWindow(docId);
             return true;
         } catch (error) {
@@ -112,7 +107,7 @@ export const useDocumentStore = defineStore('document', () => {
         }
     };
 
-    // 打开文档
+    // 打开文档 - 只负责文档数据管理
     const openDocument = async (docId: number): Promise<boolean> => {
         try {
             // 获取完整文档数据
@@ -131,7 +126,7 @@ export const useDocumentStore = defineStore('document', () => {
         }
     };
 
-    // 更新文档元数据
+    // 更新文档元数据 - 只负责文档数据管理
     const updateDocumentMetadata = async (docId: number, title: string): Promise<boolean> => {
         try {
             await DocumentService.UpdateDocumentTitle(docId, title);
@@ -148,10 +143,6 @@ export const useDocumentStore = defineStore('document', () => {
                 currentDocument.value.updated_at = new Date().toISOString();
             }
 
-            // 同步更新标签页标题
-            const tabStore = useTabStore();
-            tabStore.updateTabTitle(docId, title);
-
             return true;
         } catch (error) {
             console.error('Failed to update document metadata:', error);
@@ -159,19 +150,13 @@ export const useDocumentStore = defineStore('document', () => {
         }
     };
 
-    // 删除文档
+    // 删除文档 - 只负责文档数据管理
     const deleteDocument = async (docId: number): Promise<boolean> => {
         try {
             await DocumentService.DeleteDocument(docId);
 
             // 更新本地状态
             delete documents.value[docId];
-
-            // 同步清理标签页
-            const tabStore = useTabStore();
-            if (tabStore.hasTab(docId)) {
-                tabStore.closeTab(docId);
-            }
 
             // 如果删除的是当前文档，切换到第一个可用文档
             if (currentDocumentId.value === docId) {
@@ -192,7 +177,7 @@ export const useDocumentStore = defineStore('document', () => {
     };
 
     // === 初始化 ===
-    const initialize = async (urlDocumentId?: number): Promise<void> => {
+    const initDocument = async (urlDocumentId?: number): Promise<void> => {
         try {
             await getDocumentMetaList();
 
@@ -235,7 +220,7 @@ export const useDocumentStore = defineStore('document', () => {
         closeDocumentSelector,
         setError,
         clearError,
-        initialize,
+        initDocument,
     };
 }, {
     persist: {

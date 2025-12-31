@@ -1,18 +1,10 @@
 import {defineStore} from 'pinia';
 import {computed, reactive} from 'vue';
 import {ConfigService, StartupService} from '@/../bindings/voidraft/internal/services';
-import {
-    AppConfig,
-    AuthMethod,
-    EditingConfig,
-    LanguageType,
-    SystemThemeType,
-    TabType
-} from '@/../bindings/voidraft/internal/models/models';
+import {AppConfig, AuthMethod, LanguageType, SystemThemeType, TabType} from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/common/utils/configUtils';
 import {FONT_OPTIONS} from '@/common/constant/fonts';
-import {SUPPORTED_LOCALES} from '@/common/constant/locales';
 import {
     CONFIG_KEY_MAP,
     CONFIG_LIMITS,
@@ -35,12 +27,6 @@ export const useConfigStore = defineStore('config', () => {
 
     // Font options (no longer localized)
     const fontOptions = computed(() => FONT_OPTIONS);
-
-    // 计算属性
-    const createLimitComputed = (key: NumberConfigKey) => computed(() => CONFIG_LIMITS[key]);
-    const limits = Object.fromEntries(
-        (['fontSize', 'tabSize', 'lineHeight'] as const).map(key => [key, createLimitComputed(key)])
-    ) as Record<NumberConfigKey, ReturnType<typeof createLimitComputed>>;
 
     // 统一配置更新方法
     const updateConfig = async <K extends ConfigKey>(key: K, value: any): Promise<void> => {
@@ -99,39 +85,12 @@ export const useConfigStore = defineStore('config', () => {
         }
     };
 
-    // 通用数值调整器工厂
-    const createAdjuster = <T extends NumberConfigKey>(key: T) => {
-        const limit = CONFIG_LIMITS[key];
-        const clamp = (value: number) => ConfigUtils.clamp(value, limit.min, limit.max);
-
-        return {
-            increase: async () => await updateConfig(key, clamp(state.config.editing[key] + 1)),
-            decrease: async () => await updateConfig(key, clamp(state.config.editing[key] - 1)),
-            set: async (value: number) => await updateConfig(key, clamp(value)),
-            reset: async () => await updateConfig(key, limit.default),
-            increaseLocal: () => updateConfigLocal(key, clamp(state.config.editing[key] + 1)),
-            decreaseLocal: () => updateConfigLocal(key, clamp(state.config.editing[key] - 1))
-        };
-    };
-
-    const createEditingToggler = <T extends keyof EditingConfig>(key: T) =>
-        async () => await updateConfig(key as ConfigKey, !state.config.editing[key] as EditingConfig[T]);
-
-    // 枚举值切换器
-    const createEnumToggler = <T extends TabType>(key: 'tabType', values: readonly T[]) =>
-        async () => {
-            const currentIndex = values.indexOf(state.config.editing[key] as T);
-            const nextIndex = (currentIndex + 1) % values.length;
-            return await updateConfig(key, values[nextIndex]);
-        };
-
     // 重置配置
     const resetConfig = async (): Promise<void> => {
         if (state.isLoading) return;
 
         state.isLoading = true;
         try {
-
             await ConfigService.ResetConfig();
             const appConfig = await ConfigService.GetConfig();
             if (appConfig) {
@@ -142,57 +101,25 @@ export const useConfigStore = defineStore('config', () => {
         }
     };
 
-    // 语言设置方法
-    const setLanguage = async (language: LanguageType): Promise<void> => {
-        await updateConfig('language', language);
-        const frontendLocale = ConfigUtils.backendLanguageToFrontend(language);
-        locale.value = frontendLocale as any;
+    // 辅助函数：限制数值范围
+    const clampValue = (value: number, key: NumberConfigKey): number => {
+        const limit = CONFIG_LIMITS[key];
+        return ConfigUtils.clamp(value, limit.min, limit.max);
     };
 
-    // 系统主题设置方法
-    const setSystemTheme = async (systemTheme: SystemThemeType): Promise<void> => {
-        await updateConfig('systemTheme', systemTheme);
-    };
+    // 计算属性
+    const fontConfig = computed(() => ({
+        fontSize: state.config.editing.fontSize,
+        fontFamily: state.config.editing.fontFamily,
+        lineHeight: state.config.editing.lineHeight,
+        fontWeight: state.config.editing.fontWeight
+    }));
 
-    // 当前主题设置方法
-    const setCurrentTheme = async (themeName: string): Promise<void> => {
-        await updateConfig('currentTheme', themeName);
-    };
-
-
-    // 初始化语言设置
-    const initLanguage = async (): Promise<void> => {
-        try {
-            // 如果配置未加载，先加载配置
-            if (!state.configLoaded) {
-                await initConfig();
-            }
-
-            // 同步前端语言设置
-            const frontendLocale = ConfigUtils.backendLanguageToFrontend(state.config.appearance.language);
-            locale.value = frontendLocale as any;
-        } catch (_error) {
-            const browserLang = SUPPORTED_LOCALES[0].code;
-            locale.value = browserLang as any;
-        }
-    };
-
-    // 创建数值调整器实例
-    const adjusters = {
-        fontSize: createAdjuster('fontSize'),
-        tabSize: createAdjuster('tabSize'),
-        lineHeight: createAdjuster('lineHeight')
-    };
-
-    // 创建切换器实例
-    const togglers = {
-        tabIndent: createEditingToggler('enableTabIndent'),
-        alwaysOnTop: async () => {
-            await updateConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
-            await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
-        },
-        tabType: createEnumToggler('tabType', CONFIG_LIMITS.tabType.values)
-    };
+    const tabConfig = computed(() => ({
+        tabSize: state.config.editing.tabSize,
+        enableTabIndent: state.config.editing.enableTabIndent,
+        tabType: state.config.editing.tabType
+    }));
 
     return {
         // 状态
@@ -200,52 +127,83 @@ export const useConfigStore = defineStore('config', () => {
         configLoaded: computed(() => state.configLoaded),
         isLoading: computed(() => state.isLoading),
         fontOptions,
-
-        // 限制常量
-        ...limits,
+        fontConfig,
+        tabConfig,
 
         // 核心方法
         initConfig,
         resetConfig,
 
         // 语言相关方法
-        setLanguage,
-        initLanguage,
+        setLanguage: (value: LanguageType) => {
+            updateConfig('language', value);
+            locale.value = value as any;
+        },
 
         // 主题相关方法
-        setSystemTheme,
-        setCurrentTheme,
+        setSystemTheme: (value: SystemThemeType) => updateConfig('systemTheme', value),
+        setCurrentTheme: (value: string) => updateConfig('currentTheme', value),
 
         // 字体大小操作
-        ...adjusters.fontSize,
-        increaseFontSize: adjusters.fontSize.increase,
-        decreaseFontSize: adjusters.fontSize.decrease,
-        resetFontSize: adjusters.fontSize.reset,
-        setFontSize: adjusters.fontSize.set,
-        // 字体大小操作
-        increaseFontSizeLocal: adjusters.fontSize.increaseLocal,
-        decreaseFontSizeLocal: adjusters.fontSize.decreaseLocal,
-        saveFontSize: () => saveConfig('fontSize'),
-
-        // Tab操作
-        toggleTabIndent: togglers.tabIndent,
-        setEnableTabIndent: (value: boolean) => updateConfig('enableTabIndent', value),
-        ...adjusters.tabSize,
-        increaseTabSize: adjusters.tabSize.increase,
-        decreaseTabSize: adjusters.tabSize.decrease,
-        setTabSize: adjusters.tabSize.set,
-        toggleTabType: togglers.tabType,
-
-        // 行高操作
-        setLineHeight: adjusters.lineHeight.set,
-
-        // 窗口操作
-        toggleAlwaysOnTop: togglers.alwaysOnTop,
-        setAlwaysOnTop: (value: boolean) => updateConfig('alwaysOnTop', value),
+        setFontSize: async (value: number) => {
+            await updateConfig('fontSize', clampValue(value, 'fontSize'));
+        },
+        increaseFontSize: async () => {
+            const newValue = state.config.editing.fontSize + 1;
+            await updateConfig('fontSize', clampValue(newValue, 'fontSize'));
+        },
+        decreaseFontSize: async () => {
+            const newValue = state.config.editing.fontSize - 1;
+            await updateConfig('fontSize', clampValue(newValue, 'fontSize'));
+        },
+        resetFontSize: async () => {
+            await updateConfig('fontSize', CONFIG_LIMITS.fontSize.default);
+        },
+        increaseFontSizeLocal: () => {
+            updateConfigLocal('fontSize', clampValue(state.config.editing.fontSize + 1, 'fontSize'));
+        },
+        decreaseFontSizeLocal: () => {
+            updateConfigLocal('fontSize', clampValue(state.config.editing.fontSize - 1, 'fontSize'));
+        },
+        saveFontSize: async () => {
+            await saveConfig('fontSize');
+        },
 
         // 字体操作
         setFontFamily: (value: string) => updateConfig('fontFamily', value),
         setFontWeight: (value: string) => updateConfig('fontWeight', value),
+
+        // 行高操作
+        setLineHeight: async (value: number) => {
+            await updateConfig('lineHeight', clampValue(value, 'lineHeight'));
+        },
+
+        // Tab操作
+        setEnableTabIndent: (value: boolean) => updateConfig('enableTabIndent', value),
+        setTabSize: async (value: number) => {
+            await updateConfig('tabSize', clampValue(value, 'tabSize'));
+        },
+        increaseTabSize: async () => {
+            const newValue = state.config.editing.tabSize + 1;
+            await updateConfig('tabSize', clampValue(newValue, 'tabSize'));
+        },
+        decreaseTabSize: async () => {
+            const newValue = state.config.editing.tabSize - 1;
+            await updateConfig('tabSize', clampValue(newValue, 'tabSize'));
+        },
+        toggleTabType: async () => {
+            const values = CONFIG_LIMITS.tabType.values;
+            const currentIndex = values.indexOf(state.config.editing.tabType as typeof values[number]);
+            const nextIndex = (currentIndex + 1) % values.length;
+            await updateConfig('tabType', values[nextIndex]);
+        },
+
+        // 窗口操作
+        toggleAlwaysOnTop: async () => {
+            await updateConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
+            await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
+        },
+        setAlwaysOnTop: (value: boolean) => updateConfig('alwaysOnTop', value),
 
         // 路径操作
         setDataPath: (value: string) => updateConfigLocal('dataPath', value),

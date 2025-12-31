@@ -28,11 +28,16 @@ onMounted(async () => {
 
   const urlDocumentId = windowStore.currentDocumentId ? parseInt(windowStore.currentDocumentId) : undefined;
 
-  await documentStore.initialize(urlDocumentId);
+  await documentStore.initDocument(urlDocumentId);
 
   editorStore.setEditorContainer(editorElement.value);
 
-  await tabStore.initializeTab();
+  const currentDoc = documentStore.currentDocument;
+  if (currentDoc && currentDoc.id !== undefined) {
+    await editorStore.loadEditor(currentDoc.id, currentDoc.content || '');
+  }
+
+  await tabStore.initTab();
 });
 
 onBeforeUnmount(() => {

@@ -125,7 +125,7 @@ const enableTabs = computed({
     await setEnableTabs(value);
     if (value) {
       // 开启tabs功能时，初始化当前文档到标签页
-      tabStore.initializeTab();
+      tabStore.initTab();
     } else {
       // 关闭tabs功能时，清空所有标签页
       tabStore.clearAllTabs();

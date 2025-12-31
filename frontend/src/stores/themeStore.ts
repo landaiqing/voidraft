@@ -6,6 +6,7 @@ import {ThemeService} from '@/../bindings/voidraft/internal/services';
 import {useConfigStore} from './configStore';
 import type {ThemeColors} from '@/views/editor/theme/types';
 import {cloneThemeColors, FALLBACK_THEME_NAME, themePresetList, themePresetMap} from '@/views/editor/theme/presets';
+import {useEditorStore} from "@/stores/editorStore";
 
 // 类型定义
 type ThemeOption = { name: string; type: ThemeType };
@@ -91,11 +92,12 @@ export const useThemeStore = defineStore('theme', () => {
     // 同步应用到 DOM 与编辑器
     const applyAllThemes = () => {
         applyThemeToDOM(currentTheme.value);
+        const editorStore = useEditorStore();
+        editorStore.applyThemeSettings();
     };
 
     // 初始化主题
     const initTheme = async () => {
-        applyThemeToDOM(currentTheme.value);
         await loadThemeColors();
         applyAllThemes();
     };
