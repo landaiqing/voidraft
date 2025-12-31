@@ -9,15 +9,11 @@ export const themeCompartment = new Compartment();
 /**
  * 根据主题类型获取主题扩展
  */
-const getThemeExtension = (): Extension | null => {
+const getThemeExtension = (): Extension => {
   const themeStore = useThemeStore();
   
-  // 直接获取当前主题颜色配置
-  const colors = themeStore.currentColors;
-  
-  if (!colors) {
-    return null;
-  }
+  // 获取有效主题颜色
+  const colors = themeStore.getEffectiveColors();
 
   // 使用颜色配置创建主题
   return createThemeByColors(colors);
@@ -28,12 +24,6 @@ const getThemeExtension = (): Extension | null => {
  */
 export const createThemeExtension = (): Extension => {
   const extension = getThemeExtension();
-  
-  // 如果主题未加载，返回空扩展
-  if (!extension) {
-    return themeCompartment.of([]);
-  }
-  
   return themeCompartment.of(extension);
 };
 
@@ -48,11 +38,6 @@ export const updateEditorTheme = (view: EditorView): void => {
   try {
     const extension = getThemeExtension();
     
-    // 如果主题未加载，不更新
-    if (!extension) {
-      return;
-    }
-    
     view.dispatch({
       effects: themeCompartment.reconfigure(extension)
     });
@@ -60,4 +45,3 @@ export const updateEditorTheme = (view: EditorView): void => {
     console.error('Failed to update editor theme:', error);
   }
 };
-
