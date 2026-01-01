@@ -4,7 +4,6 @@ import { BackupService } from '@/../bindings/voidraft/internal/services';
 
 export const useBackupStore = defineStore('backup', () => {
   const isSyncing = ref(false);
-  const error = ref<string | null>(null);
 
   const sync = async (): Promise<void> => {
     if (isSyncing.value) {
@@ -12,12 +11,11 @@ export const useBackupStore = defineStore('backup', () => {
     }
 
     isSyncing.value = true;
-    error.value = null;
 
     try {
       await BackupService.Sync();
     } catch (e) {
-      error.value = e instanceof Error ? e.message : String(e);
+      throw e;
     } finally {
       isSyncing.value = false;
     }
@@ -25,7 +23,6 @@ export const useBackupStore = defineStore('backup', () => {
 
   return {
     isSyncing,
-    error,
     sync
   };
 });

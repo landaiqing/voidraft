@@ -22,6 +22,8 @@ declare module 'vue' {
     TabContainer: typeof import('./src/components/tabs/TabContainer.vue')['default']
     TabContextMenu: typeof import('./src/components/tabs/TabContextMenu.vue')['default']
     TabItem: typeof import('./src/components/tabs/TabItem.vue')['default']
+    Toast: typeof import('./src/components/toast/Toast.vue')['default']
+    ToastContainer: typeof import('./src/components/toast/ToastContainer.vue')['default']
     Toolbar: typeof import('./src/components/toolbar/Toolbar.vue')['default']
     WindowsTitleBar: typeof import('./src/components/titlebar/WindowsTitleBar.vue')['default']
     WindowTitleBar: typeof import('./src/components/titlebar/WindowTitleBar.vue')['default']

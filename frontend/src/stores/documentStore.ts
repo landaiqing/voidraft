@@ -16,33 +16,15 @@ export const useDocumentStore = defineStore('document', () => {
 
     // === UI状态 ===
     const showDocumentSelector = ref(false);
-    const selectorError = ref<{ docId: number; message: string } | null>(null);
     const isLoading = ref(false);
-
-    // === 错误处理 ===
-    const setError = (docId: number, message: string) => {
-        selectorError.value = {docId, message};
-        // 3秒后自动清除错误状态
-        setTimeout(() => {
-            if (selectorError.value?.docId === docId) {
-                selectorError.value = null;
-            }
-        }, 3000);
-    };
-
-    const clearError = () => {
-        selectorError.value = null;
-    };
 
     // === UI控制方法 ===
     const openDocumentSelector = () => {
         showDocumentSelector.value = true;
-        clearError();
     };
 
     const closeDocumentSelector = () => {
         showDocumentSelector.value = false;
-        clearError();
     };
 
 
@@ -217,7 +199,6 @@ export const useDocumentStore = defineStore('document', () => {
         currentDocumentId,
         currentDocument,
         showDocumentSelector,
-        selectorError,
         isLoading,
 
         getDocumentList,
@@ -236,8 +217,6 @@ export const useDocumentStore = defineStore('document', () => {
         // UI 控制
         openDocumentSelector,
         closeDocumentSelector,
-        setError,
-        clearError,
         
         // 初始化
         initDocument,

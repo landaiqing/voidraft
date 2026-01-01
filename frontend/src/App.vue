@@ -6,6 +6,7 @@ import {useKeybindingStore} from '@/stores/keybindingStore';
 import {useThemeStore} from '@/stores/themeStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
+import ToastContainer from '@/components/toast/ToastContainer.vue';
 import {useTranslationStore} from "@/stores/translationStore";
 import {useI18n} from "vue-i18n";
 import {LanguageType} from "../bindings/voidraft/internal/models";
@@ -41,6 +42,7 @@ onBeforeMount(async () => {
     <div class="app-content">
       <router-view/>
     </div>
+    <ToastContainer/>
   </div>
 </template>
 

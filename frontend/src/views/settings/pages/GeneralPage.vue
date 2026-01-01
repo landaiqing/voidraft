@@ -9,6 +9,7 @@ import ToggleSwitch from '../components/ToggleSwitch.vue';
 import {DialogService, HotkeyService, MigrationService} from '@/../bindings/voidraft/internal/services';
 import {useSystemStore} from "@/stores/systemStore";
 import {useConfirm, usePolling} from '@/composables';
+import toast from '@/components/toast';
 
 const {t} = useI18n();
 const {
@@ -29,7 +30,6 @@ const tabStore = useTabStore();
 
 // 进度条显示控制
 const showBar = ref(false);
-const manualError = ref('');  // 用于捕获 MigrateDirectory 抛出的错误
 let hideTimer = 0;
 
 // 轮询迁移进度
@@ -39,15 +39,20 @@ const {data: progress, error: pollError, isActive: migrating, start, stop, reset
       interval: 300,
       shouldStop: ({progress, error}) => !!error || progress >= 100,
       onStop: () => {
-        const hasError = pollError.value || progress.value?.error;
-        hideTimer = window.setTimeout(hideAll, hasError ? 5000 : 3000);
+        const error = pollError.value || progress.value?.error;
+        if (error) {
+          toast.error(error);
+        } else if ((progress.value?.progress ?? 0) >= 100) {
+          toast.success('Migration successful');
+        }
+        hideTimer = window.setTimeout(hideAll, 3000);
       }
     }
 );
 
 // 派生状态
-const migrationError = computed(() => manualError.value || pollError.value || progress.value?.error || '');
 const currentProgress = computed(() => progress.value?.progress ?? 0);
+const migrationError = computed(() => pollError.value || progress.value?.error || '');
 
 const barClass = computed(() => {
   if (!showBar.value) return '';
@@ -64,8 +69,7 @@ const hideAll = () => {
   clearTimeout(hideTimer);
   hideTimer = 0;
   showBar.value = false;
-  manualError.value = '';
-  reset();  // 清除轮询状态
+  reset();
 };
 
 // 重置设置确认
@@ -193,10 +197,8 @@ const selectDataDirectory = async () => {
 
   const [oldPath, newPath] = [currentDataPath.value, selectedPath.trim()];
 
-  // 清除之前的状态并开始轮询
   hideAll();
   showBar.value = true;
-  manualError.value = '';
   start();
 
   try {
@@ -204,10 +206,9 @@ const selectDataDirectory = async () => {
     await setDataPath(newPath);
   } catch (e) {
     stop();
-    // 设置手动捕获的错误（当轮询还没获取到错误时）
-    manualError.value = String(e).replace(/^Error:\s*/i, '') || 'Migration failed';
+    toast.error(String(e).replace(/^Error:\s*/i, '') || 'Migration failed');
     showBar.value = true;
-    hideTimer = window.setTimeout(hideAll, 5000);
+    hideTimer = window.setTimeout(hideAll, 3000);
   }
 };
 </script>
@@ -300,11 +301,6 @@ const selectDataDirectory = async () => {
             <!-- 进度条 -->
             <div class="progress-bar" :class="[{'active': showBar}, barClass]" :style="{width: barWidth}"/>
           </div>
-
-          <!-- 错误提示 -->
-          <Transition name="error-fade">
-            <div v-if="migrationError" class="progress-error">{{ migrationError }}</div>
-          </Transition>
         </div>
       </div>
     </SettingSection>
@@ -537,13 +533,6 @@ const selectDataDirectory = async () => {
       }
     }
   }
-
-  .progress-error {
-    font-size: 12px;
-    color: #ef4444;
-    opacity: 1;
-    transition: all 0.3s ease;
-  }
 }
 
 .reset-button {
@@ -601,36 +590,5 @@ const selectDataDirectory = async () => {
   100% {
     box-shadow: 0 0 0 0 rgba(255, 71, 87, 0);
   }
-}
-
-// 消息点脉冲动画
-@keyframes pulse-dot {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.5;
-    transform: scale(1.2);
-  }
-}
-
-// 错误提示动画
-.error-fade-enter-active {
-  transition: all 0.3s ease;
-}
-
-.error-fade-leave-active {
-  transition: all 0.3s ease;
-}
-
-.error-fade-enter-from {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-
-.error-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
 }
 </style>

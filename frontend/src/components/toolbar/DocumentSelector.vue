@@ -10,6 +10,7 @@ import {useConfirm} from '@/composables';
 import {validateDocumentTitle} from '@/common/utils/validation';
 import {formatDateTime, truncateString} from '@/common/utils/formatter';
 import {Document} from '@/../bindings/voidraft/internal/models/ent/models';
+import toast from '@/components/toast';
 
 // 类型定义
 interface DocumentItem extends Document {
@@ -96,7 +97,7 @@ const closeMenu = () => {
 const selectDoc = async (doc: DocumentItem) => {
   if (doc.id === undefined) return;
 
-  // 如果选择的就是当前文档，直接关闭菜单
+  // 如果选择的就是当前文档,直接关闭菜单
   if (documentStore.currentDocument?.id === doc.id) {
     closeMenu();
     return;
@@ -104,7 +105,7 @@ const selectDoc = async (doc: DocumentItem) => {
 
   const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
   if (hasOpen) {
-    documentStore.setError(doc.id, t('toolbar.alreadyOpenInNewWindow'));
+    toast.warning(t('toolbar.alreadyOpenInNewWindow'));
     return;
   }
 
@@ -116,7 +117,7 @@ const selectDoc = async (doc: DocumentItem) => {
     editorStateStore.saveCursorPosition(oldDocId, cursorPos);
   }
 
-  // 如果旧文档有未保存修改，保存它
+  // 如果旧文档有未保存修改,保存它
   if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
 
     const content = editorStore.getCurrentContent();
@@ -238,7 +239,7 @@ const handleDelete = async (doc: DocumentItem, event: Event) => {
     // 确认删除前检查文档是否在其他窗口打开
     const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
     if (hasOpen) {
-      documentStore.setError(doc.id, t('toolbar.alreadyOpenInNewWindow'));
+      toast.warning(t('toolbar.alreadyOpenInNewWindow'));
       resetDeleteConfirm();
       return;
     }
@@ -246,7 +247,7 @@ const handleDelete = async (doc: DocumentItem, event: Event) => {
     const deleteSuccess = await documentStore.deleteDocument(doc.id);
     if (deleteSuccess) {
       state.documentList = await documentStore.getDocumentList();
-      // 如果删除的是当前文档，切换到第一个文档
+      // 如果删除的是当前文档,切换到第一个文档
       if (documentStore.currentDocument?.id === doc.id && state.documentList.length > 0) {
         const firstDoc = state.documentList[0];
         if (firstDoc) await selectDoc(firstDoc);
@@ -341,11 +342,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               <!-- 普通显示 -->
               <div v-if="state.editing.id !== item.id" class="doc-info">
                 <div class="doc-title">{{ item.title }}</div>
-                <!-- 根据状态显示错误信息或时间 -->
-                <div v-if="documentStore.selectorError?.docId === item.id" class="doc-error">
-                  {{ documentStore.selectorError?.message }}
-                </div>
-                <div v-else class="doc-date">{{ formatDateTime(item.updated_at) }}</div>
+                <div class="doc-date">{{ formatDateTime(item.updated_at) }}</div>
               </div>
 
               <!-- 编辑状态 -->
@@ -387,7 +384,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
                   </svg>
                 </button>
                 <button
-                    v-if="state.documentList.length > 1 && item.id !== 1"
+                    v-if="state.documentList.length > 1"
                     class="action-btn delete-btn"
                     :class="{ 'delete-confirm': isDeleting(item.id!) }"
                     @click="handleDelete(item, $event)"
@@ -478,7 +475,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
     border: 1px solid var(--border-color);
     border-radius: 3px;
     margin-bottom: 4px;
-    width: 300px;
+    width: 340px;
     max-height: calc(100vh - 40px);
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -488,7 +485,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
 
     .input-box {
       position: relative;
-      padding: 8px;
+      padding: 10px;
       border-bottom: 1px solid var(--border-color);
 
       .main-input {
@@ -497,8 +494,8 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
         background-color: var(--bg-primary);
         border: 1px solid var(--border-color);
         border-radius: 2px;
-        padding: 5px 8px 5px 26px;
-        font-size: 11px;
+        padding: 6px 10px 6px 30px;
+        font-size: 12px;
         color: var(--text-primary);
         outline: none;
 
@@ -513,7 +510,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
 
       .input-icon {
         position: absolute;
-        left: 14px;
+        left: 16px;
         top: 50%;
         transform: translateY(-50%);
         color: var(--text-muted);
@@ -534,7 +531,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
           background-color: var(--bg-hover);
         }
 
-        &.active {
+          &.active {
           background-color: var(--selection-bg);
 
           .doc-item-content .doc-info {
@@ -542,7 +539,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               color: var(--selection-text);
             }
 
-            .doc-date, .doc-error {
+            .doc-date {
               color: var(--selection-text);
               opacity: 0.7;
             }
@@ -554,8 +551,8 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 8px;
-            font-size: 11px;
+            padding: 10px 10px;
+            font-size: 12px;
             font-weight: normal;
 
             svg {
@@ -569,15 +566,15 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 8px;
+          padding: 10px 10px;
 
           .doc-info {
             flex: 1;
             min-width: 0;
 
             .doc-title {
-              font-size: 12px;
-              margin-bottom: 2px;
+              font-size: 13px;
+              margin-bottom: 3px;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
@@ -585,16 +582,9 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
             }
 
             .doc-date {
-              font-size: 10px;
+              font-size: 11px;
               color: var(--text-muted);
               opacity: 0.6;
-            }
-
-            .doc-error {
-              font-size: 10px;
-              color: var(--text-danger);
-              font-weight: 500;
-              animation: fadeInOut 3s forwards;
             }
           }
 
@@ -607,8 +597,8 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               background-color: var(--bg-primary);
               border: 1px solid var(--border-color);
               border-radius: 2px;
-              padding: 4px 6px;
-              font-size: 11px;
+              padding: 5px 8px;
+              font-size: 12px;
               color: var(--text-primary);
               outline: none;
 
@@ -620,7 +610,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
 
           .doc-actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             opacity: 0;
             transition: opacity 0.2s ease;
 
@@ -629,7 +619,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               border: none;
               color: var(--text-muted);
               cursor: pointer;
-              padding: 4px;
+              padding: 5px;
               border-radius: 2px;
               display: flex;
               align-items: center;
@@ -650,7 +640,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
                   color: white;
 
                   .confirm-text {
-                    font-size: 9px;
+                    font-size: 10px;
                     font-weight: 500;
                   }
                 }
@@ -665,27 +655,12 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
       }
 
       .empty {
-        padding: 16px 8px;
+        padding: 18px 10px;
         text-align: center;
-        font-size: 11px;
+        font-size: 12px;
         color: var(--text-muted);
       }
     }
-  }
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
   }
 }
 </style>
