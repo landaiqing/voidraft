@@ -37,10 +37,12 @@ import TabContextMenu from './TabContextMenu.vue';
 import { useTabStore } from '@/stores/tabStore';
 import { useDocumentStore } from '@/stores/documentStore';
 import { useEditorStore } from '@/stores/editorStore';
+import { useEditorStateStore } from '@/stores/editorStateStore';
 
 const tabStore = useTabStore();
 const documentStore = useDocumentStore();
 const editorStore = useEditorStore();
+const editorStateStore = useEditorStateStore();
 
 // DOM 引用
 const tabBarRef = ref<HTMLElement>();
@@ -55,15 +57,34 @@ const contextMenuTargetId = ref<number | null>(null);
 
 // 标签页操作
 const switchToTab = async (documentId: number) => {
+
+  // 保存旧文档的光标位置
+  const oldDocId = documentStore.currentDocumentId;
+  if (oldDocId) {
+    const cursorPos = editorStore.getCurrentCursorPosition();
+    editorStateStore.saveCursorPosition(oldDocId, cursorPos);
+  }
+
+  // 如果旧文档有未保存修改，保存它
+  if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
+    try {
+      const content = editorStore.getCurrentContent();
+      await documentStore.saveDocument(oldDocId, content);
+      editorStore.syncAfterSave(oldDocId);
+    } catch (error) {
+      console.error('save document error:', error);
+    }
+  }
+
+  // 切换文档
   await tabStore.switchToTabAndDocument(documentId);
   
-  const doc = documentStore.currentDocument;
-  if (doc && doc.id !== undefined && editorStore.hasContainer) {
-    await editorStore.loadEditor(doc.id, doc.content || '');
-  }
+  // 切换到新编辑器
+  await editorStore.switchToEditor(documentId);
   
-  if (doc && tabStore.isTabsEnabled) {
-    tabStore.addOrActivateTab(doc);
+  // 更新标签页
+  if (documentStore.currentDocument && tabStore.isTabsEnabled) {
+    tabStore.addOrActivateTab(documentStore.currentDocument);
   }
 };
 

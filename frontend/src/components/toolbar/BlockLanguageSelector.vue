@@ -51,13 +51,13 @@ let editorScope: ReturnType<typeof effectScope> | null = null;
 
 // 更新当前块语言信息
 const updateCurrentBlockLanguage = () => {
-  if (!editorStore.editorView) {
+  if (!editorStore.currentEditor) {
     currentBlockLanguage.value = { name: 'text', auto: false };
     return;
   }
 
   try {
-    const state = editorStore.editorView.state;
+    const state = editorStore.currentEditor.state;
     const activeBlock = getActiveNoteBlock(state as any);
     if (activeBlock) {
       const newLanguage = {
@@ -128,7 +128,7 @@ const setupEventListeners = (view: any) => {
 
 // 监听编辑器状态变化
 watch(
-  () => editorStore.editorView,
+  () => editorStore.currentEditor,
   (newView) => {
     if (newView) {
       setupEventListeners(newView);
@@ -175,13 +175,13 @@ const closeLanguageMenu = () => {
 
 // 选择语言 - 优化性能
 const selectLanguage = (languageId: SupportedLanguage) => {
-  if (!editorStore.editorView) {
+  if (!editorStore.currentEditor) {
     closeLanguageMenu();
     return;
   }
 
   try {
-    const view = editorStore.editorView;
+    const view = editorStore.currentEditor;
     const state = view.state;
     const dispatch = view.dispatch;
 

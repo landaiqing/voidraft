@@ -1,15 +1,15 @@
 import {EditorView, ViewPlugin, ViewUpdate} from '@codemirror/view';
-import {useDocumentStore} from '@/stores/documentStore';
+import {useEditorStateStore} from '@/stores/editorStateStore';
 import {createDebounce} from '@/common/utils/debounce';
 
 /**
  * 光标位置持久化扩展
- * 实时监听光标位置变化并持久化到 documentStore
+ * 实时监听光标位置变化并持久化到 editorStateStore
  */
 export function createCursorPositionExtension(documentId: number) {
     return ViewPlugin.fromClass(
         class CursorPositionPlugin {
-            private readonly documentStore = useDocumentStore();
+            private readonly editorStateStore = useEditorStateStore();
             private readonly debouncedSave;
 
             constructor(private view: EditorView) {
@@ -42,11 +42,7 @@ export function createCursorPositionExtension(documentId: number) {
 
             private saveCursorPosition() {
                 const cursorPos = this.view.state.selection.main.head;
-                if (!this.documentStore.documentStates[documentId]) {
-                    this.documentStore.documentStates[documentId] = {cursorPos};
-                } else {
-                    this.documentStore.documentStates[documentId].cursorPos = cursorPos;
-                }
+                this.editorStateStore.saveCursorPosition(documentId, cursorPos);
             }
         }
     );

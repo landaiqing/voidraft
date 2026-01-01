@@ -3,6 +3,7 @@ import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useEditorStore} from '@/stores/editorStore';
 import {useExtensionStore} from '@/stores/extensionStore';
+import {useKeybindingStore} from '@/stores/keybindingStore';
 import {ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {
   getExtensionDefaultConfig,
@@ -10,6 +11,7 @@ import {
   getExtensionDisplayName, getExtensionsMap,
   hasExtensionConfig
 } from '@/views/editor/manager/extensions';
+import {getExtensionManager} from '@/views/editor/manager';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
@@ -17,6 +19,7 @@ import ToggleSwitch from '../components/ToggleSwitch.vue';
 const {t} = useI18n();
 const editorStore = useEditorStore();
 const extensionStore = useExtensionStore();
+const keybindingStore = useKeybindingStore();
 
 // 页面初始化时加载扩展数据
 onMounted(async () => {
@@ -55,7 +58,25 @@ const toggleExpanded = (extensionId: number) => {
 // 更新扩展状态
 const updateExtension = async (extensionId: number, enabled: boolean) => {
   try {
-    await editorStore.updateExtension(extensionId, enabled);
+    // 更新后端
+    await ExtensionService.UpdateExtensionEnabled(extensionId, enabled);
+    
+    // 重新加载各个 Store 的状态
+    await extensionStore.loadExtensions();
+    await keybindingStore.loadKeyBindings();
+    
+    // 获取更新后的扩展
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
+    if (!extension) return;
+    
+    // 应用到编辑器
+    const manager = getExtensionManager();
+    if (manager) {
+      manager.updateExtension(extension.name, enabled, extension.config);
+    }
+    
+    // 更新快捷键
+    await editorStore.applyKeymapSettings();
   } catch (error) {
     console.error('Failed to update extension:', error);
   }
@@ -75,9 +96,18 @@ const updateExtensionConfig = async (extensionId: number, configKey: string, val
     } else {
       updatedConfig[configKey] = value;
     }
-    // 使用editorStore的updateExtension方法更新，确保应用到所有编辑器实例
-    await editorStore.updateExtension(extensionId, extension.enabled ?? false, updatedConfig);
-
+    
+    // 更新后端配置
+    await ExtensionService.UpdateExtensionConfig(extensionId, updatedConfig);
+    
+    // 重新加载状态
+    await extensionStore.loadExtensions();
+    
+    // 应用到编辑器
+    const manager = getExtensionManager();
+    if (manager) {
+      manager.updateExtension(extension.name, extension.enabled ?? false, updatedConfig);
+    }
   } catch (error) {
     console.error('Failed to update extension config:', error);
   }
@@ -89,14 +119,16 @@ const resetExtension = async (extensionId: number) => {
     // 重置到默认配置
     await ExtensionService.ResetExtensionConfig(extensionId);
 
-    // 重新加载扩展状态以获取最新配置
+    // 重新加载扩展状态
     await extensionStore.loadExtensions();
 
-    // 获取重置后的状态，立即应用到所有编辑器视图
+    // 获取重置后的状态，应用到编辑器
     const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
     if (extension) {
-      // 通过editorStore更新，确保所有视图都能同步
-      await editorStore.updateExtension(extensionId, extension.enabled ?? false, extension.config);
+      const manager = getExtensionManager();
+      if (manager) {
+        manager.updateExtension(extension.name, extension.enabled ?? false, extension.config);
+      }
     }
   } catch (error) {
     console.error('Failed to reset extension:', error);

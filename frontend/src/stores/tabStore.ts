@@ -151,8 +151,9 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 验证并清理无效的标签页
      */
-    const validateTabs = () => {
-        const validDocIds = Object.keys(documentStore.documents).map(Number);
+    const validateTabs = async () => {
+        const docs = await documentStore.getDocumentList();
+        const validDocIds = docs.map(doc => doc.id).filter((id): id is number => id !== undefined);
 
         // 找出无效的标签页（文档已被删除）
         const invalidTabIds = tabOrder.value.filter(docId => !validDocIds.includes(docId));
@@ -169,9 +170,9 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 初始化标签页（当前文档）
      */
-    const initTab = () => {
+    const initTab = async () => {
         // 先验证并清理无效的标签页
-        validateTabs();
+        await validateTabs();
 
         if (isTabsEnabled.value) {
             const currentDoc = documentStore.currentDocument;

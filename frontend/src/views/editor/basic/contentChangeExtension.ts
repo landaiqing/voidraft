@@ -1,13 +1,13 @@
 import {EditorView, ViewPlugin, ViewUpdate} from '@codemirror/view';
 import type {Text} from '@codemirror/state';
-import {useEditorStore} from '@/stores/editorStore';
 
 /**
+ * 内容变化监听扩展
+ * 通过回调函数解耦，不直接依赖 Store
  */
-export function createContentChangePlugin() {
+export function createContentChangePlugin(onContentChange: () => void) {
   return ViewPlugin.fromClass(
     class ContentChangePlugin {
-      private readonly editorStore = useEditorStore();
       private lastDoc: Text;
       private rafId: number | null = null;
       private pendingNotification = false;
@@ -40,7 +40,7 @@ export function createContentChangePlugin() {
         this.rafId = requestAnimationFrame(() => {
           this.pendingNotification = false;
           this.rafId = null;
-          this.editorStore.onContentChange();
+          onContentChange();  // 调用注入的回调
         });
       }
     }

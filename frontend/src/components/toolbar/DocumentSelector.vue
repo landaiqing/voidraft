@@ -3,12 +3,13 @@ import {computed, nextTick, reactive, ref, watch} from 'vue';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useTabStore} from '@/stores/tabStore';
 import {useEditorStore} from '@/stores/editorStore';
+import {useEditorStateStore} from '@/stores/editorStateStore';
 import {useWindowStore} from '@/stores/windowStore';
 import {useI18n} from 'vue-i18n';
 import {useConfirm} from '@/composables';
 import {validateDocumentTitle} from '@/common/utils/validation';
 import {formatDateTime, truncateString} from '@/common/utils/formatter';
-import type {Document} from '@/../bindings/voidraft/internal/models/ent/models';
+import {Document} from '@/../bindings/voidraft/internal/models/ent/models';
 
 // 类型定义
 interface DocumentItem extends Document {
@@ -18,6 +19,7 @@ interface DocumentItem extends Document {
 const documentStore = useDocumentStore();
 const tabStore = useTabStore();
 const editorStore = useEditorStore();
+const editorStateStore = useEditorStateStore();
 const windowStore = useWindowStore();
 const {t} = useI18n();
 
@@ -29,6 +31,7 @@ const editInputRef = ref<HTMLInputElement>();
 const state = reactive({
   isLoaded: false,
   searchQuery: '',
+  documentList: [] as Document[],  // 缓存文档列表
   editing: {
     id: null as number | null,
     title: ''
@@ -46,7 +49,7 @@ const currentDocName = computed(() => {
 });
 
 const filteredItems = computed<DocumentItem[]>(() => {
-  const docs = documentStore.documentList;
+  const docs = state.documentList;
   const query = state.searchQuery.trim();
 
   if (!query) return docs;
@@ -69,7 +72,7 @@ const filteredItems = computed<DocumentItem[]>(() => {
 
 // 核心操作
 const openMenu = async () => {
-  await documentStore.getDocumentMetaList();
+  state.documentList = await documentStore.getDocumentList();
   documentStore.openDocumentSelector();
   state.isLoaded = true;
   await nextTick();
@@ -90,7 +93,7 @@ const closeMenu = () => {
   resetDeleteConfirm();
 };
 
-const selectDoc = async (doc: Document) => {
+const selectDoc = async (doc: DocumentItem) => {
   if (doc.id === undefined) return;
 
   // 如果选择的就是当前文档，直接关闭菜单
@@ -106,16 +109,32 @@ const selectDoc = async (doc: Document) => {
   }
 
 
+  // 保存旧文档的光标位置
+  const oldDocId = documentStore.currentDocumentId;
+  if (oldDocId) {
+    const cursorPos = editorStore.getCurrentCursorPosition();
+    editorStateStore.saveCursorPosition(oldDocId, cursorPos);
+  }
+
+  // 如果旧文档有未保存修改，保存它
+  if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
+
+    const content = editorStore.getCurrentContent();
+    await documentStore.saveDocument(oldDocId, content);
+    editorStore.syncAfterSave(oldDocId);
+
+  }
+
+  // 打开新文档
   const success = await documentStore.openDocument(doc.id);
   if (!success) return;
 
-  const fullDoc = documentStore.currentDocument;
-  if (fullDoc && editorStore.hasContainer) {
-    await editorStore.loadEditor(fullDoc.id!, fullDoc.content || '');
-  }
+  // 切换到新编辑器
+  await editorStore.switchToEditor(doc.id);
 
-  if (fullDoc && tabStore.isTabsEnabled) {
-    tabStore.addOrActivateTab(fullDoc);
+  // 更新标签页
+  if (documentStore.currentDocument && tabStore.isTabsEnabled) {
+    tabStore.addOrActivateTab(documentStore.currentDocument);
   }
 
   closeMenu();
@@ -128,7 +147,9 @@ const createDoc = async (title: string) => {
 
   try {
     const newDoc = await documentStore.createNewDocument(trimmedTitle);
-    if (newDoc) await selectDoc(newDoc);
+    if (newDoc && newDoc.id) {
+      await selectDoc(newDoc);
+    }
   } catch (error) {
     console.error('Failed to create document:', error);
   }
@@ -151,7 +172,7 @@ const handleSearchEnter = () => {
 };
 
 // 编辑操作
-const renameDoc = (doc: Document, event: Event) => {
+const renameDoc = (doc: DocumentItem, event: Event) => {
   event.stopPropagation();
   state.editing.id = doc.id ?? null;
   state.editing.title = doc.title || '';
@@ -174,8 +195,8 @@ const saveEdit = async () => {
   if (error) return;
 
   try {
-    await documentStore.updateDocumentMetadata(state.editing.id, trimmedTitle);
-    await documentStore.getDocumentMetaList();
+    await documentStore.updateDocumentTitle(state.editing.id, trimmedTitle);
+    state.documentList = await documentStore.getDocumentList();
 
     // 如果tabs功能开启且该文档有标签页，更新标签页标题
     if (tabStore.isTabsEnabled && tabStore.hasTab(state.editing.id)) {
@@ -195,7 +216,7 @@ const cancelEdit = () => {
 };
 
 // 其他操作
-const openInNewWindow = async (doc: Document, event: Event) => {
+const openInNewWindow = async (doc: DocumentItem, event: Event) => {
   event.stopPropagation();
   if (doc.id === undefined) return;
   try {
@@ -209,7 +230,7 @@ const openInNewWindow = async (doc: Document, event: Event) => {
   }
 };
 
-const handleDelete = async (doc: Document, event: Event) => {
+const handleDelete = async (doc: DocumentItem, event: Event) => {
   event.stopPropagation();
   if (doc.id === undefined) return;
 
@@ -224,10 +245,10 @@ const handleDelete = async (doc: Document, event: Event) => {
 
     const deleteSuccess = await documentStore.deleteDocument(doc.id);
     if (deleteSuccess) {
-      await documentStore.getDocumentMetaList();
+      state.documentList = await documentStore.getDocumentList();
       // 如果删除的是当前文档，切换到第一个文档
-      if (documentStore.currentDocument?.id === doc.id && documentStore.documentList.length > 0) {
-        const firstDoc = documentStore.documentList[0];
+      if (documentStore.currentDocument?.id === doc.id && state.documentList.length > 0) {
+        const firstDoc = state.documentList[0];
         if (firstDoc) await selectDoc(firstDoc);
       }
     }
@@ -366,7 +387,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
                   </svg>
                 </button>
                 <button
-                    v-if="documentStore.documentList.length > 1 && item.id !== 1"
+                    v-if="state.documentList.length > 1 && item.id !== 1"
                     class="action-btn delete-btn"
                     :class="{ 'delete-confirm': isDeleting(item.id!) }"
                     @click="handleDelete(item, $event)"

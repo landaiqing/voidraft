@@ -32,9 +32,9 @@ onMounted(async () => {
 
   editorStore.setEditorContainer(editorElement.value);
 
-  const currentDoc = documentStore.currentDocument;
-  if (currentDoc && currentDoc.id !== undefined) {
-    await editorStore.loadEditor(currentDoc.id, currentDoc.content || '');
+  const currentDocId = documentStore.currentDocumentId;
+  if (currentDocId) {
+    await editorStore.switchToEditor(currentDocId);
   }
 
   await tabStore.initTab();
