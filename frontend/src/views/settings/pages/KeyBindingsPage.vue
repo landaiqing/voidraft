@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { onMounted, computed, ref, onUnmounted, watch } from 'vue';
+import { onMounted, computed, ref, nextTick } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
+import { AccordionContainer, AccordionItem } from '@/components/accordion';
 import { useKeybindingStore } from '@/stores/keybindingStore';
 import { useSystemStore } from '@/stores/systemStore';
 import { useConfigStore } from '@/stores/configStore';
@@ -11,6 +12,7 @@ import { getCommandDescription } from '@/views/editor/keymap/commands';
 import { KeyBindingType } from '@/../bindings/voidraft/internal/models/models';
 import { KeyBindingService } from '@/../bindings/voidraft/internal/services';
 import { useConfirm } from '@/composables/useConfirm';
+import toast from '@/components/toast';
 
 const { t } = useI18n();
 const keybindingStore = useKeybindingStore();
@@ -20,16 +22,26 @@ const editorStore = useEditorStore();
 
 interface EditingState {
   id: number;
-  name: string;
-  originalKey: string;
 }
 
 const editingBinding = ref<EditingState | null>(null);
-const capturedKey = ref('');
-const capturedKeyDisplay = ref<string[]>([]);
-const isConflict = ref(false);
+const inputKey = ref('');
 
-const isEditing = computed(() => !!editingBinding.value);
+// 将快捷键字符串拆分为独立的键
+const splitKeys = (keyStr: string): string[] => {
+  if (!keyStr) return [];
+  return keyStr.split(/[-+]/).filter(Boolean);
+};
+
+// 动态设置 ref 并自动聚焦
+const setInputRef = (el: any) => {
+  if (el && el instanceof HTMLInputElement) {
+    // 使用 nextTick 确保 DOM 完全渲染后再聚焦
+    nextTick(() => {
+      el.focus();
+    });
+  }
+};
 
 onMounted(async () => {
   await keybindingStore.loadKeyBindings();
@@ -63,7 +75,10 @@ const keyBindings = computed(() =>
     command: getDisplayKeybinding(kb),
     rawKey: getRawKey(kb),
     extension: kb.extension || '',
-    description: getCommandDescription(kb.name) || kb.name || ''
+    description: getCommandDescription(kb.name) || kb.name || '',
+    enabled: kb.enabled,
+    preventDefault: kb.preventDefault,
+    originalData: kb
   }))
 );
 
@@ -82,6 +97,8 @@ const getDisplayKeybinding = (kb: any): string[] => {
 };
 
 const parseKeyString = (keyStr: string): string[] => {
+  if (!keyStr) return [];
+  
   const symbolMap: Record<string, string> = {
     'Mod': systemStore.isMacOS ? '⌘' : 'Ctrl',
     'Cmd': '⌘',
@@ -102,128 +119,141 @@ const parseKeyString = (keyStr: string): string[] => {
     .filter(Boolean);
 };
 
-
-// 键盘事件捕获
-const SPECIAL_KEYS: Record<string, string> = {
-  ' ': 'Space',
-  'ArrowUp': 'ArrowUp',
-  'ArrowDown': 'ArrowDown',
-  'ArrowLeft': 'ArrowLeft',
-  'ArrowRight': 'ArrowRight',
-  'Enter': 'Enter',
-  'Tab': 'Tab',
-  'Backspace': 'Backspace',
-  'Delete': 'Delete',
-  'Home': 'Home',
-  'End': 'End',
-  'PageUp': 'PageUp',
-  'PageDown': 'PageDown',
+// 切换启用状态
+const toggleEnabled = async (binding: any) => {
+  try {
+    await KeyBindingService.UpdateKeyBindingEnabled(binding.id, !binding.enabled);
+    await keybindingStore.loadKeyBindings();
+    await editorStore.applyKeymapSettings();
+  } catch (error) {
+    console.error('Failed to update enabled status:', error);
+  }
 };
 
-const MODIFIER_KEYS = ['Control', 'Alt', 'Shift', 'Meta'];
-const MAX_KEY_PARTS = 3; // 最多3个键
-
-const captureKeyBinding = (event: KeyboardEvent): string | null => {
-  // 忽略单独的修饰键
-  if (MODIFIER_KEYS.includes(event.key)) return null;
-  
-  const parts: string[] = [];
-  
-  // 添加修饰键
-  if (event.ctrlKey || event.metaKey) parts.push('Mod');
-  if (event.altKey) parts.push('Alt');
-  if (event.shiftKey) parts.push('Shift');
-  
-  // 获取主键
-  const mainKey = SPECIAL_KEYS[event.key] ?? 
-    (event.key.length === 1 ? event.key.toLowerCase() : event.key);
-  
-  if (mainKey) parts.push(mainKey);
-  
-  // 限制最多3个键
-  if (parts.length > MAX_KEY_PARTS) return null;
-  
-  return parts.join('-');
+// 切换 PreventDefault
+const togglePreventDefault = async (binding: any) => {
+  try {
+    await KeyBindingService.UpdateKeyBindingPreventDefault(binding.id, !binding.preventDefault);
+    await keybindingStore.loadKeyBindings();
+    await editorStore.applyKeymapSettings();
+  } catch (error) {
+    console.error('Failed to update preventDefault:', error);
+  }
 };
 
+// 开始添加快捷键
+const startAddKey = (bindingId: number) => {
+  editingBinding.value = {
+    id: bindingId
+  };
+  inputKey.value = '';
+};
+
+// 取消编辑
 const cancelEdit = () => {
-  window.removeEventListener('keydown', handleKeyCapture, true);
   editingBinding.value = null;
-  capturedKey.value = '';
-  capturedKeyDisplay.value = [];
-  isConflict.value = false;
+  inputKey.value = '';
 };
 
-const handleKeyCapture = (event: KeyboardEvent) => {
-  if (!isEditing.value) return;
+// 验证快捷键格式
+const validateKeyFormat = (key: string): boolean => {
+  if (!key || key.trim() === '') return false;
   
-  event.preventDefault();
-  event.stopPropagation();
+  // 基本格式验证：允许 Mod/Ctrl/Alt/Shift + 其他键
+  const validPattern = /^(Mod|Ctrl|Alt|Shift|Cmd)(-[A-Za-z0-9\[\]\\/;',.\-=`]|-(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Enter|Tab|Backspace|Delete|Home|End|PageUp|PageDown|Space|Escape))+$/;
+  const simpleKeyPattern = /^[A-Za-z0-9]$/;
+  const specialKeyPattern = /^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Enter|Tab|Backspace|Delete|Home|End|PageUp|PageDown|Space|Escape)$/;
   
-  // ESC 取消编辑
-  if (event.key === 'Escape') {
-    cancelEdit();
+  return validPattern.test(key) || simpleKeyPattern.test(key) || specialKeyPattern.test(key);
+};
+
+// 检查快捷键冲突
+const checkConflict = (newKey: string, currentBindingId: number): { conflict: boolean; conflictWith?: string } => {
+  const conflictBinding = keyBindings.value.find(kb => 
+    kb.rawKey === newKey && kb.id !== currentBindingId
+  );
+  
+  if (conflictBinding) {
+    return {
+      conflict: true,
+      conflictWith: conflictBinding.description
+    };
+  }
+  
+  return { conflict: false };
+};
+
+// 添加新键到快捷键
+const addKeyPart = async () => {
+  if (!editingBinding.value || !inputKey.value.trim()) {
     return;
   }
   
-  const key = captureKeyBinding(event);
-  if (key) {
-    capturedKey.value = key;
-    capturedKeyDisplay.value = parseKeyString(key);
-    isConflict.value = false;
-  }
-};
-
-
-const startEditBinding = (binding: any) => {
-  editingBinding.value = {
-    id: binding.id,
-    name: binding.name,
-    originalKey: binding.rawKey
-  };
-  capturedKey.value = '';
-  capturedKeyDisplay.value = [];
-  isConflict.value = false;
+  const newPart = inputKey.value.trim();
+  const binding = keyBindings.value.find(kb => kb.id === editingBinding.value!.id);
+  if (!binding) return;
   
-  // 手动添加键盘监听
-  window.addEventListener('keydown', handleKeyCapture, true);
-};
-
-const checkConflict = (newKey: string): boolean => 
-  keyBindings.value.some(kb => 
-    kb.rawKey === newKey && kb.name !== editingBinding.value?.name
-  );
-
-const confirmKeybinding = async () => {
-  if (!editingBinding.value || !capturedKey.value) return;
+  // 检查键数量限制（最多4个）
+  const currentParts = splitKeys(binding.rawKey);
+  if (currentParts.length >= 4) {
+    toast.error(t('keybindings.maxKeysReached'));
+    inputKey.value = '';
+    return;
+  }
+  
+  // 获取现有的键
+  const currentKey = binding.rawKey;
+  const newKey = currentKey ? `${currentKey}-${newPart}` : newPart;
+  
+  // 验证格式
+  if (!validateKeyFormat(newKey)) {
+    toast.error(t('keybindings.invalidFormat'));
+    inputKey.value = '';
+    return;
+  }
   
   // 检查冲突
-  if (checkConflict(capturedKey.value)) {
-    isConflict.value = true;
-    setTimeout(cancelEdit, 600);
+  const conflictCheck = checkConflict(newKey, editingBinding.value.id);
+  if (conflictCheck.conflict) {
+    toast.error(t('keybindings.conflict', { command: conflictCheck.conflictWith }));
+    inputKey.value = '';
     return;
   }
   
   try {
-    await keybindingStore.updateKeyBinding(
-      editingBinding.value.id,
-      capturedKey.value
-    );
+    await keybindingStore.updateKeyBinding(editingBinding.value.id, newKey);
     await editorStore.applyKeymapSettings();
+    inputKey.value = '';
   } catch (error) {
-    console.error(error);
-  } finally {
-    cancelEdit();
+    console.error('Failed to add key part:', error);
   }
 };
+
+// 删除快捷键的某个部分
+const removeKeyPart = async (bindingId: number, index: number) => {
+  const binding = keyBindings.value.find(kb => kb.id === bindingId);
+  if (!binding) return;
+  
+  const parts = splitKeys(binding.rawKey);
+  parts.splice(index, 1);
+  
+  const newKey = parts.join('-');
+  
+  try {
+    await keybindingStore.updateKeyBinding(bindingId, newKey);
+    await editorStore.applyKeymapSettings();
+  } catch (error) {
+    console.error('Failed to remove key part:', error);
+  }
+};
+
 </script>
 
 <template>
   <div class="settings-page">
     <!-- 快捷键模式设置 -->
     <SettingSection :title="t('keybindings.keymapMode')">
-      <SettingItem
-        :title="t('keybindings.keymapMode')">
+      <SettingItem :title="t('keybindings.keymapMode')">
         <select
           :value="configStore.config.editing.keymapMode"
           @change="updateKeymapMode(($event.target as HTMLSelectElement).value as KeyBindingType)"
@@ -251,68 +281,111 @@ const confirmKeybinding = async () => {
         </button>
       </template>
       
-      <div class="key-bindings-container">
-        <div class="key-bindings-header">
-          <div class="keybinding-col">{{ t('keybindings.headers.shortcut') }}</div>
-          <div class="extension-col">{{ t('keybindings.headers.extension') }}</div>
-          <div class="description-col">{{ t('keybindings.headers.description') }}</div>
-        </div>
-        
-        <div
+      <AccordionContainer :multiple="false">
+        <AccordionItem
           v-for="binding in keyBindings"
-          :key="binding.name"
-          class="key-binding-row"
+          :key="binding.id"
+          :id="binding.id!"
         >
-          <!-- 快捷键列 -->
-          <div 
-            class="keybinding-col"
-            :class="{ 'editing': editingBinding?.name === binding.name }"
-            @click.stop="editingBinding?.name !== binding.name && startEditBinding(binding)"
-          >
-            <!-- 编辑模式 -->
-            <template v-if="editingBinding?.name === binding.name">
-              <template v-if="!capturedKey">
-                <span class="key-badge waiting">waiting...</span>
-              </template>
-              <template v-else>
+          <!-- 标题插槽 -->
+          <template #title>
+            <div class="binding-title" :class="{ 'disabled': !binding.enabled }">
+              <div class="binding-name">
+                <span class="binding-description">{{ binding.description }}</span>
+                <span class="binding-extension">{{ binding.extension }}</span>
+              </div>
+              <div class="binding-keys">
                 <span 
-                  v-for="(key, index) in capturedKeyDisplay"
+                  v-for="(key, index) in binding.command"
                   :key="index"
-                  class="key-badge captured"
-                  :class="{ 'conflict': isConflict }"
+                  class="key-badge"
                 >
                   {{ key }}
                 </span>
-              </template>
-              <button 
-                @click.stop="confirmKeybinding" 
-                class="btn-mini btn-confirm"
-                :disabled="!capturedKey"
-                title="Ok"
-              >✓</button>
-              <button 
-                @click.stop="cancelEdit" 
-                class="btn-mini btn-cancel"
-                title="Cancel"
-              >✕</button>
-            </template>
-            
-            <!-- 显示模式 -->
-            <template v-else>
-              <span 
-                v-for="(key, index) in binding.command"
-                :key="index"
-                class="key-badge"
-              >
-                {{ key }}
-              </span>
-            </template>
+                <span v-if="!binding.command.length" class="key-badge-empty">-</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- 展开内容 -->
+          <div class="binding-config">
+            <!-- Enabled 配置 -->
+            <div class="config-row">
+              <span class="config-label">{{ t('keybindings.config.enabled') }}</span>
+              <label class="switch">
+                <input 
+                  type="checkbox" 
+                  :checked="binding.enabled"
+                  @change="toggleEnabled(binding)"
+                >
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- PreventDefault 配置 -->
+            <div class="config-row">
+              <span class="config-label">{{ t('keybindings.config.preventDefault') }}</span>
+              <label class="switch">
+                <input 
+                  type="checkbox" 
+                  :checked="binding.preventDefault"
+                  @change="togglePreventDefault(binding)"
+                >
+                <span class="slider"></span>
+              </label>
+            </div>
+
+            <!-- Key 配置 -->
+            <div class="config-row">
+              <span class="config-label">{{ t('keybindings.config.keybinding') }}</span>
+              <div class="key-input-wrapper">
+                <div class="key-tags">
+                  <!-- 显示现有快捷键的每个部分 -->
+                  <template v-if="binding.rawKey">
+                    <span 
+                      v-for="(keyPart, index) in splitKeys(binding.rawKey)"
+                      :key="index"
+                      class="key-tag"
+                    >
+                      <span class="key-tag-text">{{ keyPart }}</span>
+                      <button 
+                        class="key-tag-remove"
+                        @click="removeKeyPart(binding.id!, index)"
+                      >×</button>
+                    </span>
+                  </template>
+                  
+                  <!-- 添加输入框 -->
+                  <template v-if="editingBinding?.id === binding.id">
+                    <input 
+                      :ref="setInputRef"
+                      v-model="inputKey"
+                      type="text"
+                      class="key-input"
+                      :placeholder="t('keybindings.keyPlaceholder')"
+                      @keydown.enter="addKeyPart"
+                      @keydown.escape="cancelEdit"
+                      @blur="cancelEdit"
+                    />
+                  </template>
+                  
+                  <!-- 添加按钮 -->
+                  <template v-else>
+                    <button 
+                      class="key-tag-add"
+                      @click="startAddKey(binding.id!)"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M6 1V11M1 6H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                      </svg>
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </div>
           </div>
-          
-          <div class="extension-col">{{ binding.extension }}</div>
-          <div class="description-col">{{ binding.description }}</div>
-        </div>
-      </div>
+        </AccordionItem>
+      </AccordionContainer>
     </SettingSection>
   </div>
 </template>
@@ -375,167 +448,275 @@ const confirmKeybinding = async () => {
   }
 }
 
-.key-bindings-container {
+.binding-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
   
-  .key-bindings-header {
-    display: flex;
-    padding: 0 0 8px 0;
-    border-bottom: 1px solid var(--settings-border);
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 500;
-  }
-  
-  .key-binding-row {
-    display: flex;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--settings-border);
-    align-items: center;
-    transition: background-color 0.2s ease;
-    
-    &:hover {
-      background-color: var(--settings-hover);
-    }
-  }
-  
-  .keybinding-col {
-    width: 150px;
-    display: flex;
-    gap: 4px;
-    padding: 0 10px 0 0;
-    color: var(--settings-text);
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    
-    &:hover:not(.editing) .key-badge {
-      border-color: #4a9eff;
-    }
-    
-    &.editing {
-      cursor: default;
-    }
-    
-    .key-badge {
-      background-color: var(--settings-input-bg);
-      padding: 2px 6px;
-      border-radius: 3px;
-      font-size: 11px;
-      border: 1px solid var(--settings-input-border);
-      color: var(--settings-text);
-      transition: border-color 0.2s ease;
-      white-space: nowrap;
-      
-      &.waiting {
-        border: none;
-        background-color: transparent;
-        padding: 0;
-        color: #4a9eff;
-        font-style: italic;
-        animation: colorPulse 1.5s ease-in-out infinite;
-      }
-      
-      &.captured {
-        background-color: #4a9eff;
-        color: white;
-        border-color: #4a9eff;
-        
-        &.conflict {
-          background-color: #dc3545;
-          border-color: #dc3545;
-          animation: shake 0.6s ease-in-out;
-        }
-      }
-    }
-  }
-  
-  .btn-mini {
-    width: 16px;
-    height: 16px;
-    min-width: 16px;
-    border: none;
-    border-radius: 2px;
-    cursor: pointer;
-    font-size: 10px;
-    transition: opacity 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    line-height: 1;
-    margin-left: auto;
-    
-    &.btn-confirm {
-      background-color: #28a745;
-      color: white;
-      
-      &:hover:not(:disabled) {
-        opacity: 0.85;
-      }
-      
-      &:disabled {
-        background-color: var(--settings-input-border);
-        cursor: not-allowed;
-        opacity: 0.5;
-      }
-    }
-    
-    &.btn-cancel {
-      background-color: #dc3545;
-      color: white;
-      margin-left: 2px;
-      
-      &:hover {
-        opacity: 0.85;
-      }
-    }
-  }
-  
-  .extension-col {
-    width: 80px;
-    padding: 0 10px 0 0;
-    font-size: 13px;
-    color: var(--settings-text);
-    text-transform: capitalize;
-  }
-  
-  .description-col {
-    flex: 1;
-    font-size: 13px;
-    color: var(--settings-text);
+  &.disabled {
+    opacity: 0.5;
   }
 }
 
-@keyframes colorPulse {
-  0%, 100% {
-    color: #4a9eff;
+.binding-name {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.binding-description {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--settings-text);
+}
+
+.binding-extension {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: capitalize;
+}
+
+.binding-keys {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.key-badge {
+  background-color: var(--settings-input-bg);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  border: 1px solid var(--settings-input-border);
+  color: var(--settings-text);
+  white-space: nowrap;
+}
+
+.key-badge-empty {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.binding-config {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.config-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.config-label {
+  font-size: 13px;
+  color: var(--settings-text);
+  font-weight: 500;
+}
+
+// Switch 开关样式
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    
+    &:checked + .slider {
+      background-color: #4a9eff;
+      
+      &:before {
+        transform: translateX(16px);
+      }
+    }
+    
+    &:focus + .slider {
+      box-shadow: 0 0 1px #4a9eff;
+    }
+  }
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--settings-input-border);
+  transition: 0.3s;
+  border-radius: 20px;
+  
+  &:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+}
+
+.key-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-tags {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1;
+  min-height: 28px;
+}
+
+.key-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  height: 28px;
+  background-color: var(--settings-input-bg);
+  border: 1px solid var(--settings-input-border);
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--settings-text);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  
+  &:hover {
+    border-color: #4a9eff;
+    
+    .key-tag-remove {
+      opacity: 1;
+    }
+  }
+}
+
+.key-tag-text {
+  user-select: none;
+}
+
+.key-tag-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    color: #e74c3c;
     opacity: 1;
   }
-  50% {
-    color: #2080ff;
-    opacity: 0.6;
-  }
 }
 
-@keyframes shake {
-  0%, 100% {
-    transform: translateX(0);
-  }
-  10%, 30%, 50%, 70%, 90% {
-    transform: translateX(-4px);
-  }
-  20%, 40%, 60%, 80% {
-    transform: translateX(4px);
-  }
-}
-
-.coming-soon-placeholder {
-  padding: 20px;
-  background-color: var(--settings-card-bg);
-  border-radius: 6px;
+.key-tag-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: 1px dashed var(--settings-input-border);
+  border-radius: 4px;
+  background-color: transparent;
   color: var(--text-muted);
-  text-align: center;
-  font-style: italic;
-  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  
+  &:hover {
+    border-color: #4a9eff;
+    background-color: var(--settings-input-bg);
+    color: #4a9eff;
+  }
+}
+
+.key-input {
+  padding: 4px 8px;
+  height: 28px;
+  border: 1px solid #4a9eff;
+  border-radius: 4px;
+  background-color: var(--settings-input-bg);
+  color: var(--settings-text);
+  font-size: 12px;
+  width: 60px;
+  outline: none;
+  box-sizing: border-box;
+  
+  &::placeholder {
+    color: var(--text-muted);
+    font-size: 11px;
+  }
+}
+
+.btn-mini {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  flex-shrink: 0;
+  
+  &.btn-confirm {
+    background-color: #28a745;
+    color: white;
+    
+    &:hover:not(:disabled) {
+      opacity: 0.85;
+    }
+    
+    &:disabled {
+      background-color: var(--settings-input-border);
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+  
+  &.btn-cancel {
+    background-color: #dc3545;
+    color: white;
+    
+    &:hover {
+      opacity: 0.85;
+    }
+  }
 }
 </style>

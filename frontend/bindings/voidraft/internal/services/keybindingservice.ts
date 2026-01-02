@@ -89,10 +89,18 @@ export function UpdateKeyBindingEnabled(id: number, enabled: boolean): Promise<v
 }
 
 /**
- * UpdateKeyBindingKeys 更新快捷键绑定（根据操作系统自动判断更新哪个字段）
+ * UpdateKeyBindingKeys 更新快捷键绑定
  */
 export function UpdateKeyBindingKeys(id: number, key: string): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3432755175, id, key) as any;
+    return $resultPromise;
+}
+
+/**
+ * UpdateKeyBindingPreventDefault 更新快捷键 PreventDefault 状态
+ */
+export function UpdateKeyBindingPreventDefault(id: number, preventDefault: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(202386744, id, preventDefault) as any;
     return $resultPromise;
 }
 

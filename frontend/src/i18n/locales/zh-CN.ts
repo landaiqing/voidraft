@@ -1,5 +1,14 @@
 export default {
   locale: 'zh-CN',
+  common: {
+    ok: '确定',
+    cancel: '取消',
+    edit: '编辑',
+    delete: '删除',
+    confirm: '确认',
+    save: '保存',
+    reset: '重置'
+  },
   titlebar: {
     minimize: '最小化',
     maximize: '最大化',
@@ -56,6 +65,19 @@ export default {
     },
     resetToDefault: '重置为默认',
     confirmReset: '确认重置？',
+    noKeybinding: '未设置',
+    waitingForKey: '等待输入...',
+    clickToSet: '点击设置快捷键',
+    editKeybinding: '编辑快捷键',
+    config: {
+      enabled: '启用',
+      preventDefault: '阻止默认',
+      keybinding: '快捷键'
+    },
+    keyPlaceholder: '输入键名, 回车添加',
+    invalidFormat: '格式错误',
+    conflict: '冲突: {command}',
+    maxKeysReached: '最多只能添加4个键',
     commands: {
       showSearch: '显示搜索面板',
       hideSearch: '隐藏搜索面板',
@@ -179,6 +201,7 @@ export default {
     enableWindowSnap: '启用窗口吸附',
     enableLoadingAnimation: '启用加载动画',
     enableTabs: '启用标签页',
+    enableMemoryMonitor: '启用内存监视器',
     startup: '启动设置',
     startAtLogin: '开机自启动',
     dataStorage: '数据存储',
@@ -226,6 +249,7 @@ export default {
       categoryEditing: '编辑增强',
       categoryUI: '界面增强',
       categoryTools: '工具扩展',
+      enabled: '启用',
       configuration: '配置',
       resetToDefault: '重置为默认配置',
     },

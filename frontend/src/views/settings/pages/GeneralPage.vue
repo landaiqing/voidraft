@@ -19,6 +19,7 @@ const {
   setDataPath,
   setEnableGlobalHotkey,
   setEnableLoadingAnimation,
+  setEnableMemoryMonitor,
   setEnableSystemTray,
   setEnableTabs,
   setEnableWindowSnap,
@@ -135,6 +136,12 @@ const enableTabs = computed({
       tabStore.clearAllTabs();
     }
   }
+});
+
+// 计算属性 - 启用内存监视器
+const enableMemoryMonitor = computed({
+  get: () => general.enableMemoryMonitor,
+  set: (value: boolean) => setEnableMemoryMonitor(value)
 });
 
 // 计算属性 - 开机启动
@@ -272,6 +279,9 @@ const selectDataDirectory = async () => {
       </SettingItem>
       <SettingItem :title="t('settings.enableTabs')">
         <ToggleSwitch v-model="enableTabs"/>
+      </SettingItem>
+      <SettingItem :title="t('settings.enableMemoryMonitor')">
+        <ToggleSwitch v-model="enableMemoryMonitor"/>
       </SettingItem>
     </SettingSection>
 

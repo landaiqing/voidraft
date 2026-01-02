@@ -11,6 +11,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AccordionContainer: typeof import('./src/components/accordion/AccordionContainer.vue')['default']
+    AccordionItem: typeof import('./src/components/accordion/AccordionItem.vue')['default']
     BlockLanguageSelector: typeof import('./src/components/toolbar/BlockLanguageSelector.vue')['default']
     DocumentSelector: typeof import('./src/components/toolbar/DocumentSelector.vue')['default']
     LinuxTitleBar: typeof import('./src/components/titlebar/LinuxTitleBar.vue')['default']

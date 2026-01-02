@@ -6,6 +6,7 @@ import (
 	"voidraft/internal/models"
 
 	"voidraft/internal/models/ent"
+	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
 	"voidraft/internal/models/schema/mixin"
 
@@ -112,43 +113,72 @@ func (s *KeyBindingService) SyncKeyBindings(ctx context.Context) error {
 
 // GetKeyBindings 根据类型获取快捷键
 func (s *KeyBindingService) GetKeyBindings(ctx context.Context, kbType models.KeyBindingType) ([]*ent.KeyBinding, error) {
-	if kbType == models.Standard {
-		// Standard 模式：只返回 type=standard 且 enabled=true
-		return s.db.Client.KeyBinding.Query().
-			Where(
-				keybinding.Type(string(kbType)),
-				keybinding.Enabled(true),
-			).
-			All(ctx)
-	}
-
-	// Emacs 模式：获取所有 enabled=true 的快捷键
-	allEnabled, err := s.db.Client.KeyBinding.Query().
-		Where(keybinding.Enabled(true)).
+	// 获取启用的扩展名称集合
+	enabledExts, err := s.db.Client.Extension.Query().
+		Where(extension.Enabled(true)).
 		All(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("query enabled key bindings error: %w", err)
+		return nil, fmt.Errorf("query enabled extensions error: %w", err)
+	}
+	enabledExtMap := make(map[string]bool, len(enabledExts))
+	for _, ext := range enabledExts {
+		enabledExtMap[ext.Name] = true
+	}
+
+	if kbType == models.Standard {
+		// Standard 模式：返回扩展已启用的快捷键
+		bindings, err := s.db.Client.KeyBinding.Query().
+			Where(keybinding.Type(string(kbType))).
+			Order(ent.Asc(keybinding.FieldID)).
+			All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return filterByExtension(bindings, enabledExtMap), nil
+	}
+
+	// Emacs 模式：获取所有快捷键
+	allBindings, err := s.db.Client.KeyBinding.Query().
+		Order(ent.Asc(keybinding.FieldID)).
+		All(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("query key bindings error: %w", err)
 	}
 
 	// 构建 emacs 快捷键的 name 集合
 	emacsNames := make(map[string]bool)
-	for _, kb := range allEnabled {
+	for _, kb := range allBindings {
 		if kb.Type == string(models.Emacs) {
 			emacsNames[kb.Name] = true
 		}
 	}
 
-	// 过滤：去掉与 emacs 冲突的 standard 快捷键
+	// 过滤：去掉与 emacs 冲突的 standard 快捷键，并过滤扩展未启用的
 	var result []*ent.KeyBinding
-	for _, kb := range allEnabled {
-		// 如果是 standard 类型，且与 emacs 有 name 冲突，则跳过
+	for _, kb := range allBindings {
 		if kb.Type == string(models.Standard) && emacsNames[kb.Name] {
+			continue
+		}
+		// editor 扩展始终包含，不检查启用状态
+		if kb.Extension != models.DefaultExtension && !enabledExtMap[kb.Extension] {
 			continue
 		}
 		result = append(result, kb)
 	}
 
 	return result, nil
+}
+
+// filterByExtension 过滤出扩展已启用的快捷键
+func filterByExtension(bindings []*ent.KeyBinding, enabledExtMap map[string]bool) []*ent.KeyBinding {
+	result := make([]*ent.KeyBinding, 0, len(bindings))
+	for _, kb := range bindings {
+		// editor 扩展始终包含，不检查启用状态
+		if kb.Extension == models.DefaultExtension || enabledExtMap[kb.Extension] {
+			result = append(result, kb)
+		}
+	}
+	return result
 }
 
 // GetKeyBindingByID 根据ID获取快捷键
@@ -163,7 +193,7 @@ func (s *KeyBindingService) GetKeyBindingByID(ctx context.Context, id int) (*ent
 	return kb, nil
 }
 
-// UpdateKeyBindingKeys 更新快捷键绑定（根据操作系统自动判断更新哪个字段）
+// UpdateKeyBindingKeys 更新快捷键绑定
 func (s *KeyBindingService) UpdateKeyBindingKeys(ctx context.Context, id int, key string) error {
 	kb, err := s.GetKeyBindingByID(ctx, id)
 	if err != nil {
@@ -201,6 +231,20 @@ func (s *KeyBindingService) UpdateKeyBindingEnabled(ctx context.Context, id int,
 	}
 	return s.db.Client.KeyBinding.UpdateOneID(kb.ID).
 		SetEnabled(enabled).
+		Exec(ctx)
+}
+
+// UpdateKeyBindingPreventDefault 更新快捷键 PreventDefault 状态
+func (s *KeyBindingService) UpdateKeyBindingPreventDefault(ctx context.Context, id int, preventDefault bool) error {
+	kb, err := s.GetKeyBindingByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if kb == nil {
+		return fmt.Errorf("key binding not found: id=%d", id)
+	}
+	return s.db.Client.KeyBinding.UpdateOneID(kb.ID).
+		SetPreventDefault(preventDefault).
 		Exec(ctx)
 }
 

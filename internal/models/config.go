@@ -79,6 +79,7 @@ type GeneralConfig struct {
 	// 界面设置
 	EnableLoadingAnimation bool `json:"enableLoadingAnimation"` // 是否启用加载动画
 	EnableTabs             bool `json:"enableTabs"`             // 是否启用标签页模式
+	EnableMemoryMonitor    bool `json:"enableMemoryMonitor"`    // 是否启用内存监视器
 }
 
 // HotkeyCombo 热键组合定义
@@ -188,6 +189,7 @@ func NewDefaultAppConfig() *AppConfig {
 			EnableGlobalHotkey:     false,
 			EnableLoadingAnimation: true,  // 默认启用加载动画
 			EnableTabs:             false, // 默认不启用标签页模式
+			EnableMemoryMonitor:    true,  // 默认启用内存监视器
 			GlobalHotkey: HotkeyCombo{
 				Ctrl:  false,
 				Shift: false,

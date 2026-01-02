@@ -24,6 +24,7 @@ export const CONFIG_KEY_MAP = {
     enableWindowSnap: 'general.enableWindowSnap',
     enableLoadingAnimation: 'general.enableLoadingAnimation',
     enableTabs: 'general.enableTabs',
+    enableMemoryMonitor: 'general.enableMemoryMonitor',
     // editing
     fontSize: 'editing.fontSize',
     fontFamily: 'editing.fontFamily',
@@ -88,6 +89,7 @@ export const DEFAULT_CONFIG: AppConfig = {
         enableWindowSnap: true,
         enableLoadingAnimation: true,
         enableTabs: false,
+        enableMemoryMonitor: true,
     },
     editing: {
         fontSize: CONFIG_LIMITS.fontSize.default,

@@ -39,6 +39,9 @@ export interface CodeBlockOptions {
 
     /** 新建块时的默认语言 */
     defaultLanguage?: SupportedLanguage;
+
+    /** 分隔符高度（像素） */
+    separatorHeight?: number;
 }
 
 /**
@@ -86,6 +89,7 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         showBackground = true,
         enableAutoDetection = true,
         defaultLanguage = 'text',
+        separatorHeight = 12,
     } = options;
 
     return [
@@ -104,7 +108,8 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 
         // 视觉装饰系统
         ...getBlockDecorationExtensions({
-            showBackground
+            showBackground,
+            separatorHeight
         }),
 
         // 光标保护（防止方向键移动到分隔符上）

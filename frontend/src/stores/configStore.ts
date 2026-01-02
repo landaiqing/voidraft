@@ -233,6 +233,9 @@ export const useConfigStore = defineStore('config', () => {
         // 标签页配置相关方法
         setEnableTabs: (value: boolean) => updateConfig('enableTabs', value),
 
+        // 内存监视器配置相关方法
+        setEnableMemoryMonitor: (value: boolean) => updateConfig('enableMemoryMonitor', value),
+
         // 快捷键模式配置相关方法
         setKeymapMode: (value: any) => updateConfig('keymapMode', value),
 

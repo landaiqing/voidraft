@@ -461,6 +461,11 @@ export class GeneralConfig {
      */
     "enableTabs": boolean;
 
+    /**
+     * 是否启用内存监视器
+     */
+    "enableMemoryMonitor": boolean;
+
     /** Creates a new GeneralConfig instance. */
     constructor($$source: Partial<GeneralConfig> = {}) {
         if (!("alwaysOnTop" in $$source)) {
@@ -489,6 +494,9 @@ export class GeneralConfig {
         }
         if (!("enableTabs" in $$source)) {
             this["enableTabs"] = false;
+        }
+        if (!("enableMemoryMonitor" in $$source)) {
+            this["enableMemoryMonitor"] = false;
         }
 
         Object.assign(this, $$source);
