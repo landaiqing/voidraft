@@ -51,13 +51,13 @@ let editorScope: ReturnType<typeof effectScope> | null = null;
 
 // 更新当前块语言信息
 const updateCurrentBlockLanguage = () => {
-  if (!editorStore.editorView) {
+  if (!editorStore.currentEditor) {
     currentBlockLanguage.value = { name: 'text', auto: false };
     return;
   }
 
   try {
-    const state = editorStore.editorView.state;
+    const state = editorStore.currentEditor.state;
     const activeBlock = getActiveNoteBlock(state as any);
     if (activeBlock) {
       const newLanguage = {
@@ -128,7 +128,7 @@ const setupEventListeners = (view: any) => {
 
 // 监听编辑器状态变化
 watch(
-  () => editorStore.editorView,
+  () => editorStore.currentEditor,
   (newView) => {
     if (newView) {
       setupEventListeners(newView);
@@ -175,13 +175,13 @@ const closeLanguageMenu = () => {
 
 // 选择语言 - 优化性能
 const selectLanguage = (languageId: SupportedLanguage) => {
-  if (!editorStore.editorView) {
+  if (!editorStore.currentEditor) {
     closeLanguageMenu();
     return;
   }
 
   try {
-    const view = editorStore.editorView;
+    const view = editorStore.currentEditor;
     const state = view.state;
     const dispatch = view.dispatch;
 
@@ -294,9 +294,11 @@ const scrollToCurrentLanguage = () => {
       <span class="arrow" :class="{ 'open': showLanguageMenu }">▲</span>
     </button>
     
-    <div class="language-menu" v-if="showLanguageMenu">
-      <!-- 搜索框 -->
-      <div class="search-container">
+    <!-- 菜单 -->
+    <Transition name="slide-up">
+      <div class="language-menu" v-if="showLanguageMenu">
+        <!-- 搜索框 -->
+        <div class="search-container">
         <input 
           ref="searchInputRef"
           v-model="searchQuery"
@@ -330,11 +332,23 @@ const scrollToCurrentLanguage = () => {
           {{ t('toolbar.noLanguageFound') }}
         </div>
       </div>
-    </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped lang="scss">
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
 .block-language-selector {
   position: relative;
   
@@ -386,15 +400,17 @@ const scrollToCurrentLanguage = () => {
     border: 1px solid var(--border-color);
     border-radius: 3px;
     margin-bottom: 4px;
-    width: 220px;
-    max-height: 280px;
+    width: 280px;
+    max-height: 400px;
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     
           .search-container {
         position: relative;
-        padding: 8px;
+        padding: 10px;
         border-bottom: 1px solid var(--border-color);
         
         .search-input {
@@ -403,11 +419,11 @@ const scrollToCurrentLanguage = () => {
           background-color: var(--bg-primary);
           border: 1px solid var(--border-color);
           border-radius: 2px;
-          padding: 5px 8px 5px 26px;
-          font-size: 11px;
+          padding: 6px 10px 6px 30px;
+          font-size: 12px;
           color: var(--text-primary);
           outline: none;
-          line-height: 1.2;
+          line-height: 1.4;
           
           &:focus {
             border-color: var(--text-muted);
@@ -420,7 +436,7 @@ const scrollToCurrentLanguage = () => {
         
         .search-icon {
           position: absolute;
-          left: 14px;
+          left: 16px;
           top: 50%;
           transform: translateY(-50%);
           color: var(--text-muted);
@@ -429,20 +445,21 @@ const scrollToCurrentLanguage = () => {
       }
     
           .language-list {
-        max-height: 200px;
+        max-height: 320px;
         overflow-y: auto;
+        flex: 1;
         
         .language-option {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 6px 8px;
+          padding: 8px 10px;
           cursor: pointer;
-          font-size: 11px;
+          font-size: 12px;
+          border-bottom: 1px solid var(--border-color);
           
           &:hover {
-            background-color: var(--border-color);
-            opacity: 0.8;
+            background-color: var(--bg-hover);
           }
           
           &.active {
@@ -460,17 +477,17 @@ const scrollToCurrentLanguage = () => {
           }
           
           .language-alias {
-            font-size: 10px;
+            font-size: 11px;
             color: var(--text-muted);
             opacity: 0.6;
           }
         }
         
         .no-results {
-          padding: 12px 8px;
+          padding: 14px 10px;
           text-align: center;
           color: var(--text-muted);
-          font-size: 11px;
+          font-size: 12px;
         }
       }
   }
@@ -478,7 +495,7 @@ const scrollToCurrentLanguage = () => {
 
 /* 自定义滚动条 */
 .language-list::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .language-list::-webkit-scrollbar-track {
@@ -487,7 +504,7 @@ const scrollToCurrentLanguage = () => {
 
 .language-list::-webkit-scrollbar-thumb {
   background-color: var(--border-color);
-  border-radius: 2px;
+  border-radius: 3px;
   
   &:hover {
     background-color: var(--text-muted);

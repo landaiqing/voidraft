@@ -2,12 +2,15 @@
 import {computed, nextTick, reactive, ref, watch} from 'vue';
 import {useDocumentStore} from '@/stores/documentStore';
 import {useTabStore} from '@/stores/tabStore';
+import {useEditorStore} from '@/stores/editorStore';
+import {useEditorStateStore} from '@/stores/editorStateStore';
 import {useWindowStore} from '@/stores/windowStore';
 import {useI18n} from 'vue-i18n';
 import {useConfirm} from '@/composables';
 import {validateDocumentTitle} from '@/common/utils/validation';
 import {formatDateTime, truncateString} from '@/common/utils/formatter';
-import type {Document} from '@/../bindings/voidraft/internal/models/ent/models';
+import {Document} from '@/../bindings/voidraft/internal/models/ent/models';
+import toast from '@/components/toast';
 
 // 类型定义
 interface DocumentItem extends Document {
@@ -16,6 +19,8 @@ interface DocumentItem extends Document {
 
 const documentStore = useDocumentStore();
 const tabStore = useTabStore();
+const editorStore = useEditorStore();
+const editorStateStore = useEditorStateStore();
 const windowStore = useWindowStore();
 const {t} = useI18n();
 
@@ -27,6 +32,7 @@ const editInputRef = ref<HTMLInputElement>();
 const state = reactive({
   isLoaded: false,
   searchQuery: '',
+  documentList: [] as Document[],  // 缓存文档列表
   editing: {
     id: null as number | null,
     title: ''
@@ -44,7 +50,7 @@ const currentDocName = computed(() => {
 });
 
 const filteredItems = computed<DocumentItem[]>(() => {
-  const docs = documentStore.documentList;
+  const docs = state.documentList;
   const query = state.searchQuery.trim();
 
   if (!query) return docs;
@@ -67,7 +73,7 @@ const filteredItems = computed<DocumentItem[]>(() => {
 
 // 核心操作
 const openMenu = async () => {
-  await documentStore.getDocumentMetaList();
+  state.documentList = await documentStore.getDocumentList();
   documentStore.openDocumentSelector();
   state.isLoaded = true;
   await nextTick();
@@ -88,10 +94,10 @@ const closeMenu = () => {
   resetDeleteConfirm();
 };
 
-const selectDoc = async (doc: Document) => {
+const selectDoc = async (doc: DocumentItem) => {
   if (doc.id === undefined) return;
 
-  // 如果选择的就是当前文档，直接关闭菜单
+  // 如果选择的就是当前文档,直接关闭菜单
   if (documentStore.currentDocument?.id === doc.id) {
     closeMenu();
     return;
@@ -99,17 +105,40 @@ const selectDoc = async (doc: Document) => {
 
   const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
   if (hasOpen) {
-    documentStore.setError(doc.id, t('toolbar.alreadyOpenInNewWindow'));
+    toast.warning(t('toolbar.alreadyOpenInNewWindow'));
     return;
   }
 
-  const success = await documentStore.openDocument(doc.id);
-  if (success) {
-    if (tabStore.isTabsEnabled) {
-      tabStore.addOrActivateTab(doc);
-    }
-    closeMenu();
+
+  // 保存旧文档的光标位置
+  const oldDocId = documentStore.currentDocumentId;
+  if (oldDocId) {
+    const cursorPos = editorStore.getCurrentCursorPosition();
+    editorStateStore.saveCursorPosition(oldDocId, cursorPos);
   }
+
+  // 如果旧文档有未保存修改,保存它
+  if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
+
+    const content = editorStore.getCurrentContent();
+    await documentStore.saveDocument(oldDocId, content);
+    editorStore.syncAfterSave(oldDocId);
+
+  }
+
+  // 打开新文档
+  const success = await documentStore.openDocument(doc.id);
+  if (!success) return;
+
+  // 切换到新编辑器
+  await editorStore.switchToEditor(doc.id);
+
+  // 更新标签页
+  if (documentStore.currentDocument && tabStore.isTabsEnabled) {
+    tabStore.addOrActivateTab(documentStore.currentDocument);
+  }
+
+  closeMenu();
 };
 
 const createDoc = async (title: string) => {
@@ -119,7 +148,9 @@ const createDoc = async (title: string) => {
 
   try {
     const newDoc = await documentStore.createNewDocument(trimmedTitle);
-    if (newDoc) await selectDoc(newDoc);
+    if (newDoc && newDoc.id) {
+      await selectDoc(newDoc);
+    }
   } catch (error) {
     console.error('Failed to create document:', error);
   }
@@ -142,7 +173,7 @@ const handleSearchEnter = () => {
 };
 
 // 编辑操作
-const renameDoc = (doc: Document, event: Event) => {
+const renameDoc = (doc: DocumentItem, event: Event) => {
   event.stopPropagation();
   state.editing.id = doc.id ?? null;
   state.editing.title = doc.title || '';
@@ -165,8 +196,8 @@ const saveEdit = async () => {
   if (error) return;
 
   try {
-    await documentStore.updateDocumentMetadata(state.editing.id, trimmedTitle);
-    await documentStore.getDocumentMetaList();
+    await documentStore.updateDocumentTitle(state.editing.id, trimmedTitle);
+    state.documentList = await documentStore.getDocumentList();
 
     // 如果tabs功能开启且该文档有标签页，更新标签页标题
     if (tabStore.isTabsEnabled && tabStore.hasTab(state.editing.id)) {
@@ -186,17 +217,21 @@ const cancelEdit = () => {
 };
 
 // 其他操作
-const openInNewWindow = async (doc: Document, event: Event) => {
+const openInNewWindow = async (doc: DocumentItem, event: Event) => {
   event.stopPropagation();
   if (doc.id === undefined) return;
   try {
+    // 在打开新窗口前，如果启用了标签且该文档有标签，先关闭标签
+    if (tabStore.isTabsEnabled && tabStore.hasTab(doc.id)) {
+      await tabStore.closeTab(doc.id);
+    }
     await documentStore.openDocumentInNewWindow(doc.id);
   } catch (error) {
     console.error('Failed to open document in new window:', error);
   }
 };
 
-const handleDelete = async (doc: Document, event: Event) => {
+const handleDelete = async (doc: DocumentItem, event: Event) => {
   event.stopPropagation();
   if (doc.id === undefined) return;
 
@@ -204,17 +239,17 @@ const handleDelete = async (doc: Document, event: Event) => {
     // 确认删除前检查文档是否在其他窗口打开
     const hasOpen = await windowStore.isDocumentWindowOpen(doc.id);
     if (hasOpen) {
-      documentStore.setError(doc.id, t('toolbar.alreadyOpenInNewWindow'));
+      toast.warning(t('toolbar.alreadyOpenInNewWindow'));
       resetDeleteConfirm();
       return;
     }
 
     const deleteSuccess = await documentStore.deleteDocument(doc.id);
     if (deleteSuccess) {
-      await documentStore.getDocumentMetaList();
-      // 如果删除的是当前文档，切换到第一个文档
-      if (documentStore.currentDocument?.id === doc.id && documentStore.documentList.length > 0) {
-        const firstDoc = documentStore.documentList[0];
+      state.documentList = await documentStore.getDocumentList();
+      // 如果删除的是当前文档,切换到第一个文档
+      if (documentStore.currentDocument?.id === doc.id && state.documentList.length > 0) {
+        const firstDoc = state.documentList[0];
         if (firstDoc) await selectDoc(firstDoc);
       }
     }
@@ -307,11 +342,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               <!-- 普通显示 -->
               <div v-if="state.editing.id !== item.id" class="doc-info">
                 <div class="doc-title">{{ item.title }}</div>
-                <!-- 根据状态显示错误信息或时间 -->
-                <div v-if="documentStore.selectorError?.docId === item.id" class="doc-error">
-                  {{ documentStore.selectorError?.message }}
-                </div>
-                <div v-else class="doc-date">{{ formatDateTime(item.updated_at) }}</div>
+                <div class="doc-date">{{ formatDateTime(item.updated_at) }}</div>
               </div>
 
               <!-- 编辑状态 -->
@@ -353,7 +384,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
                   </svg>
                 </button>
                 <button
-                    v-if="documentStore.documentList.length > 1 && item.id !== 1"
+                    v-if="state.documentList.length > 1"
                     class="action-btn delete-btn"
                     :class="{ 'delete-confirm': isDeleting(item.id!) }"
                     @click="handleDelete(item, $event)"
@@ -444,7 +475,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
     border: 1px solid var(--border-color);
     border-radius: 3px;
     margin-bottom: 4px;
-    width: 300px;
+    width: 340px;
     max-height: calc(100vh - 40px);
     z-index: 1000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -454,7 +485,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
 
     .input-box {
       position: relative;
-      padding: 8px;
+      padding: 10px;
       border-bottom: 1px solid var(--border-color);
 
       .main-input {
@@ -463,8 +494,8 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
         background-color: var(--bg-primary);
         border: 1px solid var(--border-color);
         border-radius: 2px;
-        padding: 5px 8px 5px 26px;
-        font-size: 11px;
+        padding: 6px 10px 6px 30px;
+        font-size: 12px;
         color: var(--text-primary);
         outline: none;
 
@@ -479,7 +510,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
 
       .input-icon {
         position: absolute;
-        left: 14px;
+        left: 16px;
         top: 50%;
         transform: translateY(-50%);
         color: var(--text-muted);
@@ -500,7 +531,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
           background-color: var(--bg-hover);
         }
 
-        &.active {
+          &.active {
           background-color: var(--selection-bg);
 
           .doc-item-content .doc-info {
@@ -508,7 +539,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               color: var(--selection-text);
             }
 
-            .doc-date, .doc-error {
+            .doc-date {
               color: var(--selection-text);
               opacity: 0.7;
             }
@@ -520,8 +551,8 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 8px;
-            font-size: 11px;
+            padding: 10px 10px;
+            font-size: 12px;
             font-weight: normal;
 
             svg {
@@ -535,15 +566,15 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 8px 8px;
+          padding: 10px 10px;
 
           .doc-info {
             flex: 1;
             min-width: 0;
 
             .doc-title {
-              font-size: 12px;
-              margin-bottom: 2px;
+              font-size: 13px;
+              margin-bottom: 3px;
               overflow: hidden;
               text-overflow: ellipsis;
               white-space: nowrap;
@@ -551,16 +582,9 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
             }
 
             .doc-date {
-              font-size: 10px;
+              font-size: 11px;
               color: var(--text-muted);
               opacity: 0.6;
-            }
-
-            .doc-error {
-              font-size: 10px;
-              color: var(--text-danger);
-              font-weight: 500;
-              animation: fadeInOut 3s forwards;
             }
           }
 
@@ -573,8 +597,8 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               background-color: var(--bg-primary);
               border: 1px solid var(--border-color);
               border-radius: 2px;
-              padding: 4px 6px;
-              font-size: 11px;
+              padding: 5px 8px;
+              font-size: 12px;
               color: var(--text-primary);
               outline: none;
 
@@ -586,7 +610,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
 
           .doc-actions {
             display: flex;
-            gap: 6px;
+            gap: 8px;
             opacity: 0;
             transition: opacity 0.2s ease;
 
@@ -595,7 +619,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
               border: none;
               color: var(--text-muted);
               cursor: pointer;
-              padding: 4px;
+              padding: 5px;
               border-radius: 2px;
               display: flex;
               align-items: center;
@@ -616,7 +640,7 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
                   color: white;
 
                   .confirm-text {
-                    font-size: 9px;
+                    font-size: 10px;
                     font-weight: 500;
                   }
                 }
@@ -631,27 +655,12 @@ watch(() => documentStore.showDocumentSelector, (isOpen) => {
       }
 
       .empty {
-        padding: 16px 8px;
+        padding: 18px 10px;
         text-align: center;
-        font-size: 11px;
+        font-size: 12px;
         color: var(--text-muted);
       }
     }
-  }
-}
-
-@keyframes fadeInOut {
-  0% {
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
   }
 }
 </style>

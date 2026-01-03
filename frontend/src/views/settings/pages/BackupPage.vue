@@ -2,47 +2,17 @@
 import {useConfigStore} from '@/stores/configStore';
 import {useBackupStore} from '@/stores/backupStore';
 import {useI18n} from 'vue-i18n';
-import {computed, ref, watch, onUnmounted} from 'vue';
+import {computed} from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 import {AuthMethod} from '@/../bindings/voidraft/internal/models/models';
 import {DialogService} from '@/../bindings/voidraft/internal/services';
+import toast from '@/components/toast';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
 const backupStore = useBackupStore();
-
-// 消息显示状态
-const message = ref<string | null>(null);
-const isError = ref(false);
-let messageTimer: ReturnType<typeof setTimeout> | null = null;
-
-const clearMessage = () => {
-  if (messageTimer) {
-    clearTimeout(messageTimer);
-    messageTimer = null;
-  }
-  message.value = null;
-};
-
-// 监听同步完成，显示消息并自动消失
-watch(() => backupStore.isSyncing, (syncing, wasSyncing) => {
-  if (wasSyncing && !syncing) {
-    clearMessage();
-    if (backupStore.error) {
-      message.value = backupStore.error;
-      isError.value = true;
-      messageTimer = setTimeout(clearMessage, 5000);
-    } else {
-      message.value = 'Sync successful';
-      isError.value = false;
-      messageTimer = setTimeout(clearMessage, 3000);
-    }
-  }
-});
-
-onUnmounted(clearMessage);
 
 const authMethodOptions = computed(() => [
   {value: AuthMethod.Token, label: t('settings.backup.authMethods.token')},
@@ -62,6 +32,15 @@ const selectSshKeyFile = async () => {
   const selectedPath = await DialogService.SelectFile();
   if (selectedPath.trim()) {
     configStore.setSshKeyPath(selectedPath.trim());
+  }
+};
+
+const handleSync = async () => {
+  try {
+    await backupStore.sync();
+    toast.success('Sync successful');
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : String(e));
   }
 };
 </script>
@@ -202,14 +181,10 @@ const selectSshKeyFile = async () => {
 
     <!-- 备份操作 -->
     <SettingSection :title="t('settings.backup.backupOperations')">
-      <SettingItem 
-        :title="t('settings.backup.syncToRemote')"
-        :description="message || undefined"
-        :descriptionType="message ? (isError ? 'error' : 'success') : 'default'"
-      >
+      <SettingItem :title="t('settings.backup.syncToRemote')">
         <button
           class="sync-button"
-          @click="backupStore.sync"
+          @click="handleSync"
           :disabled="!configStore.config.backup.enabled || !configStore.config.backup.repo_url || backupStore.isSyncing"
           :class="{ 'syncing': backupStore.isSyncing }"
         >
@@ -222,10 +197,6 @@ const selectSshKeyFile = async () => {
 </template>
 
 <style scoped lang="scss">
-.settings-page {
-  //max-width: 800px;
-}
-
 // 统一的输入控件样式
 .repo-url-input,
 .branch-input,

@@ -1,6 +1,6 @@
 import {Extension} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
-import {DocumentStats} from '@/stores/editorStore';
+import {DocumentStats} from '@/stores/editorStateStore';
 import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 
 // 更新编辑器文档统计信息

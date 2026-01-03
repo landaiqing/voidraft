@@ -39,6 +39,9 @@ export interface CodeBlockOptions {
 
     /** 新建块时的默认语言 */
     defaultLanguage?: SupportedLanguage;
+
+    /** 分隔符高度（像素） */
+    separatorHeight?: number;
 }
 
 /**

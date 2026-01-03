@@ -3,6 +3,7 @@ import {useI18n} from 'vue-i18n';
 import {computed, onMounted, onUnmounted, ref, watch, shallowRef, readonly, toRefs, effectScope, onScopeDispose} from 'vue';
 import {useConfigStore} from '@/stores/configStore';
 import {useEditorStore} from '@/stores/editorStore';
+import {useEditorStateStore} from '@/stores/editorStateStore';
 import {useUpdateStore} from '@/stores/updateStore';
 import {useWindowStore} from '@/stores/windowStore';
 import {useSystemStore} from '@/stores/systemStore';
@@ -15,6 +16,7 @@ import {formatBlockContent} from '@/views/editor/extensions/codeblock/formatCode
 import {createDebounce} from '@/common/utils/debounce';
 
 const editorStore = useEditorStore();
+const editorStateStore = useEditorStateStore();
 const configStore = useConfigStore();
 const updateStore = useUpdateStore();
 const windowStore = useWindowStore();
@@ -25,7 +27,6 @@ const router = useRouter();
 const canFormatCurrentBlock = ref(false);
 const isLoaded = shallowRef(false);
 
-const { documentStats } = toRefs(editorStore);
 const { config } = toRefs(configStore);
 
 // 窗口置顶状态
@@ -57,14 +58,14 @@ const goToSettings = () => {
 
 // 执行格式化
 const formatCurrentBlock = () => {
-  if (!canFormatCurrentBlock.value || !editorStore.editorView) return;
-  formatBlockContent(editorStore.editorView);
+  if (!canFormatCurrentBlock.value || !editorStore.currentEditor) return;
+  formatBlockContent(editorStore.currentEditor);
 };
 
 
 // 统一更新按钮状态
 const updateButtonStates = () => {
-  const view: any = editorStore.editorView;
+  const view: any = editorStore.currentEditor;
   if (!view) {
     canFormatCurrentBlock.value = false;
     return;
@@ -125,7 +126,7 @@ const setupEditorListeners = (view: any) => {
 
 // 监听编辑器视图变化
 watch(
-    () => editorStore.editorView,
+    () => editorStore.currentEditor,
     (newView) => {
       // 在 scope 中管理副作用
       editorScope.run(() => {
@@ -191,11 +192,13 @@ const updateButtonTitle = computed(() => {
 });
 
 // 统计数据的计算属性
-const statsData = computed(() => ({
-  lines: documentStats.value.lines,
-  characters: documentStats.value.characters,
-  selectedCharacters: documentStats.value.selectedCharacters
-}));
+const statsData = computed(() => {
+  const docId = editorStore.currentEditorId;
+  if (!docId) {
+    return { lines: 0, characters: 0, selectedCharacters: 0 };
+  }
+  return editorStateStore.getDocumentStats(docId);
+});
 </script>
 
 <template>

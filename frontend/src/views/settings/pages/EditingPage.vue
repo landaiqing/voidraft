@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
+import { useEditorStore } from '@/stores/editorStore';
 import { useI18n } from 'vue-i18n';
 import {computed, onMounted } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -9,6 +10,7 @@ import { TabType } from '@/../bindings/voidraft/internal/models/';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
+const editorStore = useEditorStore();
 
 // 确保配置已加载
 onMounted(async () => {
@@ -27,6 +29,7 @@ const fontFamilyModel = computed({
   set: async (fontFamily: string) => {
     if (fontFamily) {
       await configStore.setFontFamily(fontFamily);
+      editorStore.applyFontSettings();
     }
   }
 });
@@ -50,6 +53,7 @@ const fontWeightModel = computed({
   set: async (value: string) => {
     if (value) {
       await configStore.setFontWeight(value);
+      editorStore.applyFontSettings();
     }
   }
 });
@@ -58,20 +62,24 @@ const fontWeightModel = computed({
 const increaseLineHeight = async () => {
   const newLineHeight = Math.min(3.0, configStore.config.editing.lineHeight + 0.1);
   await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
+  editorStore.applyFontSettings();
 };
 
 const decreaseLineHeight = async () => {
   const newLineHeight = Math.max(1.0, configStore.config.editing.lineHeight - 0.1);
   await configStore.setLineHeight(Math.round(newLineHeight * 10) / 10);
+  editorStore.applyFontSettings();
 };
 
 // 字体大小控制
 const increaseFontSize = async () => {
   await configStore.increaseFontSize();
+  editorStore.applyFontSettings();
 };
 
 const decreaseFontSize = async () => {
   await configStore.decreaseFontSize();
+  editorStore.applyFontSettings();
 };
 
 // Tab类型切换
@@ -84,15 +92,18 @@ const tabTypeText = computed(() => {
 // Tab大小增减
 const increaseTabSize = async () => {
   await configStore.increaseTabSize();
+  editorStore.applyTabSettings();
 };
 
 const decreaseTabSize = async () => {
   await configStore.decreaseTabSize();
+  editorStore.applyTabSettings();
 };
 
 // Tab相关操作
 const handleToggleTabType = async () => {
   await configStore.toggleTabType();
+  editorStore.applyTabSettings();
 };
 
 // 创建双向绑定的计算属性
@@ -100,6 +111,7 @@ const enableTabIndent = computed({
   get: () => configStore.config.editing.enableTabIndent,
   set: async (value: boolean) => {
     await configStore.setEnableTabIndent(value);
+    editorStore.applyTabSettings();
   }
 });
 
@@ -187,13 +199,13 @@ const handleAutoSaveDelayChange = async (event: Event) => {
           <button 
             @click="decreaseTabSize" 
             class="control-button" 
-            :disabled="!enableTabIndent || configStore.config.editing.tabSize <= configStore.tabSize.min"
+            :disabled="!enableTabIndent || configStore.config.editing.tabSize <= 2"
           >-</button>
           <span>{{ configStore.config.editing.tabSize }}</span>
           <button 
             @click="increaseTabSize" 
             class="control-button" 
-            :disabled="!enableTabIndent || configStore.config.editing.tabSize >= configStore.tabSize.max"
+            :disabled="!enableTabIndent || configStore.config.editing.tabSize >= 8"
           >+</button>
         </div>
       </SettingItem>

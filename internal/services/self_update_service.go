@@ -25,7 +25,7 @@ type SelfUpdateResult struct {
 	AssetURL       string `json:"assetURL"`       // 下载链接
 	ReleaseNotes   string `json:"releaseNotes"`   // 发布说明
 	Error          string `json:"error"`          // 错误信息
-	Source         string `json:"source"`         // 更新源（github/gitea）
+	Source         string `json:"source"`         // 更新源（github）
 }
 
 // SelfUpdateService 自我更新服务
@@ -66,33 +66,6 @@ func (s *SelfUpdateService) CheckForUpdates(ctx context.Context) (*SelfUpdateRes
 		return nil, err
 	}
 
-	result := &SelfUpdateResult{
-		CurrentVersion: config.Updates.Version,
-		HasUpdate:      false,
-		UpdateApplied:  false,
-	}
-
-	// 尝试主要更新源
-	primaryResult, err := s.checkSourceForUpdates(ctx, config.Updates.PrimarySource, config)
-	if err == nil && primaryResult != nil {
-		s.handleUpdateBadge(primaryResult)
-		return primaryResult, nil
-	}
-
-	// 尝试备用更新源
-	backupResult, backupErr := s.checkSourceForUpdates(ctx, config.Updates.BackupSource, config)
-	if backupErr != nil {
-		result.Error = fmt.Sprintf("both sources failed: %v; %v", err, backupErr)
-		s.handleUpdateBadge(result)
-		return result, errors.New(result.Error)
-	}
-
-	s.handleUpdateBadge(backupResult)
-	return backupResult, nil
-}
-
-// checkSourceForUpdates 根据更新源类型检查更新
-func (s *SelfUpdateService) checkSourceForUpdates(ctx context.Context, sourceType models.UpdateSourceType, config *models.AppConfig) (*SelfUpdateResult, error) {
 	timeout := config.Updates.UpdateTimeout
 	if timeout <= 0 {
 		timeout = 30
@@ -104,28 +77,21 @@ func (s *SelfUpdateService) checkSourceForUpdates(ctx context.Context, sourceTyp
 		CurrentVersion: config.Updates.Version,
 		HasUpdate:      false,
 		UpdateApplied:  false,
-		Source:         string(sourceType),
+		Source:         "github",
 	}
 
-	var release *selfupdate.Release
-	var found bool
-	var err error
-
-	switch sourceType {
-	case models.UpdateSourceGithub:
-		release, found, err = s.checkGithubUpdates(timeoutCtx, config)
-	case models.UpdateSourceGitea:
-		release, found, err = s.checkGiteaUpdates(timeoutCtx, config)
-	default:
-		return nil, fmt.Errorf("unsupported source: %s", sourceType)
-	}
-
+	// 检查 GitHub 更新
+	release, found, err := s.checkGithubUpdates(timeoutCtx, config)
 	if err != nil {
-		return result, fmt.Errorf("check failed: %w", err)
+		result.Error = fmt.Sprintf("check github updates failed: %v", err)
+		s.handleUpdateBadge(result)
+		return result, err
 	}
 
 	if !found {
-		return result, fmt.Errorf("no release for %s/%s", runtime.GOOS, runtime.GOARCH)
+		result.Error = fmt.Sprintf("no release for %s/%s", runtime.GOOS, runtime.GOARCH)
+		s.handleUpdateBadge(result)
+		return result, errors.New(result.Error)
 	}
 
 	result.LatestVersion = release.Version()
@@ -133,24 +99,13 @@ func (s *SelfUpdateService) checkSourceForUpdates(ctx context.Context, sourceTyp
 	result.ReleaseNotes = release.ReleaseNotes
 	result.HasUpdate = release.GreaterThan(config.Updates.Version)
 
+	s.handleUpdateBadge(result)
 	return result, nil
 }
 
 // createGithubUpdater 创建GitHub更新器
 func (s *SelfUpdateService) createGithubUpdater() (*selfupdate.Updater, error) {
 	return selfupdate.NewUpdater(selfupdate.Config{})
-}
-
-// createGiteaUpdater 创建Gitea更新器
-func (s *SelfUpdateService) createGiteaUpdater(config *models.AppConfig) (*selfupdate.Updater, error) {
-	source, err := selfupdate.NewGiteaSource(selfupdate.GiteaConfig{
-		BaseURL: config.Updates.Gitea.BaseURL,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create gitea source failed: %w", err)
-	}
-
-	return selfupdate.NewUpdater(selfupdate.Config{Source: source})
 }
 
 // checkGithubUpdates 检查GitHub更新
@@ -161,17 +116,6 @@ func (s *SelfUpdateService) checkGithubUpdates(ctx context.Context, config *mode
 	}
 
 	repo := selfupdate.NewRepositorySlug(config.Updates.Github.Owner, config.Updates.Github.Repo)
-	return updater.DetectLatest(ctx, repo)
-}
-
-// checkGiteaUpdates 检查Gitea更新
-func (s *SelfUpdateService) checkGiteaUpdates(ctx context.Context, config *models.AppConfig) (*selfupdate.Release, bool, error) {
-	updater, err := s.createGiteaUpdater(config)
-	if err != nil {
-		return nil, false, err
-	}
-
-	repo := selfupdate.NewRepositorySlug(config.Updates.Gitea.Owner, config.Updates.Gitea.Repo)
 	return updater.DetectLatest(ctx, repo)
 }
 
@@ -201,23 +145,17 @@ func (s *SelfUpdateService) ApplyUpdate(ctx context.Context) (*SelfUpdateResult,
 		return nil, fmt.Errorf("locate executable failed: %w", err)
 	}
 
-	// 尝试主要源
-	result, err := s.performUpdate(ctx, config.Updates.PrimarySource, exe, config)
-	if err == nil {
-		return result, nil
-	}
-
-	// 尝试备用源
-	result, err = s.performUpdate(ctx, config.Updates.BackupSource, exe, config)
+	// 执行 GitHub 更新
+	result, err := s.performUpdate(ctx, exe, config)
 	if err != nil {
-		return nil, fmt.Errorf("update failed from both sources: %w", err)
+		return nil, fmt.Errorf("update failed: %w", err)
 	}
 
 	return result, nil
 }
 
 // performUpdate 执行更新操作（包括检测、备份、下载、应用）
-func (s *SelfUpdateService) performUpdate(ctx context.Context, sourceType models.UpdateSourceType, exe string, config *models.AppConfig) (*SelfUpdateResult, error) {
+func (s *SelfUpdateService) performUpdate(ctx context.Context, exe string, config *models.AppConfig) (*SelfUpdateResult, error) {
 	timeout := config.Updates.UpdateTimeout
 	if timeout <= 0 {
 		timeout = 30
@@ -225,8 +163,13 @@ func (s *SelfUpdateService) performUpdate(ctx context.Context, sourceType models
 	checkCtx, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()
 
-	// 获取更新器和版本信息
-	updater, release, found, err := s.getUpdateFromSource(checkCtx, sourceType, config)
+	// 获取 GitHub 更新信息
+	updater, err := s.createGithubUpdater()
+	if err != nil {
+		return nil, fmt.Errorf("create github updater failed: %w", err)
+	}
+
+	release, found, err := s.checkGithubUpdates(checkCtx, config)
 	if err != nil || !found {
 		return nil, fmt.Errorf("detect release failed: %w", err)
 	}
@@ -236,7 +179,7 @@ func (s *SelfUpdateService) performUpdate(ctx context.Context, sourceType models
 		LatestVersion:  release.Version(),
 		AssetURL:       release.AssetURL,
 		ReleaseNotes:   release.ReleaseNotes,
-		Source:         string(sourceType),
+		Source:         "github",
 		HasUpdate:      release.GreaterThan(config.Updates.Version),
 	}
 
@@ -267,33 +210,6 @@ func (s *SelfUpdateService) performUpdate(ctx context.Context, sourceType models
 	result.UpdateApplied = true
 	s.handleUpdateSuccess(result)
 	return result, nil
-}
-
-// getUpdateFromSource 从指定源获取更新信息
-func (s *SelfUpdateService) getUpdateFromSource(ctx context.Context, sourceType models.UpdateSourceType, config *models.AppConfig) (*selfupdate.Updater, *selfupdate.Release, bool, error) {
-	var updater *selfupdate.Updater
-	var release *selfupdate.Release
-	var found bool
-	var err error
-
-	switch sourceType {
-	case models.UpdateSourceGithub:
-		updater, err = s.createGithubUpdater()
-		if err != nil {
-			return nil, nil, false, err
-		}
-		release, found, err = s.checkGithubUpdates(ctx, config)
-	case models.UpdateSourceGitea:
-		updater, err = s.createGiteaUpdater(config)
-		if err != nil {
-			return nil, nil, false, err
-		}
-		release, found, err = s.checkGiteaUpdates(ctx, config)
-	default:
-		return nil, nil, false, fmt.Errorf("unsupported source: %s", sourceType)
-	}
-
-	return updater, release, found, err
 }
 
 // handleUpdateSuccess 处理更新成功后的操作

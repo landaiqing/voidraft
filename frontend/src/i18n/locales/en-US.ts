@@ -1,5 +1,14 @@
 export default {
   locale: 'en-US',
+  common: {
+    ok: 'OK',
+    cancel: 'Cancel',
+    edit: 'Edit',
+    delete: 'Delete',
+    confirm: 'Confirm',
+    save: 'Save',
+    reset: 'Reset'
+  },
   titlebar: {
     minimize: 'Minimize',
     maximize: 'Maximize',
@@ -56,6 +65,19 @@ export default {
     },
     resetToDefault: 'Reset to Default',
     confirmReset: 'Confirm Reset?',
+    noKeybinding: 'Not Set',
+    waitingForKey: 'Waiting...',
+    clickToSet: 'Click to set keybinding',
+    editKeybinding: 'Edit keybinding',
+    config: {
+      enabled: 'Enabled',
+      preventDefault: 'Prevent Default',
+      keybinding: 'Keybinding'
+    },
+    keyPlaceholder: 'Enter key, press Enter to add',
+    invalidFormat: 'Invalid format',
+    conflict: 'Conflict: {command}',
+    maxKeysReached: 'Maximum 4 keys allowed',
     commands: {
       showSearch: 'Show search panel',
       hideSearch: 'Hide search panel',
@@ -178,6 +200,7 @@ export default {
     enableWindowSnap: 'Enable Window Snapping',
     enableLoadingAnimation: 'Enable Loading Animation',
     enableTabs: 'Enable Tabs',
+    enableMemoryMonitor: 'Enable Memory Monitor',
     startup: 'Startup Settings',
     startAtLogin: 'Start at Login',
     dataStorage: 'Data Storage',
@@ -223,6 +246,7 @@ export default {
       categoryEditing: 'Editing Enhancement',
       categoryUI: 'UI Enhancement',
       categoryTools: 'Tools',
+      enabled: 'Enabled',
       configuration: 'Configuration',
       resetToDefault: 'Reset to Default Configuration',
     },

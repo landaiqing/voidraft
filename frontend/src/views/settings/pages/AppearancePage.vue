@@ -133,16 +133,13 @@ const updateLocalColor = (colorKey: string, value: string) => {
 const applyChanges = async () => {
   try {
     if (!tempColors.value) return;
-    
+
     // 更新 store 中的颜色
     themeStore.updateCurrentColors(tempColors.value);
     
     // 保存到数据库
     await themeStore.saveCurrentTheme();
-    
-    // 刷新编辑器主题
-    themeStore.refreshEditorTheme();
-    
+
     // 清除未保存标记
     hasUnsavedChanges.value = false;
   } catch (error) {

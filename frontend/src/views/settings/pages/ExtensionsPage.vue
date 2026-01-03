@@ -3,6 +3,7 @@ import {computed, onMounted, ref} from 'vue';
 import {useI18n} from 'vue-i18n';
 import {useEditorStore} from '@/stores/editorStore';
 import {useExtensionStore} from '@/stores/extensionStore';
+import {useKeybindingStore} from '@/stores/keybindingStore';
 import {ExtensionService} from '@/../bindings/voidraft/internal/services';
 import {
   getExtensionDefaultConfig,
@@ -10,13 +11,16 @@ import {
   getExtensionDisplayName, getExtensionsMap,
   hasExtensionConfig
 } from '@/views/editor/manager/extensions';
+import {getExtensionManager} from '@/views/editor/manager';
 import SettingSection from '../components/SettingSection.vue';
-import SettingItem from '../components/SettingItem.vue';
+import AccordionContainer from '@/components/accordion/AccordionContainer.vue';
+import AccordionItem from '@/components/accordion/AccordionItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 
 const {t} = useI18n();
 const editorStore = useEditorStore();
 const extensionStore = useExtensionStore();
+const keybindingStore = useKeybindingStore();
 
 // 页面初始化时加载扩展数据
 onMounted(async () => {
@@ -24,11 +28,11 @@ onMounted(async () => {
 });
 
 // 展开状态管理
-const expandedExtensions = ref<Set<number>>(new Set());
+const expandedExtensions = ref<number[]>([]);
 
 // 获取所有可用的扩展
 const availableExtensions = computed(() => {
-  return getExtensionsMap().map(name => {
+  const extensions = getExtensionsMap().map(name => {
     const extension = extensionStore.extensions.find(ext => ext.name === name);
     return {
       id: extension?.id ?? 0,
@@ -41,21 +45,37 @@ const availableExtensions = computed(() => {
       defaultConfig: getExtensionDefaultConfig(name)
     };
   });
+  console.log('Available Extensions:', extensions);
+  return extensions;
 });
 
-// 切换展开状态
-const toggleExpanded = (extensionId: number) => {
-  if (expandedExtensions.value.has(extensionId)) {
-    expandedExtensions.value.delete(extensionId);
-  } else {
-    expandedExtensions.value.add(extensionId);
-  }
+// 获取扩展图标路径（直接使用扩展名称作为文件名）
+const getExtensionIcon = (name: string): string => {
+  return `/images/${name}.svg`;
 };
 
 // 更新扩展状态
 const updateExtension = async (extensionId: number, enabled: boolean) => {
   try {
-    await editorStore.updateExtension(extensionId, enabled);
+    // 更新后端
+    await ExtensionService.UpdateExtensionEnabled(extensionId, enabled);
+    
+    // 重新加载各个 Store 的状态
+    await extensionStore.loadExtensions();
+    await keybindingStore.loadKeyBindings();
+    
+    // 获取更新后的扩展
+    const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
+    if (!extension) return;
+    
+    // 应用到编辑器
+    const manager = getExtensionManager();
+    if (manager) {
+      manager.updateExtension(extension.name, enabled, extension.config);
+    }
+    
+    // 更新快捷键
+    await editorStore.applyKeymapSettings();
   } catch (error) {
     console.error('Failed to update extension:', error);
   }
@@ -75,9 +95,18 @@ const updateExtensionConfig = async (extensionId: number, configKey: string, val
     } else {
       updatedConfig[configKey] = value;
     }
-    // 使用editorStore的updateExtension方法更新，确保应用到所有编辑器实例
-    await editorStore.updateExtension(extensionId, extension.enabled ?? false, updatedConfig);
-
+    
+    // 更新后端配置
+    await ExtensionService.UpdateExtensionConfig(extensionId, updatedConfig);
+    
+    // 重新加载状态
+    await extensionStore.loadExtensions();
+    
+    // 应用到编辑器
+    const manager = getExtensionManager();
+    if (manager) {
+      manager.updateExtension(extension.name, extension.enabled ?? false, updatedConfig);
+    }
   } catch (error) {
     console.error('Failed to update extension config:', error);
   }
@@ -89,14 +118,16 @@ const resetExtension = async (extensionId: number) => {
     // 重置到默认配置
     await ExtensionService.ResetExtensionConfig(extensionId);
 
-    // 重新加载扩展状态以获取最新配置
+    // 重新加载扩展状态
     await extensionStore.loadExtensions();
 
-    // 获取重置后的状态，立即应用到所有编辑器视图
+    // 获取重置后的状态，应用到编辑器
     const extension = extensionStore.extensions.find(ext => ext.id === extensionId);
     if (extension) {
-      // 通过editorStore更新，确保所有视图都能同步
-      await editorStore.updateExtension(extensionId, extension.enabled ?? false, extension.config);
+      const manager = getExtensionManager();
+      if (manager) {
+        manager.updateExtension(extension.name, extension.enabled ?? false, extension.config);
+      }
     }
   } catch (error) {
     console.error('Failed to reset extension:', error);
@@ -161,152 +192,227 @@ const handleConfigInput = async (
 <template>
   <div class="settings-page">
     <SettingSection :title="t('settings.extensions')">
-      <div
-          v-for="extension in availableExtensions"
-          :key="extension.name"
-          class="extension-item"
-      >
-        <!-- 扩展主项 -->
-        <SettingItem
-            :title="extension.displayName"
-            :description="extension.description"
-        >
-          <div class="extension-controls">
-            <button
-                v-if="extension.hasConfig"
-                class="config-button"
-                @click="toggleExpanded(extension.id)"
-                :class="{ expanded: expandedExtensions.has(extension.id) }"
-                :title="t('settings.extensionsPage.configuration')"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                   stroke-linecap="round" stroke-linejoin="round">
-                <path
-                    d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                <circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-            <div v-else class="config-placeholder"></div>
-            <ToggleSwitch
-                :model-value="extension.enabled"
-                @update:model-value="updateExtension(extension.id, $event)"
-            />
-          </div>
-        </SettingItem>
-
-        <!-- 可展开的配置区域 -->
-        <div
-            v-if="extension.hasConfig && expandedExtensions.has(extension.id)"
-            class="extension-config"
-        >
-          <!-- 配置项标题和重置按钮 -->
-          <div class="config-header">
-            <h4 class="config-title">{{ t('settings.extensionsPage.configuration') }}</h4>
-            <button
-                class="reset-button"
-                @click="resetExtension(extension.id)"
-                :title="t('settings.extensionsPage.resetToDefault')"
-            >
-              {{ t('settings.reset') }}
-            </button>
-          </div>
-
-          <div class="config-table-wrapper">
-            <table class="config-table">
-              <tbody>
-              <tr
-                  v-for="[configKey, configValue] in Object.entries(extension.defaultConfig)"
-                  :key="configKey"
-              >
-                <th scope="row" class="config-table-key">
-                  {{ configKey }}
-                </th>
-                <td class="config-table-value">
-                  <input
-                      class="config-value-input"
-                      type="text"
-                      :value="formatConfigValue(getConfigValue(extension.config, configKey, configValue))"
-                      @change="handleConfigInput(extension.id, configKey, configValue, $event)"
-                      @keyup.enter.prevent="handleConfigInput(extension.id, configKey, configValue, $event)"
-                  />
-                </td>
-              </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <!-- 空状态提示 -->
+      <div v-if="availableExtensions.length === 0" class="empty-state">
+        <p>{{ t('settings.extensionsPage.loading') }}</p>
       </div>
+      
+      <!-- 扩展列表 -->
+      <AccordionContainer v-else v-model="expandedExtensions" :multiple="false">
+        <AccordionItem
+            v-for="extension in availableExtensions"
+            :key="extension.id"
+            :id="extension.id"
+            :class="{ 'extension-disabled': !extension.enabled }"
+        >
+          <!-- 标题插槽：显示图标和扩展名称 -->
+          <template #title>
+            <div class="extension-header">
+              <div class="extension-icon-wrapper">
+                <div class="extension-icon-placeholder" :class="{ 'disabled': !extension.enabled }">
+                  <!-- 直接使用扩展名称作为图标文件名 -->
+                  <img 
+                    :src="getExtensionIcon(extension.name)" 
+                    :alt="extension.displayName"
+                    class="extension-icon-img"
+                  />
+                </div>
+              </div>
+              <div class="extension-info">
+                <div class="extension-name">{{ extension.displayName }}</div>
+                <div class="extension-description">{{ extension.description }}</div>
+              </div>
+            </div>
+          </template>
+
+          <!-- 默认插槽：显示开关和配置项 -->
+          <div class="extension-content">
+            <!-- 启用开关 -->
+            <div class="extension-toggle-section">
+              <label class="toggle-label">{{ t('settings.extensionsPage.enabled') }}</label>
+              <ToggleSwitch
+                  :model-value="extension.enabled"
+                  @update:model-value="updateExtension(extension.id, $event)"
+              />
+            </div>
+
+            <!-- 配置项 -->
+            <div v-if="extension.hasConfig" class="extension-config-section">
+              <div class="config-header">
+                <h4 class="config-title">{{ t('settings.extensionsPage.configuration') }}</h4>
+                <button
+                    class="reset-button"
+                    @click="resetExtension(extension.id)"
+                    :title="t('settings.extensionsPage.resetToDefault')"
+                >
+                  {{ t('settings.reset') }}
+                </button>
+              </div>
+
+              <div class="config-table-wrapper">
+                <table class="config-table">
+                  <tbody>
+                  <tr
+                      v-for="[configKey, configValue] in Object.entries(extension.defaultConfig)"
+                      :key="configKey"
+                  >
+                    <th scope="row" class="config-table-key">
+                      {{ configKey }}
+                    </th>
+                    <td class="config-table-value">
+                      <input
+                          class="config-value-input"
+                          type="text"
+                          :value="formatConfigValue(getConfigValue(extension.config, configKey, configValue))"
+                          @change="handleConfigInput(extension.id, configKey, configValue, $event)"
+                          @keyup.enter.prevent="handleConfigInput(extension.id, configKey, configValue, $event)"
+                      />
+                    </td>
+                  </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </AccordionItem>
+      </AccordionContainer>
     </SettingSection>
   </div>
 </template>
 
 <style scoped lang="scss">
-.extension-item {
-  border-bottom: 1px solid var(--settings-input-border);
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--settings-text-secondary);
+  font-size: 14px;
+}
 
-  &:last-child {
-    border-bottom: none;
+// 禁用状态的扩展项
+:deep(.extension-disabled) {
+  background-color: rgba(0, 0, 0, 0.02);
+  
+  .accordion-header {
+    opacity: 0.7;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.03);
+      opacity: 0.8;
+    }
+  }
+
+  &.is-expanded {
+    background-color: rgba(0, 0, 0, 0.03);
+    
+    .accordion-header {
+      opacity: 0.8;
+    }
+  }
+
+  .extension-description {
+    opacity: 0.7;
   }
 }
 
-.extension-controls {
+.extension-header {
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 140px;
-  justify-content: flex-end;
+  width: 100%;
 }
 
-.config-button {
-  padding: 4px;
-  border: none;
-  background: none;
-  color: var(--settings-text-secondary);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border-radius: 4px;
+.extension-icon-wrapper {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+}
+
+.extension-icon-placeholder {
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-
-  &:hover {
-    background-color: var(--settings-hover);
-    color: var(--settings-text);
-  }
-
-  &.expanded {
-    color: var(--settings-accent);
-    background-color: var(--settings-hover);
-  }
-
-  svg {
-    transition: all 0.2s ease;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(var(--settings-accent-rgb, 74, 158, 255), 0.12), rgba(var(--settings-accent-rgb, 74, 158, 255), 0.06));
+  border: 1px solid rgba(var(--settings-accent-rgb, 74, 158, 255), 0.15);
+  color: white;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  
+  &.disabled {
+    background: linear-gradient(135deg, rgba(136, 136, 136, 0.08), rgba(136, 136, 136, 0.04));
+    border-color: rgba(136, 136, 136, 0.1);
+    box-shadow: none;
+    
+    .extension-icon-img {
+      opacity: 0.4;
+      filter: grayscale(1);
+    }
   }
 }
 
-.config-placeholder {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
+.extension-icon-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  transition: all 0.2s ease;
 }
 
-.extension-config {
-  background-color: var(--settings-input-bg);
-  border-left: 2px solid var(--settings-accent);
-  margin: 4px 0 12px 0;
-  padding: 8px 10px;
-  border-radius: 2px;
+.extension-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.extension-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--settings-text);
+  margin-bottom: 2px;
+}
+
+.extension-description {
   font-size: 12px;
+  color: var(--settings-text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.extension-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.extension-toggle-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--settings-input-bg);
+  border-radius: 4px;
+  border: 1px solid var(--settings-input-border);
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--settings-text);
+  margin: 0;
+}
+
+.extension-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .config-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .config-title {
@@ -319,10 +425,10 @@ const handleConfigInput = async (
 }
 
 .reset-button {
-  padding: 3px 8px;
+  padding: 4px 10px;
   font-size: 12px;
   border: 1px solid var(--settings-input-border);
-  border-radius: 2px;
+  border-radius: 3px;
   background-color: transparent;
   color: var(--settings-text-secondary);
   cursor: pointer;
@@ -338,7 +444,7 @@ const handleConfigInput = async (
 
 .config-table-wrapper {
   border: 1px solid var(--settings-input-border);
-  border-radius: 2px;
+  border-radius: 4px;
   overflow: hidden;
   background-color: var(--settings-panel, var(--settings-input-bg));
 }
@@ -346,7 +452,7 @@ const handleConfigInput = async (
 .config-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .config-table tr + tr {
@@ -355,7 +461,7 @@ const handleConfigInput = async (
 
 .config-table th,
 .config-table td {
-  padding: 5px 8px;
+  padding: 6px 10px;
   vertical-align: middle;
 }
 
@@ -367,36 +473,36 @@ const handleConfigInput = async (
   border-right: 1px solid var(--settings-input-border);
   background-color: rgba(0, 0, 0, 0.05);
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .config-table-value {
-  padding: 3px 4px;
+  padding: 4px 6px;
 }
 
 .config-value-input {
   width: 100%;
-  padding: 4px 6px;
+  padding: 5px 8px;
   border: 1px solid transparent;
-  border-radius: 2px;
+  border-radius: 3px;
   background: transparent;
   color: var(--settings-text);
-  font-size: 11px;
+  font-size: 12px;
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, monospace;
-  line-height: 1.3;
+  line-height: 1.4;
   box-sizing: border-box;
   transition: border-color 0.15s ease, background-color 0.15s ease;
-}
 
-.config-value-input:hover {
-  border-color: var(--settings-input-border);
-  background-color: var(--settings-hover);
-}
+  &:hover {
+    border-color: var(--settings-input-border);
+    background-color: var(--settings-hover);
+  }
 
-.config-value-input:focus {
-  outline: none;
-  border-color: var(--settings-accent);
-  background-color: var(--settings-input-bg);
+  &:focus {
+    outline: none;
+    border-color: var(--settings-accent);
+    background-color: var(--settings-input-bg);
+  }
 }
 </style> 
 

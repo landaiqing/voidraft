@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useConfigStore } from '@/stores/configStore';
 import MemoryMonitor from '@/components/monitor/MemoryMonitor.vue';
 
 const { t } = useI18n();
 const router = useRouter();
 const route = useRoute();
+const configStore = useConfigStore();
+
+// 计算属性 
+const enableMemoryMonitor = computed(() => configStore.config.general.enableMemoryMonitor);
 
 // 导航配置
 const navItems = [
@@ -64,7 +69,7 @@ const goBackToEditor = async () => {
           <span class="nav-text">{{ item.id === 'test' ? 'Test' : t(`settings.${item.id}`) }}</span>
         </div>
       </div>
-      <div class="settings-footer">
+      <div class="settings-footer" v-if="enableMemoryMonitor">
         <div class="memory-info-section">
           <div class="section-title">{{ t('settings.systemInfo') }}</div>
           <MemoryMonitor />

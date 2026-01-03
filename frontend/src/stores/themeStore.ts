@@ -4,12 +4,12 @@ import {SystemThemeType} from '@/../bindings/voidraft/internal/models/models';
 import {Type as ThemeType} from '@/../bindings/voidraft/internal/models/ent/theme/models';
 import {ThemeService} from '@/../bindings/voidraft/internal/services';
 import {useConfigStore} from './configStore';
-import {useEditorStore} from './editorStore';
 import type {ThemeColors} from '@/views/editor/theme/types';
 import {cloneThemeColors, FALLBACK_THEME_NAME, themePresetList, themePresetMap} from '@/views/editor/theme/presets';
+import {useEditorStore} from "@/stores/editorStore";
 
 // 类型定义
-type ThemeOption = {name: string; type: ThemeType};
+type ThemeOption = { name: string; type: ThemeType };
 
 // 解析主题名称，确保返回有效的主题
 const resolveThemeName = (name?: string): string =>
@@ -62,15 +62,11 @@ export const useThemeStore = defineStore('theme', () => {
     // 从服务器获取主题颜色
     const fetchThemeColors = async (themeName: string): Promise<ThemeColors> => {
         const safeName = resolveThemeName(themeName);
-        try {
-            const theme = await ThemeService.GetThemeByName(safeName);
-            if (theme?.colors) {
-                const colors = cloneThemeColors(theme.colors as ThemeColors);
-                colors.themeName = safeName;
-                return colors;
-            }
-        } catch (error) {
-            console.error('Failed to load theme override:', error);
+        const theme = await ThemeService.GetThemeByName(safeName);
+        if (theme?.colors) {
+            const colors = cloneThemeColors(theme.colors as ThemeColors);
+            colors.themeName = safeName;
+            return colors;
         }
         return getPresetColors(safeName);
     };
@@ -80,21 +76,36 @@ export const useThemeStore = defineStore('theme', () => {
         const targetName = resolveThemeName(
             themeName || configStore.config?.appearance?.currentTheme
         );
+        currentColors.value = getPresetColors(targetName);
         currentColors.value = await fetchThemeColors(targetName);
+
+    };
+
+    // 获取可用的主题颜色
+    const getEffectiveColors = (): ThemeColors => {
+        const targetName = resolveThemeName(
+            currentColors.value?.themeName || configStore.config?.appearance?.currentTheme
+        );
+        return currentColors.value ?? getPresetColors(targetName);
+    };
+
+    // 同步应用到 DOM 与编辑器
+    const applyAllThemes = () => {
+        applyThemeToDOM(currentTheme.value);
+        const editorStore = useEditorStore();
+        editorStore.applyThemeSettings();
     };
 
     // 初始化主题
     const initTheme = async () => {
-        applyThemeToDOM(currentTheme.value);
         await loadThemeColors();
-        refreshEditorTheme();
+        applyAllThemes();
     };
 
     // 设置系统主题
     const setTheme = async (theme: SystemThemeType) => {
         await configStore.setSystemTheme(theme);
-        applyThemeToDOM(theme);
-        refreshEditorTheme();
+        applyAllThemes();
     };
 
     // 切换到指定主题
@@ -106,7 +117,7 @@ export const useThemeStore = defineStore('theme', () => {
 
         await loadThemeColors(themeName);
         await configStore.setCurrentTheme(themeName);
-        refreshEditorTheme();
+        applyAllThemes();
         return true;
     };
 
@@ -128,7 +139,7 @@ export const useThemeStore = defineStore('theme', () => {
         await ThemeService.UpdateTheme(themeName, currentColors.value);
 
         await loadThemeColors(themeName);
-        refreshEditorTheme();
+        applyAllThemes();
         return true;
     };
 
@@ -142,16 +153,10 @@ export const useThemeStore = defineStore('theme', () => {
         await ThemeService.ResetTheme(themeName);
 
         await loadThemeColors(themeName);
-        refreshEditorTheme();
+        applyAllThemes();
         return true;
     };
 
-    // 刷新编辑器主题
-    const refreshEditorTheme = () => {
-        applyThemeToDOM(currentTheme.value);
-        const editorStore = useEditorStore();
-        editorStore?.applyThemeSettings();
-    };
 
     return {
         availableThemes,
@@ -164,7 +169,8 @@ export const useThemeStore = defineStore('theme', () => {
         updateCurrentColors,
         saveCurrentTheme,
         resetCurrentTheme,
-        refreshEditorTheme,
         applyThemeToDOM,
+        applyAllThemes,
+        getEffectiveColors,
     };
 });

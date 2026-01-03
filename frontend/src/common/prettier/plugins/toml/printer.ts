@@ -35,7 +35,6 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
   // Helper methods
   public mapVisit: (elements: TomlCstNode[] | undefined) => (Doc | string)[];
   public visitSingle: (ctx: TomlContext) => Doc | string;
-  public visit: (ctx: TomlCstNode, inParam?: any) => Doc | string;
 
   constructor() {
     super();
@@ -57,26 +56,38 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
       const singleElement = getSingle(ctx);
       return this.visit(singleElement);
     };
+  }
 
-    // Store reference to inherited visit method and override it
-    const originalVisit = Object.getPrototypeOf(this).visit?.bind(this);
-    this.visit = (ctx: TomlCstNode, inParam?: any): Doc | string => {
-      if (!ctx) {
-        return '';
-      }
-      
+  /**
+   * Override visit method to handle TOML CST nodes
+   * Accepts both single node and array of nodes as per base class signature
+   */
+  visit(cstNode: any, param?: any): any {
+    // Handle array of nodes
+    if (Array.isArray(cstNode)) {
+      return cstNode.map(node => this.visit(node, param));
+    }
+
+    const ctx = cstNode;
+    if (!ctx) {
+      return '';
+    }
+
+    // 确保节点有name属性才调用基类方法
+    if (ctx.name) {
       // Try to use the inherited visit method first
+      const originalVisit = super.visit;
       if (originalVisit) {
         try {
-          return originalVisit(ctx, inParam);
+          return originalVisit.call(this, ctx, param);
         } catch (error) {
-          console.warn('Original visit method failed:', error);
+          // Fallback to manual dispatch
         }
       }
-      
+
       // Fallback: manually dispatch based on node name/type
       const methodName = ctx.name;
-      if (methodName && typeof (this as any)[methodName] === 'function') {
+      if (typeof (this as any)[methodName] === 'function') {
         const visitMethod = (this as any)[methodName];
         try {
           if (ctx.children) {
@@ -88,16 +99,16 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
           console.warn(`Visit method ${methodName} failed:`, error);
         }
       }
-      
-      // Final fallback: return image if available
-      return ctx.image || '';
-    };
+    }
+
+    // Final fallback: return image if available
+    return ctx.image || '';
   }
 
   /**
    * Visit the root TOML document
    */
-  toml(ctx: TomlDocument): Doc {
+  toml(ctx: any): Doc {
     // Handle empty toml document
     if (!ctx.expression) {
       return [line];
@@ -164,7 +175,7 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
   /**
    * Visit an expression (keyval, table, or comment)
    */
-  expression(ctx: TomlExpression): Doc | string {
+  expression(ctx: any): Doc | string {
     if (ctx.keyval) {
       let keyValDoc = this.visit(ctx.keyval[0]);
       if (ctx.Comment) {
@@ -189,7 +200,7 @@ class TomlBeautifierVisitor extends BaseTomlCstVisitor {
   /**
    * Visit a key-value pair
    */
-  keyval(ctx: TomlKeyVal): Doc {
+  keyval(ctx: any): Doc {
     const keyDoc = this.visit(ctx.key[0]);
     const valueDoc = this.visit(ctx.val[0]);
     return [keyDoc, ' = ', valueDoc];

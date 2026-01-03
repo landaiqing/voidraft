@@ -18,12 +18,9 @@ export const useTabStore = defineStore('tab', () => {
     const tabsMap = ref<Record<number, Tab>>({});
     const tabOrder = ref<number[]>([]);  // 维护标签页顺序
     const draggedTabId = ref<number | null>(null);
-
-    // === 计算属性 ===
-
+    
     const isTabsEnabled = computed(() => configStore.config.general.enableTabs);
     const canCloseTab = computed(() => tabOrder.value.length > 1);
-    const currentDocumentId = computed(() => documentStore.currentDocumentId);
 
     // 按顺序返回标签页数组（用于UI渲染）
     const tabs = computed(() => {
@@ -75,7 +72,7 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 关闭标签页
      */
-    const closeTab = (documentId: number) => {
+    const closeTab = async (documentId: number) => {
         if (!hasTab(documentId)) return;
 
         const tabIndex = tabOrder.value.indexOf(documentId);
@@ -95,7 +92,7 @@ export const useTabStore = defineStore('tab', () => {
 
             if (nextIndex >= 0 && tabOrder.value[nextIndex]) {
                 const nextDocumentId = tabOrder.value[nextIndex];
-                switchToTabAndDocument(nextDocumentId);
+                await switchToTabAndDocument(nextDocumentId);
             }
         }
     };
@@ -120,15 +117,15 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 切换到指定标签页并打开对应文档
      */
-    const switchToTabAndDocument = (documentId: number) => {
+    const switchToTabAndDocument = async (documentId: number) => {
         if (!hasTab(documentId)) return;
-
+        
         // 如果点击的是当前已激活的文档，不需要重复请求
         if (documentStore.currentDocumentId === documentId) {
             return;
         }
 
-        documentStore.openDocument(documentId);
+        await documentStore.openDocument(documentId);
     };
 
     /**
@@ -154,8 +151,9 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 验证并清理无效的标签页
      */
-    const validateTabs = () => {
-        const validDocIds = Object.keys(documentStore.documents).map(Number);
+    const validateTabs = async () => {
+        const docs = await documentStore.getDocumentList();
+        const validDocIds = docs.map(doc => doc.id).filter((id): id is number => id !== undefined);
 
         // 找出无效的标签页（文档已被删除）
         const invalidTabIds = tabOrder.value.filter(docId => !validDocIds.includes(docId));
@@ -172,9 +170,9 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 初始化标签页（当前文档）
      */
-    const initializeTab = () => {
-        // 先验证并清理无效的标签页（处理持久化的脏数据）
-        validateTabs();
+    const initTab = async () => {
+        // 先验证并清理无效的标签页
+        await validateTabs();
 
         if (isTabsEnabled.value) {
             const currentDoc = documentStore.currentDocument;
@@ -189,7 +187,7 @@ export const useTabStore = defineStore('tab', () => {
     /**
      * 关闭其他标签页（除了指定的标签页）
      */
-    const closeOtherTabs = (keepDocumentId: number) => {
+    const closeOtherTabs = async (keepDocumentId: number) => {
         if (!hasTab(keepDocumentId)) return;
 
         // 获取所有其他标签页的ID
@@ -200,14 +198,14 @@ export const useTabStore = defineStore('tab', () => {
 
         // 如果当前打开的文档在被关闭的标签中，需要切换到保留的文档
         if (otherTabIds.includes(documentStore.currentDocumentId!)) {
-            switchToTabAndDocument(keepDocumentId);
+            await switchToTabAndDocument(keepDocumentId);
         }
     };
 
     /**
      * 关闭指定标签页右侧的所有标签页
      */
-    const closeTabsToRight = (documentId: number) => {
+    const closeTabsToRight = async (documentId: number) => {
         const index = getTabIndex(documentId);
         if (index === -1) return;
 
@@ -219,14 +217,14 @@ export const useTabStore = defineStore('tab', () => {
 
         // 如果当前打开的文档在被关闭的右侧标签中，需要切换到指定的文档
         if (rightTabIds.includes(documentStore.currentDocumentId!)) {
-            switchToTabAndDocument(documentId);
+            await switchToTabAndDocument(documentId);
         }
     };
 
     /**
      * 关闭指定标签页左侧的所有标签页
      */
-    const closeTabsToLeft = (documentId: number) => {
+    const closeTabsToLeft = async (documentId: number) => {
         const index = getTabIndex(documentId);
         if (index <= 0) return;
 
@@ -238,7 +236,7 @@ export const useTabStore = defineStore('tab', () => {
 
         // 如果当前打开的文档在被关闭的左侧标签中，需要切换到指定的文档
         if (leftTabIds.includes(documentStore.currentDocumentId!)) {
-            switchToTabAndDocument(documentId);
+            await switchToTabAndDocument(documentId);
         }
     };
 
@@ -262,7 +260,6 @@ export const useTabStore = defineStore('tab', () => {
         // 计算属性
         isTabsEnabled,
         canCloseTab,
-        currentDocumentId,
 
         // 方法
         addOrActivateTab,
@@ -273,7 +270,7 @@ export const useTabStore = defineStore('tab', () => {
         switchToTabAndDocument,
         moveTab,
         getTabIndex,
-        initializeTab,
+        initTab,
         clearAllTabs,
         updateTabTitle,
         validateTabs,

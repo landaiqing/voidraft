@@ -11,6 +11,8 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AccordionContainer: typeof import('./src/components/accordion/AccordionContainer.vue')['default']
+    AccordionItem: typeof import('./src/components/accordion/AccordionItem.vue')['default']
     BlockLanguageSelector: typeof import('./src/components/toolbar/BlockLanguageSelector.vue')['default']
     DocumentSelector: typeof import('./src/components/toolbar/DocumentSelector.vue')['default']
     LinuxTitleBar: typeof import('./src/components/titlebar/LinuxTitleBar.vue')['default']
@@ -22,6 +24,8 @@ declare module 'vue' {
     TabContainer: typeof import('./src/components/tabs/TabContainer.vue')['default']
     TabContextMenu: typeof import('./src/components/tabs/TabContextMenu.vue')['default']
     TabItem: typeof import('./src/components/tabs/TabItem.vue')['default']
+    Toast: typeof import('./src/components/toast/Toast.vue')['default']
+    ToastContainer: typeof import('./src/components/toast/ToastContainer.vue')['default']
     Toolbar: typeof import('./src/components/toolbar/Toolbar.vue')['default']
     WindowsTitleBar: typeof import('./src/components/titlebar/WindowsTitleBar.vue')['default']
     WindowTitleBar: typeof import('./src/components/titlebar/WindowTitleBar.vue')['default']
