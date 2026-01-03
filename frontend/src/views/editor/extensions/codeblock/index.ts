@@ -89,7 +89,6 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         showBackground = true,
         enableAutoDetection = true,
         defaultLanguage = 'text',
-        separatorHeight = 12,
     } = options;
 
     return [
@@ -108,8 +107,7 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 
         // 视觉装饰系统
         ...getBlockDecorationExtensions({
-            showBackground,
-            separatorHeight
+            showBackground
         }),
 
         // 光标保护（防止方向键移动到分隔符上）

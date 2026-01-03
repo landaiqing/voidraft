@@ -13,6 +13,7 @@ import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
 import {createWheelZoomExtension} from '@/views/editor/basic/wheelZoomExtension';
 import {createCursorPositionExtension, scrollToCursor} from '@/views/editor/basic/cursorPositionExtension';
+import {createFoldStateExtension, restoreFoldState} from '@/views/editor/basic/foldStateExtension';
 import {createDynamicKeymapExtension, updateKeymapExtension} from '@/views/editor/keymap';
 import {
     createDynamicExtensions,
@@ -118,6 +119,9 @@ export const useEditorStore = defineStore('editor', () => {
         // 光标位置持久化扩展
         const cursorPositionExtension = createCursorPositionExtension(docId);
 
+        // 折叠状态持久化扩展
+        const foldStateExtension = createFoldStateExtension(docId);
+
         // 快捷键扩展
         const keymapExtension = await createDynamicKeymapExtension();
 
@@ -136,6 +140,7 @@ export const useEditorStore = defineStore('editor', () => {
             contentChangeExtension,
             codeBlockExtension,
             cursorPositionExtension,
+            foldStateExtension,
             ...dynamicExtensions,
         ];
 
@@ -227,6 +232,12 @@ export const useEditorStore = defineStore('editor', () => {
             requestAnimationFrame(() => {
                 scrollToCursor(instance.view);
                 instance.view.focus();
+                
+                // 恢复折叠状态
+                const savedFoldState = editorStateStore.getFoldState(instance.documentId);
+                if (savedFoldState.length > 0) {
+                    restoreFoldState(instance.view, savedFoldState);
+                }
             });
         } catch (error) {
             console.error('Error showing editor:', error);
