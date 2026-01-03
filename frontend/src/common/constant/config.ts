@@ -5,7 +5,6 @@ import {
     LanguageType,
     SystemThemeType,
     TabType,
-    UpdateSourceType
 } from '@/../bindings/voidraft/internal/models/models';
 import {FONT_OPTIONS} from './fonts';
 
@@ -110,19 +109,12 @@ export const DEFAULT_CONFIG: AppConfig = {
     updates: {
         version: "1.0.0",
         autoUpdate: true,
-        primarySource: UpdateSourceType.UpdateSourceGithub,
-        backupSource: UpdateSourceType.UpdateSourceGitea,
         backupBeforeUpdate: true,
-        updateTimeout: 30,
+        updateTimeout: 120,
         github: {
             owner: "landaiqing",
             repo: "voidraft",
         },
-        gitea: {
-            baseURL: "https://git.landaiqing.cn",
-            owner: "landaiqing",
-            repo: "voidraft",
-        }
     },
     backup: {
         enabled: false,

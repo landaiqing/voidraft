@@ -285,7 +285,7 @@ export class SelfUpdateResult {
     "error": string;
 
     /**
-     * 更新源（github/gitea）
+     * 更新源（github）
      */
     "source": string;
 

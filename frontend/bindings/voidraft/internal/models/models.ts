@@ -565,49 +565,6 @@ export class GitBackupConfig {
 }
 
 /**
- * GiteaConfig Gitea配置
- */
-export class GiteaConfig {
-    /**
-     * Gitea服务器URL
-     */
-    "baseURL": string;
-
-    /**
-     * 仓库所有者
-     */
-    "owner": string;
-
-    /**
-     * 仓库名称
-     */
-    "repo": string;
-
-    /** Creates a new GiteaConfig instance. */
-    constructor($$source: Partial<GiteaConfig> = {}) {
-        if (!("baseURL" in $$source)) {
-            this["baseURL"] = "";
-        }
-        if (!("owner" in $$source)) {
-            this["owner"] = "";
-        }
-        if (!("repo" in $$source)) {
-            this["repo"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new GiteaConfig instance from a string or object.
-     */
-    static createFrom($$source: any = {}): GiteaConfig {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new GiteaConfig($$parsedSource as Partial<GiteaConfig>);
-    }
-}
-
-/**
  * GithubConfig GitHub配置
  */
 export class GithubConfig {
@@ -1273,26 +1230,6 @@ export enum TabType {
 };
 
 /**
- * UpdateSourceType 更新源类型
- */
-export enum UpdateSourceType {
-    /**
-     * The Go zero value for the underlying type of the enum.
-     */
-    $zero = "",
-
-    /**
-     * UpdateSourceGithub GitHub更新源
-     */
-    UpdateSourceGithub = "github",
-
-    /**
-     * UpdateSourceGitea Gitea更新源
-     */
-    UpdateSourceGitea = "gitea",
-};
-
-/**
  * UpdatesConfig 更新设置配置
  */
 export class UpdatesConfig {
@@ -1305,16 +1242,6 @@ export class UpdatesConfig {
      * 是否自动更新
      */
     "autoUpdate": boolean;
-
-    /**
-     * 主要更新源
-     */
-    "primarySource": UpdateSourceType;
-
-    /**
-     * 备用更新源
-     */
-    "backupSource": UpdateSourceType;
 
     /**
      * 更新前是否备份
@@ -1331,11 +1258,6 @@ export class UpdatesConfig {
      */
     "github": GithubConfig;
 
-    /**
-     * Gitea配置
-     */
-    "gitea": GiteaConfig;
-
     /** Creates a new UpdatesConfig instance. */
     constructor($$source: Partial<UpdatesConfig> = {}) {
         if (!("version" in $$source)) {
@@ -1343,12 +1265,6 @@ export class UpdatesConfig {
         }
         if (!("autoUpdate" in $$source)) {
             this["autoUpdate"] = false;
-        }
-        if (!("primarySource" in $$source)) {
-            this["primarySource"] = ("" as UpdateSourceType);
-        }
-        if (!("backupSource" in $$source)) {
-            this["backupSource"] = ("" as UpdateSourceType);
         }
         if (!("backupBeforeUpdate" in $$source)) {
             this["backupBeforeUpdate"] = false;
@@ -1359,9 +1275,6 @@ export class UpdatesConfig {
         if (!("github" in $$source)) {
             this["github"] = (new GithubConfig());
         }
-        if (!("gitea" in $$source)) {
-            this["gitea"] = (new GiteaConfig());
-        }
 
         Object.assign(this, $$source);
     }
@@ -1370,14 +1283,10 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField6_0 = $$createType9;
-        const $$createField7_0 = $$createType10;
+        const $$createField4_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
-            $$parsedSource["github"] = $$createField6_0($$parsedSource["github"]);
-        }
-        if ("gitea" in $$parsedSource) {
-            $$parsedSource["gitea"] = $$createField7_0($$parsedSource["gitea"]);
+            $$parsedSource["github"] = $$createField4_0($$parsedSource["github"]);
         }
         return new UpdatesConfig($$parsedSource as Partial<UpdatesConfig>);
     }
@@ -1399,4 +1308,3 @@ var $$createType6 = (function $$initCreateType6(...args): any {
 const $$createType7 = $Create.Map($Create.Any, $Create.Any);
 const $$createType8 = HotkeyCombo.createFrom;
 const $$createType9 = GithubConfig.createFrom;
-const $$createType10 = GiteaConfig.createFrom;
