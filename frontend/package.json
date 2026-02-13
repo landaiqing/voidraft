@@ -53,7 +53,7 @@
     "@codemirror/view": "^6.39.9",
     "@cospaia/prettier-plugin-clojure": "^0.0.2",
     "@lezer/highlight": "^1.2.3",
-    "@lezer/lr": "^1.4.5",
+    "@lezer/lr": "^1.4.7",
     "@prettier/plugin-xml": "^3.4.2",
     "@replit/codemirror-lang-svelte": "^6.0.0",
     "@toml-tools/lexer": "^1.0.1",
