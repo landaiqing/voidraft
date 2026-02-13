@@ -50,7 +50,7 @@
     "@codemirror/lint": "^6.9.2",
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.3",
-    "@codemirror/view": "^6.39.8",
+    "@codemirror/view": "^6.39.9",
     "@cospaia/prettier-plugin-clojure": "^0.0.2",
     "@lezer/highlight": "^1.2.3",
     "@lezer/lr": "^1.4.5",
