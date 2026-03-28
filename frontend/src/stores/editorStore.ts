@@ -92,8 +92,14 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 滚轮缩放扩展
         const wheelZoomExtension = createWheelZoomExtension({
-            increaseFontSize: () => configStore.increaseFontSizeLocal(),
-            decreaseFontSize: () => configStore.decreaseFontSizeLocal(),
+            increaseFontSize: () => {
+                configStore.increaseFontSizeLocal();
+                applyFontSettings();
+            },
+            decreaseFontSize: () => {
+                configStore.decreaseFontSizeLocal();
+                applyFontSettings();
+            },
             onSave: () => configStore.saveFontSize(),
             saveDelay: 1000
         });

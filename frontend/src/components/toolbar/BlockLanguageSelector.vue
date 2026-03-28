@@ -183,7 +183,7 @@ const selectLanguage = (languageId: SupportedLanguage) => {
   try {
     const view = editorStore.currentEditor;
     const state = view.state;
-    const dispatch = view.dispatch;
+    const dispatch = view.dispatch.bind(view);
 
     const [targetLanguage, autoDetect] = languageId === 'auto' 
       ? ['text', true] 
