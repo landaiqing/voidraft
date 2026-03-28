@@ -56,7 +56,6 @@ import yamlPrettierPlugin from "prettier/plugins/yaml";
 import goPrettierPlugin from "@/common/prettier/plugins/go";
 import sqlPrettierPlugin from "@/common/prettier/plugins/sql";
 import phpPrettierPlugin from "@/common/prettier/plugins/php";
-import javaPrettierPlugin from "@/common/prettier/plugins/java";
 import xmlPrettierPlugin from "@prettier/plugin-xml";
 import shellPrettierPlugin from "@/common/prettier/plugins/shell";
 import dockerfilePrettierPlugin from "@/common/prettier/plugins/docker";
@@ -134,8 +133,12 @@ export const LANGUAGES: LanguageInfo[] = [
         plugins: [markdownPrettierPlugin]
     }),
     new LanguageInfo("java", "Java", javaLanguage.parser, ["java"], {
-        parser: "java",
-        plugins: [javaPrettierPlugin]
+        parser: "clang-format",
+        plugins: [clangPrettierPlugin],
+        options: {
+            filename: "Main.java",
+            clangStyle: "Google"
+        }
     }),
     new LanguageInfo("php", "PHP", phpLanguage.configure({top: "Program"}).parser, ["php"], {
         parser: "php",
