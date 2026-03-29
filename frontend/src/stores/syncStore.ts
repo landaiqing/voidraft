@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import { BackupService } from '@/../bindings/voidraft/internal/services';
+import { SyncService } from '@/../bindings/voidraft/internal/services';
 
-export const useBackupStore = defineStore('backup', () => {
+export const useSyncStore = defineStore('sync', () => {
   const isSyncing = ref(false);
 
   const sync = async (): Promise<void> => {
@@ -11,11 +11,8 @@ export const useBackupStore = defineStore('backup', () => {
     }
 
     isSyncing.value = true;
-
     try {
-      await BackupService.Sync();
-    } catch (e) {
-      throw e;
+      await SyncService.Sync();
     } finally {
       isSyncing.value = false;
     }

@@ -29,7 +29,7 @@ type ServiceManager struct {
 	badgeService        *dock.DockService
 	notificationService *notifications.NotificationService
 	testService         *TestService // 测试服务（仅开发环境）
-	BackupService       *BackupService
+	SyncService         *SyncService
 	httpClientService   *HttpClientService // HTTP客户端服务
 	logger              *log.LogService
 }
@@ -95,8 +95,8 @@ func NewServiceManager() *ServiceManager {
 	// 初始化主题服务
 	themeService := NewThemeService(databaseService, logger)
 
-	// 初始化备份服务
-	backupService := NewBackupService(configService, databaseService, logger)
+	// 初始化同步服务
+	syncService := NewSyncService(configService, databaseService, logger)
 
 	// 初始化HTTP客户端服务
 	httpClientService := NewHttpClientService(logger)
@@ -124,7 +124,7 @@ func NewServiceManager() *ServiceManager {
 		badgeService:        badgeService,
 		notificationService: notificationService,
 		testService:         testService,
-		BackupService:       backupService,
+		SyncService:         syncService,
 		httpClientService:   httpClientService,
 		logger:              logger,
 	}
@@ -150,7 +150,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.badgeService),
 		application.NewService(sm.notificationService),
 		application.NewService(sm.testService),
-		application.NewService(sm.BackupService),
+		application.NewService(sm.SyncService),
 		application.NewService(sm.httpClientService),
 	}
 	return services

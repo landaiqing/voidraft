@@ -182,7 +182,7 @@ export default {
     general: '常规',
     editing: '编辑器',
     appearance: '外观',
-    backupPage: '备份',
+    syncPage: '同步',
     extensions: '扩展',
     keyBindings: '快捷键',
     updates: '更新',
@@ -259,11 +259,16 @@ export default {
     colorValue: '颜色值',
     hotkeyPreview: '预览：',
     none: '无',
-    backup: {
+    sync: {
       basicSettings: '基本设置',
-      enableBackup: '启用备份',
-      autoBackup: '自动备份',
-      backupInterval: '备份间隔',
+      enableSync: '启用同步',
+      targetType: '同步方式',
+      targetTypes: {
+        git: 'Git',
+        localfs: '本地文件系统'
+      },
+      autoSync: '自动同步',
+      syncInterval: '同步间隔',
       intervals: {
         '5min': '5分钟',
         '10min': '10分钟',
@@ -272,8 +277,11 @@ export default {
         '1hour': '1小时'
       },
       repositoryConfig: '仓库配置',
+      storageConfig: '存储配置',
       repoUrl: '仓库地址',
       repoUrlPlaceholder: '请输入Git仓库地址',
+      localfsRootPath: '本地存储目录',
+      localfsRootPathPlaceholder: '请选择本地同步目录',
       authConfig: '认证配置',
       authMethod: '认证方式',
       authMethods: {
@@ -291,9 +299,11 @@ export default {
       sshKeyPathPlaceholder: '请选择SSH密钥文件',
       sshKeyPassphrase: 'SSH密钥密码',
       sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
-      backupOperations: '备份操作',
+      syncOperations: '同步操作',
       syncToRemote: '同步到远程',
+      syncToTarget: '同步到目标',
       syncing: '同步中...',
+      syncSuccess: '同步成功',
       actions: {
         sync: '同步',
       }
