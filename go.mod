@@ -34,7 +34,7 @@ require (
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
-	github.com/cloudflare/circl v1.6.2 // indirect
+	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
