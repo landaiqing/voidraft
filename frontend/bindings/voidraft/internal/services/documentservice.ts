@@ -14,6 +14,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 // @ts-ignore: Unused imports
 import * as ent$0 from "../models/ent/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * CreateDocument 创建文档
  */
@@ -40,7 +44,7 @@ export function GetDocumentByID(id: number): $CancellablePromise<ent$0.Document 
 }
 
 /**
- * ListAllDocumentsMeta 列出所有文档
+ * ListAllDocumentsMeta lists document metadata.
  */
 export function ListAllDocumentsMeta(): $CancellablePromise<(ent$0.Document | null)[]> {
     return $Call.ByID(3073950297).then(($result: any) => {
@@ -65,8 +69,10 @@ export function UnlockDocument(id: number): $CancellablePromise<void> {
 /**
  * UpdateDocumentContent 更新文档内容
  */
-export function UpdateDocumentContent(id: number, content: string): $CancellablePromise<void> {
-    return $Call.ByID(3251897116, id, content);
+export function UpdateDocumentContent(id: number, content: string, baseUpdatedAt: string): $CancellablePromise<$models.DocumentSaveResult | null> {
+    return $Call.ByID(3251897116, id, content, baseUpdatedAt).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 /**
@@ -80,3 +86,5 @@ export function UpdateDocumentTitle(id: number, title: string): $CancellableProm
 const $$createType0 = ent$0.Document.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = $models.DocumentSaveResult.createFrom;
+const $$createType4 = $Create.Nullable($$createType3);

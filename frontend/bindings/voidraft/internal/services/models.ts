@@ -13,6 +13,50 @@ import * as http$0 from "../../../net/http/models.js";
 import * as time$0 from "../../../time/models.js";
 
 /**
+ * DocumentSaveResult describes the outcome of a document save request.
+ */
+export class DocumentSaveResult {
+    "document_id": number;
+    "updated_at": string;
+    "content_length": number;
+    "content_hash": string;
+    "saved_at": string;
+    "changed": boolean;
+
+    /** Creates a new DocumentSaveResult instance. */
+    constructor($$source: Partial<DocumentSaveResult> = {}) {
+        if (!("document_id" in $$source)) {
+            this["document_id"] = 0;
+        }
+        if (!("updated_at" in $$source)) {
+            this["updated_at"] = "";
+        }
+        if (!("content_length" in $$source)) {
+            this["content_length"] = 0;
+        }
+        if (!("content_hash" in $$source)) {
+            this["content_hash"] = "";
+        }
+        if (!("saved_at" in $$source)) {
+            this["saved_at"] = "";
+        }
+        if (!("changed" in $$source)) {
+            this["changed"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DocumentSaveResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DocumentSaveResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DocumentSaveResult($$parsedSource as Partial<DocumentSaveResult>);
+    }
+}
+
+/**
  * HttpRequest HTTP请求结构
  */
 export class HttpRequest {

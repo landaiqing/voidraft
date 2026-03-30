@@ -37,6 +37,7 @@ export {
 };
 
 export {
+    DocumentSaveResult,
     HttpRequest,
     HttpResponse,
     MemoryStats,

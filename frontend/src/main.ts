@@ -7,8 +7,10 @@ import router from './router';
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
 import { registerDirectives } from './directives';
 import {EditorView} from "@codemirror/view";
+import {setupHybridTransport} from '@/runtime/hybridTransport';
 
 (EditorView as any).EDIT_CONTEXT = false;
+setupHybridTransport();
 
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate);

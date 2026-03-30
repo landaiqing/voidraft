@@ -121,8 +121,8 @@ const selectDoc = async (doc: DocumentItem) => {
   if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
 
     const content = editorStore.getCurrentContent();
-    await documentStore.saveDocument(oldDocId, content);
-    editorStore.syncAfterSave(oldDocId);
+    const saveResult = await documentStore.saveDocument(oldDocId, content);
+    editorStore.syncAfterSave(oldDocId, saveResult);
 
   }
 

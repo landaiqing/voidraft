@@ -42,6 +42,7 @@ func main() {
 		Name:        constant.VOIDRAFT_APP_NAME,
 		Description: constant.VOIDRAFT_APP_DESCRIPTION,
 		Services:    serviceManager.GetServices(),
+		Transport:   newHybridBindingTransport(),
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
