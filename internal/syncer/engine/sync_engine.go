@@ -12,7 +12,7 @@ import (
 
 const defaultMaxAttempts = 3
 
-// Logger 描述同步引擎依赖的最小日志接口。
+// Logger describes the minimal logger used by the sync engine.
 type Logger interface {
 	Debug(message string, args ...interface{})
 	Info(message string, args ...interface{})
@@ -20,28 +20,26 @@ type Logger interface {
 	Error(message string, args ...interface{})
 }
 
-// Options 描述同步引擎构造选项。
+// Options describes sync engine construction options.
 type Options struct {
 	Logger      Logger
 	MaxAttempts int
 }
 
-// SyncOptions 描述一次同步执行参数。
+// SyncOptions describes one sync execution request.
 type SyncOptions struct {
 	CommitMessage string
 }
 
-// Result 描述同步引擎执行结果。
+// Result describes one sync engine result.
 type Result struct {
 	LocalChanged   bool
 	RemoteChanged  bool
 	AppliedToLocal bool
 	Published      bool
-	ConflictCount  int
-	Revision       string
 }
 
-// SyncEngine 负责执行一次完整的同步闭环。
+// SyncEngine runs the full local/remote sync flow.
 type SyncEngine struct {
 	backend     backend.Backend
 	store       snapshot.Store
@@ -51,7 +49,7 @@ type SyncEngine struct {
 	maxAttempts int
 }
 
-// NewSyncEngine 创建新的同步引擎实例。
+// NewSyncEngine creates a new sync engine.
 func NewSyncEngine(
 	backendInstance backend.Backend,
 	store snapshot.Store,
@@ -74,7 +72,7 @@ func NewSyncEngine(
 	}
 }
 
-// Sync 执行同步，并在远端版本竞争时自动重试。
+// Sync runs one sync and retries on revision conflicts.
 func (e *SyncEngine) Sync(ctx context.Context, options SyncOptions) (*Result, error) {
 	var lastErr error
 
@@ -99,7 +97,7 @@ func (e *SyncEngine) Sync(ctx context.Context, options SyncOptions) (*Result, er
 	return nil, lastErr
 }
 
-// syncOnce 执行一次同步尝试。
+// syncOnce performs one sync attempt.
 func (e *SyncEngine) syncOnce(ctx context.Context, options SyncOptions) (*Result, bool, error) {
 	localSnapshot, err := e.snapshotter.Export(ctx)
 	if err != nil {
@@ -135,7 +133,7 @@ func (e *SyncEngine) syncOnce(ctx context.Context, options SyncOptions) (*Result
 		return nil, false, fmt.Errorf("digest remote snapshot: %w", err)
 	}
 
-	mergedSnapshot, report, err := e.merger.Merge(ctx, localSnapshot, remoteSnapshot)
+	mergedSnapshot, _, err := e.merger.Merge(ctx, localSnapshot, remoteSnapshot)
 	if err != nil {
 		return nil, false, fmt.Errorf("merge snapshot: %w", err)
 	}
@@ -178,7 +176,5 @@ func (e *SyncEngine) syncOnce(ctx context.Context, options SyncOptions) (*Result
 		RemoteChanged:  remoteDigest != mergedDigest,
 		AppliedToLocal: appliedToLocal,
 		Published:      remoteState != publishedState,
-		ConflictCount:  report.Conflicts,
-		Revision:       publishedState.Revision,
 	}, false, nil
 }

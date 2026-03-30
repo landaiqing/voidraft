@@ -4,6 +4,7 @@ go 1.26
 
 require (
 	entgo.io/ent v0.14.6
+	github.com/coder/websocket v1.8.14
 	github.com/creativeprojects/go-selfupdate v1.5.2
 	github.com/go-git/go-git/v5 v5.17.0
 	github.com/google/uuid v1.6.0
@@ -35,7 +36,6 @@ require (
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/cloudflare/circl v1.6.3 // indirect
-	github.com/coder/websocket v1.8.14 // indirect
 	github.com/cyphar/filepath-securejoin v0.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect

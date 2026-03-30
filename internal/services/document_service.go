@@ -2,17 +2,33 @@ package services
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"voidraft/internal/models/ent/document"
+	"voidraft/internal/models/schema/mixin"
+
+	"voidraft/internal/models/ent"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-	"voidraft/internal/models/ent"
 )
 
 const defaultDocumentTitle = "default"
 const defaultDocumentContent = "\n∞∞∞text-a\n"
+
+var ErrDocumentRevisionConflict = errors.New("document revision conflict")
+
+// DocumentSaveResult describes the outcome of a document save request.
+type DocumentSaveResult struct {
+	DocumentID    int    `json:"document_id"`
+	UpdatedAt     string `json:"updated_at"`
+	ContentLength int    `json:"content_length"`
+	ContentHash   string `json:"content_hash"`
+	SavedAt       string `json:"saved_at"`
+	Changed       bool   `json:"changed"`
+}
 
 // DocumentService 文档服务
 type DocumentService struct {
@@ -65,10 +81,29 @@ func (s *DocumentService) CreateDocument(ctx context.Context, title string) (*en
 }
 
 // UpdateDocumentContent 更新文档内容
-func (s *DocumentService) UpdateDocumentContent(ctx context.Context, id int, content string) error {
-	return s.db.Client.Document.UpdateOneID(id).
+func (s *DocumentService) UpdateDocumentContent(ctx context.Context, id int, content string, baseUpdatedAt string) (*DocumentSaveResult, error) {
+	doc, err := s.GetDocumentByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if doc == nil {
+		return nil, fmt.Errorf("document not found: %d", id)
+	}
+	if baseUpdatedAt != "" && doc.UpdatedAt != baseUpdatedAt {
+		return nil, fmt.Errorf("%w: document %d has changed since %s", ErrDocumentRevisionConflict, id, baseUpdatedAt)
+	}
+	if doc.Content == content {
+		return buildDocumentSaveResult(doc, mixin.NowString(), false), nil
+	}
+
+	updatedDoc, err := s.db.Client.Document.UpdateOneID(id).
 		SetContent(content).
-		Exec(ctx)
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("update document content error: %w", err)
+	}
+
+	return buildDocumentSaveResult(updatedDoc, mixin.NowString(), true), nil
 }
 
 // UpdateDocumentTitle 更新文档标题
@@ -134,9 +169,25 @@ func (s *DocumentService) DeleteDocument(ctx context.Context, id int) error {
 	return s.db.Client.Document.DeleteOneID(id).Exec(ctx)
 }
 
-// ListAllDocumentsMeta 列出所有文档
+// ListAllDocumentsMeta lists document metadata.
 func (s *DocumentService) ListAllDocumentsMeta(ctx context.Context) ([]*ent.Document, error) {
 	return s.db.Client.Document.Query().Select(document.FieldID, document.FieldTitle, document.FieldUpdatedAt, document.FieldLocked, document.FieldCreatedAt).
 		Order(ent.Desc(document.FieldUpdatedAt)).
 		All(ctx)
+}
+
+func buildDocumentSaveResult(doc *ent.Document, savedAt string, changed bool) *DocumentSaveResult {
+	return &DocumentSaveResult{
+		DocumentID:    doc.ID,
+		UpdatedAt:     doc.UpdatedAt,
+		ContentLength: len(doc.Content),
+		ContentHash:   generateDocumentContentHash(doc.Content),
+		SavedAt:       savedAt,
+		Changed:       changed,
+	}
+}
+
+func generateDocumentContentHash(content string) string {
+	sum := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(sum[:])
 }

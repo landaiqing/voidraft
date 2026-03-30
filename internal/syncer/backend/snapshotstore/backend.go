@@ -159,10 +159,17 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 	}
 
 	if _, err := b.config.Store.Put(ctx, b.headKey(), bytes.NewReader(headPayload), putOptions); err != nil {
+		if head, headExists, readErr := b.readHead(ctx); readErr == nil && (!headExists || head.Document.BundleKey != bundleKey) {
+			_ = b.config.Store.Delete(ctx, bundleKey)
+		}
 		if errors.Is(err, blob.ErrConditionNotMet) {
 			return backend.RemoteState{}, backend.ErrRevisionConflict
 		}
 		return backend.RemoteState{}, err
+	}
+
+	if exists && currentHead.Document.BundleKey != "" && currentHead.Document.BundleKey != bundleKey {
+		_ = b.config.Store.Delete(ctx, currentHead.Document.BundleKey)
 	}
 
 	return backend.RemoteState{

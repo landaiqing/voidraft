@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 	"voidraft/internal/common/helper"
 	"voidraft/internal/models"
@@ -18,16 +19,36 @@ const (
 	localFSHeadKey = "head.json"
 )
 
-// SyncService 提供应用层同步服务入口。
+// SyncStatus describes the latest manual sync state.
+type SyncStatus struct {
+	TargetID       string `json:"target_id,omitempty"`
+	LastSyncAt     string `json:"last_sync_at,omitempty"`
+	LastSuccessAt  string `json:"last_success_at,omitempty"`
+	LastError      string `json:"last_error,omitempty"`
+	LocalChanged   bool   `json:"local_changed"`
+	RemoteChanged  bool   `json:"remote_changed"`
+	AppliedToLocal bool   `json:"applied_to_local"`
+	Published      bool   `json:"published"`
+}
+
+// SyncConnectionResult describes a connection test result.
+type SyncConnectionResult struct {
+	TargetID       string `json:"target_id"`
+	ResolvedBranch string `json:"resolved_branch,omitempty"`
+}
+
+// SyncService exposes app-layer sync operations.
 type SyncService struct {
 	configService   *ConfigService
 	dbService       *DatabaseService
 	logger          *log.LogService
 	app             *syncer.App
 	cancelObservers []helper.CancelFunc
+	statusMu        sync.RWMutex
+	status          SyncStatus
 }
 
-// NewSyncService 创建新的同步服务实例。
+// NewSyncService creates a new sync service instance.
 func NewSyncService(configService *ConfigService, dbService *DatabaseService, logger *log.LogService) *SyncService {
 	return &SyncService{
 		configService: configService,
@@ -36,8 +57,9 @@ func NewSyncService(configService *ConfigService, dbService *DatabaseService, lo
 	}
 }
 
-// ServiceStartup 在服务启动时初始化同步系统。
+// ServiceStartup initializes the sync service and config observers.
 func (s *SyncService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
+	_ = ctx
 	_ = options
 
 	if err := s.ensureApp(); err != nil {
@@ -56,7 +78,7 @@ func (s *SyncService) ServiceStartup(ctx context.Context, options application.Se
 	return nil
 }
 
-// Initialize 重新加载配置并启动自动同步。
+// Initialize reloads config and restarts auto-sync.
 func (s *SyncService) Initialize() error {
 	if err := s.ensureApp(); err != nil {
 		return err
@@ -71,23 +93,23 @@ func (s *SyncService) Initialize() error {
 		return fmt.Errorf("reconfigure sync app: %w", err)
 	}
 	if err := s.app.Start(context.Background()); err != nil {
-		return fmt.Errorf("start sync app: %w", err)
+		s.logger.Warning("start sync app: %v", err)
 	}
 	return nil
 }
 
-// Reinitialize 重新初始化同步服务。
+// Reinitialize is an alias used by config watchers.
 func (s *SyncService) Reinitialize() error {
 	return s.Initialize()
 }
 
-// HandleConfigChange 在配置变化时重新应用配置。
+// HandleConfigChange re-applies sync config changes.
 func (s *SyncService) HandleConfigChange(config *models.SyncConfig) error {
 	_ = config
 	return s.Initialize()
 }
 
-// StartAutoSync 启动自动同步调度。
+// StartAutoSync starts auto-sync scheduling.
 func (s *SyncService) StartAutoSync() error {
 	if err := s.ensureApp(); err != nil {
 		return err
@@ -95,7 +117,7 @@ func (s *SyncService) StartAutoSync() error {
 	return s.app.Start(context.Background())
 }
 
-// StopAutoSync 停止自动同步调度。
+// StopAutoSync stops auto-sync scheduling.
 func (s *SyncService) StopAutoSync() {
 	if s.app == nil {
 		return
@@ -105,24 +127,74 @@ func (s *SyncService) StopAutoSync() {
 	}
 }
 
-// Sync 执行一次手动同步。
-func (s *SyncService) Sync() error {
+// Sync runs one manual sync and returns the latest status.
+func (s *SyncService) Sync() (*SyncStatus, error) {
 	if err := s.ensureApp(); err != nil {
-		return err
+		return nil, err
 	}
 
 	targetID, err := s.selectedTargetID()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if _, err := s.app.Sync(context.Background(), targetID); err != nil {
-		return err
+	syncedAt := time.Now().Format(time.RFC3339)
+	result, err := s.app.Sync(context.Background(), targetID)
+	if err != nil {
+		status := s.statusSnapshot()
+		status.TargetID = targetID
+		status.LastSyncAt = syncedAt
+		status.LastError = err.Error()
+		status.LocalChanged = false
+		status.RemoteChanged = false
+		status.AppliedToLocal = false
+		status.Published = false
+		s.storeStatus(status)
+		return nil, err
 	}
-	return nil
+
+	status := SyncStatus{
+		TargetID:       targetID,
+		LastSyncAt:     syncedAt,
+		LastSuccessAt:  syncedAt,
+		LocalChanged:   result.LocalChanged,
+		RemoteChanged:  result.RemoteChanged,
+		AppliedToLocal: result.AppliedToLocal,
+		Published:      result.Published,
+	}
+	s.storeStatus(status)
+	return s.GetStatus(), nil
 }
 
-// ServiceShutdown 停止同步服务并释放资源。
+// TestConnection validates the selected target configuration immediately.
+func (s *SyncService) TestConnection() (*SyncConnectionResult, error) {
+	if err := s.ensureApp(); err != nil {
+		return nil, err
+	}
+
+	target, err := s.selectedTargetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	resolvedBranch, err := s.app.TestTarget(context.Background(), target)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SyncConnectionResult{
+		TargetID:       target.Kind,
+		ResolvedBranch: resolvedBranch,
+	}, nil
+}
+
+// GetStatus returns the latest manual sync status.
+func (s *SyncService) GetStatus() *SyncStatus {
+	status := s.statusSnapshot()
+	return &status
+}
+
+// ServiceShutdown stops observers and sync schedulers.
 func (s *SyncService) ServiceShutdown() {
 	for _, cancel := range s.cancelObservers {
 		if cancel != nil {
@@ -132,7 +204,7 @@ func (s *SyncService) ServiceShutdown() {
 	s.StopAutoSync()
 }
 
-// onSyncConfigChange 响应 sync 配置变化。
+// onSyncConfigChange reacts to sync config updates.
 func (s *SyncService) onSyncConfigChange(oldValue interface{}, newValue interface{}) {
 	_, _ = oldValue, newValue
 	if err := s.Initialize(); err != nil {
@@ -140,7 +212,7 @@ func (s *SyncService) onSyncConfigChange(oldValue interface{}, newValue interfac
 	}
 }
 
-// onDataPathChange 响应数据目录变化。
+// onDataPathChange reacts to data path changes.
 func (s *SyncService) onDataPathChange(oldValue interface{}, newValue interface{}) {
 	_, _ = oldValue, newValue
 	if err := s.Reinitialize(); err != nil {
@@ -148,7 +220,7 @@ func (s *SyncService) onDataPathChange(oldValue interface{}, newValue interface{
 	}
 }
 
-// ensureApp 保证同步应用已被创建。
+// ensureApp ensures the sync app is ready.
 func (s *SyncService) ensureApp() error {
 	if s.app != nil {
 		return nil
@@ -164,22 +236,36 @@ func (s *SyncService) ensureApp() error {
 	return nil
 }
 
-// buildConfig 将现有应用配置映射为同步核心配置。
+// buildConfig maps app config into sync-core config.
 func (s *SyncService) buildConfig() (syncer.Config, error) {
-	appConfig, err := s.configService.GetConfig()
+	target, err := s.selectedTargetConfig()
 	if err != nil {
 		return syncer.Config{}, err
 	}
 
 	return syncer.Config{
-		Targets: []syncer.TargetConfig{
-			s.buildGitTargetConfig(appConfig.General.DataPath, appConfig.Sync.Git),
-			s.buildLocalFSTargetConfig(appConfig.Sync.LocalFS),
-		},
+		Targets: []syncer.TargetConfig{target},
 	}, nil
 }
 
-// selectedTargetID 返回当前选中的同步目标标识。
+// selectedTargetConfig builds the config for the selected sync target.
+func (s *SyncService) selectedTargetConfig() (syncer.TargetConfig, error) {
+	appConfig, err := s.configService.GetConfig()
+	if err != nil {
+		return syncer.TargetConfig{}, err
+	}
+
+	switch appConfig.Sync.Target {
+	case models.SyncTargetGit:
+		return s.buildGitTargetConfig(appConfig.General.DataPath, appConfig.Sync.Git), nil
+	case models.SyncTargetLocalFS:
+		return s.buildLocalFSTargetConfig(appConfig.Sync.LocalFS), nil
+	default:
+		return syncer.TargetConfig{}, fmt.Errorf("unsupported sync target: %s", appConfig.Sync.Target)
+	}
+}
+
+// selectedTargetID returns the selected target identifier.
 func (s *SyncService) selectedTargetID() (string, error) {
 	appConfig, err := s.configService.GetConfig()
 	if err != nil {
@@ -196,7 +282,7 @@ func (s *SyncService) selectedTargetID() (string, error) {
 	}
 }
 
-// buildGitTargetConfig 将 Git 配置转换为同步核心目标配置。
+// buildGitTargetConfig converts Git config into sync-core target config.
 func (s *SyncService) buildGitTargetConfig(dataPath string, config models.GitSyncConfig) syncer.TargetConfig {
 	return syncer.TargetConfig{
 		Kind:    syncer.TargetKindGit,
@@ -208,7 +294,7 @@ func (s *SyncService) buildGitTargetConfig(dataPath string, config models.GitSyn
 		Git: &syncer.GitTargetConfig{
 			RepoPath:    filepath.Join(dataPath, syncDir),
 			RepoURL:     config.RepoURL,
-			Branch:      syncer.DefaultBranch,
+			Branch:      "",
 			RemoteName:  syncer.DefaultRemoteName,
 			AuthorName:  "voidraft",
 			AuthorEmail: "sync@voidraft.app",
@@ -224,7 +310,7 @@ func (s *SyncService) buildGitTargetConfig(dataPath string, config models.GitSyn
 	}
 }
 
-// buildLocalFSTargetConfig 将 localfs 配置转换为同步核心目标配置。
+// buildLocalFSTargetConfig converts localfs config into sync-core target config.
 func (s *SyncService) buildLocalFSTargetConfig(config models.LocalFSSyncConfig) syncer.TargetConfig {
 	return syncer.TargetConfig{
 		Kind:    syncer.TargetKindLocalFS,
@@ -239,4 +325,18 @@ func (s *SyncService) buildLocalFSTargetConfig(config models.LocalFSSyncConfig) 
 			RootPath:  config.RootPath,
 		},
 	}
+}
+
+// statusSnapshot returns a copy of the current sync status.
+func (s *SyncService) statusSnapshot() SyncStatus {
+	s.statusMu.RLock()
+	defer s.statusMu.RUnlock()
+	return s.status
+}
+
+// storeStatus updates the current sync status.
+func (s *SyncService) storeStatus(status SyncStatus) {
+	s.statusMu.Lock()
+	s.status = status
+	s.statusMu.Unlock()
 }

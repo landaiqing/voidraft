@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,37 +17,24 @@ import * as $models from "./models.js";
 /**
  * CancelMigration 取消迁移
  */
-export function CancelMigration(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1813274502) as any;
-    return $resultPromise;
+export function CancelMigration(): $CancellablePromise<void> {
+    return $Call.ByID(1813274502);
 }
 
 /**
  * GetProgress 获取当前进度
  */
-export function GetProgress(): Promise<$models.MigrationProgress> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3413264131) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function GetProgress(): $CancellablePromise<$models.MigrationProgress> {
+    return $Call.ByID(3413264131).then(($result: any) => {
         return $$createType0($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * MigrateDirectory 迁移目录
  */
-export function MigrateDirectory(srcPath: string, dstPath: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(311970580, srcPath, dstPath) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceShutdown 服务关闭
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3472042605) as any;
-    return $resultPromise;
+export function MigrateDirectory(srcPath: string, dstPath: string): $CancellablePromise<void> {
+    return $Call.ByID(311970580, srcPath, dstPath);
 }
 
 // Private type creation functions

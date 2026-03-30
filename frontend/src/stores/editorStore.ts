@@ -24,6 +24,7 @@ import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
 import {LruCache} from '@/common/utils/lruCache';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {useEditorStateStore, type DocumentStats} from './editorStateStore';
+import {DocumentSaveResult} from '@/../bindings/voidraft/internal/services/models';
 
 // 编辑器实例
 interface EditorInstance {
@@ -270,7 +271,7 @@ export const useEditorStore = defineStore('editor', () => {
                 // 同步版本信息
                 if (savedDoc) {
                     instance.contentTimestamp = savedDoc.updated_at || '';
-                    instance.contentLength = (savedDoc.content || '').length;
+                    instance.contentLength = savedDoc.content_length || content.length;
                     instance.isDirty = false;
                 }
             },
@@ -370,16 +371,13 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 同步保存后的版本信息
-    const syncAfterSave = async (docId: number) => {
+    const syncAfterSave = (docId: number, saveResult?: DocumentSaveResult | null) => {
         const instance = editorCache.get(docId);
-        if (!instance) return;
+        if (!instance || !saveResult) return;
 
-        const doc = await documentStore.getDocument(docId);
-        if (doc) {
-            instance.contentTimestamp = doc.updated_at || '';
-            instance.contentLength = (doc.content || '').length;
-            instance.isDirty = false;
-        }
+        instance.contentTimestamp = saveResult.updated_at || '';
+        instance.contentLength = saveResult.content_length || instance.view.state.doc.length;
+        instance.isDirty = false;
     };
 
     // 销毁编辑器

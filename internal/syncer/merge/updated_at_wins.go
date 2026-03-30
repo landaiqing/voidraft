@@ -7,64 +7,117 @@ import (
 	"voidraft/internal/syncer/snapshot"
 )
 
-// UpdatedAtWinsMerger 使用 updated_at 作为默认冲突解决依据。
+// UpdatedAtWinsMerger merges snapshots using the latest event time.
 type UpdatedAtWinsMerger struct{}
 
-// NewUpdatedAtWinsMerger 创建新的默认合并器。
+// NewUpdatedAtWinsMerger creates the default merger.
 func NewUpdatedAtWinsMerger() *UpdatedAtWinsMerger {
 	return &UpdatedAtWinsMerger{}
 }
 
-// Merge 合并本地与远端快照。
+// Merge merges the local and remote snapshots.
 func (m *UpdatedAtWinsMerger) Merge(ctx context.Context, local *snapshot.Snapshot, remote *snapshot.Snapshot) (*snapshot.Snapshot, Report, error) {
 	_ = ctx
 
 	localSnapshot := snapshot.Clone(local)
 	remoteSnapshot := snapshot.Clone(remote)
 
-	index := make(map[string]snapshot.Record)
+	merged := snapshot.New()
 	report := Report{}
 
 	for _, kind := range sortedKinds(localSnapshot, remoteSnapshot) {
-		for _, record := range localSnapshot.Resources[kind] {
-			index[recordKey(kind, record.ID)] = snapshot.CloneRecord(record)
+		records := m.mergeKind(localSnapshot.Resources[kind], remoteSnapshot.Resources[kind], &report)
+		if len(records) == 0 {
+			continue
 		}
-		for _, remoteRecord := range remoteSnapshot.Resources[kind] {
-			key := recordKey(kind, remoteRecord.ID)
-			localRecord, exists := index[key]
-			if !exists {
-				index[key] = snapshot.CloneRecord(remoteRecord)
-				report.Added++
-				continue
-			}
 
-			switch {
-			case remoteRecord.UpdatedAt.After(localRecord.UpdatedAt):
-				index[key] = snapshot.CloneRecord(remoteRecord)
-				report.Updated++
-			case remoteRecord.UpdatedAt.Equal(localRecord.UpdatedAt):
-				if snapshot.RecordDigest(localRecord) != snapshot.RecordDigest(remoteRecord) {
-					report.Conflicts++
-				}
-			default:
-				if remoteRecord.DeletedAt != nil && localRecord.DeletedAt == nil {
-					report.Deleted++
-				}
-			}
-		}
+		sort.Slice(records, func(i int, j int) bool {
+			return records[i].ID < records[j].ID
+		})
+		merged.Resources[kind] = records
 	}
 
-	merged := snapshot.New()
-	for _, key := range sortedKeys(index) {
-		record := index[key]
-		merged.Resources[record.Kind] = append(merged.Resources[record.Kind], snapshot.CloneRecord(record))
-	}
 	merged.CreatedAt = time.Now()
-
 	return merged, report, nil
 }
 
-// sortedKinds 返回两个快照内的全部资源类型集合。
+// mergeKind merges all records for one resource kind.
+func (m *UpdatedAtWinsMerger) mergeKind(localRecords []snapshot.Record, remoteRecords []snapshot.Record, report *Report) []snapshot.Record {
+	localIndex := make(map[string]snapshot.Record, len(localRecords))
+	for _, record := range localRecords {
+		localIndex[record.ID] = snapshot.CloneRecord(record)
+	}
+
+	remoteIndex := make(map[string]snapshot.Record, len(remoteRecords))
+	for _, record := range remoteRecords {
+		remoteIndex[record.ID] = snapshot.CloneRecord(record)
+	}
+
+	ids := sortedRecordIDs(localIndex, remoteIndex)
+	merged := make([]snapshot.Record, 0, len(ids))
+
+	for _, id := range ids {
+		localRecord, hasLocal := localIndex[id]
+		remoteRecord, hasRemote := remoteIndex[id]
+
+		switch {
+		case !hasLocal:
+			report.Added++
+			merged = append(merged, snapshot.CloneRecord(remoteRecord))
+		case !hasRemote:
+			merged = append(merged, snapshot.CloneRecord(localRecord))
+		default:
+			record, delta := m.mergePair(localRecord, remoteRecord)
+			merged = append(merged, record)
+			report.Added += delta.Added
+			report.Updated += delta.Updated
+			report.Deleted += delta.Deleted
+		}
+	}
+
+	return merged
+}
+
+// mergePair merges one local and remote record pair.
+func (m *UpdatedAtWinsMerger) mergePair(localRecord snapshot.Record, remoteRecord snapshot.Record) (snapshot.Record, Report) {
+	report := Report{}
+	localEventAt := recordEventAt(localRecord)
+	remoteEventAt := recordEventAt(remoteRecord)
+
+	switch {
+	case remoteEventAt.After(localEventAt):
+		report.Updated = 1
+		if remoteRecord.DeletedAt != nil && localRecord.DeletedAt == nil {
+			report.Deleted = 1
+		}
+		return snapshot.CloneRecord(remoteRecord), report
+	case localEventAt.After(remoteEventAt):
+		if localRecord.DeletedAt != nil && remoteRecord.DeletedAt == nil {
+			report.Deleted = 1
+		}
+		return snapshot.CloneRecord(localRecord), report
+	default:
+		if snapshot.RecordDigest(localRecord) == snapshot.RecordDigest(remoteRecord) {
+			return snapshot.CloneRecord(localRecord), report
+		}
+
+		report.Updated = 1
+		if remoteRecord.DeletedAt != nil && localRecord.DeletedAt == nil {
+			report.Deleted = 1
+		}
+		return snapshot.CloneRecord(remoteRecord), report
+	}
+}
+
+// recordEventAt returns the timestamp used to compare update and delete events.
+func recordEventAt(record snapshot.Record) time.Time {
+	if record.DeletedAt != nil && record.DeletedAt.After(record.UpdatedAt) {
+		return *record.DeletedAt
+	}
+	return record.UpdatedAt
+}
+
+// sortedKinds returns all resource kinds from both snapshots in stable order.
 func sortedKinds(local *snapshot.Snapshot, remote *snapshot.Snapshot) []string {
 	index := make(map[string]struct{})
 	for kind := range local.Resources {
@@ -82,17 +135,26 @@ func sortedKinds(local *snapshot.Snapshot, remote *snapshot.Snapshot) []string {
 	return kinds
 }
 
-// sortedKeys 返回稳定排序后的索引键集合。
-func sortedKeys(index map[string]snapshot.Record) []string {
-	keys := make([]string, 0, len(index))
-	for key := range index {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	return keys
-}
+// sortedRecordIDs returns the union of local and remote record IDs in stable order.
+func sortedRecordIDs(local map[string]snapshot.Record, remote map[string]snapshot.Record) []string {
+	ids := make([]string, 0, len(local)+len(remote))
+	seen := make(map[string]struct{}, len(local)+len(remote))
 
-// recordKey 生成 record 的稳定索引键。
-func recordKey(kind string, id string) string {
-	return kind + ":" + id
+	for id := range local {
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	for id := range remote {
+		if _, exists := seen[id]; exists {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+
+	sort.Strings(ids)
+	return ids
 }

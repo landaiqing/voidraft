@@ -23,13 +23,13 @@ const (
 	defaultSyncAttempts = 3
 )
 
-// Options 描述同步应用的构造选项。
+// Options describes app construction options.
 type Options struct {
 	Logger          Logger
 	MaxSyncAttempts int
 }
 
-// App 是同步系统的编排入口。
+// App coordinates the sync system.
 type App struct {
 	logger          Logger
 	snapshotter     snapshot.Snapshotter
@@ -43,7 +43,7 @@ type App struct {
 	schedulers map[string]*scheduler.Ticker
 }
 
-// NewApp 创建新的同步应用实例。
+// NewApp creates a new sync app.
 func NewApp(client *ent.Client, options Options) *App {
 	maxSyncAttempts := options.MaxSyncAttempts
 	if maxSyncAttempts <= 0 {
@@ -65,12 +65,15 @@ func NewApp(client *ent.Client, options Options) *App {
 	}
 }
 
-// Reconfigure 更新同步系统配置。
+// Reconfigure replaces the current sync configuration.
 func (a *App) Reconfigure(ctx context.Context, cfg Config) error {
 	_ = ctx
 
 	normalized := cfg.Normalize()
 	for _, target := range normalized.Targets {
+		if !target.Enabled || !target.Ready() {
+			continue
+		}
 		if err := target.Validate(); err != nil {
 			return fmt.Errorf("validate target %s: %w", target.Kind, err)
 		}
@@ -83,7 +86,7 @@ func (a *App) Reconfigure(ctx context.Context, cfg Config) error {
 	return nil
 }
 
-// Start 按当前配置启动自动同步调度。
+// Start starts auto-sync schedulers for the current config.
 func (a *App) Start(ctx context.Context) error {
 	targets := a.targetsSnapshot()
 	if err := a.verifyTargets(ctx, targets); err != nil {
@@ -100,22 +103,22 @@ func (a *App) Start(ctx context.Context) error {
 			continue
 		}
 
-		currentTargetID := target.Kind
+		targetID := target.Kind
 		task := scheduler.NewTicker()
 		task.Start(target.Schedule.Interval, func(runCtx context.Context) error {
-			_, err := a.Sync(runCtx, currentTargetID)
+			_, err := a.Sync(runCtx, targetID)
 			if err != nil && a.logger != nil {
-				a.logger.Error("sync auto run failed for target %s: %v", currentTargetID, err)
+				a.logger.Error("sync auto run failed for target %s: %v", targetID, err)
 			}
 			return err
 		})
-		a.schedulers[currentTargetID] = task
+		a.schedulers[targetID] = task
 	}
 
 	return nil
 }
 
-// Stop 停止所有自动同步调度。
+// Stop stops all running auto-sync schedulers.
 func (a *App) Stop(ctx context.Context) error {
 	_ = ctx
 
@@ -126,7 +129,7 @@ func (a *App) Stop(ctx context.Context) error {
 	return nil
 }
 
-// Sync 执行指定目标的一次完整同步。
+// Sync runs one full sync for the given target.
 func (a *App) Sync(ctx context.Context, targetID string) (*SyncResult, error) {
 	target, err := a.currentTarget(targetID)
 	if err != nil {
@@ -174,24 +177,46 @@ func (a *App) Sync(ctx context.Context, targetID string) (*SyncResult, error) {
 		RemoteChanged:  result.RemoteChanged,
 		AppliedToLocal: result.AppliedToLocal,
 		Published:      result.Published,
-		ConflictCount:  result.ConflictCount,
-		Revision:       result.Revision,
 	}, nil
 }
 
-// commitMessage 生成提交信息。
+// TestTarget verifies a target config and returns resolved backend details.
+func (a *App) TestTarget(ctx context.Context, target TargetConfig) (string, error) {
+	if err := target.Validate(); err != nil {
+		return "", err
+	}
+
+	backendInstance, err := a.newBackend(target)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = backendInstance.Close()
+	}()
+
+	if err := backendInstance.Verify(ctx); err != nil {
+		return "", err
+	}
+
+	if resolver, ok := backendInstance.(interface{ ResolvedBranch() string }); ok {
+		return resolver.ResolvedBranch(), nil
+	}
+	return "", nil
+}
+
+// commitMessage builds the sync commit message.
 func (a *App) commitMessage(target TargetConfig) string {
 	return fmt.Sprintf("Sync %s %s", target.Kind, time.Now().Format(time.RFC3339))
 }
 
-// currentTarget 返回当前内存中的目标配置。
+// currentTarget returns the current target config from memory.
 func (a *App) currentTarget(targetID string) (TargetConfig, error) {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	return a.config.Target(targetID)
 }
 
-// targetsSnapshot 返回当前所有目标的快照。
+// targetsSnapshot returns a stable copy of the configured targets.
 func (a *App) targetsSnapshot() []TargetConfig {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
@@ -201,31 +226,21 @@ func (a *App) targetsSnapshot() []TargetConfig {
 	return targets
 }
 
-// verifyTargets 预先校验所有已就绪目标。
+// verifyTargets verifies all ready targets before scheduling.
 func (a *App) verifyTargets(ctx context.Context, targets []TargetConfig) error {
 	for _, target := range targets {
 		if !target.Ready() {
 			continue
 		}
 
-		backendInstance, err := a.newBackend(target)
-		if err != nil {
-			return err
-		}
-
-		verifyErr := backendInstance.Verify(ctx)
-		closeErr := backendInstance.Close()
-		if verifyErr != nil {
-			return fmt.Errorf("verify target %s: %w", target.Kind, verifyErr)
-		}
-		if closeErr != nil {
-			return fmt.Errorf("close target %s backend: %w", target.Kind, closeErr)
+		if _, err := a.TestTarget(ctx, target); err != nil {
+			return fmt.Errorf("verify target %s: %w", target.Kind, err)
 		}
 	}
 	return nil
 }
 
-// newBackend 根据目标配置构造后端实例。
+// newBackend creates a backend instance from the target config.
 func (a *App) newBackend(target TargetConfig) (backend.Backend, error) {
 	switch target.Kind {
 	case TargetKindGit:
@@ -266,7 +281,7 @@ func (a *App) newBackend(target TargetConfig) (backend.Backend, error) {
 	}
 }
 
-// stopSchedulersLocked 停止所有调度器。
+// stopSchedulersLocked stops all schedulers while the app lock is held.
 func (a *App) stopSchedulersLocked() {
 	for targetID, task := range a.schedulers {
 		task.Stop()
@@ -274,7 +289,7 @@ func (a *App) stopSchedulersLocked() {
 	}
 }
 
-// fallbackString 返回第一个非空字符串。
+// fallbackString returns the first non-empty string.
 func fallbackString(value string, fallback string) string {
 	if value == "" {
 		return fallback

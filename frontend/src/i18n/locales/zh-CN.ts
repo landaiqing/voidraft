@@ -300,11 +300,17 @@ export default {
       sshKeyPassphrase: 'SSH密钥密码',
       sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
       syncOperations: '同步操作',
-      syncToRemote: '同步到远程',
       syncToTarget: '同步到目标',
+      testingConnection: '测试中...',
       syncing: '同步中...',
       syncSuccess: '同步成功',
+      testConnectionSuccess: '连接测试成功',
+      testConnectionSuccessWithBranch: '连接测试成功，分支：{branch}',
+      lastSync: '最近同步',
+      lastSuccess: '最近成功',
+      lastError: '最近错误',
       actions: {
+        testConnection: '立即测试连接',
         sync: '同步',
       }
     },

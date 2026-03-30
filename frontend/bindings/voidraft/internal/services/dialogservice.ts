@@ -8,20 +8,18 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
  * SelectDirectory 打开目录选择对话框
  */
-export function SelectDirectory(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2249533621) as any;
-    return $resultPromise;
+export function SelectDirectory(): $CancellablePromise<string> {
+    return $Call.ByID(2249533621);
 }
 
 /**
  * SelectFile 打开文件选择对话框
  */
-export function SelectFile(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(37302920) as any;
-    return $resultPromise;
+export function SelectFile(): $CancellablePromise<string> {
+    return $Call.ByID(37302920);
 }

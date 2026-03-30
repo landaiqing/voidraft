@@ -8,48 +8,32 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
  * ClearAll 清除所有测试状态
  */
-export function ClearAll(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2179720854) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceStartup 服务启动时调用
- */
-export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(617408198, options) as any;
-    return $resultPromise;
+export function ClearAll(): $CancellablePromise<void> {
+    return $Call.ByID(2179720854);
 }
 
 /**
  * TestBadge 测试Badge功能
  */
-export function TestBadge(text: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(4242952145, text) as any;
-    return $resultPromise;
+export function TestBadge(text: string): $CancellablePromise<void> {
+    return $Call.ByID(4242952145, text);
 }
 
 /**
  * TestNotification 测试通知功能
  */
-export function TestNotification(title: string, subtitle: string, body: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1697553289, title, subtitle, body) as any;
-    return $resultPromise;
+export function TestNotification(title: string, subtitle: string, body: string): $CancellablePromise<void> {
+    return $Call.ByID(1697553289, title, subtitle, body);
 }
 
 /**
  * TestUpdateNotification 测试更新通知
  */
-export function TestUpdateNotification(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3091730060) as any;
-    return $resultPromise;
+export function TestUpdateNotification(): $CancellablePromise<void> {
+    return $Call.ByID(3091730060);
 }

@@ -8,27 +8,25 @@ import (
 )
 
 const (
-	// DefaultBranch 是默认 Git 分支名。
-	DefaultBranch = "master"
-	// DefaultRemoteName 是默认 Git 远端名。
+	// DefaultRemoteName is the default Git remote name.
 	DefaultRemoteName = "origin"
-	// DefaultHeadKey 是默认同步头文件名。
+	// DefaultHeadKey is the default snapshot head filename.
 	DefaultHeadKey = "head.json"
 )
 
 const (
-	// TargetKindGit 表示 Git 同步目标。
+	// TargetKindGit identifies the Git sync target.
 	TargetKindGit = "git"
-	// TargetKindLocalFS 表示本地文件系统同步目标。
+	// TargetKindLocalFS identifies the local snapshot sync target.
 	TargetKindLocalFS = "localfs"
 )
 
-// Config 描述整个同步系统的运行配置。
+// Config describes the sync runtime configuration.
 type Config struct {
 	Targets []TargetConfig
 }
 
-// TargetConfig 描述单个同步目标的配置。
+// TargetConfig describes one sync target.
 type TargetConfig struct {
 	Kind     string
 	Enabled  bool
@@ -37,13 +35,13 @@ type TargetConfig struct {
 	LocalFS  *LocalFSTargetConfig
 }
 
-// ScheduleConfig 描述自动同步调度配置。
+// ScheduleConfig describes the auto-sync scheduler settings.
 type ScheduleConfig struct {
 	AutoSync bool
 	Interval time.Duration
 }
 
-// GitTargetConfig 描述 Git 同步目标配置。
+// GitTargetConfig describes the Git sync target configuration.
 type GitTargetConfig struct {
 	RepoPath    string
 	RepoURL     string
@@ -54,7 +52,7 @@ type GitTargetConfig struct {
 	Auth        GitAuthConfig
 }
 
-// GitAuthConfig 描述 Git 鉴权配置。
+// GitAuthConfig describes the Git auth configuration.
 type GitAuthConfig struct {
 	Method         string
 	Username       string
@@ -64,14 +62,14 @@ type GitAuthConfig struct {
 	SSHKeyPassword string
 }
 
-// LocalFSTargetConfig 描述本地文件系统同步目标配置。
+// LocalFSTargetConfig describes the local snapshot store configuration.
 type LocalFSTargetConfig struct {
 	Namespace string
 	HeadKey   string
 	RootPath  string
 }
 
-// Normalize 返回带默认值的配置副本。
+// Normalize returns a normalized copy of the sync configuration.
 func (c Config) Normalize() Config {
 	if len(c.Targets) == 0 {
 		return Config{}
@@ -85,7 +83,7 @@ func (c Config) Normalize() Config {
 	return Config{Targets: targets}
 }
 
-// Target 返回指定 kind 的目标配置。
+// Target returns the config for the given target kind.
 func (c Config) Target(targetKind string) (TargetConfig, error) {
 	for _, target := range c.Targets {
 		if target.Kind == targetKind {
@@ -95,7 +93,7 @@ func (c Config) Target(targetKind string) (TargetConfig, error) {
 	return TargetConfig{}, fmt.Errorf("%w: %s", ErrTargetNotFound, targetKind)
 }
 
-// Normalize 返回带默认值的目标配置副本。
+// Normalize returns a normalized copy of the target config.
 func (t TargetConfig) Normalize() TargetConfig {
 	target := t
 	if target.Kind == "" {
@@ -106,9 +104,6 @@ func (t TargetConfig) Normalize() TargetConfig {
 	}
 	if target.Kind == TargetKindGit && target.Git != nil {
 		gitConfig := *target.Git
-		if strings.TrimSpace(gitConfig.Branch) == "" {
-			gitConfig.Branch = DefaultBranch
-		}
 		if strings.TrimSpace(gitConfig.RemoteName) == "" {
 			gitConfig.RemoteName = DefaultRemoteName
 		}
@@ -127,7 +122,7 @@ func (t TargetConfig) Normalize() TargetConfig {
 	return target
 }
 
-// Validate 校验目标配置。
+// Validate validates the target configuration.
 func (t TargetConfig) Validate() error {
 	switch t.Kind {
 	case TargetKindGit:
@@ -150,7 +145,7 @@ func (t TargetConfig) Validate() error {
 	return nil
 }
 
-// Ready 判断目标是否具备执行同步的必要信息。
+// Ready reports whether the target can run a sync now.
 func (t TargetConfig) Ready() bool {
 	if !t.Enabled {
 		return false
