@@ -6,6 +6,4 @@ export {
     DockService
 };
 
-export {
-    BadgeOptions
-} from "./models.js";
+export * from "./models.js";

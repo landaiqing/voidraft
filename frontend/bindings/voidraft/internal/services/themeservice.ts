@@ -8,8 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as ent$0 from "../models/ent/models.js";
@@ -17,24 +20,37 @@ import * as ent$0 from "../models/ent/models.js";
 /**
  * GetThemeByName 根据Key获取主题
  */
-export function GetThemeByName(name: string): $CancellablePromise<ent$0.Theme | null> {
-    return $Call.ByID(1938954770, name).then(($result: any) => {
+export function GetThemeByName(name: string): Promise<ent$0.Theme | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1938954770, name) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * ResetTheme 删除主题
  */
-export function ResetTheme(key: string): $CancellablePromise<void> {
-    return $Call.ByID(1806334457, key);
+export function ResetTheme(key: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1806334457, key) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup 服务启动
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2915959937, options) as any;
+    return $resultPromise;
 }
 
 /**
  * UpdateTheme 保存或更新主题
  */
-export function UpdateTheme(key: string, colors: { [_ in string]?: any }): $CancellablePromise<void> {
-    return $Call.ByID(70189749, key, colors);
+export function UpdateTheme(key: string, colors: { [_: string]: any }): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(70189749, key, colors) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions

@@ -79,7 +79,7 @@ func (ws *WindowService) OpenDocumentWindow(documentID int64) error {
 			Theme: application.SystemDefault,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
-		URL:              fmt.Sprintf("/?documentId=%d", documentID),
+		URL:              fmt.Sprintf("/?documentId=%d&windowName=%s", documentID, windowName),
 	})
 
 	// 注册窗口事件

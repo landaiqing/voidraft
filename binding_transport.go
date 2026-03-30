@@ -2,213 +2,271 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
-	"github.com/coder/websocket"
-	"github.com/coder/websocket/wsjson"
+	"github.com/lxzan/gws"
 	"github.com/wailsapp/wails/v3/pkg/application"
 
 	"voidraft/internal/services"
 )
 
-const bindingWebSocketPath = "/wails/ws-bindings"
+//go:embed binding_transport.js
+var bindingTransportClientTemplate string
 
-type hybridBindingTransport struct {
-	httpTransport    *application.HTTPTransport
-	messageProcessor *application.MessageProcessor
+type bindingWebSocketTransport struct {
+	gws.BuiltinEventHandler
+
 	logger           *slog.Logger
-	ctx              context.Context
+	messageProcessor *application.MessageProcessor
+	server           *http.Server
+	jsClient         []byte
+	upgrader         *gws.Upgrader
 
-	connections sync.Map
+	clients sync.Map
 }
 
-type hybridBindingMessage struct {
-	ID       string                 `json:"id"`
-	Type     string                 `json:"type"`
-	Request  *hybridBindingRequest  `json:"request,omitempty"`
-	Response *hybridBindingResponse `json:"response,omitempty"`
+type bindingTransportClient struct {
+	conn      *gws.Conn
+	ctx       context.Context
+	cancel    context.CancelFunc
+	closeOnce sync.Once
 }
 
-type hybridBindingRequest struct {
-	Object     int             `json:"object"`
-	Method     int             `json:"method"`
-	Args       json.RawMessage `json:"args,omitempty"`
-	WindowName string          `json:"windowName,omitempty"`
-	ClientID   string          `json:"clientId,omitempty"`
+type bindingTransportMessage struct {
+	ID       string                      `json:"id,omitempty"`
+	Type     string                      `json:"type"`
+	Request  *application.RuntimeRequest `json:"request,omitempty"`
+	Response *bindingTransportResponse   `json:"response,omitempty"`
+	Event    *application.CustomEvent    `json:"event,omitempty"`
 }
 
-type hybridBindingResponse struct {
+type bindingTransportResponse struct {
 	StatusCode int    `json:"statusCode"`
 	Data       any    `json:"data,omitempty"`
 	Error      string `json:"error,omitempty"`
 }
 
-func newHybridBindingTransport() *hybridBindingTransport {
-	return &hybridBindingTransport{
-		httpTransport: application.NewHTTPTransport(application.HTTPTransportWithLogger(slog.Default())),
-		logger:        slog.Default(),
+func newBindingTransport() *bindingWebSocketTransport {
+	return &bindingWebSocketTransport{
+		logger: slog.Default(),
 	}
 }
 
-func (t *hybridBindingTransport) Start(ctx context.Context, processor *application.MessageProcessor) error {
-	t.ctx = ctx
+func (t *bindingWebSocketTransport) Start(ctx context.Context, processor *application.MessageProcessor) error {
 	t.messageProcessor = processor
-	return t.httpTransport.Start(ctx, processor)
-}
+	t.upgrader = gws.NewUpgrader(t, &gws.ServerOption{
+		Recovery: gws.Recovery,
+	})
 
-func (t *hybridBindingTransport) JSClient() []byte {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/wails/ws", t.handleWebSocket)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return fmt.Errorf("listen websocket transport: %w", err)
+	}
+
+	wsURL := "ws://" + listener.Addr().String() + "/wails/ws"
+	t.jsClient = []byte(strings.ReplaceAll(
+		bindingTransportClientTemplate,
+		"__WAILS_WS_URL__",
+		strconv.Quote(wsURL),
+	))
+	t.server = &http.Server{Handler: mux}
+
+	go func() {
+		<-ctx.Done()
+		if err := t.Stop(); err != nil {
+			t.logger.Error("failed to stop binding websocket transport", "error", err)
+		}
+	}()
+
+	go func() {
+		if err := t.server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			t.logger.Error("binding websocket transport server stopped unexpectedly", "error", err)
+		}
+	}()
+
+	t.logger.Info("binding websocket transport listening", "url", wsURL)
 	return nil
 }
 
-func (t *hybridBindingTransport) Stop() error {
-	t.connections.Range(func(key, _ any) bool {
-		if conn, ok := key.(*websocket.Conn); ok {
-			_ = conn.Close(websocket.StatusGoingAway, "application shutting down")
+func (t *bindingWebSocketTransport) JSClient() []byte {
+	return t.jsClient
+}
+
+func (t *bindingWebSocketTransport) Stop() error {
+	t.clients.Range(func(key, value any) bool {
+		client, ok := value.(*bindingTransportClient)
+		if ok {
+			client.close()
 		}
-		t.connections.Delete(key)
+		t.clients.Delete(key)
 		return true
 	})
-	return t.httpTransport.Stop()
+
+	if t.server == nil {
+		return nil
+	}
+
+	return t.server.Shutdown(context.Background())
 }
 
-func (t *hybridBindingTransport) Handler() func(next http.Handler) http.Handler {
-	httpHandler := t.httpTransport.Handler()
-	return func(next http.Handler) http.Handler {
-		runtimeHandler := httpHandler(next)
-		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			if req.URL.Path == bindingWebSocketPath {
-				t.handleBindingWebSocket(rw, req)
-				return
-			}
-			runtimeHandler.ServeHTTP(rw, req)
-		})
-	}
-}
-
-func (t *hybridBindingTransport) handleBindingWebSocket(rw http.ResponseWriter, req *http.Request) {
-	if t.messageProcessor == nil {
-		http.Error(rw, "binding transport not ready", http.StatusServiceUnavailable)
-		return
-	}
-
-	conn, err := websocket.Accept(rw, req, nil)
-	if err != nil {
-		t.logger.Error("failed to accept binding websocket", "error", err)
-		return
-	}
-	conn.SetReadLimit(64 << 20)
-	t.connections.Store(conn, struct{}{})
-
-	baseCtx := t.ctx
-	if baseCtx == nil {
-		baseCtx = req.Context()
-	}
-
-	connCtx, cancel := context.WithCancel(baseCtx)
-	outgoing := make(chan hybridBindingMessage, 16)
-
-	go t.writeBindingMessages(connCtx, conn, outgoing, cancel)
-	t.readBindingMessages(connCtx, conn, outgoing)
-
-	cancel()
-	t.connections.Delete(conn)
-	_ = conn.Close(websocket.StatusNormalClosure, "")
-}
-
-func (t *hybridBindingTransport) writeBindingMessages(ctx context.Context, conn *websocket.Conn, outgoing <-chan hybridBindingMessage, cancel context.CancelFunc) {
-	defer cancel()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case message, ok := <-outgoing:
-			if !ok {
-				return
-			}
-
-			if err := wsjson.Write(ctx, conn, message); err != nil {
-				t.logger.Error("failed to write binding websocket message", "error", err)
-				return
-			}
-		}
-	}
-}
-
-func (t *hybridBindingTransport) readBindingMessages(ctx context.Context, conn *websocket.Conn, outgoing chan<- hybridBindingMessage) {
-	for {
-		var message hybridBindingMessage
-		if err := wsjson.Read(ctx, conn, &message); err != nil {
-			if websocket.CloseStatus(err) != -1 && websocket.CloseStatus(err) != websocket.StatusNormalClosure {
-				t.logger.Debug("binding websocket closed", "status", websocket.CloseStatus(err))
-			}
-			return
-		}
-		if message.Type != "request" || message.Request == nil {
-			continue
-		}
-
-		go t.processBindingMessage(ctx, outgoing, message)
-	}
-}
-
-func (t *hybridBindingTransport) processBindingMessage(ctx context.Context, outgoing chan<- hybridBindingMessage, message hybridBindingMessage) {
-	if t.messageProcessor == nil {
-		t.respondBindingError(ctx, outgoing, message.ID, http.StatusServiceUnavailable, errors.New("binding transport not ready"))
-		return
-	}
-
-	args := &application.Args{}
-	if len(message.Request.Args) > 0 {
-		if err := args.UnmarshalJSON(message.Request.Args); err != nil {
-			t.respondBindingError(ctx, outgoing, message.ID, http.StatusUnprocessableEntity, err)
-			return
-		}
-	}
-
-	resp, err := t.messageProcessor.HandleRuntimeCallWithIDs(ctx, &application.RuntimeRequest{
-		Object:            message.Request.Object,
-		Method:            message.Request.Method,
-		Args:              args,
-		WebviewWindowName: message.Request.WindowName,
-		ClientID:          message.Request.ClientID,
+func (t *bindingWebSocketTransport) DispatchWailsEvent(event *application.CustomEvent) {
+	payload, err := json.Marshal(bindingTransportMessage{
+		Type:  "event",
+		Event: event,
 	})
 	if err != nil {
-		statusCode := http.StatusUnprocessableEntity
+		t.logger.Warn("failed to encode websocket event", "event", event.Name, "error", err)
+		return
+	}
+
+	broadcaster := gws.NewBroadcaster(gws.OpcodeText, payload)
+	defer func() {
+		_ = broadcaster.Close()
+	}()
+
+	t.clients.Range(func(_ any, value any) bool {
+		client, ok := value.(*bindingTransportClient)
+		if !ok {
+			return true
+		}
+
+		if err := broadcaster.Broadcast(client.conn); err != nil {
+			t.logger.Debug("failed to broadcast websocket event", "event", event.Name, "error", err)
+		}
+
+		return true
+	})
+}
+
+func (t *bindingWebSocketTransport) handleWebSocket(rw http.ResponseWriter, req *http.Request) {
+	conn, err := t.upgrader.Upgrade(rw, req)
+	if err != nil {
+		t.logger.Error("failed to upgrade websocket connection", "error", err)
+		return
+	}
+
+	go conn.ReadLoop()
+}
+
+func (t *bindingWebSocketTransport) OnOpen(socket *gws.Conn) {
+	t.clients.Store(socket, newBindingTransportClient(socket))
+}
+
+func (t *bindingWebSocketTransport) OnClose(socket *gws.Conn, err error) {
+	if client, ok := t.loadClient(socket); ok {
+		client.close()
+	}
+	t.clients.Delete(socket)
+
+	if err != nil && !errors.Is(err, net.ErrClosed) {
+		t.logger.Debug("binding websocket closed", "error", err)
+	}
+}
+
+func (t *bindingWebSocketTransport) OnMessage(socket *gws.Conn, message *gws.Message) {
+	defer message.Close()
+
+	var payload bindingTransportMessage
+	if err := json.Unmarshal(message.Bytes(), &payload); err != nil {
+		t.logger.Warn("failed to decode websocket request", "error", err)
+		return
+	}
+
+	if payload.Type != "request" || payload.Request == nil {
+		return
+	}
+
+	if payload.Request.Args == nil {
+		payload.Request.Args = &application.Args{}
+	}
+
+	client, ok := t.loadClient(socket)
+	if !ok {
+		return
+	}
+
+	go t.handleRequest(client, payload.ID, payload.Request)
+}
+
+func (t *bindingWebSocketTransport) handleRequest(client *bindingTransportClient, id string, req *application.RuntimeRequest) {
+	if t.messageProcessor == nil {
+		t.sendResponse(client, id, nil, http.StatusServiceUnavailable, errors.New("binding transport not ready"))
+		return
+	}
+
+	resp, err := t.messageProcessor.HandleRuntimeCallWithIDs(client.ctx, req)
+	statusCode := http.StatusOK
+	if err != nil {
+		statusCode = http.StatusUnprocessableEntity
 		if errors.Is(err, services.ErrDocumentRevisionConflict) {
 			statusCode = http.StatusConflict
 		}
-		t.respondBindingError(ctx, outgoing, message.ID, statusCode, err)
-		return
 	}
 
-	select {
-	case <-ctx.Done():
-	case outgoing <- hybridBindingMessage{
-		ID:   message.ID,
-		Type: "response",
-		Response: &hybridBindingResponse{
-			StatusCode: http.StatusOK,
-			Data:       resp,
-		},
-	}:
+	t.sendResponse(client, id, resp, statusCode, err)
+}
+
+func (t *bindingWebSocketTransport) sendResponse(client *bindingTransportClient, id string, data any, statusCode int, err error) {
+	response := &bindingTransportResponse{
+		StatusCode: statusCode,
+		Data:       data,
+	}
+	if err != nil {
+		response.Error = err.Error()
+	}
+
+	if err := client.writeJSON(bindingTransportMessage{
+		ID:       id,
+		Type:     "response",
+		Response: response,
+	}); err != nil {
+		t.logger.Debug("failed to encode websocket response", "id", id, "error", err)
 	}
 }
 
-func (t *hybridBindingTransport) respondBindingError(ctx context.Context, outgoing chan<- hybridBindingMessage, id string, statusCode int, err error) {
-	select {
-	case <-ctx.Done():
-	case outgoing <- hybridBindingMessage{
-		ID:   id,
-		Type: "response",
-		Response: &hybridBindingResponse{
-			StatusCode: statusCode,
-			Error:      err.Error(),
-		},
-	}:
+func (t *bindingWebSocketTransport) loadClient(socket *gws.Conn) (*bindingTransportClient, bool) {
+	value, ok := t.clients.Load(socket)
+	if !ok {
+		return nil, false
 	}
+
+	client, ok := value.(*bindingTransportClient)
+	return client, ok
+}
+
+func newBindingTransportClient(conn *gws.Conn) *bindingTransportClient {
+	ctx, cancel := context.WithCancel(context.Background())
+	return &bindingTransportClient{
+		conn:   conn,
+		ctx:    ctx,
+		cancel: cancel,
+	}
+}
+
+func (c *bindingTransportClient) close() {
+	c.closeOnce.Do(func() {
+		c.cancel()
+		_ = c.conn.WriteClose(1001, nil)
+	})
+}
+
+func (c *bindingTransportClient) writeJSON(message bindingTransportMessage) error {
+	payload, err := json.Marshal(message)
+	if err != nil {
+		return err
+	}
+
+	return c.conn.WriteMessage(gws.OpcodeText, payload)
 }

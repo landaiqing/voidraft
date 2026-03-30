@@ -51,6 +51,7 @@ import {useDocumentStore} from '@/stores/documentStore';
 import {useTabStore} from '@/stores/tabStore';
 import TabContainer from '@/components/tabs/TabContainer.vue';
 import {
+  APP_ICON_URL,
   minimizeWindow,
   toggleMaximize,
   closeWindow,

@@ -8,8 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
@@ -21,63 +24,93 @@ import * as $models from "./models.js";
 /**
  * GetStatus returns the latest manual sync status.
  */
-export function GetStatus(): $CancellablePromise<$models.SyncStatus | null> {
-    return $Call.ByID(2881223453).then(($result: any) => {
+export function GetStatus(): Promise<$models.SyncStatus | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2881223453) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * HandleConfigChange re-applies sync config changes.
  */
-export function HandleConfigChange(config: models$0.SyncConfig | null): $CancellablePromise<void> {
-    return $Call.ByID(1326966557, config);
+export function HandleConfigChange(config: models$0.SyncConfig | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1326966557, config) as any;
+    return $resultPromise;
 }
 
 /**
  * Initialize reloads config and restarts auto-sync.
  */
-export function Initialize(): $CancellablePromise<void> {
-    return $Call.ByID(1986210239);
+export function Initialize(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1986210239) as any;
+    return $resultPromise;
 }
 
 /**
  * Reinitialize is an alias used by config watchers.
  */
-export function Reinitialize(): $CancellablePromise<void> {
-    return $Call.ByID(1904005378);
+export function Reinitialize(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1904005378) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceShutdown stops observers and sync schedulers.
+ */
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4185231442) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup initializes the sync service and config observers.
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2650385641, options) as any;
+    return $resultPromise;
 }
 
 /**
  * StartAutoSync starts auto-sync scheduling.
  */
-export function StartAutoSync(): $CancellablePromise<void> {
-    return $Call.ByID(90694923);
+export function StartAutoSync(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(90694923) as any;
+    return $resultPromise;
 }
 
 /**
  * StopAutoSync stops auto-sync scheduling.
  */
-export function StopAutoSync(): $CancellablePromise<void> {
-    return $Call.ByID(972414697);
+export function StopAutoSync(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(972414697) as any;
+    return $resultPromise;
 }
 
 /**
  * Sync runs one manual sync and returns the latest status.
  */
-export function Sync(): $CancellablePromise<$models.SyncStatus | null> {
-    return $Call.ByID(3361086502).then(($result: any) => {
+export function Sync(): Promise<$models.SyncStatus | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3361086502) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * TestConnection validates the selected target configuration immediately.
  */
-export function TestConnection(): $CancellablePromise<$models.SyncConnectionResult | null> {
-    return $Call.ByID(389881917).then(($result: any) => {
+export function TestConnection(): Promise<$models.SyncConnectionResult | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(389881917) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType3($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 // Private type creation functions

@@ -2,7 +2,7 @@
   <div class="linux-titlebar" style="--wails-draggable:drag" @contextmenu.prevent>
     <div class="titlebar-content" @dblclick="handleToggleMaximize" @contextmenu.prevent>
       <div class="titlebar-icon">
-        <img src="/appicon.png" alt="voidraft"/>
+        <img :src="APP_ICON_URL" alt="voidraft"/>
       </div>
       <div v-if="!tabStore.isTabsEnabled && !isInSettings" class="titlebar-title" :title="fullTitleText">
         {{ titleText }}
@@ -61,6 +61,7 @@ import {useDocumentStore} from '@/stores/documentStore';
 import {useTabStore} from '@/stores/tabStore';
 import TabContainer from '@/components/tabs/TabContainer.vue';
 import {
+  APP_ICON_URL,
   minimizeWindow,
   toggleMaximize,
   closeWindow,
