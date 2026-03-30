@@ -1,11 +1,12 @@
 package services
 
 import (
+	"log/slog"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
-	"log/slog"
 )
 
 // ServiceManager 服务管理器，负责协调各个服务
