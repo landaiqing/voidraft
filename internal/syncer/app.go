@@ -177,9 +177,6 @@ func (a *App) Sync(ctx context.Context, targetID string) (*SyncResult, error) {
 		RemoteChanged:  result.RemoteChanged,
 		AppliedToLocal: result.AppliedToLocal,
 		Published:      result.Published,
-		ConflictCount:  result.ConflictCount,
-		ConflictIDs:    append([]string(nil), result.ConflictIDs...),
-		Revision:       result.Revision,
 	}, nil
 }
 

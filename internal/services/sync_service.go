@@ -21,17 +21,14 @@ const (
 
 // SyncStatus describes the latest manual sync state.
 type SyncStatus struct {
-	TargetID       string   `json:"target_id,omitempty"`
-	LastSyncAt     string   `json:"last_sync_at,omitempty"`
-	LastSuccessAt  string   `json:"last_success_at,omitempty"`
-	LastError      string   `json:"last_error,omitempty"`
-	LocalChanged   bool     `json:"local_changed"`
-	RemoteChanged  bool     `json:"remote_changed"`
-	AppliedToLocal bool     `json:"applied_to_local"`
-	Published      bool     `json:"published"`
-	ConflictCount  int      `json:"conflict_count"`
-	ConflictIDs    []string `json:"conflict_ids,omitempty"`
-	Revision       string   `json:"revision,omitempty"`
+	TargetID       string `json:"target_id,omitempty"`
+	LastSyncAt     string `json:"last_sync_at,omitempty"`
+	LastSuccessAt  string `json:"last_success_at,omitempty"`
+	LastError      string `json:"last_error,omitempty"`
+	LocalChanged   bool   `json:"local_changed"`
+	RemoteChanged  bool   `json:"remote_changed"`
+	AppliedToLocal bool   `json:"applied_to_local"`
+	Published      bool   `json:"published"`
 }
 
 // SyncConnectionResult describes a connection test result.
@@ -152,9 +149,6 @@ func (s *SyncService) Sync() (*SyncStatus, error) {
 		status.RemoteChanged = false
 		status.AppliedToLocal = false
 		status.Published = false
-		status.ConflictCount = 0
-		status.ConflictIDs = nil
-		status.Revision = ""
 		s.storeStatus(status)
 		return nil, err
 	}
@@ -167,9 +161,6 @@ func (s *SyncService) Sync() (*SyncStatus, error) {
 		RemoteChanged:  result.RemoteChanged,
 		AppliedToLocal: result.AppliedToLocal,
 		Published:      result.Published,
-		ConflictCount:  result.ConflictCount,
-		ConflictIDs:    append([]string(nil), result.ConflictIDs...),
-		Revision:       result.Revision,
 	}
 	s.storeStatus(status)
 	return s.GetStatus(), nil

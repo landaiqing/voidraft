@@ -365,9 +365,6 @@ export class SyncStatus {
     "remote_changed": boolean;
     "applied_to_local": boolean;
     "published": boolean;
-    "conflict_count": number;
-    "conflict_ids"?: string[];
-    "revision"?: string;
 
     /** Creates a new SyncStatus instance. */
     constructor($$source: Partial<SyncStatus> = {}) {
@@ -383,9 +380,6 @@ export class SyncStatus {
         if (!("published" in $$source)) {
             this["published"] = false;
         }
-        if (!("conflict_count" in $$source)) {
-            this["conflict_count"] = 0;
-        }
 
         Object.assign(this, $$source);
     }
@@ -394,11 +388,7 @@ export class SyncStatus {
      * Creates a new SyncStatus instance from a string or object.
      */
     static createFrom($$source: any = {}): SyncStatus {
-        const $$createField9_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("conflict_ids" in $$parsedSource) {
-            $$parsedSource["conflict_ids"] = $$createField9_0($$parsedSource["conflict_ids"]);
-        }
         return new SyncStatus($$parsedSource as Partial<SyncStatus>);
     }
 }

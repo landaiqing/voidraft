@@ -15,7 +15,4 @@ type SyncResult struct {
 	RemoteChanged  bool
 	AppliedToLocal bool
 	Published      bool
-	ConflictCount  int
-	ConflictIDs    []string
-	Revision       string
 }

@@ -37,9 +37,6 @@ type Result struct {
 	RemoteChanged  bool
 	AppliedToLocal bool
 	Published      bool
-	ConflictCount  int
-	ConflictIDs    []string
-	Revision       string
 }
 
 // SyncEngine runs the full local/remote sync flow.
@@ -136,7 +133,7 @@ func (e *SyncEngine) syncOnce(ctx context.Context, options SyncOptions) (*Result
 		return nil, false, fmt.Errorf("digest remote snapshot: %w", err)
 	}
 
-	mergedSnapshot, report, err := e.merger.Merge(ctx, localSnapshot, remoteSnapshot)
+	mergedSnapshot, _, err := e.merger.Merge(ctx, localSnapshot, remoteSnapshot)
 	if err != nil {
 		return nil, false, fmt.Errorf("merge snapshot: %w", err)
 	}
@@ -179,8 +176,5 @@ func (e *SyncEngine) syncOnce(ctx context.Context, options SyncOptions) (*Result
 		RemoteChanged:  remoteDigest != mergedDigest,
 		AppliedToLocal: appliedToLocal,
 		Published:      remoteState != publishedState,
-		ConflictCount:  report.Conflicts,
-		ConflictIDs:    append([]string(nil), report.ConflictIDs...),
-		Revision:       publishedState.Revision,
 	}, false, nil
 }

@@ -29,7 +29,6 @@ const hasTargetConfig = computed(() => (
 ));
 const canTestConnection = computed(() => hasTargetConfig.value);
 const canSync = computed(() => isSyncEnabled.value && hasTargetConfig.value);
-const conflictIDsText = computed(() => syncStatus.value?.conflict_ids?.join(', ') ?? '');
 
 const authMethodOptions = computed(() => [
   {value: AuthMethod.Token, label: t('settings.sync.authMethods.token')},
@@ -64,6 +63,7 @@ const selectLocalFSDirectory = async () => {
   }
 };
 
+/** Tests the current sync target immediately. */
 const handleTestConnection = async () => {
   try {
     const result = await syncStore.testConnection();
@@ -77,13 +77,10 @@ const handleTestConnection = async () => {
   }
 };
 
+/** Runs one manual sync. */
 const handleSync = async () => {
   try {
-    const status = await syncStore.sync();
-    if (status?.conflict_count) {
-      toast.success(t('settings.sync.syncSuccessWithConflicts', {count: status.conflict_count}));
-      return;
-    }
+    await syncStore.sync();
     toast.success(t('settings.sync.syncSuccess'));
   } catch (error) {
     toast.error(error instanceof Error ? error.message : String(error));
@@ -283,9 +280,6 @@ onMounted(() => {
           <div v-if="syncStatus" class="sync-status">
             <div>{{ t('settings.sync.lastSync') }}: {{ lastSyncText }}</div>
             <div>{{ t('settings.sync.lastSuccess') }}: {{ lastSuccessText }}</div>
-            <div v-if="syncStatus.revision">{{ t('settings.sync.revision') }}: {{ syncStatus.revision.slice(0, 12) }}</div>
-            <div>{{ t('settings.sync.conflicts') }}: {{ syncStatus.conflict_count }}</div>
-            <div v-if="syncStatus.conflict_ids?.length">{{ t('settings.sync.conflictIds') }}: {{ conflictIDsText }}</div>
             <div v-if="syncStatus.last_error" class="sync-status-error">
               {{ t('settings.sync.lastError') }}: {{ syncStatus.last_error }}
             </div>
