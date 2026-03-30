@@ -173,7 +173,7 @@ class RunButtonMarker extends GutterMarker {
         time: response.time,
         requestSize: response.requestSize,
         body: response.body,
-        headers: response.headers,
+        headers: response.headers as { [_: string]: string[] },
         timestamp: response.timestamp ? new Date(response.timestamp) : new Date(),
         error: response.error
       };

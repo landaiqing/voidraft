@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Create as $Create} from "@wailsio/runtime";
+import { Create as $Create } from "@wailsio/runtime";
 
 /**
  * A Header represents the key-value pairs in an HTTP header.
@@ -11,4 +11,4 @@ import {Create as $Create} from "@wailsio/runtime";
  * The keys should be in canonical form, as returned by
  * [CanonicalHeaderKey].
  */
-export type Header = { [_: string]: string[] };
+export type Header = { [_ in string]?: string[] };

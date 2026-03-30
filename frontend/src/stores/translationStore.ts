@@ -42,7 +42,7 @@ export const useTranslationStore = defineStore('translation', () => {
                 try {
                     const languages = await TranslationService.GetTranslatorLanguages(translatorType as any);
                     if (languages) {
-                        translatorLanguages.value[translatorType] = languages;
+                        translatorLanguages.value[translatorType] = languages as Record<string, LanguageInfo>;
                     }
                 } catch (err) {
                     console.error(`Failed to preload languages for ${translatorType}:`, err);
@@ -63,7 +63,7 @@ export const useTranslationStore = defineStore('translation', () => {
         try {
             const languages = await TranslationService.GetTranslatorLanguages(translatorType as any);
             if (languages) {
-                translatorLanguages.value[translatorType] = languages;
+                translatorLanguages.value[translatorType] = languages as Record<string, LanguageInfo>;
             }
         } catch (err) {
             console.error(`Failed to load languages for ${translatorType}:`, err);

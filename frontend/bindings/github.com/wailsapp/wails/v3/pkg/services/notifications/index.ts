@@ -6,4 +6,8 @@ export {
     NotificationService
 };
 
-export * from "./models.js";
+export {
+    NotificationAction,
+    NotificationCategory,
+    NotificationOptions
+} from "./models.js";

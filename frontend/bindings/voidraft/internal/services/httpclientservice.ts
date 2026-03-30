@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,13 +17,10 @@ import * as $models from "./models.js";
 /**
  * ExecuteRequest 执行HTTP请求
  */
-export function ExecuteRequest(request: $models.HttpRequest | null): Promise<$models.HttpResponse | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3143343977, request) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function ExecuteRequest(request: $models.HttpRequest | null): $CancellablePromise<$models.HttpResponse | null> {
+    return $Call.ByID(3143343977, request).then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 // Private type creation functions

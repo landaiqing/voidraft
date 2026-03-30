@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,41 +17,33 @@ import * as $models from "./models.js";
 /**
  * FormatBytes 格式化字节数为人类可读的格式
  */
-export function FormatBytes(bytes: number): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1368998019, bytes) as any;
-    return $resultPromise;
+export function FormatBytes(bytes: number): $CancellablePromise<string> {
+    return $Call.ByID(1368998019, bytes);
 }
 
 /**
  * GetMemoryStats 获取当前内存统计信息
  */
-export function GetMemoryStats(): Promise<$models.MemoryStats> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1678201009) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function GetMemoryStats(): $CancellablePromise<$models.MemoryStats> {
+    return $Call.ByID(1678201009).then(($result: any) => {
         return $$createType0($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * GetSystemInfo 获取系统环境信息
  */
-export function GetSystemInfo(): Promise<$models.SystemInfo | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2629436820) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function GetSystemInfo(): $CancellablePromise<$models.SystemInfo | null> {
+    return $Call.ByID(2629436820).then(($result: any) => {
         return $$createType2($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * TriggerGC 手动触发垃圾回收
  */
-export function TriggerGC(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(741882899) as any;
-    return $resultPromise;
+export function TriggerGC(): $CancellablePromise<void> {
+    return $Call.ByID(741882899);
 }
 
 // Private type creation functions
