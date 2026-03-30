@@ -1,6 +1,6 @@
 package syncer
 
-// Logger 描述同步模块需要的最小日志接口。
+// Logger describes the minimal logger used by the sync module.
 type Logger interface {
 	Debug(message string, args ...interface{})
 	Info(message string, args ...interface{})
@@ -8,7 +8,7 @@ type Logger interface {
 	Error(message string, args ...interface{})
 }
 
-// SyncResult 描述一次同步的结果。
+// SyncResult describes one sync execution result.
 type SyncResult struct {
 	TargetID       string
 	LocalChanged   bool
@@ -16,5 +16,6 @@ type SyncResult struct {
 	AppliedToLocal bool
 	Published      bool
 	ConflictCount  int
+	ConflictIDs    []string
 	Revision       string
 }

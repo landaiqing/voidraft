@@ -329,6 +329,81 @@ export class SelfUpdateResult {
 }
 
 /**
+ * SyncConnectionResult describes a connection test result.
+ */
+export class SyncConnectionResult {
+    "target_id": string;
+    "resolved_branch"?: string;
+
+    /** Creates a new SyncConnectionResult instance. */
+    constructor($$source: Partial<SyncConnectionResult> = {}) {
+        if (!("target_id" in $$source)) {
+            this["target_id"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncConnectionResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncConnectionResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncConnectionResult($$parsedSource as Partial<SyncConnectionResult>);
+    }
+}
+
+/**
+ * SyncStatus describes the latest manual sync state.
+ */
+export class SyncStatus {
+    "target_id"?: string;
+    "last_sync_at"?: string;
+    "last_success_at"?: string;
+    "last_error"?: string;
+    "local_changed": boolean;
+    "remote_changed": boolean;
+    "applied_to_local": boolean;
+    "published": boolean;
+    "conflict_count": number;
+    "conflict_ids"?: string[];
+    "revision"?: string;
+
+    /** Creates a new SyncStatus instance. */
+    constructor($$source: Partial<SyncStatus> = {}) {
+        if (!("local_changed" in $$source)) {
+            this["local_changed"] = false;
+        }
+        if (!("remote_changed" in $$source)) {
+            this["remote_changed"] = false;
+        }
+        if (!("applied_to_local" in $$source)) {
+            this["applied_to_local"] = false;
+        }
+        if (!("published" in $$source)) {
+            this["published"] = false;
+        }
+        if (!("conflict_count" in $$source)) {
+            this["conflict_count"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncStatus {
+        const $$createField9_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("conflict_ids" in $$parsedSource) {
+            $$parsedSource["conflict_ids"] = $$createField9_0($$parsedSource["conflict_ids"]);
+        }
+        return new SyncStatus($$parsedSource as Partial<SyncStatus>);
+    }
+}
+
+/**
  * SystemInfo 系统信息
  */
 export class SystemInfo {

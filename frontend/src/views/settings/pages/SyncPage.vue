@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import {useConfigStore} from '@/stores/configStore';
-import {useSyncStore} from '@/stores/syncStore';
+import {computed, onMounted} from 'vue';
 import {useI18n} from 'vue-i18n';
-import {computed} from 'vue';
-import SettingSection from '../components/SettingSection.vue';
-import SettingItem from '../components/SettingItem.vue';
-import ToggleSwitch from '../components/ToggleSwitch.vue';
 import {AuthMethod, SyncTarget} from '@/../bindings/voidraft/internal/models/models';
 import {DialogService} from '@/../bindings/voidraft/internal/services';
 import toast from '@/components/toast';
+import {useConfigStore} from '@/stores/configStore';
+import {useSyncStore} from '@/stores/syncStore';
+import SettingItem from '../components/SettingItem.vue';
+import SettingSection from '../components/SettingSection.vue';
+import ToggleSwitch from '../components/ToggleSwitch.vue';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
@@ -19,6 +19,17 @@ const isGitTarget = computed(() => syncConfig.value.target === SyncTarget.SyncTa
 const isSyncEnabled = computed(() => isGitTarget.value ? syncConfig.value.git.enabled : syncConfig.value.localfs.enabled);
 const isAutoSyncEnabled = computed(() => isGitTarget.value ? syncConfig.value.git.auto_sync : syncConfig.value.localfs.auto_sync);
 const currentInterval = computed(() => isGitTarget.value ? syncConfig.value.git.sync_interval : syncConfig.value.localfs.sync_interval);
+const syncStatus = computed(() => syncStore.status);
+const lastSyncText = computed(() => formatTimestamp(syncStatus.value?.last_sync_at));
+const lastSuccessText = computed(() => formatTimestamp(syncStatus.value?.last_success_at));
+const hasTargetConfig = computed(() => (
+  isGitTarget.value
+    ? Boolean(syncConfig.value.git.repo_url.trim())
+    : Boolean(syncConfig.value.localfs.root_path.trim())
+));
+const canTestConnection = computed(() => hasTargetConfig.value);
+const canSync = computed(() => isSyncEnabled.value && hasTargetConfig.value);
+const conflictIDsText = computed(() => syncStatus.value?.conflict_ids?.join(', ') ?? '');
 
 const authMethodOptions = computed(() => [
   {value: AuthMethod.Token, label: t('settings.sync.authMethods.token')},
@@ -39,16 +50,6 @@ const syncIntervalOptions = computed(() => [
   {value: 60, label: t('settings.sync.intervals.1hour')}
 ]);
 
-const canSync = computed(() => {
-  if (!isSyncEnabled.value) {
-    return false;
-  }
-
-  return isGitTarget.value
-    ? Boolean(syncConfig.value.git.repo_url.trim())
-    : Boolean(syncConfig.value.localfs.root_path.trim());
-});
-
 const selectSshKeyFile = async () => {
   const selectedPath = await DialogService.SelectFile();
   if (selectedPath.trim()) {
@@ -63,14 +64,40 @@ const selectLocalFSDirectory = async () => {
   }
 };
 
-const handleSync = async () => {
+const handleTestConnection = async () => {
   try {
-    await syncStore.sync();
-    toast.success(t('settings.sync.syncSuccess'));
-  } catch (e) {
-    toast.error(e instanceof Error ? e.message : String(e));
+    const result = await syncStore.testConnection();
+    if (result?.resolved_branch) {
+      toast.success(t('settings.sync.testConnectionSuccessWithBranch', {branch: result.resolved_branch}));
+      return;
+    }
+    toast.success(t('settings.sync.testConnectionSuccess'));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : String(error));
   }
 };
+
+const handleSync = async () => {
+  try {
+    const status = await syncStore.sync();
+    if (status?.conflict_count) {
+      toast.success(t('settings.sync.syncSuccessWithConflicts', {count: status.conflict_count}));
+      return;
+    }
+    toast.success(t('settings.sync.syncSuccess'));
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : String(error));
+  }
+};
+
+/** Formats a sync timestamp for display. */
+const formatTimestamp = (value?: string) => (
+  value ? new Date(value).toLocaleString() : t('settings.none')
+);
+
+onMounted(() => {
+  void syncStore.loadStatus();
+});
 </script>
 
 <template>
@@ -101,8 +128,8 @@ const handleSync = async () => {
       >
         <ToggleSwitch
           :modelValue="isAutoSyncEnabled"
-          @update:modelValue="configStore.setAutoSync"
           :disabled="!isSyncEnabled"
+          @update:modelValue="configStore.setAutoSync"
         />
       </SettingItem>
 
@@ -113,8 +140,8 @@ const handleSync = async () => {
         <select
           class="sync-interval-select"
           :value="currentInterval"
-          @change="(e) => configStore.setSyncInterval(Number((e.target as HTMLSelectElement).value))"
           :disabled="!isSyncEnabled || !isAutoSyncEnabled"
+          @change="(e) => configStore.setSyncInterval(Number((e.target as HTMLSelectElement).value))"
         >
           <option v-for="option in syncIntervalOptions" :key="option.value" :value="option.value">
             {{ option.label }}
@@ -130,9 +157,9 @@ const handleSync = async () => {
             type="text"
             class="repo-url-input"
             :value="syncConfig.git.repo_url"
-            @input="(e) => configStore.setRepoUrl((e.target as HTMLInputElement).value)"
             :placeholder="t('settings.sync.repoUrlPlaceholder')"
             :disabled="!isSyncEnabled"
+            @input="(e) => configStore.setRepoUrl((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -157,8 +184,8 @@ const handleSync = async () => {
         <select
           class="auth-method-select"
           :value="syncConfig.git.auth_method"
-          @change="(e) => configStore.setAuthMethod((e.target as HTMLSelectElement).value as AuthMethod)"
           :disabled="!isSyncEnabled"
+          @change="(e) => configStore.setAuthMethod((e.target as HTMLSelectElement).value as AuthMethod)"
         >
           <option v-for="option in authMethodOptions" :key="option.value" :value="option.value">
             {{ option.label }}
@@ -172,9 +199,9 @@ const handleSync = async () => {
             type="text"
             class="username-input"
             :value="syncConfig.git.username ?? ''"
-            @input="(e) => configStore.setUsername((e.target as HTMLInputElement).value)"
             :placeholder="t('settings.sync.usernamePlaceholder')"
             :disabled="!isSyncEnabled"
+            @input="(e) => configStore.setUsername((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
 
@@ -183,9 +210,9 @@ const handleSync = async () => {
             type="password"
             class="password-input"
             :value="syncConfig.git.password ?? ''"
-            @input="(e) => configStore.setPassword((e.target as HTMLInputElement).value)"
             :placeholder="t('settings.sync.passwordPlaceholder')"
             :disabled="!isSyncEnabled"
+            @input="(e) => configStore.setPassword((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -196,9 +223,9 @@ const handleSync = async () => {
             type="password"
             class="token-input"
             :value="syncConfig.git.token ?? ''"
-            @input="(e) => configStore.setToken((e.target as HTMLInputElement).value)"
             :placeholder="t('settings.sync.tokenPlaceholder')"
             :disabled="!isSyncEnabled"
+            @input="(e) => configStore.setToken((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -221,9 +248,9 @@ const handleSync = async () => {
             type="password"
             class="ssh-passphrase-input"
             :value="syncConfig.git.ssh_key_passphrase ?? ''"
-            @input="(e) => configStore.setSshKeyPassphrase((e.target as HTMLInputElement).value)"
             :placeholder="t('settings.sync.sshKeyPassphrasePlaceholder')"
             :disabled="!isSyncEnabled"
+            @input="(e) => configStore.setSshKeyPassphrase((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -231,15 +258,39 @@ const handleSync = async () => {
 
     <SettingSection :title="t('settings.sync.syncOperations')">
       <SettingItem :title="t('settings.sync.syncToTarget')">
-        <button
-          class="sync-button"
-          @click="handleSync"
-          :disabled="!canSync || syncStore.isSyncing"
-          :class="{ 'syncing': syncStore.isSyncing }"
-        >
-          <span v-if="syncStore.isSyncing" class="loading-spinner"></span>
-          {{ syncStore.isSyncing ? t('settings.sync.syncing') : t('settings.sync.actions.sync') }}
-        </button>
+        <div class="sync-action">
+          <div class="sync-actions">
+            <button
+              class="sync-button secondary"
+              :disabled="!canTestConnection || syncStore.isSyncing || syncStore.isTestingConnection"
+              @click="handleTestConnection"
+            >
+              <span v-if="syncStore.isTestingConnection" class="loading-spinner"></span>
+              {{ syncStore.isTestingConnection ? t('settings.sync.testingConnection') : t('settings.sync.actions.testConnection') }}
+            </button>
+
+            <button
+              class="sync-button"
+              :disabled="!canSync || syncStore.isSyncing || syncStore.isTestingConnection"
+              :class="{ 'syncing': syncStore.isSyncing }"
+              @click="handleSync"
+            >
+              <span v-if="syncStore.isSyncing" class="loading-spinner"></span>
+              {{ syncStore.isSyncing ? t('settings.sync.syncing') : t('settings.sync.actions.sync') }}
+            </button>
+          </div>
+
+          <div v-if="syncStatus" class="sync-status">
+            <div>{{ t('settings.sync.lastSync') }}: {{ lastSyncText }}</div>
+            <div>{{ t('settings.sync.lastSuccess') }}: {{ lastSuccessText }}</div>
+            <div v-if="syncStatus.revision">{{ t('settings.sync.revision') }}: {{ syncStatus.revision.slice(0, 12) }}</div>
+            <div>{{ t('settings.sync.conflicts') }}: {{ syncStatus.conflict_count }}</div>
+            <div v-if="syncStatus.conflict_ids?.length">{{ t('settings.sync.conflictIds') }}: {{ conflictIDsText }}</div>
+            <div v-if="syncStatus.last_error" class="sync-status-error">
+              {{ t('settings.sync.lastError') }}: {{ syncStatus.last_error }}
+            </div>
+          </div>
+        </div>
       </SettingItem>
     </SettingSection>
   </div>
@@ -334,6 +385,10 @@ const handleSync = async () => {
     cursor: not-allowed;
   }
 
+  &.secondary {
+    background-color: transparent;
+  }
+
   .loading-spinner {
     display: inline-block;
     width: 14px;
@@ -349,6 +404,31 @@ const handleSync = async () => {
     border-color: #2196f3;
     color: white;
   }
+}
+
+.sync-action {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.sync-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sync-status {
+  font-size: 12px;
+  color: var(--settings-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sync-status-error {
+  color: #ff7875;
 }
 
 .disabled-setting {

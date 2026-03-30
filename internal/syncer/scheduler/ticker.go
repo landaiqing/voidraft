@@ -6,19 +6,21 @@ import (
 	"time"
 )
 
-// Ticker 提供可重启的周期任务调度器。
+const maxBackoffMultiplier = 8
+
+// Ticker runs a periodic job and supports restart/stop.
 type Ticker struct {
 	mu     sync.Mutex
 	cancel context.CancelFunc
 	done   chan struct{}
 }
 
-// NewTicker 创建新的调度器实例。
+// NewTicker creates a new scheduler instance.
 func NewTicker() *Ticker {
 	return &Ticker{}
 }
 
-// Start 启动周期任务。
+// Start runs a periodic job with exponential backoff after failures.
 func (t *Ticker) Start(interval time.Duration, job func(context.Context) error) {
 	if interval <= 0 || job == nil {
 		return
@@ -28,7 +30,6 @@ func (t *Ticker) Start(interval time.Duration, job func(context.Context) error) 
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan struct{})
-	ticker := time.NewTicker(interval)
 
 	t.mu.Lock()
 	t.cancel = cancel
@@ -37,20 +38,32 @@ func (t *Ticker) Start(interval time.Duration, job func(context.Context) error) 
 
 	go func() {
 		defer close(done)
-		defer ticker.Stop()
+
+		failures := 0
+		delay := interval
 
 		for {
+			timer := time.NewTimer(delay)
 			select {
 			case <-ctx.Done():
+				if !timer.Stop() {
+					<-timer.C
+				}
 				return
-			case <-ticker.C:
-				_ = job(ctx)
+			case <-timer.C:
 			}
+
+			if err := job(ctx); err != nil {
+				failures++
+			} else {
+				failures = 0
+			}
+			delay = nextInterval(interval, failures)
 		}
 	}()
 }
 
-// Stop 停止当前任务。
+// Stop stops the running job.
 func (t *Ticker) Stop() {
 	t.mu.Lock()
 	cancel := t.cancel
@@ -67,9 +80,23 @@ func (t *Ticker) Stop() {
 	}
 }
 
-// Running 返回调度器是否正在运行。
+// Running reports whether the scheduler is active.
 func (t *Ticker) Running() bool {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	return t.cancel != nil
+}
+
+// nextInterval returns the next delay after applying failure backoff.
+func nextInterval(interval time.Duration, failures int) time.Duration {
+	if interval <= 0 {
+		return 0
+	}
+
+	multiplier := 1
+	for step := 0; step < failures && multiplier < maxBackoffMultiplier; step++ {
+		multiplier *= 2
+	}
+
+	return interval * time.Duration(multiplier)
 }

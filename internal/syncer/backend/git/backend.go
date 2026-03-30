@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 	"voidraft/internal/syncer/backend"
@@ -19,7 +20,12 @@ import (
 
 const defaultGitIgnore = "*.tmp\n*.log\n"
 
-// Config 描述 Git 后端配置。
+const (
+	fallbackMainBranch   = "main"
+	fallbackMasterBranch = "master"
+)
+
+// Config describes the Git backend configuration.
 type Config struct {
 	RepoPath    string
 	RepoURL     string
@@ -30,13 +36,14 @@ type Config struct {
 	Auth        AuthConfig
 }
 
-// Backend 提供基于 Git 的后端实现。
+// Backend implements the snapshot backend over Git.
 type Backend struct {
 	config     Config
 	repository *git.Repository
+	resolved   string
 }
 
-// New 创建新的 Git 后端实例。
+// New creates a new Git backend.
 func New(config Config) (*Backend, error) {
 	normalized, err := normalizeConfig(config)
 	if err != nil {
@@ -45,38 +52,26 @@ func New(config Config) (*Backend, error) {
 	return &Backend{config: normalized}, nil
 }
 
-// Verify 校验本地仓库和远端连接是否可用。
+// Verify validates repository access and resolves the effective branch.
 func (b *Backend) Verify(ctx context.Context) error {
-	_ = ctx
-
 	if err := b.ensureRepository(); err != nil {
 		return err
 	}
 
-	auth, err := authMethod(b.config.Auth)
-	if err != nil {
-		return err
-	}
-
-	remote, err := b.repository.Remote(b.config.RemoteName)
-	if err != nil {
-		return err
-	}
-
-	_, err = remote.List(&git.ListOptions{Auth: auth})
-	if err == nil {
-		return nil
-	}
-	if isEmptyRemoteError(err) {
-		return nil
-	}
+	_, err := b.resolveBranch(ctx)
 	return err
 }
 
-// DownloadLatest 拉取远端最新快照并导出到目标目录。
-func (b *Backend) DownloadLatest(ctx context.Context, dst string) (backend.RemoteState, error) {
-	_ = ctx
+// ResolvedBranch returns the effective branch used by the backend.
+func (b *Backend) ResolvedBranch() string {
+	if b.resolved != "" {
+		return b.resolved
+	}
+	return strings.TrimSpace(b.config.Branch)
+}
 
+// DownloadLatest downloads the latest snapshot and expands it to dst.
+func (b *Backend) DownloadLatest(ctx context.Context, dst string) (backend.RemoteState, error) {
 	if err := b.ensureRepository(); err != nil {
 		return backend.RemoteState{}, err
 	}
@@ -85,7 +80,7 @@ func (b *Backend) DownloadLatest(ctx context.Context, dst string) (backend.Remot
 		return backend.RemoteState{}, err
 	}
 
-	remoteState, err := b.fetchRemoteState()
+	remoteState, err := b.fetchRemoteState(ctx)
 	if err != nil {
 		return backend.RemoteState{}, err
 	}
@@ -100,15 +95,18 @@ func (b *Backend) DownloadLatest(ctx context.Context, dst string) (backend.Remot
 	return remoteState, nil
 }
 
-// Upload 将本地快照目录发布到远端 Git 仓库。
+// Upload publishes the staged snapshot directory to the remote Git repo.
 func (b *Backend) Upload(ctx context.Context, src string, options backend.PublishOptions) (backend.RemoteState, error) {
-	_ = ctx
-
 	if err := b.ensureRepository(); err != nil {
 		return backend.RemoteState{}, err
 	}
 
-	remoteState, err := b.fetchRemoteState()
+	branch, err := b.resolveBranch(ctx)
+	if err != nil {
+		return backend.RemoteState{}, err
+	}
+
+	remoteState, err := b.fetchRemoteState(ctx)
 	if err != nil {
 		return backend.RemoteState{}, err
 	}
@@ -116,7 +114,7 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 		return backend.RemoteState{}, backend.ErrRevisionConflict
 	}
 
-	if err := b.prepareBranch(remoteState); err != nil {
+	if err := b.prepareBranch(branch, remoteState); err != nil {
 		return backend.RemoteState{}, err
 	}
 	if err := syncDir(src, b.config.RepoPath); err != nil {
@@ -151,8 +149,8 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 		return backend.RemoteState{}, err
 	}
 
-	branchRef := plumbing.NewBranchReferenceName(b.config.Branch)
-	remoteRef := plumbing.NewRemoteReferenceName(b.config.RemoteName, b.config.Branch)
+	branchRef := plumbing.NewBranchReferenceName(branch)
+	remoteRef := plumbing.NewRemoteReferenceName(b.config.RemoteName, branch)
 	err = b.repository.Push(&git.PushOptions{
 		RemoteName: b.config.RemoteName,
 		Auth:       auth,
@@ -170,19 +168,16 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 	return b.currentLocalState()
 }
 
-// Close 关闭后端。
+// Close closes the backend.
 func (b *Backend) Close() error {
 	return nil
 }
 
-// normalizeConfig 填充 Git 后端配置默认值。
+// normalizeConfig fills default Git backend values.
 func normalizeConfig(config Config) (Config, error) {
 	normalized := config
 	if strings.TrimSpace(normalized.RepoPath) == "" {
 		return Config{}, errors.New("git repo path is required")
-	}
-	if strings.TrimSpace(normalized.Branch) == "" {
-		normalized.Branch = "master"
 	}
 	if strings.TrimSpace(normalized.RemoteName) == "" {
 		normalized.RemoteName = "origin"
@@ -196,7 +191,7 @@ func normalizeConfig(config Config) (Config, error) {
 	return normalized, nil
 }
 
-// ensureRepository 确保本地 Git 仓库存在且远端配置正确。
+// ensureRepository ensures the local Git repository exists and matches config.
 func (b *Backend) ensureRepository() error {
 	if b.repository != nil {
 		return b.ensureRemote()
@@ -232,7 +227,7 @@ func (b *Backend) ensureRepository() error {
 	return b.ensureRemote()
 }
 
-// ensureRemote 确保远端配置与当前目标一致。
+// ensureRemote ensures the remote config matches the current target.
 func (b *Backend) ensureRemote() error {
 	if strings.TrimSpace(b.config.RepoURL) == "" {
 		return nil
@@ -264,8 +259,13 @@ func (b *Backend) ensureRemote() error {
 	return err
 }
 
-// fetchRemoteState 拉取远端分支并返回最新状态。
-func (b *Backend) fetchRemoteState() (backend.RemoteState, error) {
+// fetchRemoteState fetches the latest state for the effective branch.
+func (b *Backend) fetchRemoteState(ctx context.Context) (backend.RemoteState, error) {
+	branch, err := b.resolveBranch(ctx)
+	if err != nil {
+		return backend.RemoteState{}, err
+	}
+
 	auth, err := authMethod(b.config.Auth)
 	if err != nil {
 		return backend.RemoteState{}, err
@@ -283,7 +283,7 @@ func (b *Backend) fetchRemoteState() (backend.RemoteState, error) {
 		return backend.RemoteState{}, err
 	}
 
-	ref, err := b.repository.Reference(plumbing.NewRemoteReferenceName(b.config.RemoteName, b.config.Branch), true)
+	ref, err := b.repository.Reference(plumbing.NewRemoteReferenceName(b.config.RemoteName, branch), true)
 	if err != nil {
 		if errors.Is(err, plumbing.ErrReferenceNotFound) {
 			return backend.RemoteState{}, nil
@@ -297,7 +297,7 @@ func (b *Backend) fetchRemoteState() (backend.RemoteState, error) {
 	}, nil
 }
 
-// exportRemoteTree 将指定提交的树内容导出为普通文件。
+// exportRemoteTree exports the given commit tree as regular files.
 func (b *Backend) exportRemoteTree(revision string, dst string) error {
 	commit, err := b.repository.CommitObject(plumbing.NewHash(revision))
 	if err != nil {
@@ -332,9 +332,9 @@ func (b *Backend) exportRemoteTree(revision string, dst string) error {
 	})
 }
 
-// prepareBranch 将本地分支重置到远端最新版本。
-func (b *Backend) prepareBranch(remoteState backend.RemoteState) error {
-	branchRef := plumbing.NewBranchReferenceName(b.config.Branch)
+// prepareBranch moves the local checkout to the effective branch head.
+func (b *Backend) prepareBranch(branch string, remoteState backend.RemoteState) error {
+	branchRef := plumbing.NewBranchReferenceName(branch)
 	if remoteState.Exists {
 		if err := b.repository.Storer.SetReference(plumbing.NewHashReference(branchRef, plumbing.NewHash(remoteState.Revision))); err != nil {
 			return err
@@ -358,7 +358,7 @@ func (b *Backend) prepareBranch(remoteState backend.RemoteState) error {
 	})
 }
 
-// currentLocalState 返回当前本地 HEAD 状态。
+// currentLocalState returns the current local HEAD state.
 func (b *Backend) currentLocalState() (backend.RemoteState, error) {
 	head, err := b.repository.Head()
 	if err != nil {
@@ -373,7 +373,110 @@ func (b *Backend) currentLocalState() (backend.RemoteState, error) {
 	}, nil
 }
 
-// ensureGitIgnore 保证仓库目录中存在默认 .gitignore。
+// resolveBranch picks the effective branch for the current sync session.
+func (b *Backend) resolveBranch(ctx context.Context) (string, error) {
+	if branch := strings.TrimSpace(b.config.Branch); branch != "" {
+		b.resolved = branch
+		return branch, nil
+	}
+	if b.resolved != "" {
+		return b.resolved, nil
+	}
+
+	auth, err := authMethod(b.config.Auth)
+	if err != nil {
+		return "", err
+	}
+
+	remote, err := b.repository.Remote(b.config.RemoteName)
+	if err != nil {
+		return "", err
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	refs, err := remote.ListContext(ctx, &git.ListOptions{Auth: auth})
+	if err != nil {
+		if isEmptyRemoteError(err) {
+			b.resolved = fallbackMainBranch
+			return b.resolved, nil
+		}
+		return "", err
+	}
+
+	b.resolved = resolveBranchName(refs)
+	return b.resolved, nil
+}
+
+// resolveBranchName infers the best branch from remote refs.
+func resolveBranchName(refs []*plumbing.Reference) string {
+	branches := make(map[string]*plumbing.Reference)
+	var headHash plumbing.Hash
+	var hasHeadHash bool
+
+	for _, ref := range refs {
+		if ref == nil {
+			continue
+		}
+
+		switch {
+		case ref.Name() == plumbing.HEAD:
+			if ref.Type() == plumbing.SymbolicReference && ref.Target().IsBranch() {
+				return ref.Target().Short()
+			}
+			if ref.Type() == plumbing.HashReference {
+				headHash = ref.Hash()
+				hasHeadHash = true
+			}
+		case ref.Name().IsBranch():
+			branches[ref.Name().Short()] = ref
+		}
+	}
+
+	if hasHeadHash {
+		matches := make([]string, 0, len(branches))
+		for name, ref := range branches {
+			if ref.Hash() == headHash {
+				matches = append(matches, name)
+			}
+		}
+		sort.Strings(matches)
+		if len(matches) == 1 {
+			return matches[0]
+		}
+		for _, candidate := range []string{fallbackMainBranch, fallbackMasterBranch} {
+			for _, match := range matches {
+				if match == candidate {
+					return candidate
+				}
+			}
+		}
+		if len(matches) > 0 {
+			return matches[0]
+		}
+	}
+
+	for _, candidate := range []string{fallbackMainBranch, fallbackMasterBranch} {
+		if _, ok := branches[candidate]; ok {
+			return candidate
+		}
+	}
+
+	names := make([]string, 0, len(branches))
+	for name := range branches {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	if len(names) > 0 {
+		return names[0]
+	}
+
+	return fallbackMainBranch
+}
+
+// ensureGitIgnore makes sure the repository contains the default .gitignore.
 func ensureGitIgnore(repoPath string) error {
 	gitIgnorePath := filepath.Join(repoPath, ".gitignore")
 	if _, err := os.Stat(gitIgnorePath); err == nil {
@@ -384,7 +487,7 @@ func ensureGitIgnore(repoPath string) error {
 	return os.WriteFile(gitIgnorePath, []byte(defaultGitIgnore), 0644)
 }
 
-// recreateDir 清空并重建目录。
+// recreateDir recreates a directory from scratch.
 func recreateDir(dir string) error {
 	if err := os.RemoveAll(dir); err != nil {
 		return err
@@ -392,7 +495,7 @@ func recreateDir(dir string) error {
 	return os.MkdirAll(dir, 0755)
 }
 
-// syncDir 将源目录内容同步到目标目录。
+// syncDir syncs the source directory into the target directory.
 func syncDir(src string, dst string) error {
 	sourceEntries, err := os.ReadDir(src)
 	if err != nil {
@@ -440,7 +543,7 @@ func syncDir(src string, dst string) error {
 	return nil
 }
 
-// copyFile 复制单个文件并保留权限位。
+// copyFile copies one file while preserving permissions.
 func copyFile(src string, dst string) error {
 	sourceFile, err := os.Open(src)
 	if err != nil {
@@ -467,7 +570,7 @@ func copyFile(src string, dst string) error {
 	return err
 }
 
-// stageAll 将工作区所有变化加入索引。
+// stageAll stages all worktree changes.
 func stageAll(worktree *git.Worktree) (bool, error) {
 	status, err := worktree.Status()
 	if err != nil {
@@ -499,7 +602,7 @@ func stageAll(worktree *git.Worktree) (bool, error) {
 	return !status.IsClean(), nil
 }
 
-// isEmptyRemoteError 判断错误是否表示远端仓库为空。
+// isEmptyRemoteError reports whether the error means the remote is empty.
 func isEmptyRemoteError(err error) bool {
 	if err == nil {
 		return false
@@ -508,7 +611,7 @@ func isEmptyRemoteError(err error) bool {
 	return strings.Contains(message, "empty") || strings.Contains(message, "no reference")
 }
 
-// isMissingRemoteRefError 判断错误是否表示远端分支不存在。
+// isMissingRemoteRefError reports whether the error means a remote branch is missing.
 func isMissingRemoteRefError(err error) bool {
 	if err == nil {
 		return false

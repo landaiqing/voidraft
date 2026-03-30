@@ -8,17 +8,17 @@ import (
 	"voidraft/internal/syncer/snapshot"
 )
 
-// importContext 构造同步导入所需的上下文。
+// importContext builds the context used for sync imports.
 func importContext(ctx context.Context) context.Context {
 	return mixin.SkipAutoUpdate(mixin.SkipSoftDelete(ctx))
 }
 
-// exportContext 构造同步导出所需的上下文。
+// exportContext builds the context used for sync exports.
 func exportContext(ctx context.Context) context.Context {
 	return mixin.SkipSoftDelete(ctx)
 }
 
-// cloneMap 返回 map 的安全副本。
+// cloneMap returns a safe copy of a map value.
 func cloneMap(value map[string]interface{}) map[string]interface{} {
 	if value == nil {
 		return nil
@@ -26,7 +26,7 @@ func cloneMap(value map[string]interface{}) map[string]interface{} {
 	return maps.Clone(value)
 }
 
-// recordDeletedAtString 返回记录中的删除时间字符串。
+// recordDeletedAtString returns the record delete timestamp as RFC3339.
 func recordDeletedAtString(record snapshot.Record) *string {
 	if record.DeletedAt == nil {
 		return nil
@@ -35,7 +35,7 @@ func recordDeletedAtString(record snapshot.Record) *string {
 	return &value
 }
 
-// shouldApplyRecord 判断记录是否应该覆盖本地数据。
+// shouldApplyRecord reports whether the incoming record should overwrite local data.
 func shouldApplyRecord(localUpdatedAt string, record snapshot.Record) bool {
 	if localUpdatedAt == "" {
 		return true
@@ -44,32 +44,40 @@ func shouldApplyRecord(localUpdatedAt string, record snapshot.Record) bool {
 	if err != nil {
 		return true
 	}
-	return record.UpdatedAt.After(localTime)
+	return recordApplyTime(record).After(localTime) || recordApplyTime(record).Equal(localTime)
 }
 
-// stringValue 从记录字段中读取字符串。
+// stringValue reads a string field from the record values.
 func stringValue(record snapshot.Record, key string) string {
 	value, _ := record.Values[key].(string)
 	return value
 }
 
-// boolValue 从记录字段中读取布尔值。
+// boolValue reads a bool field from the record values.
 func boolValue(record snapshot.Record, key string) bool {
 	value, _ := record.Values[key].(bool)
 	return value
 }
 
-// mapValue 从记录字段中读取 map 值。
+// mapValue reads a map field from the record values.
 func mapValue(record snapshot.Record, key string) map[string]interface{} {
 	value, _ := record.Values[key].(map[string]interface{})
 	return cloneMap(value)
 }
 
-// blobString 读取记录中的文本 blob。
+// blobString reads a text blob from the record.
 func blobString(record snapshot.Record, name string) string {
 	value, ok := record.Blobs[name]
 	if !ok {
 		return ""
 	}
 	return string(value)
+}
+
+// recordApplyTime returns the effective update time used during imports.
+func recordApplyTime(record snapshot.Record) time.Time {
+	if record.DeletedAt != nil && record.DeletedAt.After(record.UpdatedAt) {
+		return *record.DeletedAt
+	}
+	return record.UpdatedAt
 }
