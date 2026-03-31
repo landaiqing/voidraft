@@ -178,8 +178,10 @@ func (t *bindingWebSocketTransport) OnClose(socket *gws.Conn, err error) {
 func (t *bindingWebSocketTransport) OnMessage(socket *gws.Conn, message *gws.Message) {
 	defer message.Close()
 
+	body := append([]byte(nil), message.Bytes()...)
+
 	var payload bindingTransportMessage
-	if err := json.Unmarshal(message.Bytes(), &payload); err != nil {
+	if err := json.Unmarshal(body, &payload); err != nil {
 		t.logger.Warn("failed to decode websocket request", "error", err)
 		return
 	}

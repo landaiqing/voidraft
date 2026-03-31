@@ -8,12 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
  * SetEnabled 设置开机启动状态
  */
-export function SetEnabled(enabled: boolean): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2911601468, enabled) as any;
-    return $resultPromise;
+export function SetEnabled(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2911601468, enabled);
 }

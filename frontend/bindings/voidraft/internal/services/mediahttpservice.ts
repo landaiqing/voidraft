@@ -8,11 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -21,61 +17,28 @@ import * as $models from "./models.js";
 /**
  * DeleteImage removes one image file and its metadata sidecar.
  */
-export function DeleteImage(imagePath: string): Promise<$models.ImageDeleteResult | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(143616668, imagePath) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function DeleteImage(imagePath: string): $CancellablePromise<$models.ImageDeleteResult | null> {
+    return $Call.ByID(143616668, imagePath).then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * ImportImage validates and stores an image under the date-based media tree.
  */
-export function ImportImage(request: $models.ImageImportRequest | null): Promise<$models.ImageAsset | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2860242998, request) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function ImportImage(request: $models.ImageImportRequest | null): $CancellablePromise<$models.ImageAsset | null> {
+    return $Call.ByID(2860242998, request).then(($result: any) => {
         return $$createType3($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * ListImages returns all imported images ordered by creation time descending.
  */
-export function ListImages(): Promise<($models.ImageAsset | null)[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(471121014) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function ListImages(): $CancellablePromise<($models.ImageAsset | null)[]> {
+    return $Call.ByID(471121014).then(($result: any) => {
         return $$createType4($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * ServiceName returns the stable service identifier.
- */
-export function ServiceName(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3159917436) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceShutdown stops config watchers.
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2519222661) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceStartup configures the service and starts config watchers.
- */
-export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2764039056, options) as any;
-    return $resultPromise;
+    });
 }
 
 // Private type creation functions
