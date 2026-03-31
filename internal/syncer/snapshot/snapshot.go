@@ -3,11 +3,14 @@ package snapshot
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash"
 	"maps"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -33,6 +36,7 @@ type Record struct {
 	DeletedAt *time.Time
 	Values    map[string]interface{}
 	Blobs     map[string][]byte
+	BlobFiles map[string]string
 }
 
 // Snapshotter 描述快照导出与应用接口。
@@ -52,6 +56,15 @@ func New() *Snapshot {
 
 // NewRecord 根据业务字段构造规范化记录。
 func NewRecord(kind string, id string, values map[string]interface{}, blobs map[string][]byte) (Record, error) {
+	return newRecord(kind, id, values, blobs, nil)
+}
+
+// NewRecordWithBlobFiles builds one normalized record with blob file references.
+func NewRecordWithBlobFiles(kind string, id string, values map[string]interface{}, blobFiles map[string]string) (Record, error) {
+	return newRecord(kind, id, values, nil, blobFiles)
+}
+
+func newRecord(kind string, id string, values map[string]interface{}, blobs map[string][]byte, blobFiles map[string]string) (Record, error) {
 	if strings.TrimSpace(kind) == "" {
 		return Record{}, errors.New("record kind is required")
 	}
@@ -83,6 +96,7 @@ func NewRecord(kind string, id string, values map[string]interface{}, blobs map[
 		DeletedAt: deletedAt,
 		Values:    normalizedValues,
 		Blobs:     cloneBlobs(blobs),
+		BlobFiles: cloneBlobFiles(blobFiles),
 	}, nil
 }
 
@@ -116,14 +130,41 @@ func CloneRecord(record Record) Record {
 		DeletedAt: cloneTime(record.DeletedAt),
 		Values:    cloneValues(record.Values),
 		Blobs:     cloneBlobs(record.Blobs),
+		BlobFiles: cloneBlobFiles(record.BlobFiles),
 	}
 }
 
 // Digest 计算快照的稳定摘要。
 func Digest(snap *Snapshot) (string, error) {
 	normalized := Clone(snap)
+	hasher := sha256.New()
 
+	writeDigestUint64(hasher, uint64(normalized.Version))
+	for _, kind := range sortedKinds(normalized.Resources) {
+		writeDigestString(hasher, kind)
+
+		records := normalized.Resources[kind]
+		sort.Slice(records, func(i int, j int) bool {
+			return records[i].ID < records[j].ID
+		})
+		writeDigestUint64(hasher, uint64(len(records)))
+
+		for _, record := range records {
+			recordDigest, err := RecordDigest(record)
+			if err != nil {
+				return "", err
+			}
+			writeDigestString(hasher, recordDigest)
+		}
+	}
+
+	return hex.EncodeToString(hasher.Sum(nil)), nil
+}
+
+// RecordDigest 计算单条记录的稳定摘要。
+func RecordDigest(record Record) (string, error) {
 	type digestRecord struct {
+		Kind      string                 `json:"kind"`
 		ID        string                 `json:"id"`
 		UpdatedAt string                 `json:"updated_at"`
 		DeletedAt *string                `json:"deleted_at,omitempty"`
@@ -131,59 +172,31 @@ func Digest(snap *Snapshot) (string, error) {
 		Blobs     map[string][]byte      `json:"blobs,omitempty"`
 	}
 
-	payload := struct {
-		Version   int                       `json:"version"`
-		Resources map[string][]digestRecord `json:"resources"`
-	}{
-		Version:   normalized.Version,
-		Resources: make(map[string][]digestRecord, len(normalized.Resources)),
+	var deletedAt *string
+	if record.DeletedAt != nil {
+		value := record.DeletedAt.Format(time.RFC3339)
+		deletedAt = &value
 	}
 
-	for _, kind := range sortedKinds(normalized.Resources) {
-		records := normalized.Resources[kind]
-		sort.Slice(records, func(i int, j int) bool {
-			return records[i].ID < records[j].ID
-		})
-
-		items := make([]digestRecord, 0, len(records))
-		for _, record := range records {
-			var deletedAt *string
-			if record.DeletedAt != nil {
-				value := record.DeletedAt.Format(time.RFC3339)
-				deletedAt = &value
-			}
-			items = append(items, digestRecord{
-				ID:        record.ID,
-				UpdatedAt: record.UpdatedAt.Format(time.RFC3339),
-				DeletedAt: deletedAt,
-				Values:    record.Values,
-				Blobs:     record.Blobs,
-			})
-		}
-		payload.Resources[kind] = items
-	}
-
-	data, err := json.Marshal(payload)
+	blobs, err := loadRecordBlobs(record)
 	if err != nil {
 		return "", err
 	}
 
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
-}
-
-// RecordDigest 计算单条记录的稳定摘要。
-func RecordDigest(record Record) string {
-	sum, err := Digest(&Snapshot{
-		Version: CurrentVersion,
-		Resources: map[string][]Record{
-			record.Kind: {CloneRecord(record)},
-		},
+	payload, err := json.Marshal(digestRecord{
+		Kind:      record.Kind,
+		ID:        record.ID,
+		UpdatedAt: record.UpdatedAt.Format(time.RFC3339),
+		DeletedAt: deletedAt,
+		Values:    cloneValues(record.Values),
+		Blobs:     blobs,
 	})
 	if err != nil {
-		return ""
+		return "", err
 	}
-	return sum
+
+	sum := sha256.Sum256(payload)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // cloneValues 复制字段 map。
@@ -206,6 +219,14 @@ func cloneBlobs(blobs map[string][]byte) map[string][]byte {
 	return copied
 }
 
+// cloneBlobFiles 复制 blob 文件引用集合。
+func cloneBlobFiles(blobFiles map[string]string) map[string]string {
+	if len(blobFiles) == 0 {
+		return nil
+	}
+	return maps.Clone(blobFiles)
+}
+
 // cloneTime 复制时间指针。
 func cloneTime(value *time.Time) *time.Time {
 	if value == nil {
@@ -213,6 +234,57 @@ func cloneTime(value *time.Time) *time.Time {
 	}
 	cloned := *value
 	return &cloned
+}
+
+// HasBlobs reports whether the record includes any blob payload or blob file references.
+func (r Record) HasBlobs() bool {
+	return len(r.Blobs) > 0 || len(r.BlobFiles) > 0
+}
+
+// BlobNames returns all blob names in stable order.
+func (r Record) BlobNames() []string {
+	if !r.HasBlobs() {
+		return nil
+	}
+
+	index := make(map[string]struct{}, len(r.Blobs)+len(r.BlobFiles))
+	for name := range r.Blobs {
+		index[name] = struct{}{}
+	}
+	for name := range r.BlobFiles {
+		index[name] = struct{}{}
+	}
+
+	names := make([]string, 0, len(index))
+	for name := range index {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// BlobBytes reads one blob either from memory or from a referenced file.
+func (r Record) BlobBytes(name string) ([]byte, bool, error) {
+	if data, ok := r.Blobs[name]; ok {
+		return append([]byte(nil), data...), true, nil
+	}
+
+	path, ok := r.BlobFiles[name]
+	if !ok {
+		return nil, false, nil
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, true, err
+	}
+	return data, true, nil
+}
+
+// BlobFilePath returns the on-disk blob path when the record references a file directly.
+func (r Record) BlobFilePath(name string) (string, bool) {
+	value, ok := r.BlobFiles[name]
+	return value, ok
 }
 
 // parseRequiredTime 解析必填时间字段。
@@ -245,4 +317,35 @@ func sortedKinds(resources map[string][]Record) []string {
 	}
 	sort.Strings(kinds)
 	return kinds
+}
+
+func loadRecordBlobs(record Record) (map[string][]byte, error) {
+	names := record.BlobNames()
+	if len(names) == 0 {
+		return nil, nil
+	}
+
+	blobs := make(map[string][]byte, len(names))
+	for _, name := range names {
+		data, ok, err := record.BlobBytes(name)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			continue
+		}
+		blobs[name] = data
+	}
+	return blobs, nil
+}
+
+func writeDigestString(hasher hash.Hash, value string) {
+	writeDigestUint64(hasher, uint64(len(value)))
+	_, _ = hasher.Write([]byte(value))
+}
+
+func writeDigestUint64(hasher hash.Hash, value uint64) {
+	var buffer [8]byte
+	binary.BigEndian.PutUint64(buffer[:], value)
+	_, _ = hasher.Write(buffer[:])
 }

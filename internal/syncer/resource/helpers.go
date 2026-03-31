@@ -65,13 +65,28 @@ func mapValue(record snapshot.Record, key string) map[string]interface{} {
 	return cloneMap(value)
 }
 
-// blobString reads a text blob from the record.
-func blobString(record snapshot.Record, name string) string {
-	value, ok := record.Blobs[name]
-	if !ok {
-		return ""
+// blobBytes reads one blob payload from the record.
+func blobBytes(record snapshot.Record, name string) ([]byte, error) {
+	value, ok, err := record.BlobBytes(name)
+	if err != nil {
+		return nil, err
 	}
-	return string(value)
+	if !ok {
+		return nil, nil
+	}
+	return value, nil
+}
+
+// blobString reads a text blob from the record.
+func blobString(record snapshot.Record, name string) (string, error) {
+	value, err := blobBytes(record, name)
+	if err != nil {
+		return "", err
+	}
+	if len(value) == 0 {
+		return "", nil
+	}
+	return string(value), nil
 }
 
 // recordApplyTime returns the effective update time used during imports.

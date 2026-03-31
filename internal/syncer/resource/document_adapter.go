@@ -84,10 +84,15 @@ func (a *DocumentAdapter) Apply(ctx context.Context, records []snapshot.Record) 
 
 // create 创建新的文档记录。
 func (a *DocumentAdapter) create(ctx context.Context, record snapshot.Record) error {
+	content, err := blobString(record, documentContentBlob)
+	if err != nil {
+		return err
+	}
+
 	builder := a.client.Document.Create().
 		SetUUID(record.ID).
 		SetTitle(stringValue(record, document.FieldTitle)).
-		SetContent(blobString(record, documentContentBlob)).
+		SetContent(content).
 		SetLocked(boolValue(record, document.FieldLocked)).
 		SetCreatedAt(stringValue(record, document.FieldCreatedAt)).
 		SetUpdatedAt(stringValue(record, document.FieldUpdatedAt))
@@ -101,9 +106,14 @@ func (a *DocumentAdapter) create(ctx context.Context, record snapshot.Record) er
 
 // update 更新已有文档记录。
 func (a *DocumentAdapter) update(ctx context.Context, id int, record snapshot.Record) error {
+	content, err := blobString(record, documentContentBlob)
+	if err != nil {
+		return err
+	}
+
 	builder := a.client.Document.UpdateOneID(id).
 		SetTitle(stringValue(record, document.FieldTitle)).
-		SetContent(blobString(record, documentContentBlob)).
+		SetContent(content).
 		SetLocked(boolValue(record, document.FieldLocked)).
 		SetUpdatedAt(stringValue(record, document.FieldUpdatedAt))
 

@@ -280,6 +280,94 @@ export class ImageImportRequest {
 }
 
 /**
+ * ImageListPage describes one page of indexed images.
+ */
+export class ImageListPage {
+    "items": (ImageAsset | null)[];
+    "next_cursor"?: string;
+    "has_more": boolean;
+
+    /** Creates a new ImageListPage instance. */
+    constructor($$source: Partial<ImageListPage> = {}) {
+        if (!("items" in $$source)) {
+            this["items"] = [];
+        }
+        if (!("has_more" in $$source)) {
+            this["has_more"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageListPage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageListPage {
+        const $$createField0_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("items" in $$parsedSource) {
+            $$parsedSource["items"] = $$createField0_0($$parsedSource["items"]);
+        }
+        return new ImageListPage($$parsedSource as Partial<ImageListPage>);
+    }
+}
+
+/**
+ * ImageListPageRequest describes one paginated list request.
+ */
+export class ImageListPageRequest {
+    "limit"?: number;
+    "cursor"?: string;
+
+    /** Creates a new ImageListPageRequest instance. */
+    constructor($$source: Partial<ImageListPageRequest> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageListPageRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageListPageRequest {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ImageListPageRequest($$parsedSource as Partial<ImageListPageRequest>);
+    }
+}
+
+/**
+ * MediaReconcileStatus describes the background full-reconcile worker state.
+ */
+export class MediaReconcileStatus {
+    "running": boolean;
+    "pending": boolean;
+    "last_note"?: string;
+    "last_error"?: string;
+    "last_requested_at"?: string;
+    "last_started_at"?: string;
+    "last_finished_at"?: string;
+
+    /** Creates a new MediaReconcileStatus instance. */
+    constructor($$source: Partial<MediaReconcileStatus> = {}) {
+        if (!("running" in $$source)) {
+            this["running"] = false;
+        }
+        if (!("pending" in $$source)) {
+            this["pending"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MediaReconcileStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MediaReconcileStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MediaReconcileStatus($$parsedSource as Partial<MediaReconcileStatus>);
+    }
+}
+
+/**
  * MemoryStats 内存统计信息
  */
 export class MemoryStats {
@@ -593,8 +681,8 @@ export class SystemInfo {
      * Creates a new SystemInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): SystemInfo {
-        const $$createField3_0 = $$createType5;
-        const $$createField4_0 = $$createType6;
+        const $$createField3_0 = $$createType8;
+        const $$createField4_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("osInfo" in $$parsedSource) {
             $$parsedSource["osInfo"] = $$createField3_0($$parsedSource["osInfo"]);
@@ -616,6 +704,9 @@ var $$createType1 = (function $$initCreateType1(...args: any[]): any {
 });
 const $$createType2 = $Create.Array($Create.Any);
 const $$createType3 = $Create.Map($Create.Any, $$createType2);
-const $$createType4 = OSInfo.createFrom;
+const $$createType4 = ImageAsset.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $Create.Map($Create.Any, $Create.Any);
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = OSInfo.createFrom;
+const $$createType8 = $Create.Nullable($$createType7);
+const $$createType9 = $Create.Map($Create.Any, $Create.Any);

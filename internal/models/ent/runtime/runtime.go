@@ -6,6 +6,7 @@ import (
 	"voidraft/internal/models/ent/document"
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
+	"voidraft/internal/models/ent/mediaasset"
 	"voidraft/internal/models/ent/theme"
 	"voidraft/internal/models/schema"
 )
@@ -209,6 +210,101 @@ func init() {
 	keybinding.DefaultScope = keybindingDescScope.Default.(string)
 	// keybinding.ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
 	keybinding.ScopeValidator = keybindingDescScope.Validators[0].(func(string) error)
+	mediaassetMixin := schema.MediaAsset{}.Mixin()
+	mediaassetMixinHooks0 := mediaassetMixin[0].Hooks()
+	mediaassetMixinHooks1 := mediaassetMixin[1].Hooks()
+	mediaasset.Hooks[0] = mediaassetMixinHooks0[0]
+	mediaasset.Hooks[1] = mediaassetMixinHooks1[0]
+	mediaassetMixinInters1 := mediaassetMixin[1].Interceptors()
+	mediaasset.Interceptors[0] = mediaassetMixinInters1[0]
+	mediaassetMixinFields0 := mediaassetMixin[0].Fields()
+	_ = mediaassetMixinFields0
+	mediaassetMixinFields2 := mediaassetMixin[2].Fields()
+	_ = mediaassetMixinFields2
+	mediaassetFields := schema.MediaAsset{}.Fields()
+	_ = mediaassetFields
+	// mediaassetDescCreatedAt is the schema descriptor for created_at field.
+	mediaassetDescCreatedAt := mediaassetMixinFields0[0].Descriptor()
+	// mediaasset.DefaultCreatedAt holds the default value on creation for the created_at field.
+	mediaasset.DefaultCreatedAt = mediaassetDescCreatedAt.Default.(func() string)
+	// mediaassetDescUpdatedAt is the schema descriptor for updated_at field.
+	mediaassetDescUpdatedAt := mediaassetMixinFields0[1].Descriptor()
+	// mediaasset.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	mediaasset.DefaultUpdatedAt = mediaassetDescUpdatedAt.Default.(func() string)
+	// mediaassetDescUUID is the schema descriptor for uuid field.
+	mediaassetDescUUID := mediaassetMixinFields2[0].Descriptor()
+	// mediaasset.DefaultUUID holds the default value on creation for the uuid field.
+	mediaasset.DefaultUUID = mediaassetDescUUID.Default.(func() string)
+	// mediaassetDescAssetID is the schema descriptor for asset_id field.
+	mediaassetDescAssetID := mediaassetFields[0].Descriptor()
+	// mediaasset.AssetIDValidator is a validator for the "asset_id" field. It is called by the builders before save.
+	mediaasset.AssetIDValidator = func() func(string) error {
+		validators := mediaassetDescAssetID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(asset_id string) error {
+			for _, fn := range fns {
+				if err := fn(asset_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// mediaassetDescOriginalFilename is the schema descriptor for original_filename field.
+	mediaassetDescOriginalFilename := mediaassetFields[1].Descriptor()
+	// mediaasset.OriginalFilenameValidator is a validator for the "original_filename" field. It is called by the builders before save.
+	mediaasset.OriginalFilenameValidator = mediaassetDescOriginalFilename.Validators[0].(func(string) error)
+	// mediaassetDescRelativePath is the schema descriptor for relative_path field.
+	mediaassetDescRelativePath := mediaassetFields[2].Descriptor()
+	// mediaasset.RelativePathValidator is a validator for the "relative_path" field. It is called by the builders before save.
+	mediaasset.RelativePathValidator = func() func(string) error {
+		validators := mediaassetDescRelativePath.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(relative_path string) error {
+			for _, fn := range fns {
+				if err := fn(relative_path); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// mediaassetDescMimeType is the schema descriptor for mime_type field.
+	mediaassetDescMimeType := mediaassetFields[3].Descriptor()
+	// mediaasset.MimeTypeValidator is a validator for the "mime_type" field. It is called by the builders before save.
+	mediaasset.MimeTypeValidator = func() func(string) error {
+		validators := mediaassetDescMimeType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(mime_type string) error {
+			for _, fn := range fns {
+				if err := fn(mime_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// mediaassetDescSize is the schema descriptor for size field.
+	mediaassetDescSize := mediaassetFields[4].Descriptor()
+	// mediaasset.SizeValidator is a validator for the "size" field. It is called by the builders before save.
+	mediaasset.SizeValidator = mediaassetDescSize.Validators[0].(func(int64) error)
+	// mediaassetDescWidth is the schema descriptor for width field.
+	mediaassetDescWidth := mediaassetFields[5].Descriptor()
+	// mediaasset.WidthValidator is a validator for the "width" field. It is called by the builders before save.
+	mediaasset.WidthValidator = mediaassetDescWidth.Validators[0].(func(int) error)
+	// mediaassetDescHeight is the schema descriptor for height field.
+	mediaassetDescHeight := mediaassetFields[6].Descriptor()
+	// mediaasset.HeightValidator is a validator for the "height" field. It is called by the builders before save.
+	mediaasset.HeightValidator = mediaassetDescHeight.Validators[0].(func(int) error)
 	themeMixin := schema.Theme{}.Mixin()
 	themeMixinHooks1 := themeMixin[1].Hooks()
 	themeMixinHooks2 := themeMixin[2].Hooks()
@@ -255,6 +351,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.5"                                         // Version of ent codegen.
-	Sum     = "h1:Rj2WOYJtCkWyFo6a+5wB3EfBRP0rnx1fMk6gGA0UUe4=" // Sum of ent codegen.
+	Version = "v0.14.6"                                         // Version of ent codegen.
+	Sum     = "h1:/f2696BpwuWAEEG6PVGWflg6+Inrpq4pRWuNlWz/Skk=" // Sum of ent codegen.
 )

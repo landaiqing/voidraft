@@ -3,6 +3,7 @@ package snapshot
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -105,7 +106,7 @@ func (s *FileStore) Write(ctx context.Context, root string, snap *Snapshot) erro
 		})
 
 		for _, record := range records {
-			if len(record.Blobs) == 0 {
+			if !record.HasBlobs() {
 				if err := writeJSON(filepath.Join(kindDir, record.ID+".json"), record.Values); err != nil {
 					return err
 				}
@@ -120,14 +121,23 @@ func (s *FileStore) Write(ctx context.Context, root string, snap *Snapshot) erro
 				return err
 			}
 
-			blobNames := make([]string, 0, len(record.Blobs))
-			for name := range record.Blobs {
-				blobNames = append(blobNames, name)
-			}
-			sort.Strings(blobNames)
+			for _, blobName := range record.BlobNames() {
+				targetPath := filepath.Join(recordDir, blobName)
+				if sourcePath, ok := record.BlobFilePath(blobName); ok {
+					if err := copyFile(targetPath, sourcePath); err != nil {
+						return err
+					}
+					continue
+				}
 
-			for _, blobName := range blobNames {
-				if err := os.WriteFile(filepath.Join(recordDir, blobName), record.Blobs[blobName], 0644); err != nil {
+				content, ok, err := record.BlobBytes(blobName)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					continue
+				}
+				if err := os.WriteFile(targetPath, content, 0644); err != nil {
 					return err
 				}
 			}
@@ -222,19 +232,15 @@ func (s *FileStore) readBlobRecord(root string, kind string) (Record, error) {
 		return Record{}, err
 	}
 
-	blobs := make(map[string][]byte)
+	blobFiles := make(map[string]string)
 	for _, entry := range entries {
 		if entry.IsDir() || entry.Name() == "record.json" {
 			continue
 		}
-		content, err := os.ReadFile(filepath.Join(root, entry.Name()))
-		if err != nil {
-			return Record{}, err
-		}
-		blobs[entry.Name()] = content
+		blobFiles[entry.Name()] = filepath.Join(root, entry.Name())
 	}
 
-	return NewRecord(kind, filepath.Base(root), values, blobs)
+	return NewRecordWithBlobFiles(kind, filepath.Base(root), values, blobFiles)
 }
 
 // readValues 读取 JSON 字段集合。
@@ -263,4 +269,36 @@ func writeJSON(path string, value interface{}) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+func copyFile(targetPath string, sourcePath string) error {
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return err
+	}
+
+	target, err := os.Create(targetPath)
+	if err != nil {
+		return err
+	}
+	closed := false
+	defer func() {
+		if !closed {
+			_ = target.Close()
+		}
+	}()
+
+	if _, err := io.Copy(target, source); err != nil {
+		return err
+	}
+	if err := target.Close(); err != nil {
+		return err
+	}
+	closed = true
+	return nil
 }

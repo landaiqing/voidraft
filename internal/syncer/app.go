@@ -25,8 +25,9 @@ const (
 
 // Options describes app construction options.
 type Options struct {
-	Logger          Logger
-	MaxSyncAttempts int
+	Logger           Logger
+	MaxSyncAttempts  int
+	MediaRootResolve func() string
 }
 
 // App coordinates the sync system.
@@ -50,14 +51,19 @@ func NewApp(client *ent.Client, options Options) *App {
 		maxSyncAttempts = defaultSyncAttempts
 	}
 
+	adapters := []resource.Adapter{
+		resource.NewDocumentAdapter(client),
+		resource.NewExtensionAdapter(client),
+		resource.NewKeyBindingAdapter(client),
+		resource.NewThemeAdapter(client),
+	}
+	if options.MediaRootResolve != nil {
+		adapters = append(adapters, resource.NewMediaAssetAdapter(client, options.MediaRootResolve))
+	}
+
 	return &App{
-		logger: options.Logger,
-		snapshotter: resource.NewRegistry(
-			resource.NewDocumentAdapter(client),
-			resource.NewExtensionAdapter(client),
-			resource.NewKeyBindingAdapter(client),
-			resource.NewThemeAdapter(client),
-		),
+		logger:          options.Logger,
+		snapshotter:     resource.NewRegistry(adapters...),
 		store:           snapshot.NewFileStore(),
 		merger:          merge.NewUpdatedAtWinsMerger(),
 		maxSyncAttempts: maxSyncAttempts,

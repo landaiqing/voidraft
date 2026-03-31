@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 	"voidraft/internal/common/helper"
-	"voidraft/internal/models"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
@@ -48,12 +47,12 @@ func createTestService() *WindowSnapService {
 		baseThresholdRatio: 0.025,
 		minThreshold:       8,
 		maxThreshold:       40,
-		managedWindows:     make(map[int64]*models.WindowInfo),
+		managedWindows:     make(map[int64]*WindowInfo),
 		windowRefs:         make(map[int64]*application.WebviewWindow),
 		windowSizeCache:    make(map[int64][2]int),
 		isUpdatingPosition: make(map[int64]bool),
 		windowMoveUnhooks:  make(map[int64]func()),
-		lastMainWindowPos:  models.WindowPosition{X: 100, Y: 100},
+		lastMainWindowPos:  WindowPosition{X: 100, Y: 100},
 		lastMainWindowSize: [2]int{800, 600},
 	}
 
@@ -189,7 +188,7 @@ func TestUnregisterWindow(t *testing.T) {
 
 	// 模拟注册窗口
 	documentID := int64(1)
-	service.managedWindows[documentID] = &models.WindowInfo{DocumentID: documentID}
+	service.managedWindows[documentID] = &WindowInfo{DocumentID: documentID}
 	service.windowSizeCache[documentID] = [2]int{640, 480}
 	service.isUpdatingPosition[documentID] = false
 
@@ -236,8 +235,8 @@ func TestCleanup(t *testing.T) {
 	service := createTestService()
 
 	// 添加一些数据
-	service.managedWindows[1] = &models.WindowInfo{DocumentID: 1}
-	service.managedWindows[2] = &models.WindowInfo{DocumentID: 2}
+	service.managedWindows[1] = &WindowInfo{DocumentID: 1}
+	service.managedWindows[2] = &WindowInfo{DocumentID: 2}
 	service.windowSizeCache[1] = [2]int{640, 480}
 	service.windowSizeCache[2] = [2]int{800, 600}
 	service.isUpdatingPosition[1] = false
@@ -291,7 +290,7 @@ func TestEventCleanupOnUnregister(t *testing.T) {
 	cleanupCounters := make(map[int64]int)
 
 	for _, id := range documentIDs {
-		service.managedWindows[id] = &models.WindowInfo{DocumentID: id}
+		service.managedWindows[id] = &WindowInfo{DocumentID: id}
 		service.windowSizeCache[id] = [2]int{640, 480}
 
 		// 为每个窗口添加清理函数
@@ -342,7 +341,7 @@ func TestEventCleanupNilSafety(t *testing.T) {
 	service := createTestService()
 
 	documentID := int64(1)
-	service.managedWindows[documentID] = &models.WindowInfo{DocumentID: documentID}
+	service.managedWindows[documentID] = &WindowInfo{DocumentID: documentID}
 	// 故意不设置清理函数
 
 	// 注销窗口不应该panic
@@ -374,10 +373,10 @@ func TestConcurrentRegisterUnregister(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < iterations; j++ {
 				documentID := int64(id*iterations + j)
-				windowInfo := &models.WindowInfo{
+				windowInfo := &WindowInfo{
 					DocumentID: documentID,
 					IsSnapped:  false,
-					LastPos:    models.WindowPosition{X: 0, Y: 0},
+					LastPos:    WindowPosition{X: 0, Y: 0},
 					MoveTime:   time.Now(),
 				}
 				service.mu.Lock()
@@ -516,7 +515,7 @@ func TestConcurrentUpdateMainWindowCache(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < 100; j++ {
 				service.mu.Lock()
-				service.lastMainWindowPos = models.WindowPosition{
+				service.lastMainWindowPos = WindowPosition{
 					X: id*100 + j,
 					Y: id*100 + j,
 				}
@@ -571,10 +570,10 @@ func BenchmarkRegisterUnregister(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		documentID := int64(i)
-		windowInfo := &models.WindowInfo{
+		windowInfo := &WindowInfo{
 			DocumentID: documentID,
 			IsSnapped:  false,
-			LastPos:    models.WindowPosition{X: 0, Y: 0},
+			LastPos:    WindowPosition{X: 0, Y: 0},
 			MoveTime:   time.Now(),
 		}
 
@@ -630,7 +629,7 @@ func TestHighFrequencyUpdates(t *testing.T) {
 
 	for i := 0; i < updates; i++ {
 		service.mu.Lock()
-		service.lastMainWindowPos = models.WindowPosition{X: i, Y: i}
+		service.lastMainWindowPos = WindowPosition{X: i, Y: i}
 		service.mu.Unlock()
 	}
 
@@ -654,10 +653,10 @@ func TestMemoryUsage(t *testing.T) {
 	for i := 0; i < windows; i++ {
 		documentID := int64(i)
 		service.mu.Lock()
-		service.managedWindows[documentID] = &models.WindowInfo{
+		service.managedWindows[documentID] = &WindowInfo{
 			DocumentID: documentID,
 			IsSnapped:  false,
-			LastPos:    models.WindowPosition{X: i, Y: i},
+			LastPos:    WindowPosition{X: i, Y: i},
 			MoveTime:   time.Now(),
 		}
 		service.windowSizeCache[documentID] = [2]int{640, 480}
@@ -730,17 +729,17 @@ func TestMainWindowResizeEffect(t *testing.T) {
 	service := createTestService()
 
 	// 设置初始主窗口尺寸
-	service.lastMainWindowPos = models.WindowPosition{X: 100, Y: 100}
+	service.lastMainWindowPos = WindowPosition{X: 100, Y: 100}
 	service.lastMainWindowSize = [2]int{800, 600}
 
 	// 添加一个已吸附的窗口
 	documentID := int64(1)
-	service.managedWindows[documentID] = &models.WindowInfo{
+	service.managedWindows[documentID] = &WindowInfo{
 		DocumentID: documentID,
 		IsSnapped:  true,
-		SnapEdge:   models.SnapEdgeRight,
-		SnapOffset: models.SnapPosition{X: 800, Y: 0}, // 吸附在右侧
-		LastPos:    models.WindowPosition{X: 900, Y: 100},
+		SnapEdge:   SnapEdgeRight,
+		SnapOffset: SnapPosition{X: 800, Y: 0}, // 吸附在右侧
+		LastPos:    WindowPosition{X: 900, Y: 100},
 		MoveTime:   time.Now(),
 	}
 
@@ -760,8 +759,8 @@ func TestMainWindowResizeEffect(t *testing.T) {
 		t.Error("Window should still be snapped after main window resize")
 	}
 
-	if windowInfo.SnapEdge != models.SnapEdgeRight {
-		t.Errorf("SnapEdge = %v, want %v", windowInfo.SnapEdge, models.SnapEdgeRight)
+	if windowInfo.SnapEdge != SnapEdgeRight {
+		t.Errorf("SnapEdge = %v, want %v", windowInfo.SnapEdge, SnapEdgeRight)
 	}
 
 	t.Log("Main window resize effect test passed")
@@ -776,10 +775,10 @@ func TestConcurrentResizeAndMove(t *testing.T) {
 	// 初始化一些窗口
 	for i := 0; i < 10; i++ {
 		documentID := int64(i)
-		service.managedWindows[documentID] = &models.WindowInfo{
+		service.managedWindows[documentID] = &WindowInfo{
 			DocumentID: documentID,
 			IsSnapped:  false,
-			LastPos:    models.WindowPosition{X: i * 100, Y: i * 100},
+			LastPos:    WindowPosition{X: i * 100, Y: i * 100},
 			MoveTime:   time.Now(),
 		}
 		service.windowSizeCache[documentID] = [2]int{640, 480}

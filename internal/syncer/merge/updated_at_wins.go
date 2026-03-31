@@ -97,7 +97,9 @@ func (m *UpdatedAtWinsMerger) mergePair(localRecord snapshot.Record, remoteRecor
 		}
 		return snapshot.CloneRecord(localRecord), report
 	default:
-		if snapshot.RecordDigest(localRecord) == snapshot.RecordDigest(remoteRecord) {
+		localDigest, localErr := snapshot.RecordDigest(localRecord)
+		remoteDigest, remoteErr := snapshot.RecordDigest(remoteRecord)
+		if localErr == nil && remoteErr == nil && localDigest == remoteDigest {
 			return snapshot.CloneRecord(localRecord), report
 		}
 

@@ -148,6 +148,64 @@ var (
 			},
 		},
 	}
+	// MediaAssetsColumns holds the columns for the "media_assets" table.
+	MediaAssetsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeString},
+		{Name: "updated_at", Type: field.TypeString},
+		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
+		{Name: "uuid", Type: field.TypeString, Unique: true},
+		{Name: "asset_id", Type: field.TypeString, Unique: true, Size: 64},
+		{Name: "original_filename", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "relative_path", Type: field.TypeString, Unique: true, Size: 1024},
+		{Name: "mime_type", Type: field.TypeString, Size: 128},
+		{Name: "size", Type: field.TypeInt64},
+		{Name: "width", Type: field.TypeInt},
+		{Name: "height", Type: field.TypeInt},
+	}
+	// MediaAssetsTable holds the schema information for the "media_assets" table.
+	MediaAssetsTable = &schema.Table{
+		Name:       "media_assets",
+		Columns:    MediaAssetsColumns,
+		PrimaryKey: []*schema.Column{MediaAssetsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediaasset_deleted_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[3]},
+			},
+			{
+				Name:    "mediaasset_uuid",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[4]},
+			},
+			{
+				Name:    "mediaasset_asset_id",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[5]},
+			},
+			{
+				Name:    "mediaasset_relative_path",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[7]},
+			},
+			{
+				Name:    "mediaasset_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[1]},
+			},
+			{
+				Name:    "mediaasset_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[2]},
+			},
+			{
+				Name:    "mediaasset_deleted_at_created_at_asset_id",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[3], MediaAssetsColumns[1], MediaAssetsColumns[5]},
+			},
+		},
+	}
 	// ThemesColumns holds the columns for the "themes" table.
 	ThemesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -182,6 +240,7 @@ var (
 		DocumentsTable,
 		ExtensionsTable,
 		KeyBindingsTable,
+		MediaAssetsTable,
 		ThemesTable,
 	}
 )
@@ -195,6 +254,9 @@ func init() {
 	}
 	KeyBindingsTable.Annotation = &entsql.Annotation{
 		Table: "key_bindings",
+	}
+	MediaAssetsTable.Annotation = &entsql.Annotation{
+		Table: "media_assets",
 	}
 	ThemesTable.Annotation = &entsql.Annotation{
 		Table: "themes",

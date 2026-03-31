@@ -48,7 +48,7 @@ func NewServiceManager() *ServiceManager {
 	databaseService := NewDatabaseService(configService, logger)
 	migrationService := NewMigrationService(databaseService, configService, logger)
 	documentService := NewDocumentService(databaseService, logger)
-	mediaHTTPService := NewMediaHTTPService(configService, logger)
+	mediaHTTPService := NewMediaHTTPService(configService, logger, databaseService)
 	windowSnapService := NewWindowSnapService(logger, configService)
 	windowService := NewWindowService(logger, documentService, windowSnapService)
 	systemService := NewSystemService(logger)
