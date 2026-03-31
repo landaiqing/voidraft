@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -20,27 +20,34 @@ import * as translator$0 from "../common/translator/models.js";
  * @returns {map[string]string} 语言代码到名称的映射
  * @returns {error} 可能的错误
  */
-export function GetTranslatorLanguages(translatorType: translator$0.TranslatorType): $CancellablePromise<{ [_ in string]?: translator$0.LanguageInfo }> {
-    return $Call.ByID(3976114458, translatorType).then(($result: any) => {
+export function GetTranslatorLanguages(translatorType: translator$0.TranslatorType): Promise<{ [_: string]: translator$0.LanguageInfo }> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3976114458, translatorType) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * GetTranslators 获取所有可用翻译器类型
  * @returns {[]string} 翻译器类型列表
  */
-export function GetTranslators(): $CancellablePromise<string[]> {
-    return $Call.ByID(3720069432).then(($result: any) => {
+export function GetTranslators(): Promise<string[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3720069432) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType2($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * IsLanguageSupported 检查指定的语言代码是否受支持
  */
-export function IsLanguageSupported(translatorType: translator$0.TranslatorType, languageCode: string): $CancellablePromise<boolean> {
-    return $Call.ByID(2819945417, translatorType, languageCode);
+export function IsLanguageSupported(translatorType: translator$0.TranslatorType, languageCode: string): Promise<boolean> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2819945417, translatorType, languageCode) as any;
+    return $resultPromise;
 }
 
 /**
@@ -52,8 +59,9 @@ export function IsLanguageSupported(translatorType: translator$0.TranslatorType,
  * @returns {string} 翻译后的文本
  * @returns {error} 可能的错误
  */
-export function TranslateWith(text: string, $from: string, to: string, translatorType: string): $CancellablePromise<string> {
-    return $Call.ByID(3577923623, text, $from, to, translatorType);
+export function TranslateWith(text: string, $from: string, to: string, translatorType: string): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3577923623, text, $from, to, translatorType) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions

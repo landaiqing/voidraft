@@ -2,8 +2,6 @@ package services
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,24 +15,20 @@ import (
 	"voidraft/internal/models/ent/mediaasset"
 	schemamixin "voidraft/internal/models/schema/mixin"
 
-	"entgo.io/ent/dialect/sql"
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
 const (
-	mediaServiceRoute         = "/media"
-	mediaDirName              = helper.MediaDirName
-	mediaImagesDirName        = helper.MediaImagesDirName
-	mediaCacheControl         = helper.MediaCacheControl
-	mediaQuickReconcileWindow = 5 * time.Second
-	mediaListPageDefaultLimit = 100
-	mediaListPageMaxLimit     = 200
-	mediaAssetBatchSize       = 256
-	headerCacheControl        = helper.MediaHeaderCacheControl
-	headerETag                = helper.MediaHeaderETag
-	headerIfNoneMatch         = helper.MediaHeaderIfNoneMatch
-	headerXContentTypeOption  = helper.MediaHeaderXContentType
+	mediaServiceRoute        = "/media"
+	mediaDirName             = helper.MediaDirName
+	mediaImagesDirName       = helper.MediaImagesDirName
+	mediaCacheControl        = helper.MediaCacheControl
+	mediaAssetBatchSize      = 256
+	headerCacheControl       = helper.MediaHeaderCacheControl
+	headerETag               = helper.MediaHeaderETag
+	headerIfNoneMatch        = helper.MediaHeaderIfNoneMatch
+	headerXContentTypeOption = helper.MediaHeaderXContentType
 )
 
 // MediaHTTPService serves media files and manages the indexed image store.
@@ -49,19 +43,7 @@ type MediaHTTPService struct {
 	rootPath string
 	now      func() time.Time
 
-	reconcileMu           sync.Mutex
-	lastQuickReconciledAt time.Time
-
-	backgroundMu                sync.Mutex
-	backgroundContext           context.Context
-	backgroundCancel            context.CancelFunc
-	backgroundReconcileRunning  bool
-	backgroundReconcilePending  bool
-	backgroundReconcileLastErr  string
-	backgroundReconcileLastNote string
-	backgroundReconcileRequest  time.Time
-	backgroundReconcileStart    time.Time
-	backgroundReconcileFinish   time.Time
+	reconcileMu sync.Mutex
 }
 
 // ImageImportRequest describes an image import payload.
@@ -94,35 +76,6 @@ type ImageDeleteResult struct {
 	Deleted      bool   `json:"deleted"`
 }
 
-// ImageListPageRequest describes one paginated list request.
-type ImageListPageRequest struct {
-	Limit  int    `json:"limit,omitempty"`
-	Cursor string `json:"cursor,omitempty"`
-}
-
-// ImageListPage describes one page of indexed images.
-type ImageListPage struct {
-	Items      []*ImageAsset `json:"items"`
-	NextCursor string        `json:"next_cursor,omitempty"`
-	HasMore    bool          `json:"has_more"`
-}
-
-// MediaReconcileStatus describes the background full-reconcile worker state.
-type MediaReconcileStatus struct {
-	Running         bool   `json:"running"`
-	Pending         bool   `json:"pending"`
-	LastNote        string `json:"last_note,omitempty"`
-	LastError       string `json:"last_error,omitempty"`
-	LastRequestedAt string `json:"last_requested_at,omitempty"`
-	LastStartedAt   string `json:"last_started_at,omitempty"`
-	LastFinishedAt  string `json:"last_finished_at,omitempty"`
-}
-
-type imageListCursor struct {
-	CreatedAt string `json:"created_at"`
-	AssetID   string `json:"asset_id"`
-}
-
 // NewMediaHTTPService creates a media HTTP service.
 func NewMediaHTTPService(configService *ConfigService, logger *log.LogService, dbServices ...*DatabaseService) *MediaHTTPService {
 	if logger == nil {
@@ -134,16 +87,12 @@ func NewMediaHTTPService(configService *ConfigService, logger *log.LogService, d
 		dbService = dbServices[0]
 	}
 
-	backgroundContext, backgroundCancel := context.WithCancel(context.Background())
-
 	return &MediaHTTPService{
-		configService:     configService,
-		dbService:         dbService,
-		logger:            logger,
-		mediaHelper:       helper.NewMediaHelper(),
-		now:               time.Now,
-		backgroundContext: backgroundContext,
-		backgroundCancel:  backgroundCancel,
+		configService: configService,
+		dbService:     dbService,
+		logger:        logger,
+		mediaHelper:   helper.NewMediaHelper(),
+		now:           time.Now,
 	}
 }
 
@@ -154,10 +103,9 @@ func (s *MediaHTTPService) ServiceStartup(ctx context.Context, options applicati
 	if err := s.configureFromConfig(); err != nil {
 		return err
 	}
-	if err := s.reconcileMediaIndex(ctx, false); err != nil {
+	if err := s.reconcileMediaIndex(ctx); err != nil {
 		return err
 	}
-	s.queueFullMediaReconcile("startup")
 
 	if s.configService != nil {
 		s.cancelObservers = []helper.CancelFunc{
@@ -176,13 +124,6 @@ func (s *MediaHTTPService) ServiceShutdown() error {
 		}
 	}
 	s.cancelObservers = nil
-	s.backgroundMu.Lock()
-	if s.backgroundCancel != nil {
-		s.backgroundCancel()
-		s.backgroundCancel = nil
-		s.backgroundContext = nil
-	}
-	s.backgroundMu.Unlock()
 	return nil
 }
 
@@ -200,7 +141,7 @@ func (s *MediaHTTPService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	targetPath, err := s.mediaHelper.ResolvePath(rootPath, r.URL.Path)
+	_, targetPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, r.URL.Path, "")
 	if err != nil {
 		http.NotFound(w, r)
 		return
@@ -262,121 +203,10 @@ func (s *MediaHTTPService) ImportImage(ctx context.Context, request *ImageImport
 		return nil, fmt.Errorf("lookup image asset: %w", err)
 	}
 	if existing != nil {
-		return s.importExistingImage(ctx, rootPath, existing, request, data, payload)
+		return s.importExistingImage(ctx, client, rootPath, existing, request, data, payload)
 	}
 
 	return s.createIndexedImage(ctx, client, rootPath, request, data, payload)
-}
-
-// ListImages returns all indexed images ordered by creation time descending.
-func (s *MediaHTTPService) ListImages(ctx context.Context) ([]*ImageAsset, error) {
-	client, _, err := s.ensureDependencies()
-	if err != nil {
-		return nil, err
-	}
-	if err := s.reconcileMediaIndex(ctx, false); err != nil {
-		return nil, err
-	}
-
-	cursor := ""
-	result := make([]*ImageAsset, 0)
-	for {
-		page, err := s.queryImageListPage(ctx, client, &ImageListPageRequest{
-			Limit:  mediaListPageMaxLimit,
-			Cursor: cursor,
-		})
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, page.Items...)
-		if !page.HasMore || page.NextCursor == "" {
-			return result, nil
-		}
-		cursor = page.NextCursor
-	}
-}
-
-// ListImagesPage returns one paginated image list page ordered by creation time descending.
-func (s *MediaHTTPService) ListImagesPage(ctx context.Context, request *ImageListPageRequest) (*ImageListPage, error) {
-	client, _, err := s.ensureDependencies()
-	if err != nil {
-		return nil, err
-	}
-	if err := s.reconcileMediaIndex(ctx, false); err != nil {
-		return nil, err
-	}
-	return s.queryImageListPage(ctx, client, request)
-}
-
-// RunFullMediaReconcile queues one background full reconcile and returns current worker state.
-func (s *MediaHTTPService) RunFullMediaReconcile(ctx context.Context) (*MediaReconcileStatus, error) {
-	if _, _, err := s.ensureDependencies(); err != nil {
-		return nil, err
-	}
-	s.queueFullMediaReconcile("manual")
-	return s.GetMediaReconcileStatus(ctx)
-}
-
-// GetMediaReconcileStatus returns the current background reconcile state.
-func (s *MediaHTTPService) GetMediaReconcileStatus(ctx context.Context) (*MediaReconcileStatus, error) {
-	_ = ctx
-	return s.mediaReconcileStatus(), nil
-}
-
-func (s *MediaHTTPService) queryImageListPage(ctx context.Context, client *entmodel.Client, request *ImageListPageRequest) (*ImageListPage, error) {
-	limit := normalizeImagePageLimit(request)
-
-	query := client.MediaAsset.Query().
-		Order(
-			mediaasset.ByCreatedAt(sql.OrderDesc()),
-			mediaasset.ByAssetID(sql.OrderDesc()),
-		).
-		Limit(limit + 1)
-
-	if request != nil && strings.TrimSpace(request.Cursor) != "" {
-		cursor, err := decodeImageListCursor(request.Cursor)
-		if err != nil {
-			return nil, err
-		}
-		query = query.Where(
-			mediaasset.Or(
-				mediaasset.CreatedAtLT(cursor.CreatedAt),
-				mediaasset.And(
-					mediaasset.CreatedAtEQ(cursor.CreatedAt),
-					mediaasset.AssetIDLT(cursor.AssetID),
-				),
-			),
-		)
-	}
-
-	rows, err := query.All(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("list images page: %w", err)
-	}
-
-	hasMore := len(rows) > limit
-	if hasMore {
-		rows = rows[:limit]
-	}
-
-	items := make([]*ImageAsset, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, s.imageAssetFromEntity(row))
-	}
-
-	nextCursor := ""
-	if hasMore && len(rows) > 0 {
-		nextCursor, err = encodeImageListCursor(rows[len(rows)-1].CreatedAt, rows[len(rows)-1].AssetID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &ImageListPage{
-		Items:      items,
-		NextCursor: nextCursor,
-		HasMore:    hasMore,
-	}, nil
 }
 
 // DeleteImage removes one logical image asset and deletes its local file.
@@ -391,13 +221,9 @@ func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*I
 		return nil, err
 	}
 	if asset == nil {
-		relativePath, pathErr := s.mediaHelper.NormalizeImageReference(imageRef, mediaServiceRoute)
+		relativePath, absPath, pathErr := s.mediaHelper.ResolveManagedImagePath(rootPath, imageRef, mediaServiceRoute)
 		if pathErr != nil {
 			return &ImageDeleteResult{Deleted: false}, nil
-		}
-		absPath, err := s.mediaHelper.ResolvePath(rootPath, relativePath)
-		if err != nil {
-			return nil, err
 		}
 		deleted, err := s.mediaHelper.RemoveImageArtifacts(absPath)
 		if err != nil {
@@ -418,19 +244,28 @@ func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*I
 		}, nil
 	}
 
-	absPath := filepath.Join(rootPath, filepath.FromSlash(asset.RelativePath))
-	if _, err := s.mediaHelper.RemoveImageArtifacts(absPath); err != nil {
+	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.RelativePath, "")
+	if err != nil {
 		return nil, err
 	}
-	s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
+	stagedPath, err := s.mediaHelper.StageFile(absPath, s.now().UTC())
+	if err != nil {
+		return nil, err
+	}
 
 	deletedAt := s.now().UTC().Format(time.RFC3339)
 	if err := client.MediaAsset.UpdateOneID(asset.ID).
 		SetDeletedAt(deletedAt).
 		SetUpdatedAt(deletedAt).
 		Exec(schemamixin.SkipAutoUpdate(ctx)); err != nil {
-		return nil, fmt.Errorf("logical delete image asset: %w", err)
+		rollbackErr := s.mediaHelper.RestoreStagedFile(absPath, stagedPath)
+		return nil, helper.WrapRollbackError("logical delete image asset", err, rollbackErr)
 	}
+
+	if err := s.mediaHelper.DiscardStagedFile(stagedPath); err != nil {
+		s.logger.Warning("discard staged image after delete %s: %v", stagedPath, err)
+	}
+	s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
 
 	return &ImageDeleteResult{
 		RelativePath: asset.RelativePath,
@@ -438,20 +273,31 @@ func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*I
 	}, nil
 }
 
-func (s *MediaHTTPService) importExistingImage(ctx context.Context, rootPath string, asset *entmodel.MediaAsset, request *ImageImportRequest, data []byte, payload *helper.ImagePayload) (*ImageAsset, error) {
+func (s *MediaHTTPService) importExistingImage(ctx context.Context, client *entmodel.Client, rootPath string, asset *entmodel.MediaAsset, request *ImageImportRequest, data []byte, payload *helper.ImagePayload) (*ImageAsset, error) {
 	if asset == nil {
 		return nil, fmt.Errorf("image asset is required")
 	}
+	if client == nil {
+		return nil, fmt.Errorf("media index database is not configured")
+	}
 
 	originalName := coalesceOriginalFilename(asset.OriginalFilename, request.Filename)
-	absPath := filepath.Join(rootPath, filepath.FromSlash(asset.RelativePath))
+	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.RelativePath, "")
+	if err != nil {
+		return nil, err
+	}
 
 	switch {
 	case asset.DeletedAt != nil:
-		if err := s.mediaHelper.WriteBinaryFile(absPath, data); err != nil {
+		stagedPath, err := s.mediaHelper.StageFile(absPath, s.now().UTC())
+		if err != nil {
 			return nil, err
 		}
-		if err := s.dbService.Client.MediaAsset.UpdateOneID(asset.ID).
+		if err := s.mediaHelper.WriteBinaryFile(absPath, data); err != nil {
+			rollbackErr := s.mediaHelper.RollbackFileChange(absPath, stagedPath)
+			return nil, helper.WrapRollbackError("write restored image asset", err, rollbackErr)
+		}
+		if err := client.MediaAsset.UpdateOneID(asset.ID).
 			ClearDeletedAt().
 			SetMimeType(payload.MimeType).
 			SetSize(int64(len(data))).
@@ -459,9 +305,13 @@ func (s *MediaHTTPService) importExistingImage(ctx context.Context, rootPath str
 			SetHeight(payload.Height).
 			SetNillableOriginalFilename(originalName).
 			Exec(ctx); err != nil {
-			return nil, fmt.Errorf("restore deleted image asset: %w", err)
+			rollbackErr := s.mediaHelper.RollbackFileChange(absPath, stagedPath)
+			return nil, helper.WrapRollbackError("restore deleted image asset", err, rollbackErr)
 		}
-		fresh, err := s.dbService.Client.MediaAsset.Get(ctx, asset.ID)
+		if err := s.mediaHelper.DiscardStagedFile(stagedPath); err != nil {
+			s.logger.Warning("discard staged image after restore %s: %v", stagedPath, err)
+		}
+		fresh, err := client.MediaAsset.Get(ctx, asset.ID)
 		if err != nil {
 			return nil, fmt.Errorf("reload restored image asset: %w", err)
 		}
@@ -469,12 +319,12 @@ func (s *MediaHTTPService) importExistingImage(ctx context.Context, rootPath str
 
 	case s.mediaHelper.FileExists(absPath):
 		if asset.OriginalFilename == nil && originalName != nil {
-			if err := s.dbService.Client.MediaAsset.UpdateOneID(asset.ID).
+			if err := client.MediaAsset.UpdateOneID(asset.ID).
 				SetOriginalFilename(*originalName).
 				Exec(schemamixin.SkipAutoUpdate(ctx)); err != nil {
 				return nil, fmt.Errorf("repair indexed image asset: %w", err)
 			}
-			fresh, err := s.dbService.Client.MediaAsset.Get(ctx, asset.ID)
+			fresh, err := client.MediaAsset.Get(ctx, asset.ID)
 			if err != nil {
 				return nil, fmt.Errorf("reload repaired image asset: %w", err)
 			}
@@ -487,12 +337,12 @@ func (s *MediaHTTPService) importExistingImage(ctx context.Context, rootPath str
 			return nil, err
 		}
 		if asset.OriginalFilename == nil && originalName != nil {
-			if err := s.dbService.Client.MediaAsset.UpdateOneID(asset.ID).
+			if err := client.MediaAsset.UpdateOneID(asset.ID).
 				SetOriginalFilename(*originalName).
 				Exec(schemamixin.SkipAutoUpdate(ctx)); err != nil {
 				return nil, fmt.Errorf("repair image asset filename: %w", err)
 			}
-			fresh, err := s.dbService.Client.MediaAsset.Get(ctx, asset.ID)
+			fresh, err := client.MediaAsset.Get(ctx, asset.ID)
 			if err != nil {
 				return nil, fmt.Errorf("reload repaired image asset: %w", err)
 			}
@@ -509,7 +359,10 @@ func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmo
 		return nil, err
 	}
 
-	absPath := filepath.Join(rootPath, filepath.FromSlash(relativePath))
+	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, relativePath, "")
+	if err != nil {
+		return nil, err
+	}
 	if err := s.mediaHelper.WriteBinaryFile(absPath, data); err != nil {
 		return nil, err
 	}
@@ -532,7 +385,7 @@ func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmo
 				Where(mediaasset.AssetIDEQ(payload.Digest)).
 				Only(schemamixin.SkipSoftDelete(ctx))
 			if lookupErr == nil && existing != nil {
-				return s.importExistingImage(ctx, rootPath, existing, request, data, payload)
+				return s.importExistingImage(ctx, client, rootPath, existing, request, data, payload)
 			}
 		}
 		return nil, fmt.Errorf("create image asset: %w", err)
@@ -541,49 +394,42 @@ func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmo
 	return s.imageAssetFromEntity(asset), nil
 }
 
-func (s *MediaHTTPService) reconcileMediaIndex(ctx context.Context, full bool) error {
+func (s *MediaHTTPService) reconcileMediaIndex(ctx context.Context) error {
 	s.reconcileMu.Lock()
 	defer s.reconcileMu.Unlock()
 
-	if !full {
-		now := s.now().UTC()
-		if !s.lastQuickReconciledAt.IsZero() && now.Sub(s.lastQuickReconciledAt) < mediaQuickReconcileWindow {
-			return nil
-		}
-	}
-
-	var err error
-	if full {
-		err = s.reconcileMediaIndexFull(ctx)
-	} else {
-		err = s.reconcileMediaIndexQuick(ctx)
-	}
-	if err != nil {
-		return err
-	}
-
-	s.lastQuickReconciledAt = s.now().UTC()
-	return nil
-}
-
-func (s *MediaHTTPService) reconcileMediaIndexQuick(ctx context.Context) error {
 	client, rootPath, err := s.ensureDependencies()
 	if err != nil {
 		return err
 	}
 
 	if err := s.walkIndexedMediaAssets(ctx, client, func(row *entmodel.MediaAsset) error {
-		absPath := filepath.Join(rootPath, filepath.FromSlash(row.RelativePath))
+		_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, row.RelativePath, "")
+		if err != nil {
+			return err
+		}
 		if row.DeletedAt != nil {
 			if removed, err := s.mediaHelper.RemoveImageArtifacts(absPath); err != nil {
 				return err
 			} else if removed {
 				s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
 			}
+			if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
+				return err
+			}
+			s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
 			return nil
 		}
 
 		if s.mediaHelper.FileExists(absPath) {
+			if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
+				return err
+			}
+			return nil
+		}
+		if restored, err := s.mediaHelper.RestoreLatestStagedFile(absPath); err != nil {
+			return err
+		} else if restored {
 			return nil
 		}
 		if err := s.hardDeleteAsset(schemamixin.SkipSoftDelete(ctx), row.ID); err != nil {
@@ -594,105 +440,6 @@ func (s *MediaHTTPService) reconcileMediaIndexQuick(ctx context.Context) error {
 		return fmt.Errorf("query indexed media assets: %w", err)
 	}
 	return nil
-}
-
-func (s *MediaHTTPService) reconcileMediaIndexFull(ctx context.Context) error {
-	client, rootPath, err := s.ensureDependencies()
-	if err != nil {
-		return err
-	}
-	if err := s.reconcileMediaIndexQuick(ctx); err != nil {
-		return err
-	}
-
-	indexedByPath := make(map[string]*entmodel.MediaAsset)
-	if err := s.walkIndexedMediaAssets(ctx, client, func(row *entmodel.MediaAsset) error {
-		indexedByPath[row.RelativePath] = row
-		return nil
-	}); err != nil {
-		return fmt.Errorf("query media asset index: %w", err)
-	}
-
-	files, err := s.mediaHelper.ScanManagedImageFiles(rootPath)
-	if err != nil {
-		return err
-	}
-
-	for _, file := range files {
-		if _, exists := indexedByPath[file.RelativePath]; exists {
-			continue
-		}
-		if err := s.indexManagedImageFile(ctx, client, rootPath, file); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s *MediaHTTPService) indexManagedImageFile(ctx context.Context, client *entmodel.Client, rootPath string, file helper.ManagedImageFile) error {
-	data, err := os.ReadFile(file.AbsPath)
-	if err != nil {
-		return fmt.Errorf("read managed image %s: %w", file.RelativePath, err)
-	}
-
-	payload, err := s.mediaHelper.InspectImagePayload(data, "", filepath.Base(filepath.FromSlash(file.RelativePath)))
-	if err != nil {
-		s.logger.Warning("skip invalid managed image %s: %v", file.RelativePath, err)
-		return nil
-	}
-	if payload.Digest != file.Digest {
-		s.logger.Warning("skip unmanaged image filename mismatch %s", file.RelativePath)
-		return nil
-	}
-	if payload.Extension != strings.ToLower(filepath.Ext(file.RelativePath)) {
-		s.logger.Warning("skip unmanaged image extension mismatch %s", file.RelativePath)
-		return nil
-	}
-
-	existing, err := client.MediaAsset.Query().
-		Where(mediaasset.AssetIDEQ(payload.Digest)).
-		Only(schemamixin.SkipSoftDelete(ctx))
-	if err != nil && !entmodel.IsNotFound(err) {
-		return fmt.Errorf("lookup managed image asset: %w", err)
-	}
-
-	switch {
-	case existing == nil:
-		_, err := client.MediaAsset.Create().
-			SetAssetID(payload.Digest).
-			SetRelativePath(file.RelativePath).
-			SetMimeType(payload.MimeType).
-			SetSize(int64(len(data))).
-			SetWidth(payload.Width).
-			SetHeight(payload.Height).
-			SetCreatedAt(file.ImportedAt.Format(time.RFC3339)).
-			SetUpdatedAt(file.ImportedAt.Format(time.RFC3339)).
-			Save(ctx)
-		if err != nil {
-			return fmt.Errorf("index managed image %s: %w", file.RelativePath, err)
-		}
-		return nil
-
-	case existing.DeletedAt != nil:
-		if removed, err := s.mediaHelper.RemoveImageArtifacts(file.AbsPath); err != nil {
-			return err
-		} else if removed {
-			s.mediaHelper.TrimEmptyMediaDirs(rootPath, file.AbsPath)
-		}
-		return nil
-
-	case existing.RelativePath == file.RelativePath:
-		return nil
-
-	default:
-		if removed, err := s.mediaHelper.RemoveImageArtifacts(file.AbsPath); err != nil {
-			return err
-		} else if removed {
-			s.mediaHelper.TrimEmptyMediaDirs(rootPath, file.AbsPath)
-		}
-		return nil
-	}
 }
 
 func (s *MediaHTTPService) ensureDependencies() (*entmodel.Client, string, error) {
@@ -741,11 +488,9 @@ func (s *MediaHTTPService) onDataPathChange(oldValue interface{}, newValue inter
 		s.logger.Error("reconfigure media service after data path change: %v", err)
 		return
 	}
-	if err := s.reconcileMediaIndex(context.Background(), false); err != nil {
-		s.logger.Error("quick reconcile media index after data path change: %v", err)
-		return
+	if err := s.reconcileMediaIndex(context.Background()); err != nil {
+		s.logger.Error("reconcile media index after data path change: %v", err)
 	}
-	s.queueFullMediaReconcile("data_path_change")
 }
 
 func (s *MediaHTTPService) currentRootPath() string {
@@ -779,82 +524,6 @@ func (s *MediaHTTPService) walkIndexedMediaAssets(ctx context.Context, client *e
 		}
 		lastAssetID = rows[len(rows)-1].AssetID
 	}
-}
-
-func (s *MediaHTTPService) queueFullMediaReconcile(note string) {
-	s.backgroundMu.Lock()
-	s.ensureBackgroundContextLocked()
-	s.backgroundReconcileRequest = s.now().UTC()
-	s.backgroundReconcileLastNote = strings.TrimSpace(note)
-	if s.backgroundReconcileRunning {
-		s.backgroundReconcilePending = true
-		s.backgroundMu.Unlock()
-		return
-	}
-
-	s.backgroundReconcileRunning = true
-	s.backgroundReconcilePending = false
-	s.backgroundReconcileLastErr = ""
-	s.backgroundReconcileStart = s.now().UTC()
-	runCtx := s.backgroundContext
-	s.backgroundMu.Unlock()
-
-	go s.runQueuedFullMediaReconcile(runCtx)
-}
-
-func (s *MediaHTTPService) runQueuedFullMediaReconcile(ctx context.Context) {
-	for {
-		err := s.reconcileMediaIndex(ctx, true)
-
-		s.backgroundMu.Lock()
-		s.backgroundReconcileFinish = s.now().UTC()
-		if err != nil {
-			s.backgroundReconcileLastErr = err.Error()
-			s.logger.Error("background media full reconcile failed: %v", err)
-		} else {
-			s.backgroundReconcileLastErr = ""
-		}
-
-		if ctx == nil || ctx.Err() != nil {
-			s.backgroundReconcileRunning = false
-			s.backgroundReconcilePending = false
-			s.backgroundMu.Unlock()
-			return
-		}
-
-		if s.backgroundReconcilePending {
-			s.backgroundReconcilePending = false
-			s.backgroundReconcileStart = s.now().UTC()
-			s.backgroundMu.Unlock()
-			continue
-		}
-
-		s.backgroundReconcileRunning = false
-		s.backgroundMu.Unlock()
-		return
-	}
-}
-
-func (s *MediaHTTPService) mediaReconcileStatus() *MediaReconcileStatus {
-	s.backgroundMu.Lock()
-	defer s.backgroundMu.Unlock()
-
-	return &MediaReconcileStatus{
-		Running:         s.backgroundReconcileRunning,
-		Pending:         s.backgroundReconcilePending,
-		LastNote:        s.backgroundReconcileLastNote,
-		LastError:       s.backgroundReconcileLastErr,
-		LastRequestedAt: formatTimeValue(s.backgroundReconcileRequest),
-		LastStartedAt:   formatTimeValue(s.backgroundReconcileStart),
-		LastFinishedAt:  formatTimeValue(s.backgroundReconcileFinish),
-	}
-}
-
-func (s *MediaHTTPService) ensureBackgroundContextLocked() {
-	if s.backgroundContext != nil {
-		return
-	}
-	s.backgroundContext, s.backgroundCancel = context.WithCancel(context.Background())
 }
 
 func (s *MediaHTTPService) findAssetByReference(ctx context.Context, value string, includeDeleted bool) (*entmodel.MediaAsset, error) {
@@ -924,7 +593,10 @@ func (s *MediaHTTPService) nextAvailableRelativePath(ctx context.Context, digest
 		return "", fmt.Errorf("managed media path already indexed: %s", relativePath)
 	}
 
-	absPath := filepath.Join(rootPath, filepath.FromSlash(relativePath))
+	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, relativePath, "")
+	if err != nil {
+		return "", err
+	}
 	if _, err := os.Stat(absPath); err == nil {
 		data, readErr := os.ReadFile(absPath)
 		if readErr != nil {
@@ -978,50 +650,6 @@ func (s *MediaHTTPService) imageAssetFromEntity(asset *entmodel.MediaAsset) *Ima
 		result.OriginalFilename = *asset.OriginalFilename
 	}
 	return result
-}
-
-func normalizeImagePageLimit(request *ImageListPageRequest) int {
-	if request == nil || request.Limit <= 0 {
-		return mediaListPageDefaultLimit
-	}
-	if request.Limit > mediaListPageMaxLimit {
-		return mediaListPageMaxLimit
-	}
-	return request.Limit
-}
-
-func encodeImageListCursor(createdAt string, assetID string) (string, error) {
-	payload, err := json.Marshal(imageListCursor{
-		CreatedAt: strings.TrimSpace(createdAt),
-		AssetID:   strings.TrimSpace(assetID),
-	})
-	if err != nil {
-		return "", fmt.Errorf("encode image list cursor: %w", err)
-	}
-	return base64.RawURLEncoding.EncodeToString(payload), nil
-}
-
-func decodeImageListCursor(value string) (*imageListCursor, error) {
-	data, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(value))
-	if err != nil {
-		return nil, fmt.Errorf("decode image list cursor: %w", err)
-	}
-
-	var cursor imageListCursor
-	if err := json.Unmarshal(data, &cursor); err != nil {
-		return nil, fmt.Errorf("parse image list cursor: %w", err)
-	}
-	if strings.TrimSpace(cursor.CreatedAt) == "" || !helper.NewMediaHelper().IsValidAssetID(cursor.AssetID) {
-		return nil, fmt.Errorf("invalid image list cursor")
-	}
-	return &cursor, nil
-}
-
-func formatTimeValue(value time.Time) string {
-	if value.IsZero() {
-		return ""
-	}
-	return value.UTC().Format(time.RFC3339)
 }
 
 func coalesceOriginalFilename(existing *string, imported string) *string {

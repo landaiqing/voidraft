@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import {Create as $Create} from "@wailsio/runtime";
 
 /**
  * AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -118,10 +118,10 @@ export class AppearanceConfig {
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
-            this["language"] = LanguageType.$zero;
+            this["language"] = ("" as LanguageType);
         }
         if (!("systemTheme" in $$source)) {
-            this["systemTheme"] = SystemThemeType.$zero;
+            this["systemTheme"] = ("" as SystemThemeType);
         }
         if (!("currentTheme" in $$source)) {
             this["currentTheme"] = "";
@@ -267,10 +267,10 @@ export class EditingConfig {
             this["tabSize"] = 0;
         }
         if (!("tabType" in $$source)) {
-            this["tabType"] = TabType.$zero;
+            this["tabType"] = ("" as TabType);
         }
         if (!("keymapMode" in $$source)) {
-            this["keymapMode"] = KeyBindingType.$zero;
+            this["keymapMode"] = ("" as KeyBindingType);
         }
         if (!("autoSaveDelay" in $$source)) {
             this["autoSaveDelay"] = 0;
@@ -299,13 +299,13 @@ export class Extension {
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
         if (!("key" in $$source)) {
-            this["key"] = ExtensionName.$zero;
+            this["key"] = ("" as ExtensionName);
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
         }
         if (!("config" in $$source)) {
-            this["config"] = {};
+            this["config"] = ({} as ExtensionConfig);
         }
 
         Object.assign(this, $$source);
@@ -327,7 +327,7 @@ export class Extension {
 /**
  * ExtensionConfig 扩展配置项
  */
-export type ExtensionConfig = { [_ in string]?: any };
+export type ExtensionConfig = { [_: string]: any };
 
 /**
  * ExtensionName 扩展标识符
@@ -549,7 +549,7 @@ export class GitSyncConfig {
             this["repo_url"] = "";
         }
         if (!("auth_method" in $$source)) {
-            this["auth_method"] = AuthMethod.$zero;
+            this["auth_method"] = ("" as AuthMethod);
         }
 
         Object.assign(this, $$source);
@@ -715,13 +715,13 @@ export class KeyBinding {
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
         if (!("name" in $$source)) {
-            this["name"] = KeyBindingName.$zero;
+            this["name"] = ("" as KeyBindingName);
         }
         if (!("type" in $$source)) {
-            this["type"] = KeyBindingType.$zero;
+            this["type"] = ("" as KeyBindingType);
         }
         if (!("extension" in $$source)) {
-            this["extension"] = ExtensionName.$zero;
+            this["extension"] = ("" as ExtensionName);
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
@@ -1235,7 +1235,7 @@ export class SyncConfig {
     /** Creates a new SyncConfig instance. */
     constructor($$source: Partial<SyncConfig> = {}) {
         if (!("target" in $$source)) {
-            this["target"] = SyncTarget.$zero;
+            this["target"] = ("" as SyncTarget);
         }
         if (!("git" in $$source)) {
             this["git"] = (new GitSyncConfig());
@@ -1399,7 +1399,7 @@ const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
 const $$createType4 = SyncConfig.createFrom;
 const $$createType5 = ConfigMetadata.createFrom;
-var $$createType6 = (function $$initCreateType6(...args: any[]): any {
+var $$createType6 = (function $$initCreateType6(...args): any {
     if ($$createType6 === $$initCreateType6) {
         $$createType6 = $$createType7;
     }

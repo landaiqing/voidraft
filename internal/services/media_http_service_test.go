@@ -3,9 +3,7 @@ package services
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"image"
 	"image/color"
@@ -41,6 +39,17 @@ func newIndexedMediaHTTPService(t *testing.T) (*MediaHTTPService, string) {
 		t.Fatalf("configure root path: %v", err)
 	}
 	return service, rootPath
+}
+
+func failMediaAssetUpdates(client *ent.Client, err error) {
+	client.MediaAsset.Use(func(next ent.Mutator) ent.Mutator {
+		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+			if m.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
+				return nil, err
+			}
+			return next.Mutate(ctx, m)
+		})
+	})
 }
 
 func TestMediaHTTPServiceConfigureRootPathCreatesDirectories(t *testing.T) {
@@ -262,140 +271,7 @@ func TestMediaHTTPServiceImportImageDeduplicatesByContentHash(t *testing.T) {
 	}
 }
 
-func TestMediaHTTPServiceFullReconcileIndexesManagedFilesOnly(t *testing.T) {
-	service, rootPath := newIndexedMediaHTTPService(t)
-	mediaHelper := commonhelper.NewMediaHelper()
-	importedAt := time.Date(2026, 3, 31, 9, 8, 7, 0, time.UTC)
-	imageData := mustEncodePNG(t, 2, 2)
-	digest := sha256.Sum256(imageData)
-	assetID := hex.EncodeToString(digest[:])
-
-	validFilename := mediaHelper.BuildStoredImageFilename(assetID, ".png")
-	validRelativePath := filepath.ToSlash(filepath.Join(mediaHelper.ImageRelativeDir(importedAt), validFilename))
-	validAbsPath := filepath.Join(rootPath, filepath.FromSlash(validRelativePath))
-	if err := os.MkdirAll(filepath.Dir(validAbsPath), 0755); err != nil {
-		t.Fatalf("mkdir valid image dir: %v", err)
-	}
-	if err := os.WriteFile(validAbsPath, imageData, 0644); err != nil {
-		t.Fatalf("write valid managed image: %v", err)
-	}
-
-	invalidAbsPath := filepath.Join(rootPath, "images", "2026", "03", "31", "random.png")
-	if err := os.WriteFile(invalidAbsPath, imageData, 0644); err != nil {
-		t.Fatalf("write invalid image: %v", err)
-	}
-
-	if err := service.reconcileMediaIndex(context.Background(), true); err != nil {
-		t.Fatalf("full reconcile: %v", err)
-	}
-
-	rows, err := service.dbService.Client.MediaAsset.Query().All(context.Background())
-	if err != nil {
-		t.Fatalf("query indexed rows: %v", err)
-	}
-	if len(rows) != 1 {
-		t.Fatalf("expected 1 indexed managed image, got %d", len(rows))
-	}
-	if rows[0].AssetID != assetID {
-		t.Fatalf("expected managed asset id %q, got %q", assetID, rows[0].AssetID)
-	}
-	if rows[0].RelativePath != validRelativePath {
-		t.Fatalf("expected managed relative path %q, got %q", validRelativePath, rows[0].RelativePath)
-	}
-}
-
-func TestMediaHTTPServiceListImagesReturnsNewestFirst(t *testing.T) {
-	service, _ := newIndexedMediaHTTPService(t)
-
-	service.now = func() time.Time {
-		return time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC)
-	}
-	older, err := service.ImportImage(context.Background(), &ImageImportRequest{
-		Filename: "older.png",
-		Data:     mustEncodePNG(t, 1, 1),
-	})
-	if err != nil {
-		t.Fatalf("import older image: %v", err)
-	}
-
-	service.now = func() time.Time {
-		return time.Date(2026, 3, 30, 10, 0, 0, 0, time.UTC)
-	}
-	newer, err := service.ImportImage(context.Background(), &ImageImportRequest{
-		Filename: "newer.png",
-		Data:     mustEncodePNG(t, 1, 2),
-	})
-	if err != nil {
-		t.Fatalf("import newer image: %v", err)
-	}
-
-	items, err := service.ListImages(context.Background())
-	if err != nil {
-		t.Fatalf("list images: %v", err)
-	}
-	if len(items) != 2 {
-		t.Fatalf("expected 2 images, got %d", len(items))
-	}
-	if items[0].RelativePath != newer.RelativePath {
-		t.Fatalf("expected newest image first, got %q", items[0].RelativePath)
-	}
-	if items[1].RelativePath != older.RelativePath {
-		t.Fatalf("expected older image second, got %q", items[1].RelativePath)
-	}
-}
-
-func TestMediaHTTPServiceListImagesPageSupportsCursorPagination(t *testing.T) {
-	service, _ := newIndexedMediaHTTPService(t)
-
-	for i, imageTime := range []time.Time{
-		time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC),
-		time.Date(2026, 3, 30, 10, 0, 0, 0, time.UTC),
-		time.Date(2026, 3, 31, 10, 0, 0, 0, time.UTC),
-	} {
-		service.now = func() time.Time {
-			return imageTime
-		}
-		if _, err := service.ImportImage(context.Background(), &ImageImportRequest{
-			Filename: fmt.Sprintf("page-%d.png", i),
-			Data:     mustEncodePNG(t, i+1, 1),
-		}); err != nil {
-			t.Fatalf("import page image %d: %v", i, err)
-		}
-	}
-
-	firstPage, err := service.ListImagesPage(context.Background(), &ImageListPageRequest{Limit: 2})
-	if err != nil {
-		t.Fatalf("list first image page: %v", err)
-	}
-	if len(firstPage.Items) != 2 {
-		t.Fatalf("expected 2 items in first page, got %d", len(firstPage.Items))
-	}
-	if !firstPage.HasMore || firstPage.NextCursor == "" {
-		t.Fatalf("expected first page to have next cursor, got hasMore=%v cursor=%q", firstPage.HasMore, firstPage.NextCursor)
-	}
-
-	secondPage, err := service.ListImagesPage(context.Background(), &ImageListPageRequest{
-		Limit:  2,
-		Cursor: firstPage.NextCursor,
-	})
-	if err != nil {
-		t.Fatalf("list second image page: %v", err)
-	}
-	if len(secondPage.Items) != 1 {
-		t.Fatalf("expected 1 item in second page, got %d", len(secondPage.Items))
-	}
-	if secondPage.HasMore || secondPage.NextCursor != "" {
-		t.Fatalf("expected second page to be terminal, got hasMore=%v cursor=%q", secondPage.HasMore, secondPage.NextCursor)
-	}
-	if firstPage.Items[0].CreatedAt < firstPage.Items[1].CreatedAt {
-		t.Fatal("expected first page items to remain ordered descending by created_at")
-	}
-	if firstPage.Items[1].CreatedAt < secondPage.Items[0].CreatedAt {
-		t.Fatal("expected second page to continue after first page cursor")
-	}
-}
-
-func TestMediaHTTPServiceListImagesExcludesManuallyDeletedFiles(t *testing.T) {
+func TestMediaHTTPServiceReconcileMediaIndexRemovesMissingFiles(t *testing.T) {
 	service, rootPath := newIndexedMediaHTTPService(t)
 
 	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
@@ -411,19 +287,56 @@ func TestMediaHTTPServiceListImagesExcludesManuallyDeletedFiles(t *testing.T) {
 		t.Fatalf("remove local image file: %v", err)
 	}
 
-	items, err := service.ListImages(context.Background())
-	if err != nil {
-		t.Fatalf("list images after manual delete: %v", err)
+	if err := service.reconcileMediaIndex(context.Background()); err != nil {
+		t.Fatalf("reconcile media index after manual delete: %v", err)
 	}
-	if len(items) != 0 {
-		t.Fatalf("expected missing image to be filtered from list, got %d items", len(items))
-	}
-
 	_, err = service.dbService.Client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(result.ID)).
 		Only(schemamixin.SkipSoftDelete(context.Background()))
 	if !ent.IsNotFound(err) {
 		t.Fatalf("expected manually deleted asset index row to be removed, err=%v", err)
+	}
+}
+
+func TestMediaHTTPServiceReconcileMediaIndexRestoresStagedFiles(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "staged-recover.png",
+		Data:     mustEncodePNG(t, 2, 1),
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	stagedPath, err := service.mediaHelper.StageFile(absImagePath, service.now().UTC())
+	if err != nil {
+		t.Fatalf("stage image file: %v", err)
+	}
+	if stagedPath == "" {
+		t.Fatal("expected staged path")
+	}
+
+	if err := service.reconcileMediaIndex(context.Background()); err != nil {
+		t.Fatalf("reconcile media index with staged file: %v", err)
+	}
+
+	if _, err := os.Stat(absImagePath); err != nil {
+		t.Fatalf("expected reconciler to restore staged file: %v", err)
+	}
+	if _, err := os.Stat(stagedPath); !os.IsNotExist(err) {
+		t.Fatalf("expected staged file to be consumed, stat err=%v", err)
+	}
+
+	reloaded, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(context.Background())
+	if err != nil {
+		t.Fatalf("reload asset after staged reconcile: %v", err)
+	}
+	if reloaded.DeletedAt != nil {
+		t.Fatal("expected asset to remain active after staged reconcile")
 	}
 }
 
@@ -462,62 +375,82 @@ func TestMediaHTTPServiceDeleteImageRemovesFileAndMarksIndexedRowDeleted(t *test
 	}
 }
 
-func TestMediaHTTPServiceRunFullMediaReconcileIndexesManagedFilesInBackground(t *testing.T) {
+func TestMediaHTTPServiceDeleteImageRestoresFileWhenIndexUpdateFails(t *testing.T) {
 	service, rootPath := newIndexedMediaHTTPService(t)
-	mediaHelper := commonhelper.NewMediaHelper()
-	importedAt := time.Date(2026, 3, 31, 9, 8, 7, 0, time.UTC)
 	imageData := mustEncodePNG(t, 2, 2)
-	digest := sha256.Sum256(imageData)
-	assetID := hex.EncodeToString(digest[:])
 
-	filename := mediaHelper.BuildStoredImageFilename(assetID, ".png")
-	relativePath := filepath.ToSlash(filepath.Join(mediaHelper.ImageRelativeDir(importedAt), filename))
-	absPath := filepath.Join(rootPath, filepath.FromSlash(relativePath))
-	if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
-		t.Fatalf("mkdir managed image dir: %v", err)
-	}
-	if err := os.WriteFile(absPath, imageData, 0644); err != nil {
-		t.Fatalf("write managed image: %v", err)
-	}
-
-	status, err := service.RunFullMediaReconcile(context.Background())
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "delete-rollback.png",
+		Data:     imageData,
+	})
 	if err != nil {
-		t.Fatalf("run background full reconcile: %v", err)
-	}
-	if !status.Running && status.LastFinishedAt == "" {
-		t.Fatal("expected background reconcile to start or finish immediately")
+		t.Fatalf("import image: %v", err)
 	}
 
-	deadline := time.Now().Add(2 * time.Second)
-	for time.Now().Before(deadline) {
-		_, err := service.dbService.Client.MediaAsset.Query().
-			Where(mediaasset.AssetIDEQ(assetID)).
-			Only(context.Background())
-		if err == nil {
-			break
-		}
-		time.Sleep(20 * time.Millisecond)
+	failMediaAssetUpdates(service.dbService.Client, fmt.Errorf("forced update failure"))
+
+	if _, err := service.DeleteImage(context.Background(), result.ID); err == nil {
+		t.Fatal("expected delete image to fail")
 	}
 
-	indexed, err := service.dbService.Client.MediaAsset.Query().
-		Where(mediaasset.AssetIDEQ(assetID)).
-		Only(context.Background())
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	restoredData, err := os.ReadFile(absImagePath)
 	if err != nil {
-		t.Fatalf("expected background reconcile to index managed image: %v", err)
+		t.Fatalf("expected image file to be restored: %v", err)
 	}
-	if indexed.RelativePath != relativePath {
-		t.Fatalf("expected indexed relative path %q, got %q", relativePath, indexed.RelativePath)
+	if !bytes.Equal(restoredData, imageData) {
+		t.Fatal("expected restored image file to keep original bytes")
 	}
 
-	finalStatus, err := service.GetMediaReconcileStatus(context.Background())
+	reloaded, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(schemamixin.SkipSoftDelete(context.Background()))
 	if err != nil {
-		t.Fatalf("get media reconcile status: %v", err)
+		t.Fatalf("reload asset after failed delete: %v", err)
 	}
-	if finalStatus.Running {
-		t.Fatal("expected background reconcile to finish")
+	if reloaded.DeletedAt != nil {
+		t.Fatal("expected deleted_at to remain nil after failed delete")
 	}
-	if finalStatus.LastError != "" {
-		t.Fatalf("expected empty background reconcile error, got %q", finalStatus.LastError)
+}
+
+func TestMediaHTTPServiceImportImageRestoreDeletedAssetRollsBackFileWhenIndexUpdateFails(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+	imageData := mustEncodePNG(t, 2, 2)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "restore-rollback.png",
+		Data:     imageData,
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+
+	if _, err := service.DeleteImage(context.Background(), result.ID); err != nil {
+		t.Fatalf("delete image before restore rollback test: %v", err)
+	}
+
+	failMediaAssetUpdates(service.dbService.Client, fmt.Errorf("forced restore failure"))
+
+	if _, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "restore-rollback.png",
+		Data:     imageData,
+	}); err == nil {
+		t.Fatal("expected restore import to fail")
+	}
+
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	if _, err := os.Stat(absImagePath); !os.IsNotExist(err) {
+		t.Fatalf("expected restored file rollback to remove image, stat err=%v", err)
+	}
+
+	reloaded, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(schemamixin.SkipSoftDelete(context.Background()))
+	if err != nil {
+		t.Fatalf("reload asset after failed restore: %v", err)
+	}
+	if reloaded.DeletedAt == nil {
+		t.Fatal("expected deleted_at to remain set after failed restore")
 	}
 }
 

@@ -8,8 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
@@ -17,45 +20,69 @@ import * as models$0 from "../models/models.js";
 /**
  * GetSupportedKeys 返回系统支持的快捷键列表
  */
-export function GetSupportedKeys(): $CancellablePromise<string[]> {
-    return $Call.ByID(1511528650).then(($result: any) => {
+export function GetSupportedKeys(): Promise<string[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1511528650) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType0($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * Initialize 初始化热键服务
  */
-export function Initialize(): $CancellablePromise<void> {
-    return $Call.ByID(3671360458);
+export function Initialize(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3671360458) as any;
+    return $resultPromise;
 }
 
 /**
  * IsRegistered 检查是否已注册
  */
-export function IsRegistered(): $CancellablePromise<boolean> {
-    return $Call.ByID(106954156);
+export function IsRegistered(): Promise<boolean> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(106954156) as any;
+    return $resultPromise;
 }
 
 /**
  * RegisterHotkey 注册全局热键
  */
-export function RegisterHotkey(combo: models$0.HotkeyCombo | null): $CancellablePromise<void> {
-    return $Call.ByID(1103945691, combo);
+export function RegisterHotkey(combo: models$0.HotkeyCombo | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1103945691, combo) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceShutdown 关闭服务
+ */
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(157291181) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup 服务启动时初始化
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3079990808, options) as any;
+    return $resultPromise;
 }
 
 /**
  * UnregisterHotkey 取消注册全局热键
  */
-export function UnregisterHotkey(): $CancellablePromise<void> {
-    return $Call.ByID(3544283732);
+export function UnregisterHotkey(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3544283732) as any;
+    return $resultPromise;
 }
 
 /**
  * UpdateHotkey 更新热键配置
  */
-export function UpdateHotkey(enable: boolean, combo: models$0.HotkeyCombo | null): $CancellablePromise<void> {
-    return $Call.ByID(823285555, enable, combo);
+export function UpdateHotkey(enable: boolean, combo: models$0.HotkeyCombo | null): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(823285555, enable, combo) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions

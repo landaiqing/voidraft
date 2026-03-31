@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 	"voidraft/internal/common/helper"
+	"voidraft/internal/common/syncer"
 	"voidraft/internal/models"
-	"voidraft/internal/syncer"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"

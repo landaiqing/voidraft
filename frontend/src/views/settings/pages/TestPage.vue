@@ -137,7 +137,7 @@
 
     <SettingSection title="Media Service Test">
       <div class="dev-description">
-        This panel imports a real image through <code>MediaHTTPService.ImportImage</code> and renders the returned <code>/media/...</code> URL with a normal <code>&lt;img&gt;</code>. The backend now uses a stable <code>asset_id</code> index and date-based storage folders.
+        This panel imports one real image through <code>MediaHTTPService.ImportImage</code> and renders the returned <code>/media/...</code> URL directly. The backend keeps import and render paths only, without image list management.
       </div>
 
       <SettingItem title="Select Image">
@@ -169,18 +169,11 @@
             Import Image
           </button>
           <button
-            @click="() => reloadMediaItems()"
-            class="test-button"
-            :disabled="isMediaBusy"
-          >
-            Refresh List
-          </button>
-          <button
             @click="deleteSelectedImage"
             class="test-button danger"
             :disabled="!selectedImage || isMediaBusy"
           >
-            Delete Selected
+            Delete Current
           </button>
         </div>
       </SettingItem>
@@ -189,89 +182,61 @@
         {{ mediaStatus.message }}
       </div>
 
-      <div class="media-debug-layout">
-        <section class="media-panel">
-          <div class="media-panel-header">
-            <span>Imported Images</span>
-            <span class="media-panel-count">{{ mediaItems.length }}</span>
-          </div>
+      <section class="media-panel preview-panel">
+        <div class="media-panel-header">
+          <span>Current Preview</span>
+          <span class="media-panel-count">{{ selectedImage ? selectedImage.mime_type : 'none' }}</span>
+        </div>
 
-          <div v-if="!mediaItems.length" class="empty-state">
-            No imported images yet.
-          </div>
+        <div v-if="selectedImage" class="media-preview-card">
+          <img
+            :src="selectedImage.url"
+            :alt="selectedImage.filename"
+            class="media-preview-image"
+            @load="handlePreviewLoad"
+            @error="handlePreviewError"
+          />
 
-          <div v-else class="media-list">
-            <button
-              v-for="item in mediaItems"
-              :key="item.id"
-              class="media-list-item"
-              :class="{ active: selectedImage?.id === item.id }"
-              @click="selectImage(item)"
-            >
-              <div class="media-list-title">{{ item.filename }}</div>
-              <div class="media-list-meta">{{ item.width }} x {{ item.height }}</div>
-              <div class="media-list-meta">{{ formatFileSize(item.size) }}</div>
-              <div class="media-list-meta">{{ item.relative_path }}</div>
-            </button>
-          </div>
-        </section>
-
-        <section class="media-panel preview-panel">
-          <div class="media-panel-header">
-            <span>Preview</span>
-            <span class="media-panel-count">{{ selectedImage ? selectedImage.mime_type : 'none' }}</span>
-          </div>
-
-          <div v-if="selectedImage" class="media-preview-card">
-            <img
-              :src="selectedImage.url"
-              :alt="selectedImage.filename"
-              class="media-preview-image"
-              @load="handlePreviewLoad"
-              @error="handlePreviewError"
-            />
-
-            <div class="media-meta-grid">
-              <div class="media-meta-row">
-                <span class="media-meta-label">Asset ID</span>
-                <code class="media-meta-value">{{ selectedImage.id }}</code>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">URL</span>
-                <code class="media-meta-value">{{ selectedImage.url }}</code>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">Stored Name</span>
-                <span class="media-meta-value">{{ selectedImage.filename }}</span>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">Relative Path</span>
-                <code class="media-meta-value">{{ selectedImage.relative_path }}</code>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">Original Name</span>
-                <span class="media-meta-value">{{ selectedImage.original_filename || '-' }}</span>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">Size</span>
-                <span class="media-meta-value">{{ formatFileSize(selectedImage.size) }}</span>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">Dimensions</span>
-                <span class="media-meta-value">{{ selectedImage.width }} x {{ selectedImage.height }}</span>
-              </div>
-              <div class="media-meta-row">
-                <span class="media-meta-label">SHA256</span>
-                <code class="media-meta-value">{{ selectedImage.sha256 }}</code>
-              </div>
+          <div class="media-meta-grid">
+            <div class="media-meta-row">
+              <span class="media-meta-label">Asset ID</span>
+              <code class="media-meta-value">{{ selectedImage.id }}</code>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">URL</span>
+              <code class="media-meta-value">{{ selectedImage.url }}</code>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">Stored Name</span>
+              <span class="media-meta-value">{{ selectedImage.filename }}</span>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">Relative Path</span>
+              <code class="media-meta-value">{{ selectedImage.relative_path }}</code>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">Original Name</span>
+              <span class="media-meta-value">{{ selectedImage.original_filename || '-' }}</span>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">Size</span>
+              <span class="media-meta-value">{{ formatFileSize(selectedImage.size) }}</span>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">Dimensions</span>
+              <span class="media-meta-value">{{ selectedImage.width }} x {{ selectedImage.height }}</span>
+            </div>
+            <div class="media-meta-row">
+              <span class="media-meta-label">SHA256</span>
+              <code class="media-meta-value">{{ selectedImage.sha256 }}</code>
             </div>
           </div>
+        </div>
 
-          <div v-else class="empty-state">
-            Select one imported image to preview.
-          </div>
-        </section>
-      </div>
+        <div v-else class="empty-state">
+          Import one image to preview it here.
+        </div>
+      </section>
     </SettingSection>
 
     <SettingSection title="Cleanup">
@@ -288,7 +253,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { ref } from 'vue';
 import * as TestService from '@/../bindings/voidraft/internal/services/testservice';
 import * as MediaHTTPService from '@/../bindings/voidraft/internal/services/mediahttpservice';
 import type { ImageAsset } from '@/../bindings/voidraft/internal/services/models';
@@ -316,7 +281,6 @@ const toastPosition = ref<ToastPosition>('top-right');
 const toastDuration = ref(4000);
 
 const mediaStatus = ref<StatusState | null>(null);
-const mediaItems = ref<ImageAsset[]>([]);
 const selectedImage = ref<ImageAsset | null>(null);
 const selectedFile = ref<File | null>(null);
 const isMediaBusy = ref(false);
@@ -384,6 +348,7 @@ const clearAll = async () => {
     notificationSubtitle.value = '';
     notificationBody.value = '';
     mediaStatus.value = null;
+    selectedImage.value = null;
     clearSelectedFile();
     showStatus(clearStatus, 'success', 'All test states cleared successfully');
   } catch (error: any) {
@@ -461,41 +426,11 @@ const importSelectedImage = async () => {
       throw new Error('ImportImage returned no asset');
     }
 
-    await reloadMediaItems(result.id);
+    selectedImage.value = result;
     clearSelectedFile();
     showStatus(mediaStatus, 'success', `Imported ${result.filename} as asset ${result.id.slice(0, 12)} and ready to render from ${result.url}`);
   } catch (error: any) {
     showStatus(mediaStatus, 'error', `Failed to import image: ${error.message || error}`);
-  } finally {
-    isMediaBusy.value = false;
-  }
-};
-
-const reloadMediaItems = async (preferredAssetID?: string) => {
-  isMediaBusy.value = true;
-  try {
-    const result = await MediaHTTPService.ListImages();
-    const items = (result || []).filter((item): item is ImageAsset => item !== null);
-    mediaItems.value = items;
-
-    if (items.length === 0) {
-      selectedImage.value = null;
-      return;
-    }
-
-    if (preferredAssetID) {
-      selectedImage.value = items.find(item => item.id === preferredAssetID) || items[0];
-      return;
-    }
-
-    if (selectedImage.value) {
-      selectedImage.value = items.find(item => item.id === selectedImage.value?.id) || items[0];
-      return;
-    }
-
-    selectedImage.value = items[0];
-  } catch (error: any) {
-    showStatus(mediaStatus, 'error', `Failed to load images: ${error.message || error}`);
   } finally {
     isMediaBusy.value = false;
   }
@@ -515,17 +450,13 @@ const deleteSelectedImage = async () => {
       throw new Error(`DeleteImage reported deleted=false for ${current.id}`);
     }
 
-    await reloadMediaItems();
+    selectedImage.value = null;
     showStatus(mediaStatus, 'success', `Deleted ${current.filename}`);
   } catch (error: any) {
     showStatus(mediaStatus, 'error', `Failed to delete image: ${error.message || error}`);
   } finally {
     isMediaBusy.value = false;
   }
-};
-
-const selectImage = (item: ImageAsset) => {
-  selectedImage.value = item;
 };
 
 const handlePreviewLoad = () => {
@@ -567,10 +498,6 @@ const readFileAsDataURL = (file: File): Promise<string> => {
     reader.readAsDataURL(file);
   });
 };
-
-onMounted(() => {
-  void reloadMediaItems();
-});
 </script>
 
 <style scoped lang="scss">
@@ -736,15 +663,8 @@ onMounted(() => {
   }
 }
 
-.media-debug-layout {
-  display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-  gap: 16px;
-  margin-top: 16px;
-  align-items: start;
-}
-
 .media-panel {
+  margin-top: 16px;
   border: 1px solid var(--settings-border);
   border-radius: 8px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.04));
@@ -765,51 +685,6 @@ onMounted(() => {
 .media-panel-count {
   font-size: 11px;
   color: var(--settings-text-secondary);
-}
-
-.media-list {
-  display: flex;
-  flex-direction: column;
-  max-height: 420px;
-  overflow: auto;
-}
-
-.media-list-item {
-  border: none;
-  border-bottom: 1px solid var(--settings-border);
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  padding: 12px;
-  cursor: pointer;
-  transition: background-color 0.15s ease;
-
-  &:hover {
-    background-color: var(--settings-hover);
-  }
-
-  &.active {
-    background-color: rgba(74, 158, 255, 0.12);
-  }
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.media-list-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--settings-text);
-  margin-bottom: 4px;
-  word-break: break-all;
-}
-
-.media-list-meta {
-  font-size: 11px;
-  color: var(--settings-text-secondary);
-  line-height: 1.4;
-  word-break: break-all;
 }
 
 .preview-panel {
@@ -871,10 +746,6 @@ onMounted(() => {
 }
 
 @media (max-width: 980px) {
-  .media-debug-layout {
-    grid-template-columns: 1fr;
-  }
-
   .preview-panel {
     min-height: 0;
   }

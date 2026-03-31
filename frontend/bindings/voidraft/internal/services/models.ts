@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import {Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -62,7 +62,7 @@ export class DocumentSaveResult {
 export class HttpRequest {
     "method": string;
     "url": string;
-    "headers": { [_ in string]?: string };
+    "headers": { [_: string]: string };
 
     /**
      * json, formdata, urlencoded, text, params, xml, html, javascript, binary
@@ -136,7 +136,7 @@ export class HttpResponse {
             this["body"] = null;
         }
         if (!("headers" in $$source)) {
-            this["headers"] = {};
+            this["headers"] = ({} as http$0.Header);
         }
         if (!("timestamp" in $$source)) {
             this["timestamp"] = null;
@@ -276,94 +276,6 @@ export class ImageImportRequest {
             $$parsedSource["data"] = $$createField2_0($$parsedSource["data"]);
         }
         return new ImageImportRequest($$parsedSource as Partial<ImageImportRequest>);
-    }
-}
-
-/**
- * ImageListPage describes one page of indexed images.
- */
-export class ImageListPage {
-    "items": (ImageAsset | null)[];
-    "next_cursor"?: string;
-    "has_more": boolean;
-
-    /** Creates a new ImageListPage instance. */
-    constructor($$source: Partial<ImageListPage> = {}) {
-        if (!("items" in $$source)) {
-            this["items"] = [];
-        }
-        if (!("has_more" in $$source)) {
-            this["has_more"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ImageListPage instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ImageListPage {
-        const $$createField0_0 = $$createType6;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("items" in $$parsedSource) {
-            $$parsedSource["items"] = $$createField0_0($$parsedSource["items"]);
-        }
-        return new ImageListPage($$parsedSource as Partial<ImageListPage>);
-    }
-}
-
-/**
- * ImageListPageRequest describes one paginated list request.
- */
-export class ImageListPageRequest {
-    "limit"?: number;
-    "cursor"?: string;
-
-    /** Creates a new ImageListPageRequest instance. */
-    constructor($$source: Partial<ImageListPageRequest> = {}) {
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new ImageListPageRequest instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ImageListPageRequest {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ImageListPageRequest($$parsedSource as Partial<ImageListPageRequest>);
-    }
-}
-
-/**
- * MediaReconcileStatus describes the background full-reconcile worker state.
- */
-export class MediaReconcileStatus {
-    "running": boolean;
-    "pending": boolean;
-    "last_note"?: string;
-    "last_error"?: string;
-    "last_requested_at"?: string;
-    "last_started_at"?: string;
-    "last_finished_at"?: string;
-
-    /** Creates a new MediaReconcileStatus instance. */
-    constructor($$source: Partial<MediaReconcileStatus> = {}) {
-        if (!("running" in $$source)) {
-            this["running"] = false;
-        }
-        if (!("pending" in $$source)) {
-            this["pending"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new MediaReconcileStatus instance from a string or object.
-     */
-    static createFrom($$source: any = {}): MediaReconcileStatus {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new MediaReconcileStatus($$parsedSource as Partial<MediaReconcileStatus>);
     }
 }
 
@@ -654,7 +566,7 @@ export class SystemInfo {
     "arch": string;
     "debug": boolean;
     "osInfo": OSInfo | null;
-    "platformInfo": { [_ in string]?: any };
+    "platformInfo": { [_: string]: any };
 
     /** Creates a new SystemInfo instance. */
     constructor($$source: Partial<SystemInfo> = {}) {
@@ -681,8 +593,8 @@ export class SystemInfo {
      * Creates a new SystemInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): SystemInfo {
-        const $$createField3_0 = $$createType8;
-        const $$createField4_0 = $$createType9;
+        const $$createField3_0 = $$createType5;
+        const $$createField4_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("osInfo" in $$parsedSource) {
             $$parsedSource["osInfo"] = $$createField3_0($$parsedSource["osInfo"]);
@@ -696,7 +608,7 @@ export class SystemInfo {
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-var $$createType1 = (function $$initCreateType1(...args: any[]): any {
+var $$createType1 = (function $$initCreateType1(...args): any {
     if ($$createType1 === $$initCreateType1) {
         $$createType1 = $$createType3;
     }
@@ -704,9 +616,6 @@ var $$createType1 = (function $$initCreateType1(...args: any[]): any {
 });
 const $$createType2 = $Create.Array($Create.Any);
 const $$createType3 = $Create.Map($Create.Any, $$createType2);
-const $$createType4 = ImageAsset.createFrom;
+const $$createType4 = OSInfo.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = OSInfo.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);
-const $$createType9 = $Create.Map($Create.Any, $Create.Any);
+const $$createType6 = $Create.Map($Create.Any, $Create.Any);

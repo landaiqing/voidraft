@@ -14,9 +14,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strconv"
+	"slices"
 	"strings"
 	"time"
 
@@ -33,18 +31,10 @@ const (
 	MediaHeaderETag         = "ETag"
 	MediaHeaderIfNoneMatch  = "If-None-Match"
 	MediaHeaderXContentType = "X-Content-Type-Options"
+	MediaStagedFileMarker   = ".voidraft-stage-"
 )
 
-var managedImageFilenamePattern = regexp.MustCompile(`^sha256_([0-9a-f]{64})(\.[A-Za-z0-9]+)$`)
-
 type MediaHelper struct{}
-
-type ManagedImageFile struct {
-	RelativePath string
-	AbsPath      string
-	ImportedAt   time.Time
-	Digest       string
-}
 
 type ImagePayload struct {
 	MimeType  string
@@ -114,6 +104,18 @@ func (h *MediaHelper) NormalizeImageReference(value string, routePrefix string) 
 	return clean, nil
 }
 
+func (h *MediaHelper) ResolveManagedImagePath(rootPath string, value string, routePrefix string) (string, string, error) {
+	relativePath, err := h.NormalizeImageReference(value, routePrefix)
+	if err != nil {
+		return "", "", err
+	}
+	absPath, err := h.ResolvePath(rootPath, relativePath)
+	if err != nil {
+		return "", "", err
+	}
+	return relativePath, absPath, nil
+}
+
 func (h *MediaHelper) ResolvePath(rootPath string, requestPath string) (string, error) {
 	if strings.Contains(requestPath, `\`) {
 		return "", fmt.Errorf("invalid media path")
@@ -141,6 +143,105 @@ func (h *MediaHelper) ResolvePath(rootPath string, requestPath string) (string, 
 	}
 
 	return targetPath, nil
+}
+
+func (h *MediaHelper) StageFile(absPath string, at time.Time) (string, error) {
+	info, err := os.Stat(absPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("stat file before staging: %w", err)
+	}
+	if info.IsDir() {
+		return "", fmt.Errorf("path is a directory: %s", absPath)
+	}
+
+	stagedPath, err := h.nextStagedFilePath(absPath, at)
+	if err != nil {
+		return "", err
+	}
+	if err := os.Rename(absPath, stagedPath); err != nil {
+		return "", fmt.Errorf("stage file: %w", err)
+	}
+	return stagedPath, nil
+}
+
+func (h *MediaHelper) RestoreStagedFile(absPath string, stagedPath string) error {
+	if strings.TrimSpace(stagedPath) == "" {
+		return nil
+	}
+	if err := os.Rename(stagedPath, absPath); err != nil {
+		return fmt.Errorf("restore staged file: %w", err)
+	}
+	return nil
+}
+
+func (h *MediaHelper) RollbackFileChange(absPath string, stagedPath string) error {
+	if err := os.Remove(absPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove changed file: %w", err)
+	}
+	if err := h.RestoreStagedFile(absPath, stagedPath); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (h *MediaHelper) DiscardStagedFile(stagedPath string) error {
+	if strings.TrimSpace(stagedPath) == "" {
+		return nil
+	}
+	if err := os.Remove(stagedPath); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("discard staged file: %w", err)
+	}
+	return nil
+}
+
+func (h *MediaHelper) StagedFilePaths(absPath string) ([]string, error) {
+	pattern := filepath.Join(
+		filepath.Dir(absPath),
+		fmt.Sprintf(".%s%s*", filepath.Base(absPath), MediaStagedFileMarker),
+	)
+	paths, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("list staged files: %w", err)
+	}
+	slices.Sort(paths)
+	return paths, nil
+}
+
+func (h *MediaHelper) RestoreLatestStagedFile(absPath string) (bool, error) {
+	stagedPaths, err := h.StagedFilePaths(absPath)
+	if err != nil {
+		return false, err
+	}
+	if len(stagedPaths) == 0 {
+		return false, nil
+	}
+
+	latestPath := stagedPaths[len(stagedPaths)-1]
+	if err := h.RestoreStagedFile(absPath, latestPath); err != nil {
+		return false, err
+	}
+	for _, stagedPath := range stagedPaths[:len(stagedPaths)-1] {
+		if err := h.DiscardStagedFile(stagedPath); err != nil {
+			return true, err
+		}
+	}
+	return true, nil
+}
+
+func (h *MediaHelper) DiscardStagedFiles(absPath string) error {
+	stagedPaths, err := h.StagedFilePaths(absPath)
+	if err != nil {
+		return err
+	}
+	for _, stagedPath := range stagedPaths {
+		if err := h.DiscardStagedFile(stagedPath); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (h *MediaHelper) BuildETag(info os.FileInfo) string {
@@ -231,10 +332,6 @@ func (h *MediaHelper) RemoveImageArtifacts(absPath string) (bool, error) {
 	} else {
 		deletedFile = true
 	}
-
-	if err := os.Remove(metadataPathForImage(absPath)); err != nil && !os.IsNotExist(err) {
-		return deletedFile, fmt.Errorf("delete image metadata: %w", err)
-	}
 	return deletedFile, nil
 }
 
@@ -261,95 +358,6 @@ func (h *MediaHelper) TrimEmptyMediaDirs(rootPath string, imagePath string) {
 	}
 }
 
-func (h *MediaHelper) ScanManagedImageFiles(rootPath string) ([]ManagedImageFile, error) {
-	imagesRoot := filepath.Join(rootPath, MediaImagesDirName)
-	if _, err := os.Stat(imagesRoot); err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, fmt.Errorf("stat media images root: %w", err)
-	}
-
-	yearDirs, err := os.ReadDir(imagesRoot)
-	if err != nil {
-		return nil, fmt.Errorf("read media year directories: %w", err)
-	}
-
-	files := make([]ManagedImageFile, 0)
-	for _, yearDir := range yearDirs {
-		if !yearDir.IsDir() || !isManagedYearDir(yearDir.Name()) {
-			continue
-		}
-
-		yearPath := filepath.Join(imagesRoot, yearDir.Name())
-		monthDirs, err := os.ReadDir(yearPath)
-		if err != nil {
-			return nil, fmt.Errorf("read media month directories: %w", err)
-		}
-
-		for _, monthDir := range monthDirs {
-			if !monthDir.IsDir() || !isManagedMonthOrDayDir(monthDir.Name(), 12) {
-				continue
-			}
-
-			monthPath := filepath.Join(yearPath, monthDir.Name())
-			dayDirs, err := os.ReadDir(monthPath)
-			if err != nil {
-				return nil, fmt.Errorf("read media day directories: %w", err)
-			}
-
-			for _, dayDir := range dayDirs {
-				if !dayDir.IsDir() || !isManagedMonthOrDayDir(dayDir.Name(), 31) {
-					continue
-				}
-
-				dayPath := filepath.Join(monthPath, dayDir.Name())
-				entries, err := os.ReadDir(dayPath)
-				if err != nil {
-					return nil, fmt.Errorf("read managed image directory: %w", err)
-				}
-
-				for _, entry := range entries {
-					if entry.IsDir() {
-						continue
-					}
-
-					digest, _, ok := parseManagedImageFilename(entry.Name())
-					if !ok {
-						continue
-					}
-					info, err := entry.Info()
-					if err != nil {
-						return nil, fmt.Errorf("read managed image info: %w", err)
-					}
-					importedAt := time.Date(
-						mustAtoi(yearDir.Name()),
-						time.Month(mustAtoi(monthDir.Name())),
-						mustAtoi(dayDir.Name()),
-						info.ModTime().UTC().Hour(),
-						info.ModTime().UTC().Minute(),
-						info.ModTime().UTC().Second(),
-						info.ModTime().UTC().Nanosecond(),
-						time.UTC,
-					)
-
-					files = append(files, ManagedImageFile{
-						RelativePath: path.Join(MediaImagesDirName, yearDir.Name(), monthDir.Name(), dayDir.Name(), entry.Name()),
-						AbsPath:      filepath.Join(dayPath, entry.Name()),
-						ImportedAt:   importedAt,
-						Digest:       digest,
-					})
-				}
-			}
-		}
-	}
-
-	sort.Slice(files, func(i int, j int) bool {
-		return files[i].RelativePath < files[j].RelativePath
-	})
-	return files, nil
-}
-
 func (h *MediaHelper) IsValidAssetID(value string) bool {
 	if len(value) != 64 {
 		return false
@@ -366,22 +374,32 @@ func (h *MediaHelper) IsValidAssetID(value string) bool {
 	return true
 }
 
-func parseManagedImageFilename(filename string) (string, string, bool) {
-	matches := managedImageFilenamePattern.FindStringSubmatch(strings.TrimSpace(filename))
-	if len(matches) != 3 {
-		return "", "", false
+func WrapRollbackError(action string, err error, rollbackErr error) error {
+	if rollbackErr == nil {
+		return fmt.Errorf("%s: %w", action, err)
 	}
-
-	extension := canonicalImageExtension(matches[2])
-	if !isSupportedImageExtension(extension) {
-		return "", "", false
-	}
-
-	return strings.ToLower(matches[1]), extension, true
+	return fmt.Errorf("%s: %w; rollback failed: %v", action, err, rollbackErr)
 }
 
-func metadataPathForImage(imagePath string) string {
-	return strings.TrimSuffix(imagePath, filepath.Ext(imagePath)) + ".json"
+func (h *MediaHelper) nextStagedFilePath(absPath string, at time.Time) (string, error) {
+	if at.IsZero() {
+		at = time.Now().UTC()
+	}
+
+	dir := filepath.Dir(absPath)
+	base := filepath.Base(absPath)
+	stamp := at.UTC().UnixNano()
+
+	for attempt := 0; attempt < 16; attempt++ {
+		candidate := filepath.Join(dir, fmt.Sprintf(".%s%s%d-%d", base, MediaStagedFileMarker, stamp, attempt))
+		if _, err := os.Stat(candidate); os.IsNotExist(err) {
+			return candidate, nil
+		} else if err != nil {
+			return "", fmt.Errorf("stat staged file path: %w", err)
+		}
+	}
+
+	return "", fmt.Errorf("allocate staged file path for %s: no free candidate", absPath)
 }
 
 func canonicalImageExtension(extension string) string {
@@ -459,28 +477,4 @@ func isSupportedImageExtension(extension string) bool {
 	default:
 		return false
 	}
-}
-
-func isManagedYearDir(name string) bool {
-	if len(name) != 4 {
-		return false
-	}
-	year, err := strconv.Atoi(name)
-	return err == nil && year >= 2000 && year <= 9999
-}
-
-func isManagedMonthOrDayDir(name string, max int) bool {
-	if len(name) != 2 {
-		return false
-	}
-	value, err := strconv.Atoi(name)
-	return err == nil && value >= 1 && value <= max
-}
-
-func mustAtoi(value string) int {
-	result, err := strconv.Atoi(value)
-	if err != nil {
-		return 0
-	}
-	return result
 }

@@ -8,7 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,64 +21,45 @@ import * as $models from "./models.js";
 /**
  * DeleteImage removes one logical image asset and deletes its local file.
  */
-export function DeleteImage(imageRef: string): $CancellablePromise<$models.ImageDeleteResult | null> {
-    return $Call.ByID(143616668, imageRef).then(($result: any) => {
+export function DeleteImage(imageRef: string): Promise<$models.ImageDeleteResult | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(143616668, imageRef) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
-}
-
-/**
- * GetMediaReconcileStatus returns the current background reconcile state.
- */
-export function GetMediaReconcileStatus(): $CancellablePromise<$models.MediaReconcileStatus | null> {
-    return $Call.ByID(1842427266).then(($result: any) => {
-        return $$createType3($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * ImportImage validates and stores an image in the indexed media store.
  */
-export function ImportImage(request: $models.ImageImportRequest | null): $CancellablePromise<$models.ImageAsset | null> {
-    return $Call.ByID(2860242998, request).then(($result: any) => {
-        return $$createType5($result);
-    });
-}
-
-/**
- * ListImages returns all indexed images ordered by creation time descending.
- */
-export function ListImages(): $CancellablePromise<($models.ImageAsset | null)[]> {
-    return $Call.ByID(471121014).then(($result: any) => {
-        return $$createType6($result);
-    });
-}
-
-/**
- * ListImagesPage returns one paginated image list page ordered by creation time descending.
- */
-export function ListImagesPage(request: $models.ImageListPageRequest | null): $CancellablePromise<$models.ImageListPage | null> {
-    return $Call.ByID(855812637, request).then(($result: any) => {
-        return $$createType8($result);
-    });
-}
-
-/**
- * RunFullMediaReconcile queues one background full reconcile and returns current worker state.
- */
-export function RunFullMediaReconcile(): $CancellablePromise<$models.MediaReconcileStatus | null> {
-    return $Call.ByID(2746711352).then(($result: any) => {
+export function ImportImage(request: $models.ImageImportRequest | null): Promise<$models.ImageAsset | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2860242998, request) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType3($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
+}
+
+/**
+ * ServiceShutdown stops config watchers.
+ */
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2519222661) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup configures the service and starts config watchers.
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2764039056, options) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions
 const $$createType0 = $models.ImageDeleteResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.MediaReconcileStatus.createFrom;
+const $$createType2 = $models.ImageAsset.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.ImageAsset.createFrom;
-const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = $models.ImageListPage.createFrom;
-const $$createType8 = $Create.Nullable($$createType7);
