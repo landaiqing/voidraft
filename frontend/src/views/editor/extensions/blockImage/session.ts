@@ -1,3 +1,4 @@
+import {forceParsing, syntaxParserRunning, syntaxTreeAvailable} from '@codemirror/language';
 import {EditorState} from '@codemirror/state';
 import {EditorView} from '@codemirror/view';
 import {blockState} from '../codeblock/state';
@@ -11,12 +12,19 @@ import type {
 const DEFAULT_EXPORT_WIDTH = 720;
 const HIDDEN_MOUNT_STYLE = [
   'position:fixed',
-  'left:-20000px',
-  'top:0',
+  'inset:0',
+  'overflow:hidden',
   'pointer-events:none',
+  'opacity:0',
   'z-index:-1',
   'contain:layout style paint',
 ].join(';');
+
+type InternalEditorView = EditorView & {
+  viewState?: {
+    printing?: boolean;
+  };
+};
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
@@ -70,6 +78,37 @@ async function waitForImages(root: ParentNode): Promise<void> {
     image.addEventListener('load', complete, {once: true});
     image.addEventListener('error', complete, {once: true});
   })));
+}
+
+function setFullDocumentRendering(view: EditorView, enabled: boolean): void {
+  const internalView = view as InternalEditorView;
+  if (!internalView.viewState) {
+    return;
+  }
+
+  internalView.viewState.printing = enabled;
+  view.requestMeasure();
+}
+
+async function ensureFullSyntaxTree(view: EditorView): Promise<void> {
+  const target = view.state.doc.length;
+  if (target === 0) {
+    return;
+  }
+
+  for (let attempt = 0; attempt < 6; attempt++) {
+    if (syntaxTreeAvailable(view.state, target)) {
+      return;
+    }
+
+    forceParsing(view, target, 250);
+    await waitForEditorMeasure(view);
+    await nextAnimationFrame();
+
+    if (!syntaxParserRunning(view) && syntaxTreeAvailable(view.state, target)) {
+      return;
+    }
+  }
 }
 
 function resolveDescriptor(
@@ -160,6 +199,8 @@ export class OffscreenBlockExportSession {
       parent: host,
     });
 
+    setFullDocumentRendering(view, true);
+
     return new OffscreenBlockExportSession(
       mount,
       root,
@@ -169,16 +210,18 @@ export class OffscreenBlockExportSession {
   }
 
   async settle(): Promise<void> {
+    setFullDocumentRendering(this.#view, true);
+    await waitForEditorMeasure(this.#view);
+    await waitForFonts();
+    await ensureFullSyntaxTree(this.#view);
+    await waitForImages(this.root);
     await waitForEditorMeasure(this.#view);
     await waitForAnimationFrames(2);
-    await Promise.allSettled([
-      waitForFonts(),
-      waitForImages(this.root),
-    ]);
     await waitForAnimationFrames(1);
   }
 
   destroy(): void {
+    setFullDocumentRendering(this.#view, false);
     this.#view.destroy();
     this.#mount.remove();
   }

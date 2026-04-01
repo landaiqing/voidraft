@@ -92,12 +92,6 @@ export function createBaseTheme(colors: ThemeColors): Extension {
             background: colors.backgroundSecondary,
             borderTop: `1px solid ${colors.borderColor}`,
         },
-        '.code-blocks-layer .block-even.block-readonly': {
-            background: colors.dark ? 'rgba(124, 124, 138, 0.16)' : 'rgba(0, 0, 0, 0.06)',
-        },
-        '.code-blocks-layer .block-odd.block-readonly': {
-            background: colors.dark ? 'rgba(110, 110, 124, 0.22)' : 'rgba(0, 0, 0, 0.09)',
-        },
         '.code-block-empty-selected': {
             backgroundColor: colors.selection,
         },

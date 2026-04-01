@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import {Create as $Create} from "@wailsio/runtime";
 
 /**
  * NotificationAction represents an action button for a notification.
@@ -74,7 +74,7 @@ export class NotificationOptions {
     "subtitle"?: string;
     "body"?: string;
     "categoryId"?: string;
-    "data"?: { [_ in string]?: any };
+    "data"?: { [_: string]: any };
 
     /** Creates a new NotificationOptions instance. */
     constructor($$source: Partial<NotificationOptions> = {}) {

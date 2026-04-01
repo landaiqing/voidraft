@@ -8,8 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
@@ -20,63 +23,85 @@ import * as ent$0 from "../models/ent/models.js";
 /**
  * GetDefaultKeyBindings 获取默认快捷键配置
  */
-export function GetDefaultKeyBindings(): $CancellablePromise<models$0.KeyBinding[]> {
-    return $Call.ByID(3843471588).then(($result: any) => {
+export function GetDefaultKeyBindings(): Promise<models$0.KeyBinding[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3843471588) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * GetKeyBindingByID 根据ID获取快捷键
  */
-export function GetKeyBindingByID(id: number): $CancellablePromise<ent$0.KeyBinding | null> {
-    return $Call.ByID(1578192526, id).then(($result: any) => {
+export function GetKeyBindingByID(id: number): Promise<ent$0.KeyBinding | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1578192526, id) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType3($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * GetKeyBindings 根据类型获取快捷键
  */
-export function GetKeyBindings(kbType: models$0.KeyBindingType): $CancellablePromise<(ent$0.KeyBinding | null)[]> {
-    return $Call.ByID(4253885163, kbType).then(($result: any) => {
+export function GetKeyBindings(kbType: models$0.KeyBindingType): Promise<(ent$0.KeyBinding | null)[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4253885163, kbType) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType4($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * ResetKeyBindings 重置所有快捷键到默认值
  */
-export function ResetKeyBindings(): $CancellablePromise<void> {
-    return $Call.ByID(4251626010);
+export function ResetKeyBindings(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4251626010) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup 服务启动
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2057121990, options) as any;
+    return $resultPromise;
 }
 
 /**
  * SyncKeyBindings 同步快捷键配置
  */
-export function SyncKeyBindings(): $CancellablePromise<void> {
-    return $Call.ByID(1522202638);
+export function SyncKeyBindings(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1522202638) as any;
+    return $resultPromise;
 }
 
 /**
  * UpdateKeyBindingEnabled 更新快捷键启用状态
  */
-export function UpdateKeyBindingEnabled(id: number, enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(843626124, id, enabled);
+export function UpdateKeyBindingEnabled(id: number, enabled: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(843626124, id, enabled) as any;
+    return $resultPromise;
 }
 
 /**
  * UpdateKeyBindingKeys 更新快捷键绑定
  */
-export function UpdateKeyBindingKeys(id: number, key: string): $CancellablePromise<void> {
-    return $Call.ByID(3432755175, id, key);
+export function UpdateKeyBindingKeys(id: number, key: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3432755175, id, key) as any;
+    return $resultPromise;
 }
 
 /**
  * UpdateKeyBindingPreventDefault 更新快捷键 PreventDefault 状态
  */
-export function UpdateKeyBindingPreventDefault(id: number, preventDefault: boolean): $CancellablePromise<void> {
-    return $Call.ByID(202386744, id, preventDefault);
+export function UpdateKeyBindingPreventDefault(id: number, preventDefault: boolean): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(202386744, id, preventDefault) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions

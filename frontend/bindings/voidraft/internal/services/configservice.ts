@@ -8,8 +8,11 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as helper$0 from "../common/helper/models.js";
@@ -20,52 +23,77 @@ import * as models$0 from "../models/models.js";
 /**
  * Get 获取配置项
  */
-export function Get(key: string): $CancellablePromise<any> {
-    return $Call.ByID(807201772, key);
+export function Get(key: string): Promise<any> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(807201772, key) as any;
+    return $resultPromise;
 }
 
 /**
  * GetConfig 获取完整应用配置
  */
-export function GetConfig(): $CancellablePromise<models$0.AppConfig | null> {
-    return $Call.ByID(1013336538).then(($result: any) => {
+export function GetConfig(): Promise<models$0.AppConfig | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1013336538) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
         return $$createType1($result);
-    });
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
  * MigrateConfig 执行配置迁移
  */
-export function MigrateConfig(): $CancellablePromise<void> {
-    return $Call.ByID(434292783);
+export function MigrateConfig(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(434292783) as any;
+    return $resultPromise;
 }
 
 /**
  * ResetConfig 重置所有配置为默认值
  */
-export function ResetConfig(): $CancellablePromise<void> {
-    return $Call.ByID(3593047389);
+export function ResetConfig(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3593047389) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceShutdown 关闭服务
+ */
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3963562361) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup 服务启动时初始化
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3311949428, options) as any;
+    return $resultPromise;
 }
 
 /**
  * Set 设置配置项
  */
-export function Set(key: string, value: any): $CancellablePromise<void> {
-    return $Call.ByID(2921955968, key, value);
+export function Set(key: string, value: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2921955968, key, value) as any;
+    return $resultPromise;
 }
 
 /**
  * Watch 注册配置变更监听器
  */
-export function Watch(path: string, callback: helper$0.ObserverCallback): $CancellablePromise<helper$0.CancelFunc> {
-    return $Call.ByID(1143583035, path, callback);
+export function Watch(path: string, callback: helper$0.ObserverCallback): Promise<helper$0.CancelFunc> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1143583035, path, callback) as any;
+    return $resultPromise;
 }
 
 /**
  * WatchWithContext 使用 Context 注册监听器
  */
-export function WatchWithContext(path: string, callback: helper$0.ObserverCallback): $CancellablePromise<void> {
-    return $Call.ByID(1454973098, path, callback);
+export function WatchWithContext(path: string, callback: helper$0.ObserverCallback): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1454973098, path, callback) as any;
+    return $resultPromise;
 }
 
 // Private type creation functions

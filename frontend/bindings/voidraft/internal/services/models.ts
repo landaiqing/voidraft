@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import {Create as $Create} from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -62,7 +62,7 @@ export class DocumentSaveResult {
 export class HttpRequest {
     "method": string;
     "url": string;
-    "headers": { [_ in string]?: string };
+    "headers": { [_: string]: string };
 
     /**
      * json, formdata, urlencoded, text, params, xml, html, javascript, binary
@@ -136,7 +136,7 @@ export class HttpResponse {
             this["body"] = null;
         }
         if (!("headers" in $$source)) {
-            this["headers"] = {};
+            this["headers"] = ({} as http$0.Header);
         }
         if (!("timestamp" in $$source)) {
             this["timestamp"] = null;
@@ -566,7 +566,7 @@ export class SystemInfo {
     "arch": string;
     "debug": boolean;
     "osInfo": OSInfo | null;
-    "platformInfo": { [_ in string]?: any };
+    "platformInfo": { [_: string]: any };
 
     /** Creates a new SystemInfo instance. */
     constructor($$source: Partial<SystemInfo> = {}) {
@@ -608,7 +608,7 @@ export class SystemInfo {
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-var $$createType1 = (function $$initCreateType1(...args: any[]): any {
+var $$createType1 = (function $$initCreateType1(...args): any {
     if ($$createType1 === $$initCreateType1) {
         $$createType1 = $$createType3;
     }

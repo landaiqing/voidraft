@@ -8,55 +8,103 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as application$0 from "../../application/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
-export function CheckNotificationAuthorization(): $CancellablePromise<boolean> {
-    return $Call.ByID(2216952893);
+export function CheckNotificationAuthorization(): Promise<boolean> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2216952893) as any;
+    return $resultPromise;
 }
 
-export function RegisterNotificationCategory(category: $models.NotificationCategory): $CancellablePromise<void> {
-    return $Call.ByID(2917562919, category);
+/**
+ * OnNotificationResponse registers a callback function that will be called when
+ * a notification response is received from the user.
+ */
+export function OnNotificationResponse(callback: any): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1642697808, callback) as any;
+    return $resultPromise;
 }
 
-export function RemoveAllDeliveredNotifications(): $CancellablePromise<void> {
-    return $Call.ByID(3956282340);
+export function RegisterNotificationCategory(category: $models.NotificationCategory): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2917562919, category) as any;
+    return $resultPromise;
 }
 
-export function RemoveAllPendingNotifications(): $CancellablePromise<void> {
-    return $Call.ByID(108821341);
+export function RemoveAllDeliveredNotifications(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3956282340) as any;
+    return $resultPromise;
 }
 
-export function RemoveDeliveredNotification(identifier: string): $CancellablePromise<void> {
-    return $Call.ByID(975691940, identifier);
+export function RemoveAllPendingNotifications(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(108821341) as any;
+    return $resultPromise;
 }
 
-export function RemoveNotification(identifier: string): $CancellablePromise<void> {
-    return $Call.ByID(3966653866, identifier);
+export function RemoveDeliveredNotification(identifier: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(975691940, identifier) as any;
+    return $resultPromise;
 }
 
-export function RemoveNotificationCategory(categoryID: string): $CancellablePromise<void> {
-    return $Call.ByID(2032615554, categoryID);
+export function RemoveNotification(identifier: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3966653866, identifier) as any;
+    return $resultPromise;
 }
 
-export function RemovePendingNotification(identifier: string): $CancellablePromise<void> {
-    return $Call.ByID(3729049703, identifier);
+export function RemoveNotificationCategory(categoryID: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2032615554, categoryID) as any;
+    return $resultPromise;
+}
+
+export function RemovePendingNotification(identifier: string): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3729049703, identifier) as any;
+    return $resultPromise;
 }
 
 /**
  * Public methods that delegate to the implementation.
  */
-export function RequestNotificationAuthorization(): $CancellablePromise<boolean> {
-    return $Call.ByID(3933442950);
+export function RequestNotificationAuthorization(): Promise<boolean> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3933442950) as any;
+    return $resultPromise;
 }
 
-export function SendNotification(options: $models.NotificationOptions): $CancellablePromise<void> {
-    return $Call.ByID(3968228732, options);
+export function SendNotification(options: $models.NotificationOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3968228732, options) as any;
+    return $resultPromise;
 }
 
-export function SendNotificationWithActions(options: $models.NotificationOptions): $CancellablePromise<void> {
-    return $Call.ByID(1886542847, options);
+export function SendNotificationWithActions(options: $models.NotificationOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1886542847, options) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceName returns the name of the service.
+ */
+export function ServiceName(): Promise<string> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2704532675) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceShutdown is called when the service is unloaded.
+ */
+export function ServiceShutdown(): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(2550195434) as any;
+    return $resultPromise;
+}
+
+/**
+ * ServiceStartup is called when the service is loaded.
+ */
+export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(4047820929, options) as any;
+    return $resultPromise;
 }
