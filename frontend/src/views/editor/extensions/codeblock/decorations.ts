@@ -170,8 +170,13 @@ const blockLayer = layer({
         }
       }
       
+      const isEvenBlock = idx++ % 2 == 0;
+      const blockClass = [
+        isEvenBlock ? "block-even" : "block-odd",
+        block.access === "read" ? "block-readonly" : "",
+      ].filter(Boolean).join(" ");
       markers.push(new RectangleMarker(
-        idx++ % 2 == 0 ? "block-even" : "block-odd",
+        blockClass,
         0,
         fromCoordsTop - (view.documentTop - view.documentPadding.top) - 1 - 6,
         null, // 宽度在 CSS 中设置为 100%

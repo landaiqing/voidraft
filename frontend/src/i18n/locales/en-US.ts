@@ -374,6 +374,12 @@ export default {
       name: 'Block Image Export',
       description: 'Render the current code block to an image and copy it to the clipboard',
       copyMenu: 'Copy block as image'
+    },
+    blockReadonly: {
+      name: 'Block Readonly',
+      description: 'Protect readonly code block ranges and allow toggling block access from the context menu',
+      markReadonly: 'Set block readonly',
+      markWritable: 'Set block writable'
     }
   },
   monitor: {

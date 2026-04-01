@@ -376,6 +376,12 @@ export default {
       name: '代码块导出图片',
       description: '将当前代码块渲染为图片并复制到剪贴板',
       copyMenu: '复制块为图片'
+    },
+    blockReadonly: {
+      name: '代码块局部只读',
+      description: '为只读代码块范围提供写保护，并支持在右键菜单中切换块状态',
+      markReadonly: '设为只读块',
+      markWritable: '设为可写块'
     }
   },
   monitor: {

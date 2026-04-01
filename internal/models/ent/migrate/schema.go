@@ -17,7 +17,7 @@ var (
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString, Size: 255},
-		{Name: "content", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: "\n∞∞∞text-a\n"},
+		{Name: "content", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: "\n∞∞∞text-a-w\n"},
 		{Name: "locked", Type: field.TypeBool, Default: false},
 	}
 	// DocumentsTable holds the schema information for the "documents" table.

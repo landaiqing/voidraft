@@ -6,6 +6,7 @@ export interface Block {
         name: string;
         auto: boolean;
     };
+    access: BlockAccess;
     content: {
         from: number;
         to: number;
@@ -21,37 +22,51 @@ export interface Block {
 }
 
 /**
+ * 代码块访问模式
+ */
+export type BlockAccess = 'read' | 'write';
+
+/**
+ * 分隔符解析结果
+ */
+export interface BlockDelimiterInfo {
+    language: SupportedLanguage;
+    auto: boolean;
+    access: BlockAccess;
+}
+
+/**
  * 支持的语言类型
  */
 export type SupportedLanguage =
-    | 'auto'        // 自动检测
+    | 'auto'
     | 'text'
     | 'json'
-    | 'py'          // Python
+    | 'py'
     | 'html'
     | 'sql'
-    | 'md'          // Markdown
+    | 'md'
     | 'java'
     | 'php'
     | 'css'
     | 'xml'
-    | 'cpp'         // C++
-    | 'rs'          // Rust
-    | 'cs'          // C#
-    | 'rb'          // Ruby
-    | 'sh'          // Shell
+    | 'cpp'
+    | 'rs'
+    | 'cs'
+    | 'rb'
+    | 'sh'
     | 'yaml'
     | 'toml'
     | 'go'
-    | 'clj'         // Clojure
-    | 'ex'          // Elixir
-    | 'erl'         // Erlang
-    | 'js'          // JavaScript
-    | 'ts'          // TypeScript
+    | 'clj'
+    | 'ex'
+    | 'erl'
+    | 'js'
+    | 'ts'
     | 'swift'
-    | 'kt'          // Kotlin
+    | 'kt'
     | 'groovy'
-    | 'ps1'         // PowerShell
+    | 'ps1'
     | 'dart'
     | 'scala'
     | 'dockerfile'
@@ -65,8 +80,8 @@ export type SupportedLanguage =
     | 'less'
     | 'angular'
     | 'svelte'
-    | 'http'        // HTTP Client
-    | 'mermaid'
+    | 'http'
+    | 'mermaid';
 
 /**
  * 创建块的选项
@@ -74,6 +89,7 @@ export type SupportedLanguage =
 export interface CreateBlockOptions {
     language?: SupportedLanguage;
     auto?: boolean;
+    access?: BlockAccess;
     content?: string;
 }
 
@@ -83,11 +99,13 @@ export interface CreateBlockOptions {
 export interface EditorOptions {
     defaultBlockToken: string;
     defaultBlockAutoDetect: boolean;
+    defaultBlockAccess?: BlockAccess;
 }
 
-
-// 分隔符格式常量
-export const DELIMITER_REGEX = /^\n∞∞∞([a-zA-Z0-9_]+)(-a)?\n/gm;
 export const DELIMITER_PREFIX = '\n∞∞∞';
 export const DELIMITER_SUFFIX = '\n';
 export const AUTO_DETECT_SUFFIX = '-a';
+export const READONLY_SUFFIX = '-r';
+export const WRITABLE_SUFFIX = '-w';
+
+export const DELIMITER_REGEX = /^\n∞∞∞([a-zA-Z0-9_]+)((?:-(?:a|r|w))*)\n$/m;

@@ -41,7 +41,7 @@ func (Document) Fields() []ent.Field {
 			Comment("document title"),
 		field.Text("content").
 			Optional().
-			Default("\n∞∞∞text-a\n").
+			Default("\n∞∞∞text-a-w\n").
 			StructTag(`json:"content"`).
 			Comment("document content"),
 		field.Bool("locked").

@@ -5,15 +5,50 @@
 import { EditorSelection, Transaction } from "@codemirror/state";
 import { Command } from "@codemirror/view";
 import { blockState, getActiveNoteBlock, getFirstNoteBlock, getLastNoteBlock, getNoteBlockFromPos } from "./state";
-import { Block, EditorOptions, DELIMITER_REGEX } from "./types";
+import type { Block, BlockAccess, EditorOptions, SupportedLanguage } from "./types";
 import { formatBlockContent } from "./formatCode";
+import { createDelimiter } from "./parser";
 import { codeBlockEvent, LANGUAGE_CHANGE, ADD_NEW_BLOCK, MOVE_BLOCK, DELETE_BLOCK, CURRENCIES_LOADED, USER_EVENTS } from "./annotation";
 
 /**
  * 获取块分隔符
  */
-export function getBlockDelimiter(defaultToken: string, autoDetect: boolean): string {
-    return `\n∞∞∞${autoDetect ? defaultToken + '-a' : defaultToken}\n`;
+export function getBlockDelimiter(
+    defaultToken: string,
+    autoDetect: boolean,
+    access: BlockAccess = 'write',
+): string {
+    return createDelimiter(defaultToken as SupportedLanguage, autoDetect, access);
+}
+
+function getDefaultAccess(options: EditorOptions): BlockAccess {
+    return options.defaultBlockAccess ?? 'write';
+}
+
+function replaceBlockDelimiter(
+    state: any,
+    dispatch: any,
+    block: Block,
+    language: string,
+    auto: boolean,
+    access: BlockAccess,
+) {
+    if (state.readOnly || block.delimiter.to <= block.delimiter.from) {
+        return false;
+    }
+
+    const newDelimiter = createDelimiter(language as SupportedLanguage, auto, access);
+
+    dispatch({
+        changes: {
+            from: block.delimiter.from,
+            to: block.delimiter.to,
+            insert: newDelimiter,
+        },
+        annotations: [codeBlockEvent.of(LANGUAGE_CHANGE)],
+    });
+
+    return true;
 }
 
 /**
@@ -23,14 +58,18 @@ export const insertNewBlockAtCursor = (options: EditorOptions): Command => ({ st
     if (state.readOnly) return false;
 
     const currentBlock = getActiveNoteBlock(state);
-    let delimText: string;
-    
-    if (currentBlock) {
-        delimText = `\n∞∞∞${currentBlock.language.name}${currentBlock.language.auto ? "-a" : ""}\n`;
-    } else {
-        delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
-    }
-    
+    const delimText = currentBlock
+        ? createDelimiter(
+            currentBlock.language.name as SupportedLanguage,
+            currentBlock.language.auto,
+            currentBlock.access,
+        )
+        : getBlockDelimiter(
+            options.defaultBlockToken,
+            options.defaultBlockAutoDetect,
+            getDefaultAccess(options),
+        );
+
     dispatch(state.replaceSelection(delimText), {
         scrollIntoView: true,
         userEvent: USER_EVENTS.INPUT,
@@ -47,10 +86,14 @@ export const addNewBlockBeforeCurrent = (options: EditorOptions): Command => ({ 
 
     const block = getActiveNoteBlock(state);
     if (!block) return false;
-    
-    const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-  dispatch(state.update({
+    const delimText = getBlockDelimiter(
+        options.defaultBlockToken,
+        options.defaultBlockAutoDetect,
+        getDefaultAccess(options),
+    );
+
+    dispatch(state.update({
         changes: {
             from: block.delimiter.from,
             insert: delimText,
@@ -61,7 +104,7 @@ export const addNewBlockBeforeCurrent = (options: EditorOptions): Command => ({ 
         scrollIntoView: true,
         userEvent: USER_EVENTS.INPUT,
     }));
-    
+
     return true;
 };
 
@@ -73,10 +116,14 @@ export const addNewBlockAfterCurrent = (options: EditorOptions): Command => ({ s
 
     const block = getActiveNoteBlock(state);
     if (!block) return false;
-    
-    const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-  dispatch(state.update({
+    const delimText = getBlockDelimiter(
+        options.defaultBlockToken,
+        options.defaultBlockAutoDetect,
+        getDefaultAccess(options),
+    );
+
+    dispatch(state.update({
         changes: {
             from: block.content.to,
             insert: delimText,
@@ -87,7 +134,7 @@ export const addNewBlockAfterCurrent = (options: EditorOptions): Command => ({ s
         scrollIntoView: true,
         userEvent: USER_EVENTS.INPUT,
     }));
-    
+
     return true;
 };
 
@@ -99,10 +146,14 @@ export const addNewBlockBeforeFirst = (options: EditorOptions): Command => ({ st
 
     const block = getFirstNoteBlock(state);
     if (!block) return false;
-    
-    const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-  dispatch(state.update({
+    const delimText = getBlockDelimiter(
+        options.defaultBlockToken,
+        options.defaultBlockAutoDetect,
+        getDefaultAccess(options),
+    );
+
+    dispatch(state.update({
         changes: {
             from: block.delimiter.from,
             insert: delimText,
@@ -113,7 +164,7 @@ export const addNewBlockBeforeFirst = (options: EditorOptions): Command => ({ st
         scrollIntoView: true,
         userEvent: USER_EVENTS.INPUT,
     }));
-    
+
     return true;
 };
 
@@ -122,13 +173,17 @@ export const addNewBlockBeforeFirst = (options: EditorOptions): Command => ({ st
  */
 export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ state, dispatch }) => {
     if (state.readOnly) return false;
-    
+
     const block = getLastNoteBlock(state);
     if (!block) return false;
-    
-    const delimText = getBlockDelimiter(options.defaultBlockToken, options.defaultBlockAutoDetect);
 
-  dispatch(state.update({
+    const delimText = getBlockDelimiter(
+        options.defaultBlockToken,
+        options.defaultBlockAutoDetect,
+        getDefaultAccess(options),
+    );
+
+    dispatch(state.update({
         changes: {
             from: block.content.to,
             insert: delimText,
@@ -139,7 +194,7 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
         scrollIntoView: true,
         userEvent: USER_EVENTS.INPUT,
     }));
-    
+
     return true;
 };
 
@@ -147,20 +202,14 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
  * 更改块语言
  */
 export function changeLanguageTo(state: any, dispatch: any, block: Block, language: string, auto: boolean) {
-    if (state.readOnly) return false;
-
-    const newDelimiter = `\n∞∞∞${language}${auto ? '-a' : ''}\n`;
-
-    dispatch({
-        changes: {
-            from: block.delimiter.from,
-            to: block.delimiter.to,
-            insert: newDelimiter,
-        },
-        annotations: [codeBlockEvent.of(LANGUAGE_CHANGE)],
-    });
-
-    return true;
+    return replaceBlockDelimiter(
+        state,
+        dispatch,
+        block,
+        language,
+        auto,
+        block.access,
+    );
 }
 
 /**
@@ -172,16 +221,43 @@ export function changeCurrentBlockLanguage(state: any, dispatch: any, language: 
         console.warn("No active block found");
         return false;
     }
-    
-    // 如果 language 为 null，我们只想更改自动检测标志
-    if (language === null) {
-        language = block.language.name;
-    }
-    
-    return changeLanguageTo(state, dispatch, block, language, auto);
+
+    return changeLanguageTo(
+        state,
+        dispatch,
+        block,
+        language ?? block.language.name,
+        auto,
+    );
 }
 
-// 选择和移动辅助函数
+/**
+ * 更改块访问模式
+ */
+export function changeBlockAccessTo(state: any, dispatch: any, block: Block, access: BlockAccess) {
+    return replaceBlockDelimiter(
+        state,
+        dispatch,
+        block,
+        block.language.name,
+        block.language.auto,
+        access,
+    );
+}
+
+/**
+ * 更改当前块访问模式
+ */
+export function changeCurrentBlockAccess(state: any, dispatch: any, access: BlockAccess) {
+    const block = getActiveNoteBlock(state);
+    if (!block) {
+        console.warn("No active block found");
+        return false;
+    }
+
+    return changeBlockAccessTo(state, dispatch, block, access);
+}
+
 function updateSel(sel: EditorSelection, by: (range: any) => any): EditorSelection {
     return EditorSelection.create(sel.ranges.map(by), sel.mainIndex);
 }
@@ -211,28 +287,28 @@ function previousBlock(state: any, range: any) {
     const blocks = state.field(blockState);
     const block = getNoteBlockFromPos(state, range.head);
     if (!block) return EditorSelection.cursor(0);
-    
+
     if (range.head === block.content.from) {
         const index = blocks.indexOf(block);
         const previousBlockIndex = index > 0 ? index - 1 : 0;
         return EditorSelection.cursor(blocks[previousBlockIndex].content.from);
-    } else {
-        return EditorSelection.cursor(block.content.from);
     }
+
+    return EditorSelection.cursor(block.content.from);
 }
 
 function nextBlock(state: any, range: any) {
     const blocks = state.field(blockState);
     const block = getNoteBlockFromPos(state, range.head);
     if (!block) return EditorSelection.cursor(state.doc.length);
-    
+
     if (range.head === block.content.to) {
         const index = blocks.indexOf(block);
         const nextBlockIndex = index < blocks.length - 1 ? index + 1 : index;
         return EditorSelection.cursor(blocks[nextBlockIndex].content.to);
-    } else {
-        return EditorSelection.cursor(block.content.to);
     }
+
+    return EditorSelection.cursor(block.content.to);
 }
 
 /**
@@ -268,33 +344,28 @@ export function selectPreviousBlock({ state, dispatch }: any) {
  */
 export const deleteBlock = (_options: EditorOptions): Command => ({ state, dispatch }) => {
     if (state.readOnly) return false;
-    
+
     const block = getActiveNoteBlock(state);
     if (!block) return false;
-    
+
     const blocks = state.field(blockState);
-    if (blocks.length <= 1) return false; // 不能删除最后一个块
-    
+    if (blocks.length <= 1) return false;
+
     const blockIndex = blocks.indexOf(block);
     let newCursorPos: number;
-    
+
     if (blockIndex === blocks.length - 1) {
-        // 如果是最后一个块，将光标移到前一个块的末尾
-        // 需要计算删除后的位置
         const prevBlock = blocks[blockIndex - 1];
         newCursorPos = prevBlock.content.to;
     } else {
-        // 否则移到下一个块的开始
-        // 需要计算删除后的位置，下一个块会向前移动
         const nextBlock = blocks[blockIndex + 1];
         const blockLength = block.range.to - block.range.from;
         newCursorPos = nextBlock.content.from - blockLength;
     }
-    
-    // 确保光标位置在有效范围内
+
     const docLengthAfterDelete = state.doc.length - (block.range.to - block.range.from);
     newCursorPos = Math.max(0, Math.min(newCursorPos, docLengthAfterDelete));
-    
+
     dispatch(state.update({
         changes: {
             from: block.range.from,
@@ -307,7 +378,7 @@ export const deleteBlock = (_options: EditorOptions): Command => ({ state, dispa
         scrollIntoView: true,
         userEvent: USER_EVENTS.DELETE
     }));
-    
+
     return true;
 };
 
@@ -327,23 +398,21 @@ export function moveCurrentBlockDown({ state, dispatch }: any) {
 
 function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
     if (state.readOnly) return false;
-    
+
     const block = getActiveNoteBlock(state);
     if (!block) return false;
-    
+
     const blocks = state.field(blockState);
     const blockIndex = blocks.indexOf(block);
-    
+
     const targetIndex = up ? blockIndex - 1 : blockIndex + 1;
     if (targetIndex < 0 || targetIndex >= blocks.length) return false;
-    
+
     const targetBlock = blocks[targetIndex];
-    
-    // 获取两个块的完整内容
+
     const currentBlockContent = state.doc.sliceString(block.range.from, block.range.to);
     const targetBlockContent = state.doc.sliceString(targetBlock.range.from, targetBlock.range.to);
-    
-    // 交换块的位置
+
     const changes = up ? [
         {
             from: targetBlock.range.from,
@@ -357,12 +426,11 @@ function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
             insert: targetBlockContent + currentBlockContent
         }
     ];
-    
-    // 计算新的光标位置
-    const newCursorPos = up ? 
-        targetBlock.range.from + (block.range.to - block.range.from) + (block.content.from - block.range.from) :
-        block.range.from + (targetBlock.range.to - targetBlock.range.from) + (block.content.from - block.range.from);
-    
+
+    const newCursorPos = up
+        ? targetBlock.range.from + (block.range.to - block.range.from) + (block.content.from - block.range.from)
+        : block.range.from + (targetBlock.range.to - targetBlock.range.from) + (block.content.from - block.range.from);
+
     dispatch(state.update({
         changes,
         selection: EditorSelection.cursor(newCursorPos),
@@ -371,7 +439,7 @@ function moveCurrentBlock(state: any, dispatch: any, up: boolean) {
         scrollIntoView: true,
         userEvent: USER_EVENTS.MOVE
     }));
-    
+
     return true;
 }
 

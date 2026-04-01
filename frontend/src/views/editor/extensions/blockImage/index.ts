@@ -134,14 +134,14 @@ function getBlockDomElement(view: EditorView, block: Block): HTMLElement | null 
     const isEvenBlock = blockIndex % 2 === 0;
 
     const blockLayerElem = view.dom.querySelector(
-      `.code-blocks-layer .${isEvenBlock ? 'block-even' : 'block-odd'}`,
+      `.code-blocks-layer .${isEvenBlock ? 'block-even' : 'block-odd'}${block.access === 'read' ? '.block-readonly' : ''}`,
     ) as HTMLElement | null;
     const backgroundColor =
       blockLayerElem?.ownerDocument
         ? getComputedStyle(blockLayerElem).backgroundColor
         : isEvenBlock
-          ? '#252B37'
-          : '#213644';
+          ? (block.access === 'read' ? 'rgba(124, 124, 138, 0.16)' : '#252B37')
+          : (block.access === 'read' ? 'rgba(110, 110, 124, 0.22)' : '#213644');
 
     const contentDom = view.dom.querySelector('.cm-content') as HTMLElement | null;
     const sourceStyle = contentDom ? getComputedStyle(contentDom) : getComputedStyle(view.dom);

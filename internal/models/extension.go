@@ -28,6 +28,7 @@ const (
 	Search                      ExtensionName = "search"                      // 搜索功能
 	HttpClient                  ExtensionName = "httpClient"                  // HTTP 客户端
 	BlockImage                  ExtensionName = "blockImage"                  // 代码块导出图片
+	BlockReadonly               ExtensionName = "blockReadonly"               // 代码块局部只读
 )
 
 // NewDefaultExtensions 创建默认扩展配置
@@ -109,6 +110,11 @@ func NewDefaultExtensions() []Extension {
 		},
 		{
 			Name:    BlockImage,
+			Enabled: true,
+			Config:  ExtensionConfig{},
+		},
+		{
+			Name:    BlockReadonly,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},

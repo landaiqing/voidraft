@@ -407,6 +407,11 @@ export enum ExtensionName {
      * 代码块导出图片
      */
     BlockImage = "blockImage",
+
+    /**
+     * 代码块局部只读
+     */
+    BlockReadonly = "blockReadonly",
 };
 
 /**

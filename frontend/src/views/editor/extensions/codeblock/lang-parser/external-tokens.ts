@@ -6,19 +6,26 @@
 import { ExternalTokenizer } from "@lezer/lr";
 import { BlockContent } from "./parser.terms";
 import { LANGUAGES } from "./languages";
+import { DELIMITER_PREFIX, DELIMITER_SUFFIX } from "../types";
 
 const EOF = -1;
+const FIRST_TOKEN_CHAR = DELIMITER_PREFIX.charCodeAt(0);
+const SECOND_TOKEN_CHAR = DELIMITER_PREFIX.charCodeAt(1);
 
-const FIRST_TOKEN_CHAR = "\n".charCodeAt(0);
-const SECOND_TOKEN_CHAR = "∞".charCodeAt(0);
-
-// 创建语言标记匹配器
 const languageTokensMatcher = LANGUAGES.map(l => l.token).join("|");
-const tokenRegEx = new RegExp(`^\\n∞∞∞(${languageTokensMatcher})(-a)?\\n`, "g");
+const escapeForRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const tokenRegEx = new RegExp(
+  `^${escapeForRegex(DELIMITER_PREFIX)}(?:${languageTokensMatcher})(?:-(?:a|r|w))*${escapeForRegex(DELIMITER_SUFFIX)}`,
+  "g",
+);
+const maxDelimiterLookahead = DELIMITER_PREFIX.length
+  + Math.max(...LANGUAGES.map(lang => lang.token.length))
+  + "-a-w".length
+  + DELIMITER_SUFFIX.length;
 
 /**
  * 代码块内容标记器
- * 识别 ∞∞∞ 分隔符之间的内容
+ * 识别分隔符之间的内容
  */
 export const blockContent = new ExternalTokenizer((input) => {
   let current = input.peek(0);
@@ -29,23 +36,29 @@ export const blockContent = new ExternalTokenizer((input) => {
   }
 
   while (true) {
-    // 除非前两个字符是换行符和"∞"字符，否则我们没有代码块内容标记
-    // 所以我们不需要检查标记的其余部分
     if (current === FIRST_TOKEN_CHAR && next === SECOND_TOKEN_CHAR) {
-      let potentialLang = "";
-      for (let i = 0; i < 18; i++) {
-        potentialLang += String.fromCharCode(input.peek(i));
+      let potentialDelimiter = "";
+      for (let i = 0; i < maxDelimiterLookahead; i++) {
+        const char = input.peek(i);
+        if (char === EOF) {
+          break;
+        }
+        potentialDelimiter += String.fromCharCode(char);
       }
-      if (potentialLang.match(tokenRegEx)) {
+
+      tokenRegEx.lastIndex = 0;
+      if (tokenRegEx.test(potentialDelimiter)) {
         input.acceptToken(BlockContent);
         return;
       }
     }
+
     if (next === EOF) {
       input.acceptToken(BlockContent, 1);
       return;
     }
+
     current = input.advance(1);
     next = input.peek(1);
   }
-}); 
+});

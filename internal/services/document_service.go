@@ -16,7 +16,7 @@ import (
 )
 
 const defaultDocumentTitle = "default"
-const defaultDocumentContent = "\n∞∞∞text-a\n"
+const defaultDocumentContent = "\n∞∞∞text-a-w\n"
 
 var ErrDocumentRevisionConflict = errors.New("document revision conflict")
 

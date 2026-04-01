@@ -130,6 +130,7 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 export {
     // 类型定义
     type Block,
+    type BlockAccess,
     type SupportedLanguage,
     type CreateBlockOptions,
 } from './types';
