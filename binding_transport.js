@@ -1,4 +1,5 @@
 const wsURL = __WAILS_WS_URL__;
+const wsToken = __WAILS_WS_TOKEN__;
 const reconnectDelay = 2000;
 const connectAttemptTimeout = 3000;
 const connectRetryWindow = 10000;
@@ -42,8 +43,9 @@ function toError(error, fallbackMessage) {
 }
 
 class WebSocketTransport {
-  constructor(url) {
+  constructor(url, token) {
     this.url = url;
+    this.token = token;
     this.ws = null;
     this.connectPromise = null;
     this.pendingRequests = new Map();
@@ -104,7 +106,7 @@ class WebSocketTransport {
 
   openOnce() {
     return new Promise((resolve, reject) => {
-      const ws = new WebSocket(this.url);
+      const ws = new WebSocket(this.url, this.token);
       let opened = false;
       let settled = false;
 
@@ -314,7 +316,7 @@ class WebSocketTransport {
   }
 }
 
-const transport = new WebSocketTransport(wsURL);
+const transport = new WebSocketTransport(wsURL, wsToken);
 
 window.addEventListener(
   "beforeunload",

@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Create as $Create} from "@wailsio/runtime";
+import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -128,7 +128,7 @@ export class Extension {
     /**
      * extension config
      */
-    "config": { [_: string]: any };
+    "config": { [_ in string]?: any };
 
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
@@ -327,7 +327,7 @@ export class Theme {
     /**
      * theme colors
      */
-    "colors": { [_: string]: any };
+    "colors": { [_ in string]?: any };
 
     /** Creates a new Theme instance. */
     constructor($$source: Partial<Theme> = {}) {
@@ -344,7 +344,7 @@ export class Theme {
             this["name"] = "";
         }
         if (!("type" in $$source)) {
-            this["type"] = ("" as theme$0.Type);
+            this["type"] = theme$0.Type.$zero;
         }
         if (!("colors" in $$source)) {
             this["colors"] = {};

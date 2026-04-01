@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -17,33 +17,26 @@ import * as $models from "./models.js";
 /**
  * ApplyUpdate 应用更新
  */
-export function ApplyUpdate(): Promise<$models.SelfUpdateResult | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2009328394) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function ApplyUpdate(): $CancellablePromise<$models.SelfUpdateResult | null> {
+    return $Call.ByID(2009328394).then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * CheckForUpdates 检查更新
  */
-export function CheckForUpdates(): Promise<$models.SelfUpdateResult | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(438757208) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function CheckForUpdates(): $CancellablePromise<$models.SelfUpdateResult | null> {
+    return $Call.ByID(438757208).then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * RestartApplication 重启应用程序
  */
-export function RestartApplication(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3341481538) as any;
-    return $resultPromise;
+export function RestartApplication(): $CancellablePromise<void> {
+    return $Call.ByID(3341481538);
 }
 
 // Private type creation functions

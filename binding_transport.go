@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/subtle"
 	_ "embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +33,7 @@ type bindingWebSocketTransport struct {
 	server           *http.Server
 	jsClient         []byte
 	upgrader         *gws.Upgrader
+	authToken        string
 
 	clients sync.Map
 }
@@ -63,8 +67,16 @@ func newBindingTransport() *bindingWebSocketTransport {
 
 func (t *bindingWebSocketTransport) Start(ctx context.Context, processor *application.MessageProcessor) error {
 	t.messageProcessor = processor
+	authToken, err := generateBindingTransportToken()
+	if err != nil {
+		return fmt.Errorf("generate websocket transport auth token: %w", err)
+	}
+	t.authToken = authToken
+
 	t.upgrader = gws.NewUpgrader(t, &gws.ServerOption{
-		Recovery: gws.Recovery,
+		Recovery:     gws.Recovery,
+		Authorize:    t.authorizeRequest,
+		SubProtocols: []string{authToken},
 	})
 
 	mux := http.NewServeMux()
@@ -76,11 +88,10 @@ func (t *bindingWebSocketTransport) Start(ctx context.Context, processor *applic
 	}
 
 	wsURL := "ws://" + listener.Addr().String() + "/wails/ws"
-	t.jsClient = []byte(strings.ReplaceAll(
-		bindingTransportClientTemplate,
-		"__WAILS_WS_URL__",
-		strconv.Quote(wsURL),
-	))
+	t.jsClient = []byte(strings.NewReplacer(
+		"__WAILS_WS_URL__", strconv.Quote(wsURL),
+		"__WAILS_WS_TOKEN__", strconv.Quote(authToken),
+	).Replace(bindingTransportClientTemplate))
 	t.server = &http.Server{Handler: mux}
 
 	go func() {
@@ -96,7 +107,7 @@ func (t *bindingWebSocketTransport) Start(ctx context.Context, processor *applic
 		}
 	}()
 
-	t.logger.Info("binding websocket transport listening", "url", wsURL)
+	t.logger.Info("binding websocket transport listening", "addr", listener.Addr().String())
 	return nil
 }
 
@@ -246,6 +257,67 @@ func (t *bindingWebSocketTransport) loadClient(socket *gws.Conn) (*bindingTransp
 
 	client, ok := value.(*bindingTransportClient)
 	return client, ok
+}
+
+func (t *bindingWebSocketTransport) authorizeRequest(req *http.Request, _ gws.SessionStorage) bool {
+	if !isLoopbackRequest(req) {
+		t.logger.Warn("rejected non-loopback websocket connection", "remoteAddr", req.RemoteAddr)
+		return false
+	}
+
+	protocols := parseWebSocketProtocols(req.Header.Get("Sec-WebSocket-Protocol"))
+	if len(protocols) == 1 && secureCompareString(protocols[0], t.authToken) {
+		return true
+	}
+
+	t.logger.Debug("rejected websocket connection with invalid auth token", "remoteAddr", req.RemoteAddr)
+	return false
+}
+
+func generateBindingTransportToken() (string, error) {
+	token := make([]byte, 32)
+	if _, err := rand.Read(token); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(token), nil
+}
+
+func isLoopbackRequest(req *http.Request) bool {
+	host, _, err := net.SplitHostPort(req.RemoteAddr)
+	if err != nil {
+		return false
+	}
+
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
+}
+
+func secureCompareString(actual string, expected string) bool {
+	if len(actual) == 0 || len(actual) != len(expected) {
+		return false
+	}
+
+	return subtle.ConstantTimeCompare([]byte(actual), []byte(expected)) == 1
+}
+
+func parseWebSocketProtocols(header string) []string {
+	if header == "" {
+		return nil
+	}
+
+	rawProtocols := strings.Split(header, ",")
+	protocols := make([]string, 0, len(rawProtocols))
+	for _, protocol := range rawProtocols {
+		protocol = strings.TrimSpace(protocol)
+		if protocol == "" {
+			continue
+		}
+
+		protocols = append(protocols, protocol)
+	}
+
+	return protocols
 }
 
 func newBindingTransportClient(conn *gws.Conn) *bindingTransportClient {

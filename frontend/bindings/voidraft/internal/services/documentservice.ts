@@ -8,11 +8,8 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as ent$0 from "../models/ent/models.js";
@@ -24,89 +21,65 @@ import * as $models from "./models.js";
 /**
  * CreateDocument 创建文档
  */
-export function CreateDocument(title: string): Promise<ent$0.Document | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3360680842, title) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function CreateDocument(title: string): $CancellablePromise<ent$0.Document | null> {
+    return $Call.ByID(3360680842, title).then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * DeleteDocument 删除文档
  */
-export function DeleteDocument(id: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(412287269, id) as any;
-    return $resultPromise;
+export function DeleteDocument(id: number): $CancellablePromise<void> {
+    return $Call.ByID(412287269, id);
 }
 
 /**
  * GetDocumentByID 根据ID获取文档
  */
-export function GetDocumentByID(id: number): Promise<ent$0.Document | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3468193232, id) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function GetDocumentByID(id: number): $CancellablePromise<ent$0.Document | null> {
+    return $Call.ByID(3468193232, id).then(($result: any) => {
         return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * ListAllDocumentsMeta lists document metadata.
  */
-export function ListAllDocumentsMeta(): Promise<(ent$0.Document | null)[]> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3073950297) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function ListAllDocumentsMeta(): $CancellablePromise<(ent$0.Document | null)[]> {
+    return $Call.ByID(3073950297).then(($result: any) => {
         return $$createType2($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * LockDocument 锁定文档
  */
-export function LockDocument(id: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1889494473, id) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceStartup 服务启动
- */
-export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1474135487, options) as any;
-    return $resultPromise;
+export function LockDocument(id: number): $CancellablePromise<void> {
+    return $Call.ByID(1889494473, id);
 }
 
 /**
  * UnlockDocument 解锁文档
  */
-export function UnlockDocument(id: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(222307930, id) as any;
-    return $resultPromise;
+export function UnlockDocument(id: number): $CancellablePromise<void> {
+    return $Call.ByID(222307930, id);
 }
 
 /**
  * UpdateDocumentContent 更新文档内容
  */
-export function UpdateDocumentContent(id: number, content: string, baseUpdatedAt: string): Promise<$models.DocumentSaveResult | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3251897116, id, content, baseUpdatedAt) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
+export function UpdateDocumentContent(id: number, content: string, baseUpdatedAt: string): $CancellablePromise<$models.DocumentSaveResult | null> {
+    return $Call.ByID(3251897116, id, content, baseUpdatedAt).then(($result: any) => {
         return $$createType4($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    });
 }
 
 /**
  * UpdateDocumentTitle 更新文档标题
  */
-export function UpdateDocumentTitle(id: number, title: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2045530459, id, title) as any;
-    return $resultPromise;
+export function UpdateDocumentTitle(id: number, title: string): $CancellablePromise<void> {
+    return $Call.ByID(2045530459, id, title);
 }
 
 // Private type creation functions
