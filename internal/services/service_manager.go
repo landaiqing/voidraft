@@ -1,18 +1,20 @@
 package services
 
 import (
+	"log/slog"
+
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/dock"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
-	"log/slog"
 )
 
-// ServiceManager 服务管理器，负责协调各个服务
+// ServiceManager coordinates app services.
 type ServiceManager struct {
 	configService       *ConfigService
 	databaseService     *DatabaseService
 	documentService     *DocumentService
+	mediaHTTPService    *MediaHTTPService
 	windowService       *WindowService
 	windowSnapService   *WindowSnapService
 	migrationService    *MigrationService
@@ -28,88 +30,48 @@ type ServiceManager struct {
 	themeService        *ThemeService
 	badgeService        *dock.DockService
 	notificationService *notifications.NotificationService
-	testService         *TestService // 测试服务（仅开发环境）
-	BackupService       *BackupService
-	httpClientService   *HttpClientService // HTTP客户端服务
+	testService         *TestService
+	SyncService         *SyncService
+	httpClientService   *HttpClientService
 	logger              *log.LogService
 }
 
-// NewServiceManager 创建新的服务管理器实例
+// NewServiceManager creates a new service manager instance.
 func NewServiceManager() *ServiceManager {
-	// 初始化日志服务
 	logger := log.NewWithConfig(&log.Config{
 		LogLevel: slog.LevelDebug,
 	})
 
-	// 初始化badge服务
 	badgeService := dock.New()
-
-	// 初始化通知服务
 	notificationService := notifications.New()
-
-	// 初始化配置服务
 	configService := NewConfigService(logger)
-
-	// 初始化数据库服务
 	databaseService := NewDatabaseService(configService, logger)
-
-	// 初始化迁移服务
 	migrationService := NewMigrationService(databaseService, configService, logger)
-
-	// 初始化文档服务
 	documentService := NewDocumentService(databaseService, logger)
-
-	// 初始化窗口吸附服务
+	mediaHTTPService := NewMediaHTTPService(configService, logger, databaseService)
 	windowSnapService := NewWindowSnapService(logger, configService)
-
-	// 初始化窗口服务
 	windowService := NewWindowService(logger, documentService, windowSnapService)
-
-	// 初始化系统服务
 	systemService := NewSystemService(logger)
-
-	// 初始化热键服务
 	hotkeyService := NewHotkeyService(configService, logger)
-
-	// 初始化对话服务
 	dialogService := NewDialogService(logger)
-
-	// 初始化托盘服务
 	trayService := NewTrayService(logger, configService)
-
-	// 初始化快捷键服务
 	keyBindingService := NewKeyBindingService(databaseService, logger)
-
-	// 初始化扩展服务
 	extensionService := NewExtensionService(databaseService, logger)
-
-	// 初始化开机启动服务
 	startupService := NewStartupService(configService, logger)
-
-	// 初始化自我更新服务
 	selfUpdateService := NewSelfUpdateService(configService, badgeService, notificationService, logger)
-
-	// 初始化翻译服务
 	translationService := NewTranslationService(logger)
-
-	// 初始化主题服务
 	themeService := NewThemeService(databaseService, logger)
-
-	// 初始化备份服务
-	backupService := NewBackupService(configService, databaseService, logger)
-
-	// 初始化HTTP客户端服务
+	syncService := NewSyncService(configService, databaseService, logger)
 	httpClientService := NewHttpClientService(logger)
-
-	// 初始化测试服务（开发环境使用）
 	testService := NewTestService(badgeService, notificationService, logger)
 
 	return &ServiceManager{
 		configService:       configService,
 		databaseService:     databaseService,
 		documentService:     documentService,
-		windowSnapService:   windowSnapService,
+		mediaHTTPService:    mediaHTTPService,
 		windowService:       windowService,
+		windowSnapService:   windowSnapService,
 		migrationService:    migrationService,
 		systemService:       systemService,
 		hotkeyService:       hotkeyService,
@@ -124,18 +86,21 @@ func NewServiceManager() *ServiceManager {
 		badgeService:        badgeService,
 		notificationService: notificationService,
 		testService:         testService,
-		BackupService:       backupService,
+		SyncService:         syncService,
 		httpClientService:   httpClientService,
 		logger:              logger,
 	}
 }
 
-// GetServices 获取所有wails服务列表
+// GetServices returns the registered Wails services.
 func (sm *ServiceManager) GetServices() []application.Service {
-	services := []application.Service{
+	return []application.Service{
 		application.NewService(sm.configService),
 		application.NewService(sm.databaseService),
 		application.NewService(sm.documentService),
+		application.NewServiceWithOptions(sm.mediaHTTPService, application.ServiceOptions{
+			Route: mediaServiceRoute,
+		}),
 		application.NewService(sm.windowService),
 		application.NewService(sm.keyBindingService),
 		application.NewService(sm.extensionService),
@@ -150,98 +115,79 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.badgeService),
 		application.NewService(sm.notificationService),
 		application.NewService(sm.testService),
-		application.NewService(sm.BackupService),
+		application.NewService(sm.SyncService),
 		application.NewService(sm.httpClientService),
 	}
-	return services
 }
 
-// GetHotkeyService 获取热键服务实例
 func (sm *ServiceManager) GetHotkeyService() *HotkeyService {
 	return sm.hotkeyService
 }
 
-// GetDialogService 获取对话框服务实例
 func (sm *ServiceManager) GetDialogService() *DialogService {
 	return sm.dialogService
 }
 
-// GetLogger 获取日志服务实例
 func (sm *ServiceManager) GetLogger() *log.LogService {
 	return sm.logger
 }
 
-// GetConfigService 获取配置服务实例
 func (sm *ServiceManager) GetConfigService() *ConfigService {
 	return sm.configService
 }
 
-// GetTrayService 获取托盘服务实例
 func (sm *ServiceManager) GetTrayService() *TrayService {
 	return sm.trayService
 }
 
-// GetKeyBindingService 获取快捷键服务实例
 func (sm *ServiceManager) GetKeyBindingService() *KeyBindingService {
 	return sm.keyBindingService
 }
 
-// GetStartupService 获取开机启动服务实例
 func (sm *ServiceManager) GetStartupService() *StartupService {
 	return sm.startupService
 }
 
-// GetExtensionService 获取扩展服务实例
 func (sm *ServiceManager) GetExtensionService() *ExtensionService {
 	return sm.extensionService
 }
 
-// GetSelfUpdateService 获取自我更新服务实例
 func (sm *ServiceManager) GetSelfUpdateService() *SelfUpdateService {
 	return sm.selfUpdateService
 }
 
-// GetTranslationService 获取翻译服务实例
 func (sm *ServiceManager) GetTranslationService() *TranslationService {
 	return sm.translationService
 }
 
-// GetDatabaseService 获取数据库服务实例
 func (sm *ServiceManager) GetDatabaseService() *DatabaseService {
 	return sm.databaseService
 }
 
-// GetWindowService 获取窗口服务实例
 func (sm *ServiceManager) GetWindowService() *WindowService {
 	return sm.windowService
 }
 
-// GetDocumentService 获取文档服务实例
 func (sm *ServiceManager) GetDocumentService() *DocumentService {
 	return sm.documentService
 }
 
-// GetThemeService 获取主题服务实例
 func (sm *ServiceManager) GetThemeService() *ThemeService {
 	return sm.themeService
 }
 
-// GetBadgeService 获取badge服务实例
 func (sm *ServiceManager) GetBadgeService() *dock.DockService {
 	return sm.badgeService
 }
 
-// GetNotificationService 获取通知服务实例
 func (sm *ServiceManager) GetNotificationService() *notifications.NotificationService {
 	return sm.notificationService
 }
 
-// GetSystemService 获取系统服务实例
 func (sm *ServiceManager) GetSystemService() *SystemService {
 	return sm.systemService
 }
 
-// GetHttpClientService 获取HTTP客户端服务
 func (sm *ServiceManager) GetHttpClientService() *HttpClientService {
 	return sm.httpClientService
 }

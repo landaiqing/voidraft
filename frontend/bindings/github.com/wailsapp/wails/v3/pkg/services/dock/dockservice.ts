@@ -8,76 +8,50 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../application/models.js";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
 
 /**
+ * GetBadge returns the badge label on the application icon.
+ */
+export function GetBadge(): $CancellablePromise<string | null> {
+    return $Call.ByID(1150236961);
+}
+
+/**
  * HideAppIcon hides the app icon in the dock/taskbar.
  */
-export function HideAppIcon(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3413658144) as any;
-    return $resultPromise;
+export function HideAppIcon(): $CancellablePromise<void> {
+    return $Call.ByID(3413658144);
 }
 
 /**
  * RemoveBadge removes the badge label from the application icon.
  */
-export function RemoveBadge(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2752757297) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceName returns the name of the service.
- */
-export function ServiceName(): Promise<string> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2949906614) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceShutdown is called when the service is unloaded.
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(307064411) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceStartup is called when the service is loaded.
- */
-export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1350118426, options) as any;
-    return $resultPromise;
+export function RemoveBadge(): $CancellablePromise<void> {
+    return $Call.ByID(2752757297);
 }
 
 /**
  * SetBadge sets the badge label on the application icon.
  */
-export function SetBadge(label: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1717705661, label) as any;
-    return $resultPromise;
+export function SetBadge(label: string): $CancellablePromise<void> {
+    return $Call.ByID(1717705661, label);
 }
 
 /**
  * SetCustomBadge sets the badge label on the application icon with custom options.
  */
-export function SetCustomBadge(label: string, options: $models.BadgeOptions): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2730169760, label, options) as any;
-    return $resultPromise;
+export function SetCustomBadge(label: string, options: $models.BadgeOptions): $CancellablePromise<void> {
+    return $Call.ByID(2730169760, label, options);
 }
 
 /**
  * ShowAppIcon shows the app icon in the dock/taskbar.
  */
-export function ShowAppIcon(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3409697379) as any;
-    return $resultPromise;
+export function ShowAppIcon(): $CancellablePromise<void> {
+    return $Call.ByID(3409697379);
 }

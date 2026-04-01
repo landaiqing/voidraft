@@ -87,7 +87,7 @@ export interface EditorOptions {
 
 
 // 分隔符格式常量
-export const DELIMITER_REGEX = /^\n∞∞∞([a-zA-Z0-9_-]+)(-a)?\n/gm;
+export const DELIMITER_REGEX = /^\n∞∞∞([a-zA-Z0-9_]+)(-a)?\n/gm;
 export const DELIMITER_PREFIX = '\n∞∞∞';
 export const DELIMITER_SUFFIX = '\n';
 export const AUTO_DETECT_SUFFIX = '-a';

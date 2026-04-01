@@ -1,6 +1,7 @@
 import {
     AppConfig,
     AuthMethod,
+    SyncTarget,
     KeyBindingType,
     LanguageType,
     SystemThemeType,
@@ -8,12 +9,8 @@ import {
 } from '@/../bindings/voidraft/internal/models/models';
 import {FONT_OPTIONS} from './fonts';
 
-export type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
-export type ConfigSection = 'general' | 'editing' | 'appearance' | 'updates' | 'backup';
-
 // 统一配置键映射（平级展开）
 export const CONFIG_KEY_MAP = {
-    // general
     alwaysOnTop: 'general.alwaysOnTop',
     dataPath: 'general.dataPath',
     enableSystemTray: 'general.enableSystemTray',
@@ -24,7 +21,7 @@ export const CONFIG_KEY_MAP = {
     enableLoadingAnimation: 'general.enableLoadingAnimation',
     enableTabs: 'general.enableTabs',
     enableMemoryMonitor: 'general.enableMemoryMonitor',
-    // editing
+
     fontSize: 'editing.fontSize',
     fontFamily: 'editing.fontFamily',
     fontWeight: 'editing.fontWeight',
@@ -34,33 +31,35 @@ export const CONFIG_KEY_MAP = {
     tabType: 'editing.tabType',
     keymapMode: 'editing.keymapMode',
     autoSaveDelay: 'editing.autoSaveDelay',
-    // appearance
+
     language: 'appearance.language',
     systemTheme: 'appearance.systemTheme',
     currentTheme: 'appearance.currentTheme',
-    // updates
-    version: 'updates.version',
+
     autoUpdate: 'updates.autoUpdate',
-    primarySource: 'updates.primarySource',
-    backupSource: 'updates.backupSource',
     backupBeforeUpdate: 'updates.backupBeforeUpdate',
     updateTimeout: 'updates.updateTimeout',
     github: 'updates.github',
-    gitea: 'updates.gitea',
-    // backup
-    enabled: 'backup.enabled',
-    repo_url: 'backup.repo_url',
-    auth_method: 'backup.auth_method',
-    username: 'backup.username',
-    password: 'backup.password',
-    token: 'backup.token',
-    ssh_key_path: 'backup.ssh_key_path',
-    ssh_key_passphrase: 'backup.ssh_key_passphrase',
-    backup_interval: 'backup.backup_interval',
-    auto_backup: 'backup.auto_backup',
+
+    sync_target: 'sync.target',
+    git_enabled: 'sync.git.enabled',
+    git_auto_sync: 'sync.git.auto_sync',
+    git_sync_interval: 'sync.git.sync_interval',
+    git_repo_url: 'sync.git.repo_url',
+    git_auth_method: 'sync.git.auth_method',
+    git_username: 'sync.git.username',
+    git_password: 'sync.git.password',
+    git_token: 'sync.git.token',
+    git_ssh_key_path: 'sync.git.ssh_key_path',
+    git_ssh_key_passphrase: 'sync.git.ssh_key_passphrase',
+    localfs_enabled: 'sync.localfs.enabled',
+    localfs_auto_sync: 'sync.localfs.auto_sync',
+    localfs_sync_interval: 'sync.localfs.sync_interval',
+    localfs_root_path: 'sync.localfs.root_path',
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG_KEY_MAP;
+export type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
 
 // 配置限制
 export const CONFIG_LIMITS = {
@@ -116,17 +115,26 @@ export const DEFAULT_CONFIG: AppConfig = {
             repo: "voidraft",
         },
     },
-    backup: {
-        enabled: false,
-        repo_url: "",
-        auth_method: AuthMethod.UserPass,
-        username: "",
-        password: "",
-        token: "",
-        ssh_key_path: "",
-        ssh_key_passphrase: "",
-        backup_interval: 60,
-        auto_backup: true,
+    sync: {
+        target: SyncTarget.SyncTargetGit,
+        git: {
+            enabled: false,
+            auto_sync: false,
+            sync_interval: 60,
+            repo_url: '',
+            auth_method: AuthMethod.UserPass,
+            username: '',
+            password: '',
+            token: '',
+            ssh_key_path: '',
+            ssh_key_passphrase: '',
+        },
+        localfs: {
+            enabled: false,
+            auto_sync: false,
+            sync_interval: 60,
+            root_path: '',
+        },
     },
     metadata: {
         version: '1.0.0',

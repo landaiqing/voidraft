@@ -4,16 +4,19 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 	"voidraft/internal/common/helper"
+	"voidraft/internal/models"
 )
 
-// TrayService 系统托盘服务
 type TrayService struct {
 	logger        *log.LogService
 	configService *ConfigService
 	windowHelper  *helper.WindowHelper
+	menu          *application.Menu
+	mainItem      *application.MenuItem
+	quitItem      *application.MenuItem
+	languageWatch helper.CancelFunc
 }
 
-// NewTrayService 创建新的系统托盘服务实例
 func NewTrayService(logger *log.LogService, configService *ConfigService) *TrayService {
 	return &TrayService{
 		logger:        logger,
@@ -22,46 +25,100 @@ func NewTrayService(logger *log.LogService, configService *ConfigService) *TrayS
 	}
 }
 
-// ShouldMinimizeToTray 检查是否应该最小化到托盘
+func (ts *TrayService) BindMenu(menu *application.Menu) {
+	ts.menu = menu
+	ts.mainItem = menu.Add("")
+	ts.mainItem.OnClick(func(_ *application.Context) {
+		ts.ShowWindow()
+	})
+
+	menu.AddSeparator()
+
+	ts.quitItem = menu.Add("")
+	ts.quitItem.OnClick(func(_ *application.Context) {
+		application.Get().Quit()
+	})
+
+	ts.applyMenuTexts(ts.currentLanguage())
+
+	if ts.languageWatch != nil {
+		ts.languageWatch()
+	}
+
+	ts.languageWatch = ts.configService.Watch("appearance.language", func(_, newValue interface{}) {
+		ts.applyMenuTexts(ts.resolveLanguage(newValue))
+	})
+}
+
+func (ts *TrayService) applyMenuTexts(language models.LanguageType) {
+	if ts.menu == nil || ts.mainItem == nil || ts.quitItem == nil {
+		return
+	}
+
+	mainLabel := "Main window"
+	quitLabel := "Quit"
+
+	if language == models.LangZhCN {
+		mainLabel = "\u4E3B\u7A97\u53E3"
+		quitLabel = "\u9000\u51FA"
+	}
+
+	ts.mainItem.SetLabel(mainLabel)
+	ts.quitItem.SetLabel(quitLabel)
+	ts.menu.Update()
+}
+
+func (ts *TrayService) currentLanguage() models.LanguageType {
+	return ts.resolveLanguage(ts.configService.Get("appearance.language"))
+}
+
+func (ts *TrayService) resolveLanguage(value interface{}) models.LanguageType {
+	switch language := value.(type) {
+	case models.LanguageType:
+		if language == models.LangZhCN {
+			return models.LangZhCN
+		}
+	case string:
+		if models.LanguageType(language) == models.LangZhCN {
+			return models.LangZhCN
+		}
+	}
+
+	return models.LangEnUS
+}
+
 func (ts *TrayService) ShouldMinimizeToTray() bool {
 	config, err := ts.configService.GetConfig()
 	if err != nil {
-		return true // 默认行为：隐藏到托盘
+		return true
 	}
 
 	return config.General.EnableSystemTray
 }
 
-// HandleWindowClose 处理窗口关闭事件
 func (ts *TrayService) HandleWindowClose() {
 	if ts.ShouldMinimizeToTray() {
-		// 隐藏到托盘
 		ts.windowHelper.HideMainWindow()
-	} else {
-		// 直接退出应用
-		application.Get().Quit()
+		return
 	}
+
+	application.Get().Quit()
 }
 
-// HandleWindowMinimize 处理窗口最小化事件
 func (ts *TrayService) HandleWindowMinimize() {
 	if ts.ShouldMinimizeToTray() {
-		// 隐藏到托盘
 		ts.windowHelper.HideMainWindow()
 	}
 }
 
-// ShowWindow 显示主窗口
 func (ts *TrayService) ShowWindow() {
 	ts.windowHelper.FocusMainWindow()
 }
 
-// MinimizeButtonClicked 处理标题栏最小化按钮点击
 func (ts *TrayService) MinimizeButtonClicked() {
 	ts.windowHelper.MinimiseMainWindow()
 }
 
-// AutoShowHide 自动显示/隐藏主窗口
 func (ts *TrayService) AutoShowHide() {
 	ts.windowHelper.AutoShowMainWindow()
 }

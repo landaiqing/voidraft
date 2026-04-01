@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Create as $Create} from "@wailsio/runtime";
+import { Create as $Create } from "@wailsio/runtime";
 
 /**
  * AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -30,9 +30,9 @@ export class AppConfig {
     "updates": UpdatesConfig;
 
     /**
-     * Git备份设置
+     * 同步设置
      */
-    "backup": GitBackupConfig;
+    "sync": SyncConfig;
 
     /**
      * 配置元数据
@@ -53,8 +53,8 @@ export class AppConfig {
         if (!("updates" in $$source)) {
             this["updates"] = (new UpdatesConfig());
         }
-        if (!("backup" in $$source)) {
-            this["backup"] = (new GitBackupConfig());
+        if (!("sync" in $$source)) {
+            this["sync"] = (new SyncConfig());
         }
         if (!("metadata" in $$source)) {
             this["metadata"] = (new ConfigMetadata());
@@ -86,8 +86,8 @@ export class AppConfig {
         if ("updates" in $$parsedSource) {
             $$parsedSource["updates"] = $$createField3_0($$parsedSource["updates"]);
         }
-        if ("backup" in $$parsedSource) {
-            $$parsedSource["backup"] = $$createField4_0($$parsedSource["backup"]);
+        if ("sync" in $$parsedSource) {
+            $$parsedSource["sync"] = $$createField4_0($$parsedSource["sync"]);
         }
         if ("metadata" in $$parsedSource) {
             $$parsedSource["metadata"] = $$createField5_0($$parsedSource["metadata"]);
@@ -118,10 +118,10 @@ export class AppearanceConfig {
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
-            this["language"] = ("" as LanguageType);
+            this["language"] = LanguageType.$zero;
         }
         if (!("systemTheme" in $$source)) {
-            this["systemTheme"] = ("" as SystemThemeType);
+            this["systemTheme"] = SystemThemeType.$zero;
         }
         if (!("currentTheme" in $$source)) {
             this["currentTheme"] = "";
@@ -140,7 +140,7 @@ export class AppearanceConfig {
 }
 
 /**
- * Git备份相关类型定义
+ * Git同步相关类型定义
  *
  * AuthMethod 定义Git认证方式
  */
@@ -267,10 +267,10 @@ export class EditingConfig {
             this["tabSize"] = 0;
         }
         if (!("tabType" in $$source)) {
-            this["tabType"] = ("" as TabType);
+            this["tabType"] = TabType.$zero;
         }
         if (!("keymapMode" in $$source)) {
-            this["keymapMode"] = ("" as KeyBindingType);
+            this["keymapMode"] = KeyBindingType.$zero;
         }
         if (!("autoSaveDelay" in $$source)) {
             this["autoSaveDelay"] = 0;
@@ -299,13 +299,13 @@ export class Extension {
     /** Creates a new Extension instance. */
     constructor($$source: Partial<Extension> = {}) {
         if (!("key" in $$source)) {
-            this["key"] = ("" as ExtensionName);
+            this["key"] = ExtensionName.$zero;
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
         }
         if (!("config" in $$source)) {
-            this["config"] = ({} as ExtensionConfig);
+            this["config"] = {};
         }
 
         Object.assign(this, $$source);
@@ -327,7 +327,7 @@ export class Extension {
 /**
  * ExtensionConfig 扩展配置项
  */
-export type ExtensionConfig = { [_: string]: any };
+export type ExtensionConfig = { [_ in string]?: any };
 
 /**
  * ExtensionName 扩展标识符
@@ -516,10 +516,16 @@ export class GeneralConfig {
 }
 
 /**
- * GitBackupConfig Git备份配置
+ * GitSyncConfig 描述 Git 同步配置。
  */
-export class GitBackupConfig {
+export class GitSyncConfig {
     "enabled": boolean;
+    "auto_sync": boolean;
+
+    /**
+     * 分钟
+     */
+    "sync_interval": number;
     "repo_url": string;
     "auth_method": AuthMethod;
     "username"?: string;
@@ -528,39 +534,33 @@ export class GitBackupConfig {
     "ssh_key_path"?: string;
     "ssh_key_passphrase"?: string;
 
-    /**
-     * 分钟
-     */
-    "backup_interval": number;
-    "auto_backup": boolean;
-
-    /** Creates a new GitBackupConfig instance. */
-    constructor($$source: Partial<GitBackupConfig> = {}) {
+    /** Creates a new GitSyncConfig instance. */
+    constructor($$source: Partial<GitSyncConfig> = {}) {
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
+        }
+        if (!("auto_sync" in $$source)) {
+            this["auto_sync"] = false;
+        }
+        if (!("sync_interval" in $$source)) {
+            this["sync_interval"] = 0;
         }
         if (!("repo_url" in $$source)) {
             this["repo_url"] = "";
         }
         if (!("auth_method" in $$source)) {
-            this["auth_method"] = ("" as AuthMethod);
-        }
-        if (!("backup_interval" in $$source)) {
-            this["backup_interval"] = 0;
-        }
-        if (!("auto_backup" in $$source)) {
-            this["auto_backup"] = false;
+            this["auth_method"] = AuthMethod.$zero;
         }
 
         Object.assign(this, $$source);
     }
 
     /**
-     * Creates a new GitBackupConfig instance from a string or object.
+     * Creates a new GitSyncConfig instance from a string or object.
      */
-    static createFrom($$source: any = {}): GitBackupConfig {
+    static createFrom($$source: any = {}): GitSyncConfig {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new GitBackupConfig($$parsedSource as Partial<GitBackupConfig>);
+        return new GitSyncConfig($$parsedSource as Partial<GitSyncConfig>);
     }
 }
 
@@ -715,13 +715,13 @@ export class KeyBinding {
     /** Creates a new KeyBinding instance. */
     constructor($$source: Partial<KeyBinding> = {}) {
         if (!("name" in $$source)) {
-            this["name"] = ("" as KeyBindingName);
+            this["name"] = KeyBindingName.$zero;
         }
         if (!("type" in $$source)) {
-            this["type"] = ("" as KeyBindingType);
+            this["type"] = KeyBindingType.$zero;
         }
         if (!("extension" in $$source)) {
-            this["extension"] = ("" as ExtensionName);
+            this["extension"] = ExtensionName.$zero;
         }
         if (!("enabled" in $$source)) {
             this["enabled"] = false;
@@ -1185,6 +1185,106 @@ export enum LanguageType {
 };
 
 /**
+ * LocalFSSyncConfig 描述本地文件系统同步配置。
+ */
+export class LocalFSSyncConfig {
+    "enabled": boolean;
+    "auto_sync": boolean;
+
+    /**
+     * 分钟
+     */
+    "sync_interval": number;
+    "root_path": string;
+
+    /** Creates a new LocalFSSyncConfig instance. */
+    constructor($$source: Partial<LocalFSSyncConfig> = {}) {
+        if (!("enabled" in $$source)) {
+            this["enabled"] = false;
+        }
+        if (!("auto_sync" in $$source)) {
+            this["auto_sync"] = false;
+        }
+        if (!("sync_interval" in $$source)) {
+            this["sync_interval"] = 0;
+        }
+        if (!("root_path" in $$source)) {
+            this["root_path"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LocalFSSyncConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): LocalFSSyncConfig {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new LocalFSSyncConfig($$parsedSource as Partial<LocalFSSyncConfig>);
+    }
+}
+
+/**
+ * SyncConfig 描述同步模块配置。
+ */
+export class SyncConfig {
+    "target": SyncTarget;
+    "git": GitSyncConfig;
+    "localfs": LocalFSSyncConfig;
+
+    /** Creates a new SyncConfig instance. */
+    constructor($$source: Partial<SyncConfig> = {}) {
+        if (!("target" in $$source)) {
+            this["target"] = SyncTarget.$zero;
+        }
+        if (!("git" in $$source)) {
+            this["git"] = (new GitSyncConfig());
+        }
+        if (!("localfs" in $$source)) {
+            this["localfs"] = (new LocalFSSyncConfig());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncConfig instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncConfig {
+        const $$createField1_0 = $$createType9;
+        const $$createField2_0 = $$createType10;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("git" in $$parsedSource) {
+            $$parsedSource["git"] = $$createField1_0($$parsedSource["git"]);
+        }
+        if ("localfs" in $$parsedSource) {
+            $$parsedSource["localfs"] = $$createField2_0($$parsedSource["localfs"]);
+        }
+        return new SyncConfig($$parsedSource as Partial<SyncConfig>);
+    }
+}
+
+/**
+ * SyncTarget 定义当前可选择的同步目标。
+ */
+export enum SyncTarget {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * SyncTargetGit 表示 Git 同步。
+     */
+    SyncTargetGit = "git",
+
+    /**
+     * SyncTargetLocalFS 表示本地文件系统同步。
+     */
+    SyncTargetLocalFS = "localfs",
+};
+
+/**
  * SystemThemeType 系统主题类型定义
  */
 export enum SystemThemeType {
@@ -1283,7 +1383,7 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField4_0 = $$createType9;
+        const $$createField4_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField4_0($$parsedSource["github"]);
@@ -1297,9 +1397,9 @@ const $$createType0 = GeneralConfig.createFrom;
 const $$createType1 = EditingConfig.createFrom;
 const $$createType2 = AppearanceConfig.createFrom;
 const $$createType3 = UpdatesConfig.createFrom;
-const $$createType4 = GitBackupConfig.createFrom;
+const $$createType4 = SyncConfig.createFrom;
 const $$createType5 = ConfigMetadata.createFrom;
-var $$createType6 = (function $$initCreateType6(...args): any {
+var $$createType6 = (function $$initCreateType6(...args: any[]): any {
     if ($$createType6 === $$initCreateType6) {
         $$createType6 = $$createType7;
     }
@@ -1307,4 +1407,6 @@ var $$createType6 = (function $$initCreateType6(...args): any {
 });
 const $$createType7 = $Create.Map($Create.Any, $Create.Any);
 const $$createType8 = HotkeyCombo.createFrom;
-const $$createType9 = GithubConfig.createFrom;
+const $$createType9 = GitSyncConfig.createFrom;
+const $$createType10 = LocalFSSyncConfig.createFrom;
+const $$createType11 = GithubConfig.createFrom;

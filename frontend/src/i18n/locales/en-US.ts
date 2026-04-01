@@ -182,7 +182,7 @@ export default {
     general: 'General',
     editing: 'Editor',
     appearance: 'Appearance',
-    backupPage: 'Backup',
+    syncPage: 'Sync',
     keyBindings: 'Key Bindings',
     updates: 'Updates',
     reset: 'Reset',
@@ -257,11 +257,16 @@ export default {
     restartNow: 'Restart Now',
     hotkeyPreview: 'Preview:',
     none: 'None',
-    backup: {
-      basicSettings: 'Basic Settings',
-      enableBackup: 'Enable Git Backup',
-      autoBackup: 'Auto Backup',
-      backupInterval: 'Backup Interval',
+    sync: {
+        basicSettings: 'Basic Settings',
+      enableSync: 'Enable Sync',
+        targetType: 'Sync Type',
+        targetTypes: {
+          git: 'Git',
+          localfs: 'Local File System'
+        },
+      autoSync: 'Auto Sync',
+        syncInterval: 'Sync Interval',
       intervals: {
         '5min': '5 minutes',
         '10min': '10 minutes',
@@ -270,8 +275,11 @@ export default {
         '1hour': '1 hour'
       },
       repositoryConfig: 'Repository Configuration',
-      repoUrl: 'Repository URL',
-      repoUrlPlaceholder: 'Enter Git repository URL',
+        storageConfig: 'Storage Configuration',
+        repoUrl: 'Repository URL',
+        repoUrlPlaceholder: 'Enter Git repository URL',
+        localfsRootPath: 'Local Storage Directory',
+        localfsRootPathPlaceholder: 'Select local sync directory',
       authConfig: 'Authentication Configuration',
       authMethod: 'Authentication Method',
       authMethods: {
@@ -289,10 +297,18 @@ export default {
       sshKeyPathPlaceholder: 'Select SSH key file',
       sshKeyPassphrase: 'SSH Key Passphrase',
       sshKeyPassphrasePlaceholder: 'Enter SSH key passphrase',
-      backupOperations: 'Backup Operations',
-      syncToRemote: 'Sync to Remote',
+        syncOperations: 'Sync Operations',
+      syncToTarget: 'Sync to Target',
+      testingConnection: 'Testing...',
       syncing: 'Syncing...',
+      syncSuccess: 'Sync completed',
+      testConnectionSuccess: 'Connection test passed',
+      testConnectionSuccessWithBranch: 'Connection test passed, branch: {branch}',
+      lastSync: 'Last Sync',
+      lastSuccess: 'Last Success',
+      lastError: 'Last Error',
       actions: {
+        testConnection: 'Test Connection',
         sync: 'Sync',
       }
     },

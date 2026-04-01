@@ -183,6 +183,30 @@ func (f KeyBindingMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Muta
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.KeyBindingMutation", m)
 }
 
+// The MediaAssetQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type MediaAssetQueryRuleFunc func(context.Context, *ent.MediaAssetQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f MediaAssetQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.MediaAssetQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.MediaAssetQuery", q)
+}
+
+// The MediaAssetMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type MediaAssetMutationRuleFunc func(context.Context, *ent.MediaAssetMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f MediaAssetMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.MediaAssetMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.MediaAssetMutation", m)
+}
+
 // The ThemeQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ThemeQueryRuleFunc func(context.Context, *ent.ThemeQuery) error
@@ -248,6 +272,8 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.KeyBindingQuery:
 		return q.Filter(), nil
+	case *ent.MediaAssetQuery:
+		return q.Filter(), nil
 	case *ent.ThemeQuery:
 		return q.Filter(), nil
 	default:
@@ -262,6 +288,8 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.ExtensionMutation:
 		return m.Filter(), nil
 	case *ent.KeyBindingMutation:
+		return m.Filter(), nil
+	case *ent.MediaAssetMutation:
 		return m.Filter(), nil
 	case *ent.ThemeMutation:
 		return m.Filter(), nil

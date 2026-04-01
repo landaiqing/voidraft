@@ -46,10 +46,10 @@ function collectBlocksFromTree(tree: Tree, state: EditorState): Block[] | null {
                     if (child.type.id === BlockDelimiter) {
                         delimiter = { from: child.from, to: child.to };
                         const delimiterText = doc.sliceString(child.from, child.to);
-                        const match = delimiterText.match(/∞∞∞([a-zA-Z0-9_-]+)(-a)?\n/);
-                        if (match) {
-                            language = match[1] || DEFAULT_LANGUAGE;
-                            auto = match[2] === '-a';
+                        const delimiterInfo = parseDelimiter(delimiterText);
+                        if (delimiterInfo) {
+                            language = delimiterInfo.language;
+                            auto = delimiterInfo.auto;
                         } else {
                             child.node.firstChild?.cursor().iterate(langChild => {
                                 if (langChild.type.id === BlockLanguage) {

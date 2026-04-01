@@ -8,6 +8,7 @@ import { EditorView } from "@codemirror/view";
 import { Command } from "@codemirror/view";
 import { LANGUAGES } from "./lang-parser/languages";
 import { USER_EVENTS, codeBlockEvent, CONTENT_EDIT } from "./annotation";
+import * as runtime from "@wailsio/runtime";
 
 /**
  * 构建块分隔符正则表达式
@@ -62,29 +63,37 @@ function copiedRange(state: EditorState, forCut: boolean = false) {
  */
 export const codeBlockCopyCut = EditorView.domEventHandlers({
   copy(event, view) {
+    event.preventDefault();
+    
     let { text } = copiedRange(view.state);
-    // 将块分隔符替换为双换行符
     text = text.replaceAll(blockSeparatorRegex, "\n\n");
     
-    const data = event.clipboardData;
-    if (data) {
-      event.preventDefault();
-      data.clearData();
-      data.setData("text/plain", text);
-    }
+    // 优先使用 Wails 原生剪贴板 API
+    runtime.Clipboard.SetText(text).catch(() => {
+      // 降级方案：使用浏览器剪贴板
+      const data = event.clipboardData;
+      if (data) {
+        data.clearData();
+        data.setData("text/plain", text);
+      }
+    });
   },
   
   cut(event, view) {
+    event.preventDefault();
+    
     let { text, ranges } = copiedRange(view.state, true);
-    // 将块分隔符替换为双换行符
     text = text.replaceAll(blockSeparatorRegex, "\n\n");
     
-    const data = event.clipboardData;
-    if (data) {
-      event.preventDefault();
-      data.clearData();
-      data.setData("text/plain", text);
-    }
+    // 优先使用 Wails 原生剪贴板 API
+    runtime.Clipboard.SetText(text).catch(() => {
+      // 降级方案：使用浏览器剪贴板
+      const data = event.clipboardData;
+      if (data) {
+        data.clearData();
+        data.setData("text/plain", text);
+      }
+    });
     
     if (!view.state.readOnly) {
       view.dispatch({
@@ -94,20 +103,52 @@ export const codeBlockCopyCut = EditorView.domEventHandlers({
         annotations: [codeBlockEvent.of(CONTENT_EDIT)],
       });
     }
+  },
+  
+  paste(event, view) {
+    if (view.state.readOnly) {
+      return false;
+    }
+    
+    event.preventDefault();
+    
+    // 使用 Wails 原生剪贴板 API
+    runtime.Clipboard.Text()
+      .then(text => {
+        if (text) {
+          doPaste(view, text);
+        }
+      })
+      .catch(error => {
+        console.error('[Clipboard] Failed to read from system clipboard:', error);
+        
+        const data = event.clipboardData;
+        if (data) {
+          const text = data.getData("text/plain");
+          if (text) {
+            doPaste(view, text);
+          }
+        }
+      });
+    
+    return true;
   }
 });
 
 /**
- * 复制和剪切的通用函数
+ * 复制和剪切的通用函数 - 使用 Wails 原生剪贴板 API
  */
 const copyCut = (view: EditorView, cut: boolean): boolean => {
   let { text, ranges } = copiedRange(view.state, cut);
-  // 将块分隔符替换为双换行符
   text = text.replaceAll(blockSeparatorRegex, "\n\n");
 
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text);
-  }
+  runtime.Clipboard.SetText(text).catch(err => {
+    console.error('[Clipboard] Failed to write to system clipboard:', err);
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text);
+    }
+  });
 
   if (cut && !view.state.readOnly) {
     view.dispatch({
@@ -166,20 +207,32 @@ export const cutCommand: Command = (view) => {
 };
 
 /**
- * 粘贴命令
+ * 粘贴命令 - 使用 Wails 原生剪贴板 API
  */
 export const pasteCommand: Command = (view) => {
-  if (navigator.clipboard && navigator.clipboard.readText) {
-    navigator.clipboard.readText()
-      .then(text => {
+  // 使用 Wails 原生剪贴板 API，正确处理系统编码
+  runtime.Clipboard.Text()
+    .then(text => {
+      if (text) {
         doPaste(view, text);
-      })
-      .catch(err => {
-        console.error('Failed to read from clipboard:', err);
-      });
-  } else {
-    console.warn('The clipboard API is not available, please use your browser\'s native paste feature');
-  }
+      }
+    })
+    .catch(err => {
+      console.error('[Clipboard] Failed to read from system clipboard:', err);
+      
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText()
+          .then(text => {
+            if (text) {
+              doPaste(view, text);
+            }
+          })
+          .catch(fallbackErr => {
+            console.error('[Clipboard] Fallback also failed:', fallbackErr);
+          });
+      }
+    });
+  
   return true;
 };
 

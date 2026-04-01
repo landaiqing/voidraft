@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Create as $Create} from "@wailsio/runtime";
+import { Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -13,12 +13,56 @@ import * as http$0 from "../../../net/http/models.js";
 import * as time$0 from "../../../time/models.js";
 
 /**
+ * DocumentSaveResult describes the outcome of a document save request.
+ */
+export class DocumentSaveResult {
+    "document_id": number;
+    "updated_at": string;
+    "content_length": number;
+    "content_hash": string;
+    "saved_at": string;
+    "changed": boolean;
+
+    /** Creates a new DocumentSaveResult instance. */
+    constructor($$source: Partial<DocumentSaveResult> = {}) {
+        if (!("document_id" in $$source)) {
+            this["document_id"] = 0;
+        }
+        if (!("updated_at" in $$source)) {
+            this["updated_at"] = "";
+        }
+        if (!("content_length" in $$source)) {
+            this["content_length"] = 0;
+        }
+        if (!("content_hash" in $$source)) {
+            this["content_hash"] = "";
+        }
+        if (!("saved_at" in $$source)) {
+            this["saved_at"] = "";
+        }
+        if (!("changed" in $$source)) {
+            this["changed"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DocumentSaveResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DocumentSaveResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DocumentSaveResult($$parsedSource as Partial<DocumentSaveResult>);
+    }
+}
+
+/**
  * HttpRequest HTTP请求结构
  */
 export class HttpRequest {
     "method": string;
     "url": string;
-    "headers": { [_: string]: string };
+    "headers": { [_ in string]?: string };
 
     /**
      * json, formdata, urlencoded, text, params, xml, html, javascript, binary
@@ -92,7 +136,7 @@ export class HttpResponse {
             this["body"] = null;
         }
         if (!("headers" in $$source)) {
-            this["headers"] = ({} as http$0.Header);
+            this["headers"] = {};
         }
         if (!("timestamp" in $$source)) {
             this["timestamp"] = null;
@@ -111,6 +155,127 @@ export class HttpResponse {
             $$parsedSource["headers"] = $$createField4_0($$parsedSource["headers"]);
         }
         return new HttpResponse($$parsedSource as Partial<HttpResponse>);
+    }
+}
+
+/**
+ * ImageAsset describes one imported image asset.
+ */
+export class ImageAsset {
+    "id": string;
+    "filename": string;
+    "original_filename"?: string;
+    "relative_path": string;
+    "url": string;
+    "mime_type": string;
+    "size": number;
+    "width": number;
+    "height": number;
+    "sha256": string;
+    "created_at": string;
+    "updated_at": string;
+
+    /** Creates a new ImageAsset instance. */
+    constructor($$source: Partial<ImageAsset> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("filename" in $$source)) {
+            this["filename"] = "";
+        }
+        if (!("relative_path" in $$source)) {
+            this["relative_path"] = "";
+        }
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("mime_type" in $$source)) {
+            this["mime_type"] = "";
+        }
+        if (!("size" in $$source)) {
+            this["size"] = 0;
+        }
+        if (!("width" in $$source)) {
+            this["width"] = 0;
+        }
+        if (!("height" in $$source)) {
+            this["height"] = 0;
+        }
+        if (!("sha256" in $$source)) {
+            this["sha256"] = "";
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "";
+        }
+        if (!("updated_at" in $$source)) {
+            this["updated_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageAsset instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageAsset {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ImageAsset($$parsedSource as Partial<ImageAsset>);
+    }
+}
+
+/**
+ * ImageDeleteResult describes the outcome of a delete operation.
+ */
+export class ImageDeleteResult {
+    "relative_path": string;
+    "deleted": boolean;
+
+    /** Creates a new ImageDeleteResult instance. */
+    constructor($$source: Partial<ImageDeleteResult> = {}) {
+        if (!("relative_path" in $$source)) {
+            this["relative_path"] = "";
+        }
+        if (!("deleted" in $$source)) {
+            this["deleted"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageDeleteResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageDeleteResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ImageDeleteResult($$parsedSource as Partial<ImageDeleteResult>);
+    }
+}
+
+/**
+ * ImageImportRequest describes an image import payload.
+ */
+export class ImageImportRequest {
+    "filename"?: string;
+    "mime_type"?: string;
+    "data"?: string;
+    "data_base64"?: string;
+
+    /** Creates a new ImageImportRequest instance. */
+    constructor($$source: Partial<ImageImportRequest> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageImportRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageImportRequest {
+        const $$createField2_0 = $Create.ByteSlice;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("data" in $$parsedSource) {
+            $$parsedSource["data"] = $$createField2_0($$parsedSource["data"]);
+        }
+        return new ImageImportRequest($$parsedSource as Partial<ImageImportRequest>);
     }
 }
 
@@ -329,6 +494,71 @@ export class SelfUpdateResult {
 }
 
 /**
+ * SyncConnectionResult describes a connection test result.
+ */
+export class SyncConnectionResult {
+    "target_id": string;
+    "resolved_branch"?: string;
+
+    /** Creates a new SyncConnectionResult instance. */
+    constructor($$source: Partial<SyncConnectionResult> = {}) {
+        if (!("target_id" in $$source)) {
+            this["target_id"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncConnectionResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncConnectionResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncConnectionResult($$parsedSource as Partial<SyncConnectionResult>);
+    }
+}
+
+/**
+ * SyncStatus describes the latest manual sync state.
+ */
+export class SyncStatus {
+    "target_id"?: string;
+    "last_sync_at"?: string;
+    "last_success_at"?: string;
+    "last_error"?: string;
+    "local_changed": boolean;
+    "remote_changed": boolean;
+    "applied_to_local": boolean;
+    "published": boolean;
+
+    /** Creates a new SyncStatus instance. */
+    constructor($$source: Partial<SyncStatus> = {}) {
+        if (!("local_changed" in $$source)) {
+            this["local_changed"] = false;
+        }
+        if (!("remote_changed" in $$source)) {
+            this["remote_changed"] = false;
+        }
+        if (!("applied_to_local" in $$source)) {
+            this["applied_to_local"] = false;
+        }
+        if (!("published" in $$source)) {
+            this["published"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncStatus($$parsedSource as Partial<SyncStatus>);
+    }
+}
+
+/**
  * SystemInfo 系统信息
  */
 export class SystemInfo {
@@ -336,7 +566,7 @@ export class SystemInfo {
     "arch": string;
     "debug": boolean;
     "osInfo": OSInfo | null;
-    "platformInfo": { [_: string]: any };
+    "platformInfo": { [_ in string]?: any };
 
     /** Creates a new SystemInfo instance. */
     constructor($$source: Partial<SystemInfo> = {}) {
@@ -378,7 +608,7 @@ export class SystemInfo {
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-var $$createType1 = (function $$initCreateType1(...args): any {
+var $$createType1 = (function $$initCreateType1(...args: any[]): any {
     if ($$createType1 === $$initCreateType1) {
         $$createType1 = $$createType3;
     }

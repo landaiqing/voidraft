@@ -15,5 +15,8 @@ type Extension func(*sql.Selector)
 // KeyBinding is the predicate function for keybinding builders.
 type KeyBinding func(*sql.Selector)
 
+// MediaAsset is the predicate function for mediaasset builders.
+type MediaAsset func(*sql.Selector)
+
 // Theme is the predicate function for theme builders.
 type Theme func(*sql.Selector)

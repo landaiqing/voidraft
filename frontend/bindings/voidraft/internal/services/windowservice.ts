@@ -8,40 +8,18 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {Call as $Call, Create as $Create} from "@wailsio/runtime";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/application/models.js";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
  * IsDocumentWindowOpen 检查指定文档的窗口是否已打开
  */
-export function IsDocumentWindowOpen(documentID: number): Promise<boolean> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1735611839, documentID) as any;
-    return $resultPromise;
+export function IsDocumentWindowOpen(documentID: number): $CancellablePromise<boolean> {
+    return $Call.ByID(1735611839, documentID);
 }
 
 /**
  * OpenDocumentWindow 为指定文档ID打开新窗口
  */
-export function OpenDocumentWindow(documentID: number): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(494716471, documentID) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceShutdown 实现服务关闭接口
- */
-export function ServiceShutdown(): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(202192783) as any;
-    return $resultPromise;
-}
-
-/**
- * ServiceStartup 服务启动时初始化
- */
-export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2432987694, options) as any;
-    return $resultPromise;
+export function OpenDocumentWindow(documentID: number): $CancellablePromise<void> {
+    return $Call.ByID(494716471, documentID);
 }

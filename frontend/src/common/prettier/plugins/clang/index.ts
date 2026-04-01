@@ -23,7 +23,7 @@ const languages = [
     {
         name: 'C',
         aliases: ['c'],
-        parsers: ['c'],
+        parsers: [parserName],
         extensions: ['.c', '.h'],
         filenames: ['*.c', '*.h'],
         aceMode: 'c_cpp',
@@ -34,7 +34,7 @@ const languages = [
     {
         name: 'C++',
         aliases: ['cpp', 'cxx', 'cc'],
-        parsers: ['cpp'],
+        parsers: [parserName],
         extensions: ['.cpp', '.cxx', '.cc', '.hpp', '.hxx', '.hh', '.C', '.H'],
         filenames: ['*.cpp', '*.cxx', '*.cc', '*.hpp', '*.hxx', '*.hh', '*.C', '*.H'],
         aceMode: 'c_cpp',
@@ -45,7 +45,7 @@ const languages = [
     {
         name: 'Objective-C',
         aliases: ['objc', 'objectivec'],
-        parsers: ['objective-c'],
+        parsers: [parserName],
         extensions: ['.m'],
         filenames: ['*.m'],
         aceMode: 'objectivec',
@@ -56,7 +56,7 @@ const languages = [
     {
         name: 'Objective-C++',
         aliases: ['objcpp', 'objectivecpp'],
-        parsers: ['objective-cpp'],
+        parsers: [parserName],
         extensions: ['.mm'],
         filenames: ['*.mm'],
         aceMode: 'objectivec',
@@ -67,7 +67,7 @@ const languages = [
     {
         name: 'C#',
         aliases: ['csharp', 'cs'],
-        parsers: ['cs'],
+        parsers: [parserName],
         extensions: ['.cs'],
         filenames: ['*.cs'],
         aceMode: 'csharp',
@@ -78,7 +78,7 @@ const languages = [
     {
         name: 'Java',
         aliases: ['java'],
-        parsers: ['java'],
+        parsers: [parserName],
         extensions: ['.java'],
         filenames: ['*.java'],
         aceMode: 'java',
@@ -89,7 +89,7 @@ const languages = [
     {
         name: 'Protocol Buffer',
         aliases: ['protobuf', 'proto'],
-        parsers: ['proto'],
+        parsers: [parserName],
         extensions: ['.proto'],
         filenames: ['*.proto'],
         aceMode: 'protobuf',
@@ -158,17 +158,7 @@ const clangPrinter: Printer<string> = {
 
 // Helper function to determine clang-format style
 function getClangStyle(options: any): string {
-    // You can extend this to support more options
-    const style = options.clangStyle || 'LLVM';
-    
-    // Support common styles
-    const validStyles = ['LLVM', 'Google', 'Chromium', 'Mozilla', 'WebKit', 'Microsoft', 'GNU'];
-    if (validStyles.includes(style)) {
-        return style;
-    }
-    
-    // Default to LLVM style
-    return 'LLVM';
+    return options.clangStyle || 'LLVM';
 }
 
 // Plugin options

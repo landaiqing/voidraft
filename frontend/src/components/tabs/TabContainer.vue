@@ -69,8 +69,8 @@ const switchToTab = async (documentId: number) => {
   if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
     try {
       const content = editorStore.getCurrentContent();
-      await documentStore.saveDocument(oldDocId, content);
-      editorStore.syncAfterSave(oldDocId);
+      const saveResult = await documentStore.saveDocument(oldDocId, content);
+      editorStore.syncAfterSave(oldDocId, saveResult);
     } catch (error) {
       console.error('save document error:', error);
     }

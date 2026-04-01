@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	_ "embed"
+	"fmt"
 	"log/slog"
 	"time"
 	"voidraft/internal/common/constant"
@@ -42,6 +43,7 @@ func main() {
 		Name:        constant.VOIDRAFT_APP_NAME,
 		Description: constant.VOIDRAFT_APP_DESCRIPTION,
 		Services:    serviceManager.GetServices(),
+		Transport:   newBindingTransport(),
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),
 		},
@@ -87,7 +89,7 @@ func main() {
 			Theme: application.SystemDefault,
 		},
 		BackgroundColour: application.NewRGB(27, 38, 54),
-		URL:              "/",
+		URL:              fmt.Sprintf("/?windowName=%s", constant.VOIDRAFT_MAIN_WINDOW_NAME),
 	})
 	mainWindow.Center()
 	window = mainWindow
