@@ -2,8 +2,13 @@ import { Facet, Extension, EditorState } from '@codemirror/state';
 import { Command } from '@codemirror/view';
 import { blockState, getActiveNoteBlock } from '../codeblock/state';
 import { changeCurrentBlockAccess } from '../codeblock/commands';
+import { codeBlockEvent, LANGUAGE_CHANGE } from '../codeblock/annotation';
 
 const readonlyRangeFilter = EditorState.changeFilter.of(transaction => {
+  if (transaction.annotation(codeBlockEvent) === LANGUAGE_CHANGE) {
+    return true;
+  }
+
   const blocks = transaction.startState.field(blockState, false);
   if (!blocks?.length) {
     return true;
@@ -14,7 +19,7 @@ const readonlyRangeFilter = EditorState.changeFilter.of(transaction => {
     if (block.access !== 'read') {
       continue;
     }
-    protectedRanges.push(block.content.from, block.content.to);
+    protectedRanges.push(block.range.from, block.range.to);
   }
 
   return protectedRanges.length > 0 ? protectedRanges : true;
