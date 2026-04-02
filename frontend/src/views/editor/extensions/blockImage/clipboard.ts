@@ -10,13 +10,14 @@ export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-export async function writeImageToClipboard(blob: Blob): Promise<void> {
+export async function writeImageToClipboard(blob: Blob, mimeType = blob.type || 'image/png'): Promise<void> {
   const ClipboardItemCtor = globalThis.ClipboardItem;
   if (!ClipboardItemCtor || !navigator.clipboard?.write) {
     throw new Error('Clipboard image write is not supported in this environment');
   }
 
+  const resolvedType = mimeType.startsWith('image/') ? mimeType : 'image/png';
   await navigator.clipboard.write([
-    new ClipboardItemCtor({'image/png': blob}),
+    new ClipboardItemCtor({[resolvedType]: blob}),
   ]);
 }

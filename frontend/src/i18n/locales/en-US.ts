@@ -380,6 +380,11 @@ export default {
       description: 'Protect readonly code block ranges and allow toggling block access from the context menu',
       markReadonly: 'Set block readonly',
       markWritable: 'Set block writable'
+    },
+    imageBlock: {
+      dragSort: 'Drag to reorder',
+      copyImage: 'Copy image to clipboard',
+      deleteImage: 'Delete image'
     }
   },
   monitor: {

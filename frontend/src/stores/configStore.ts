@@ -169,6 +169,19 @@ export const useConfigStore = defineStore('config', () => {
         decreaseFontSizeLocal: () => {
             updateConfigLocal('fontSize', clampValue(state.config.editing.fontSize - 1, 'fontSize'));
         },
+        adjustFontSizeLocal: (delta: number): boolean => {
+            if (!Number.isFinite(delta) || delta === 0) {
+                return false;
+            }
+
+            const nextSize = clampValue(state.config.editing.fontSize + delta, 'fontSize');
+            if (nextSize === state.config.editing.fontSize) {
+                return false;
+            }
+
+            updateConfigLocal('fontSize', nextSize);
+            return true;
+        },
         saveFontSize: async () => {
             await saveConfig('fontSize');
         },

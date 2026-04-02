@@ -1,7 +1,6 @@
-import { EditorView } from '@codemirror/view';
-import { Extension, Compartment } from '@codemirror/state';
+import {Compartment, Extension} from '@codemirror/state';
+import {EditorView} from '@codemirror/view';
 
-// 字体配置接口
 export interface FontConfig {
   fontFamily: string;
   fontSize?: number;
@@ -9,10 +8,8 @@ export interface FontConfig {
   fontWeight?: string;
 }
 
-// 创建字体配置compartment
 export const fontCompartment = new Compartment();
 
-// 默认字体配置
 export const DEFAULT_FONT_CONFIG: FontConfig = {
   fontFamily: 'HarmonyOS',
   fontSize: 13,
@@ -20,7 +17,19 @@ export const DEFAULT_FONT_CONFIG: FontConfig = {
   fontWeight: '400'
 };
 
-// 从后端配置创建字体配置
+const appliedFontConfigCache = new WeakMap<EditorView, FontConfig>();
+
+function normalizeFontConfig(config: Partial<FontConfig>): FontConfig {
+  return {...DEFAULT_FONT_CONFIG, ...config};
+}
+
+function isSameFontConfig(previous: FontConfig | undefined, next: FontConfig): boolean {
+  return previous?.fontFamily === next.fontFamily
+    && previous?.fontSize === next.fontSize
+    && previous?.lineHeight === next.lineHeight
+    && previous?.fontWeight === next.fontWeight;
+}
+
 export function createFontConfigFromBackend(backendConfig: {
   fontFamily?: string;
   fontSize?: number;
@@ -35,22 +44,21 @@ export function createFontConfigFromBackend(backendConfig: {
   };
 }
 
-// 创建字体样式扩展
 export function createFontExtension(config: Partial<FontConfig> = {}): Extension {
-  const fontConfig = { ...DEFAULT_FONT_CONFIG, ...config };
-  
+  const fontConfig = normalizeFontConfig(config);
+
   const styles: Record<string, any> = {
     '&': {
       fontFamily: fontConfig.fontFamily,
-      ...(fontConfig.fontSize && { fontSize: `${fontConfig.fontSize}px` }),
-      ...(fontConfig.lineHeight && { lineHeight: fontConfig.lineHeight.toString() }),
-      ...(fontConfig.fontWeight && { fontWeight: fontConfig.fontWeight }),
+      ...(fontConfig.fontSize && {fontSize: `${fontConfig.fontSize}px`}),
+      ...(fontConfig.lineHeight && {lineHeight: fontConfig.lineHeight.toString()}),
+      ...(fontConfig.fontWeight && {fontWeight: fontConfig.fontWeight}),
     },
     '.cm-content': {
       fontFamily: fontConfig.fontFamily,
-      ...(fontConfig.fontSize && { fontSize: `${fontConfig.fontSize}px` }),
-      ...(fontConfig.lineHeight && { lineHeight: fontConfig.lineHeight.toString() }),
-      ...(fontConfig.fontWeight && { fontWeight: fontConfig.fontWeight }),
+      ...(fontConfig.fontSize && {fontSize: `${fontConfig.fontSize}px`}),
+      ...(fontConfig.lineHeight && {lineHeight: fontConfig.lineHeight.toString()}),
+      ...(fontConfig.fontWeight && {fontWeight: fontConfig.fontWeight}),
     },
     '.cm-editor': {
       fontFamily: fontConfig.fontFamily,
@@ -60,15 +68,15 @@ export function createFontExtension(config: Partial<FontConfig> = {}): Extension
     },
     '.cm-gutters': {
       fontFamily: fontConfig.fontFamily,
-      ...(fontConfig.fontSize && { fontSize: `${fontConfig.fontSize}px` }),
+      ...(fontConfig.fontSize && {fontSize: `${fontConfig.fontSize}px`}),
     },
     '.cm-lineNumbers': {
       fontFamily: fontConfig.fontFamily,
-      ...(fontConfig.fontSize && { fontSize: `${Math.max(10, fontConfig.fontSize - 1)}px` }),
+      ...(fontConfig.fontSize && {fontSize: `${Math.max(10, fontConfig.fontSize - 1)}px`}),
     },
     '.cm-tooltip': {
       fontFamily: fontConfig.fontFamily,
-      ...(fontConfig.fontSize && { fontSize: `${Math.max(12, fontConfig.fontSize - 1)}px` }),
+      ...(fontConfig.fontSize && {fontSize: `${Math.max(12, fontConfig.fontSize - 1)}px`}),
     },
     '.cm-completionLabel': {
       fontFamily: fontConfig.fontFamily,
@@ -77,11 +85,10 @@ export function createFontExtension(config: Partial<FontConfig> = {}): Extension
       fontFamily: fontConfig.fontFamily,
     }
   };
-  
+
   return EditorView.theme(styles);
 }
 
-// 从后端配置创建字体扩展
 export function createFontExtensionFromBackend(backendConfig: {
   fontFamily?: string;
   fontSize?: number;
@@ -92,12 +99,14 @@ export function createFontExtensionFromBackend(backendConfig: {
   return fontCompartment.of(createFontExtension(fontConfig));
 }
 
-// 动态更新字体配置
 export function updateFontConfig(view: EditorView, config: Partial<FontConfig>): void {
-  const newFontExtension = createFontExtension(config);
-  
-  // 使用compartment重新配置字体扩展
+  const nextFontConfig = normalizeFontConfig(config);
+  if (isSameFontConfig(appliedFontConfigCache.get(view), nextFontConfig)) {
+    return;
+  }
+
+  appliedFontConfigCache.set(view, nextFontConfig);
   view.dispatch({
-    effects: fontCompartment.reconfigure(newFontExtension)
+    effects: fontCompartment.reconfigure(createFontExtension(nextFontConfig))
   });
-} 
+}

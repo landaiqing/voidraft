@@ -1,25 +1,22 @@
-import {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
+import {EditorView} from '@codemirror/view';
 import {createDebounce} from '@/common/utils/debounce';
 
 type FontAdjuster = () => void;
+type FontDeltaAdjuster = (delta: number) => void;
 type SaveCallback = () => Promise<void> | void;
 
 export interface WheelZoomOptions {
-  /** 增加字体大小的回调（立即执行） */
-  increaseFontSize: FontAdjuster;
-  /** 减少字体大小的回调（立即执行） */
-  decreaseFontSize: FontAdjuster;
-  /** 保存回调（防抖执行），在滚动结束后调用 */
+  increaseFontSize?: FontAdjuster;
+  decreaseFontSize?: FontAdjuster;
+  adjustFontSize?: FontDeltaAdjuster;
   onSave?: SaveCallback;
-  /** 保存防抖延迟（毫秒），默认 300ms */
   saveDelay?: number;
 }
 
 export const createWheelZoomExtension = (options: WheelZoomOptions): Extension => {
-  const {increaseFontSize, decreaseFontSize, onSave, saveDelay = 300} = options;
+  const {increaseFontSize, decreaseFontSize, adjustFontSize, onSave, saveDelay = 300} = options;
 
-  // 如果有 onSave 回调，创建防抖版本
   const {debouncedFn: debouncedSave} = onSave
     ? createDebounce(() => {
         try {
@@ -35,6 +32,34 @@ export const createWheelZoomExtension = (options: WheelZoomOptions): Extension =
       }, {delay: saveDelay})
     : {debouncedFn: null};
 
+  let pendingDelta = 0;
+  let frameId: number | null = null;
+
+  const flushPendingDelta = () => {
+    frameId = null;
+
+    if (pendingDelta === 0) {
+      return;
+    }
+
+    const delta = pendingDelta;
+    pendingDelta = 0;
+
+    if (adjustFontSize) {
+      adjustFontSize(delta);
+      return;
+    }
+
+    const applyStep = delta > 0 ? increaseFontSize : decreaseFontSize;
+    if (!applyStep) {
+      return;
+    }
+
+    for (let index = 0; index < Math.abs(delta); index++) {
+      applyStep();
+    }
+  };
+
   return EditorView.domEventHandlers({
     wheel(event) {
       if (!event.ctrlKey) {
@@ -43,14 +68,16 @@ export const createWheelZoomExtension = (options: WheelZoomOptions): Extension =
 
       event.preventDefault();
 
-      // 立即更新字体大小
       if (event.deltaY < 0) {
-        increaseFontSize();
+        pendingDelta += 1;
       } else if (event.deltaY > 0) {
-        decreaseFontSize();
+        pendingDelta -= 1;
       }
 
-      // 防抖保存
+      if (pendingDelta !== 0 && frameId === null) {
+        frameId = requestAnimationFrame(flushPendingDelta);
+      }
+
       if (debouncedSave) {
         debouncedSave();
       }

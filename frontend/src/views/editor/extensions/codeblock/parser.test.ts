@@ -36,4 +36,12 @@ describe('codeblock delimiter access', () => {
     expect(blocks[1]?.access).toBe('write');
     expect(blocks[1]?.language).toEqual({ name: 'json', auto: true });
   });
+
+  it('accepts image as a valid block language', () => {
+    expect(parseDelimiter(createDelimiter('image', false, 'write'))).toEqual({
+      language: 'image',
+      auto: false,
+      access: 'write',
+    });
+  });
 });

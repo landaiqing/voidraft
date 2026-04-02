@@ -93,12 +93,11 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 滚轮缩放扩展
         const wheelZoomExtension = createWheelZoomExtension({
-            increaseFontSize: () => {
-                configStore.increaseFontSizeLocal();
-                applyFontSettings();
-            },
-            decreaseFontSize: () => {
-                configStore.decreaseFontSizeLocal();
+            adjustFontSize: (delta) => {
+                const changed = configStore.adjustFontSizeLocal(delta);
+                if (!changed) {
+                    return;
+                }
                 applyFontSettings();
             },
             onSave: () => configStore.saveFontSize(),
@@ -177,6 +176,17 @@ export const useEditorStore = defineStore('editor', () => {
         };
     };
 
+    const getFontConfigSnapshot = () => ({
+        fontFamily: configStore.config.editing.fontFamily,
+        fontSize: configStore.config.editing.fontSize,
+        lineHeight: configStore.config.editing.lineHeight,
+        fontWeight: configStore.config.editing.fontWeight
+    });
+
+    const applyFontSettingsToView = (view: EditorView) => {
+        updateFontConfig(view, getFontConfigSnapshot());
+    };
+
     // 更新编辑器内容
     const updateEditorContent = (instance: EditorInstance, doc: Document) => {
         const currentContent = instance.view.state.doc.toString();
@@ -222,6 +232,7 @@ export const useEditorStore = defineStore('editor', () => {
         if (!containerElement.value) return;
 
         try {
+            applyFontSettingsToView(instance.view);
             // 移除当前编辑器 DOM
             const currentEditor = editorCache.get(currentEditorId.value || 0);
             if (currentEditor && currentEditor.view.dom && currentEditor.view.dom.parentElement) {
@@ -444,12 +455,10 @@ export const useEditorStore = defineStore('editor', () => {
     // 应用字体设置
     const applyFontSettings = () => {
         editorCache.values().forEach(instance => {
-            updateFontConfig(instance.view, {
-                fontFamily: configStore.config.editing.fontFamily,
-                fontSize: configStore.config.editing.fontSize,
-                lineHeight: configStore.config.editing.lineHeight,
-                fontWeight: configStore.config.editing.fontWeight
-            });
+            if (!instance.view.dom.isConnected) {
+                return;
+            }
+            applyFontSettingsToView(instance.view);
         });
     };
 

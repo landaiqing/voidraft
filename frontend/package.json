@@ -11,6 +11,7 @@
     "lint": "eslint",
     "lint:fix": "eslint --fix",
     "build:lang-parser": "node src/views/editor/extensions/codeblock/lang-parser/build-parser.js",
+    "build:image-parser": "node src/views/editor/extensions/imageblock/language/build-parser.js",
     "build:mermaid-parser": "node src/views/editor/language/mermaid/build-parsers.js",
     "test": "vitest",
     "docs:dev": "vitepress dev docs",

@@ -26,6 +26,7 @@ import {createLanguageDetection} from './lang-detect';
 import {SupportedLanguage} from './types';
 import {getMathBlockExtensions} from './mathBlock';
 import {createCursorProtection} from './cursorProtection';
+import {getImageBlockExtensions} from '../imageblock';
 
 /**
  * 代码块扩展配置选项
@@ -118,6 +119,9 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 
         // 复制粘贴功能
         ...getCopyPasteExtensions(),
+
+        // image 块可视化渲染
+        ...getImageBlockExtensions(),
 
         // 数学块功能
         ...getMathBlockExtensions(),

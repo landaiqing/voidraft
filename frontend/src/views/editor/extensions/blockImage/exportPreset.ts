@@ -18,6 +18,7 @@ import {colorTheme, colorView} from '../colorSelector';
 import {getCodeBlockLanguageExtension} from '../codeblock/lang-parser';
 import {getMathBlockExtensions} from '../codeblock/mathBlock';
 import type {Block, BlockAccess} from '../codeblock/types';
+import {getImageBlockExtensions} from '../imageblock';
 import {hyperLink} from '../hyperlink';
 import {headingSlugField} from '../markdown/state/heading-slug';
 import {render} from '../markdown/plugins/render';
@@ -240,6 +241,7 @@ export async function createBlockImageExportPreset(block: Block, sourceIndex: nu
       blockState,
       ...getCodeBlockLanguageExtension(),
       delimiterPresentationField,
+      ...getImageBlockExtensions(),
       ...getMathBlockExtensions(),
       createExportChromeTheme(),
       ...optionalContributions.map(({extension}) => extension),

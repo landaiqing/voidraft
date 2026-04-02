@@ -1,5 +1,5 @@
 import type {MenuSchemaNode} from '../contextMenu/menuSchema';
-import {getActiveNoteBlock} from '../codeblock/state';
+import {getMenuBlock, runCommandInMenuBlock} from '../contextMenu/blockContext';
 import {blockImageEnabledFacet, copyBlockImageCommand} from './index';
 
 
@@ -7,13 +7,13 @@ export const blockImageMenuNodes: MenuSchemaNode[] = [
   {
     id: 'copy-block-image',
     labelKey: 'extensions.blockImage.copyMenu',
-    command: copyBlockImageCommand,
+    command: runCommandInMenuBlock(copyBlockImageCommand),
     visible: context =>
       context.view.state.facet(blockImageEnabledFacet) &&
-      Boolean(getActiveNoteBlock(context.view.state)),
+      Boolean(getMenuBlock(context)),
     enabled: context =>
       context.view.state.facet(blockImageEnabledFacet) &&
-      Boolean(getActiveNoteBlock(context.view.state)),
+      Boolean(getMenuBlock(context)),
   },
 ];
 

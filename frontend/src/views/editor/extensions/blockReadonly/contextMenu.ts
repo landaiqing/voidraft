@@ -1,5 +1,5 @@
 import type { MenuContext, MenuSchemaNode } from '../contextMenu/menuSchema';
-import { getActiveNoteBlock } from '../codeblock/state';
+import {getMenuBlock as getTargetMenuBlock, runCommandInMenuBlock} from '../contextMenu/blockContext';
 import {
   blockReadonlyEnabledFacet,
   setActiveBlockReadOnlyCommand,
@@ -7,7 +7,7 @@ import {
 } from './index';
 
 function getMenuBlock(context: MenuContext) {
-  return getActiveNoteBlock(context.view.state);
+  return getTargetMenuBlock(context);
 }
 
 function isReadonlyExtensionEnabled(context: MenuContext) {
@@ -18,7 +18,7 @@ export const blockReadonlyMenuNodes: MenuSchemaNode[] = [
   {
     id: 'set-block-readonly',
     labelKey: 'extensions.blockReadonly.markReadonly',
-    command: setActiveBlockReadOnlyCommand,
+    command: runCommandInMenuBlock(setActiveBlockReadOnlyCommand),
     visible: context =>
       isReadonlyExtensionEnabled(context) &&
       Boolean(getMenuBlock(context)?.delimiter.to),
@@ -30,7 +30,7 @@ export const blockReadonlyMenuNodes: MenuSchemaNode[] = [
   {
     id: 'set-block-writable',
     labelKey: 'extensions.blockReadonly.markWritable',
-    command: setActiveBlockWritableCommand,
+    command: runCommandInMenuBlock(setActiveBlockWritableCommand),
     visible: context =>
       isReadonlyExtensionEnabled(context) &&
       Boolean(getMenuBlock(context)?.delimiter.to),
