@@ -383,11 +383,6 @@ export default {
             markReadonly: '设为只读块',
             markWritable: '设为可写块'
         },
-        imageBlock: {
-            dragSort: '拖拽排序',
-            copyImage: '复制图片到剪切板',
-            deleteImage: '删除图片'
-        },
     },
     monitor: {
         memory: '内存',

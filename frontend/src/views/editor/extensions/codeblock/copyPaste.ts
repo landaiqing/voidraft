@@ -8,7 +8,6 @@ import {Command, EditorView} from "@codemirror/view";
 import {LANGUAGES} from "./lang-parser/languages";
 import {codeBlockEvent, CONTENT_EDIT, USER_EVENTS} from "./annotation";
 import * as runtime from "@wailsio/runtime";
-import {handleImagePasteEvent, pasteImagesFromClipboard} from "../imageblock/clipboard";
 
 /**
  * 构建块分隔符正则表达式
@@ -107,10 +106,6 @@ export const codeBlockCopyCut = EditorView.domEventHandlers({
     paste(event, view) {
         if (view.state.readOnly) {
             return false;
-        }
-
-        if (handleImagePasteEvent(view, event as ClipboardEvent)) {
-            return true;
         }
 
         event.preventDefault();
@@ -229,10 +224,6 @@ export const cutCommand: Command = view => copyCut(view, true);
  */
 export const pasteCommand: Command = (view) => {
     void (async () => {
-        if (await pasteImagesFromClipboard(view)) {
-            return;
-        }
-
         await pasteText(view);
     })();
 

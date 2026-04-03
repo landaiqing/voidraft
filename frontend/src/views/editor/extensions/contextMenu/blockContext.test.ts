@@ -3,7 +3,7 @@ import {describe, expect, it, vi} from 'vitest';
 vi.mock('../codeblock/lang-parser/languages', () => ({
   LANGUAGES: [
     {token: 'text'},
-    {token: 'image'},
+    {token: 'http'},
   ],
 }));
 
@@ -19,8 +19,8 @@ describe('runCommandInMenuBlock', () => {
       doc: [
         createDelimiter('text', false, 'write'),
         'first block\n',
-        createDelimiter('image', false, 'write'),
-        'img(ref="sha256-1", src="/media/a.png")',
+        createDelimiter('http', false, 'write'),
+        'GET https://example.com',
       ].join(''),
       selection: {anchor: 1},
       extensions: [blockState],
@@ -28,7 +28,7 @@ describe('runCommandInMenuBlock', () => {
 
     const blocks = state.field(blockState);
     const targetBlock = blocks[1];
-    const command = vi.fn(view => getActiveNoteBlock(view.state)?.language.name === 'image');
+    const command = vi.fn(view => getActiveNoteBlock(view.state)?.language.name === 'http');
     const wrapped = runCommandInMenuBlock(command);
 
     const view = {
@@ -52,7 +52,7 @@ describe('runCommandInMenuBlock', () => {
 
     expect(wrapped(view as never, context)).toBe(true);
     expect(command).toHaveBeenCalledOnce();
-    expect(getActiveNoteBlock(state)?.language.name).toBe('image');
+    expect(getActiveNoteBlock(state)?.language.name).toBe('http');
     expect(state.selection.main.head).toBe(targetBlock.content.from);
   });
 });

@@ -81,8 +81,7 @@ export type SupportedLanguage =
     | 'angular'
     | 'svelte'
     | 'http'
-    | 'mermaid'
-    | 'image';
+    | 'mermaid';
 
 /**
  * 创建块的选项

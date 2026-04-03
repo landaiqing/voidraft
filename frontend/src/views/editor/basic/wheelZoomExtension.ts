@@ -1,5 +1,5 @@
 import type {Extension} from '@codemirror/state';
-import {EditorView} from '@codemirror/view';
+import {EditorView, ViewPlugin} from '@codemirror/view';
 import {createDebounce} from '@/common/utils/debounce';
 
 type FontAdjuster = () => void;
@@ -32,57 +32,72 @@ export const createWheelZoomExtension = (options: WheelZoomOptions): Extension =
       }, {delay: saveDelay})
     : {debouncedFn: null};
 
-  let pendingDelta = 0;
-  let frameId: number | null = null;
-
-  const flushPendingDelta = () => {
-    frameId = null;
-
-    if (pendingDelta === 0) {
-      return;
-    }
-
-    const delta = pendingDelta;
-    pendingDelta = 0;
-
-    if (adjustFontSize) {
-      adjustFontSize(delta);
-      return;
-    }
-
-    const applyStep = delta > 0 ? increaseFontSize : decreaseFontSize;
-    if (!applyStep) {
-      return;
-    }
-
-    for (let index = 0; index < Math.abs(delta); index++) {
-      applyStep();
-    }
-  };
-
-  return EditorView.domEventHandlers({
-    wheel(event) {
+  return ViewPlugin.fromClass(class {
+    private pendingDelta = 0;
+    private frameId: number | null = null;
+    private readonly domWindow: Window;
+    private readonly onWheel = (event: WheelEvent) => {
       if (!event.ctrlKey) {
-        return false;
+        return;
       }
 
       event.preventDefault();
+      event.stopPropagation();
 
       if (event.deltaY < 0) {
-        pendingDelta += 1;
+        this.pendingDelta += 1;
       } else if (event.deltaY > 0) {
-        pendingDelta -= 1;
+        this.pendingDelta -= 1;
       }
 
-      if (pendingDelta !== 0 && frameId === null) {
-        frameId = requestAnimationFrame(flushPendingDelta);
+      if (this.pendingDelta !== 0 && this.frameId === null) {
+        this.frameId = this.domWindow.requestAnimationFrame(this.flushPendingDelta);
       }
 
       if (debouncedSave) {
         debouncedSave();
       }
+    };
 
-      return true;
+    constructor(private readonly view: EditorView) {
+      this.domWindow = this.view.dom.ownerDocument.defaultView ?? window;
+      this.view.dom.addEventListener('wheel', this.onWheel, {
+        capture: true,
+        passive: false,
+      });
     }
+
+    destroy() {
+      this.view.dom.removeEventListener('wheel', this.onWheel, true);
+
+      if (this.frameId !== null) {
+        this.domWindow.cancelAnimationFrame(this.frameId);
+      }
+    }
+
+    private readonly flushPendingDelta = () => {
+      this.frameId = null;
+
+      if (this.pendingDelta === 0) {
+        return;
+      }
+
+      const delta = this.pendingDelta;
+      this.pendingDelta = 0;
+
+      if (adjustFontSize) {
+        adjustFontSize(delta);
+        return;
+      }
+
+      const applyStep = delta > 0 ? increaseFontSize : decreaseFontSize;
+      if (!applyStep) {
+        return;
+      }
+
+      for (let index = 0; index < Math.abs(delta); index++) {
+        applyStep();
+      }
+    };
   });
 };
