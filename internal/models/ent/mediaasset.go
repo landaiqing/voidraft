@@ -20,16 +20,14 @@ type MediaAsset struct {
 	CreatedAt string `json:"created_at"`
 	// update time
 	UpdatedAt string `json:"updated_at"`
-	// deleted at
-	DeletedAt *string `json:"deleted_at,omitempty"`
 	// UUID for cross-device sync (UUIDv7)
 	UUID string `json:"uuid"`
 	// stable media asset id derived from content sha256
 	AssetID string `json:"asset_id"`
-	// original imported filename
-	OriginalFilename *string `json:"original_filename,omitempty"`
+	// imported filename
+	Filename *string `json:"filename,omitempty"`
 	// media path relative to media root
-	RelativePath string `json:"relative_path"`
+	Path string `json:"path"`
 	// image mime type
 	MimeType string `json:"mime_type"`
 	// image byte size
@@ -48,7 +46,7 @@ func (*MediaAsset) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case mediaasset.FieldID, mediaasset.FieldSize, mediaasset.FieldWidth, mediaasset.FieldHeight:
 			values[i] = new(sql.NullInt64)
-		case mediaasset.FieldCreatedAt, mediaasset.FieldUpdatedAt, mediaasset.FieldDeletedAt, mediaasset.FieldUUID, mediaasset.FieldAssetID, mediaasset.FieldOriginalFilename, mediaasset.FieldRelativePath, mediaasset.FieldMimeType:
+		case mediaasset.FieldCreatedAt, mediaasset.FieldUpdatedAt, mediaasset.FieldUUID, mediaasset.FieldAssetID, mediaasset.FieldFilename, mediaasset.FieldPath, mediaasset.FieldMimeType:
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -83,13 +81,6 @@ func (_m *MediaAsset) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.UpdatedAt = value.String
 			}
-		case mediaasset.FieldDeletedAt:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
-			} else if value.Valid {
-				_m.DeletedAt = new(string)
-				*_m.DeletedAt = value.String
-			}
 		case mediaasset.FieldUUID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field uuid", values[i])
@@ -102,18 +93,18 @@ func (_m *MediaAsset) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.AssetID = value.String
 			}
-		case mediaasset.FieldOriginalFilename:
+		case mediaasset.FieldFilename:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field original_filename", values[i])
+				return fmt.Errorf("unexpected type %T for field filename", values[i])
 			} else if value.Valid {
-				_m.OriginalFilename = new(string)
-				*_m.OriginalFilename = value.String
+				_m.Filename = new(string)
+				*_m.Filename = value.String
 			}
-		case mediaasset.FieldRelativePath:
+		case mediaasset.FieldPath:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field relative_path", values[i])
+				return fmt.Errorf("unexpected type %T for field path", values[i])
 			} else if value.Valid {
-				_m.RelativePath = value.String
+				_m.Path = value.String
 			}
 		case mediaasset.FieldMimeType:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -181,24 +172,19 @@ func (_m *MediaAsset) String() string {
 	builder.WriteString("updated_at=")
 	builder.WriteString(_m.UpdatedAt)
 	builder.WriteString(", ")
-	if v := _m.DeletedAt; v != nil {
-		builder.WriteString("deleted_at=")
-		builder.WriteString(*v)
-	}
-	builder.WriteString(", ")
 	builder.WriteString("uuid=")
 	builder.WriteString(_m.UUID)
 	builder.WriteString(", ")
 	builder.WriteString("asset_id=")
 	builder.WriteString(_m.AssetID)
 	builder.WriteString(", ")
-	if v := _m.OriginalFilename; v != nil {
-		builder.WriteString("original_filename=")
+	if v := _m.Filename; v != nil {
+		builder.WriteString("filename=")
 		builder.WriteString(*v)
 	}
 	builder.WriteString(", ")
-	builder.WriteString("relative_path=")
-	builder.WriteString(_m.RelativePath)
+	builder.WriteString("path=")
+	builder.WriteString(_m.Path)
 	builder.WriteString(", ")
 	builder.WriteString("mime_type=")
 	builder.WriteString(_m.MimeType)

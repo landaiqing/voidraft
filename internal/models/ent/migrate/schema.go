@@ -153,11 +153,10 @@ var (
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "created_at", Type: field.TypeString},
 		{Name: "updated_at", Type: field.TypeString},
-		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
 		{Name: "uuid", Type: field.TypeString, Unique: true},
 		{Name: "asset_id", Type: field.TypeString, Unique: true, Size: 64},
-		{Name: "original_filename", Type: field.TypeString, Nullable: true, Size: 255},
-		{Name: "relative_path", Type: field.TypeString, Unique: true, Size: 1024},
+		{Name: "filename", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "path", Type: field.TypeString, Unique: true, Size: 1024},
 		{Name: "mime_type", Type: field.TypeString, Size: 128},
 		{Name: "size", Type: field.TypeInt64},
 		{Name: "width", Type: field.TypeInt},
@@ -170,24 +169,19 @@ var (
 		PrimaryKey: []*schema.Column{MediaAssetsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "mediaasset_deleted_at",
+				Name:    "mediaasset_uuid",
 				Unique:  false,
 				Columns: []*schema.Column{MediaAssetsColumns[3]},
 			},
 			{
-				Name:    "mediaasset_uuid",
+				Name:    "mediaasset_asset_id",
 				Unique:  false,
 				Columns: []*schema.Column{MediaAssetsColumns[4]},
 			},
 			{
-				Name:    "mediaasset_asset_id",
+				Name:    "mediaasset_path",
 				Unique:  false,
-				Columns: []*schema.Column{MediaAssetsColumns[5]},
-			},
-			{
-				Name:    "mediaasset_relative_path",
-				Unique:  false,
-				Columns: []*schema.Column{MediaAssetsColumns[7]},
+				Columns: []*schema.Column{MediaAssetsColumns[6]},
 			},
 			{
 				Name:    "mediaasset_created_at",
@@ -198,11 +192,6 @@ var (
 				Name:    "mediaasset_updated_at",
 				Unique:  false,
 				Columns: []*schema.Column{MediaAssetsColumns[2]},
-			},
-			{
-				Name:    "mediaasset_deleted_at_created_at_asset_id",
-				Unique:  false,
-				Columns: []*schema.Column{MediaAssetsColumns[3], MediaAssetsColumns[1], MediaAssetsColumns[5]},
 			},
 		},
 	}

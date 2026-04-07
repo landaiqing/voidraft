@@ -16,16 +16,14 @@ const (
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// FieldDeletedAt holds the string denoting the deleted_at field in the database.
-	FieldDeletedAt = "deleted_at"
 	// FieldUUID holds the string denoting the uuid field in the database.
 	FieldUUID = "uuid"
 	// FieldAssetID holds the string denoting the asset_id field in the database.
 	FieldAssetID = "asset_id"
-	// FieldOriginalFilename holds the string denoting the original_filename field in the database.
-	FieldOriginalFilename = "original_filename"
-	// FieldRelativePath holds the string denoting the relative_path field in the database.
-	FieldRelativePath = "relative_path"
+	// FieldFilename holds the string denoting the filename field in the database.
+	FieldFilename = "filename"
+	// FieldPath holds the string denoting the path field in the database.
+	FieldPath = "path"
 	// FieldMimeType holds the string denoting the mime_type field in the database.
 	FieldMimeType = "mime_type"
 	// FieldSize holds the string denoting the size field in the database.
@@ -43,11 +41,10 @@ var Columns = []string{
 	FieldID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-	FieldDeletedAt,
 	FieldUUID,
 	FieldAssetID,
-	FieldOriginalFilename,
-	FieldRelativePath,
+	FieldFilename,
+	FieldPath,
 	FieldMimeType,
 	FieldSize,
 	FieldWidth,
@@ -70,8 +67,7 @@ func ValidColumn(column string) bool {
 //
 //	import _ "voidraft/internal/models/ent/runtime"
 var (
-	Hooks        [2]ent.Hook
-	Interceptors [1]ent.Interceptor
+	Hooks [1]ent.Hook
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() string
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -80,10 +76,10 @@ var (
 	DefaultUUID func() string
 	// AssetIDValidator is a validator for the "asset_id" field. It is called by the builders before save.
 	AssetIDValidator func(string) error
-	// OriginalFilenameValidator is a validator for the "original_filename" field. It is called by the builders before save.
-	OriginalFilenameValidator func(string) error
-	// RelativePathValidator is a validator for the "relative_path" field. It is called by the builders before save.
-	RelativePathValidator func(string) error
+	// FilenameValidator is a validator for the "filename" field. It is called by the builders before save.
+	FilenameValidator func(string) error
+	// PathValidator is a validator for the "path" field. It is called by the builders before save.
+	PathValidator func(string) error
 	// MimeTypeValidator is a validator for the "mime_type" field. It is called by the builders before save.
 	MimeTypeValidator func(string) error
 	// SizeValidator is a validator for the "size" field. It is called by the builders before save.
@@ -112,11 +108,6 @@ func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
 }
 
-// ByDeletedAt orders the results by the deleted_at field.
-func ByDeletedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDeletedAt, opts...).ToFunc()
-}
-
 // ByUUID orders the results by the uuid field.
 func ByUUID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUUID, opts...).ToFunc()
@@ -127,14 +118,14 @@ func ByAssetID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAssetID, opts...).ToFunc()
 }
 
-// ByOriginalFilename orders the results by the original_filename field.
-func ByOriginalFilename(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOriginalFilename, opts...).ToFunc()
+// ByFilename orders the results by the filename field.
+func ByFilename(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFilename, opts...).ToFunc()
 }
 
-// ByRelativePath orders the results by the relative_path field.
-func ByRelativePath(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldRelativePath, opts...).ToFunc()
+// ByPath orders the results by the path field.
+func ByPath(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPath, opts...).ToFunc()
 }
 
 // ByMimeType orders the results by the mime_type field.

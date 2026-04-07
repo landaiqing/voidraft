@@ -26,7 +26,6 @@ func (MediaAsset) Annotations() []schema.Annotation {
 func (MediaAsset) Mixin() []ent.Mixin {
 	return []ent.Mixin{
 		mixin.TimeMixin{},
-		mixin.SoftDeleteMixin{},
 		mixin.UUIDMixin{},
 	}
 }
@@ -41,17 +40,17 @@ func (MediaAsset) Fields() []ent.Field {
 			Immutable().
 			StructTag(`json:"asset_id"`).
 			Comment("stable media asset id derived from content sha256"),
-		field.String("original_filename").
+		field.String("filename").
 			MaxLen(255).
 			Optional().
 			Nillable().
-			StructTag(`json:"original_filename,omitempty"`).
-			Comment("original imported filename"),
-		field.String("relative_path").
+			StructTag(`json:"filename,omitempty"`).
+			Comment("imported filename"),
+		field.String("path").
 			MaxLen(1024).
 			NotEmpty().
 			Unique().
-			StructTag(`json:"relative_path"`).
+			StructTag(`json:"path"`).
 			Comment("media path relative to media root"),
 		field.String("mime_type").
 			MaxLen(128).
@@ -82,9 +81,8 @@ func (MediaAsset) Edges() []ent.Edge {
 func (MediaAsset) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("asset_id"),
-		index.Fields("relative_path"),
+		index.Fields("path"),
 		index.Fields("created_at"),
 		index.Fields("updated_at"),
-		index.Fields("deleted_at", "created_at", "asset_id"),
 	}
 }

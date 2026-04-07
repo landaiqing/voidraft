@@ -163,9 +163,8 @@ export class HttpResponse {
  */
 export class ImageAsset {
     "id": string;
-    "filename": string;
-    "original_filename"?: string;
-    "relative_path": string;
+    "filename"?: string;
+    "path": string;
     "url": string;
     "mime_type": string;
     "size": number;
@@ -180,11 +179,8 @@ export class ImageAsset {
         if (!("id" in $$source)) {
             this["id"] = "";
         }
-        if (!("filename" in $$source)) {
-            this["filename"] = "";
-        }
-        if (!("relative_path" in $$source)) {
-            this["relative_path"] = "";
+        if (!("path" in $$source)) {
+            this["path"] = "";
         }
         if (!("url" in $$source)) {
             this["url"] = "";
@@ -227,13 +223,13 @@ export class ImageAsset {
  * ImageDeleteResult describes the outcome of a delete operation.
  */
 export class ImageDeleteResult {
-    "relative_path": string;
+    "path": string;
     "deleted": boolean;
 
     /** Creates a new ImageDeleteResult instance. */
     constructor($$source: Partial<ImageDeleteResult> = {}) {
-        if (!("relative_path" in $$source)) {
-            this["relative_path"] = "";
+        if (!("path" in $$source)) {
+            this["path"] = "";
         }
         if (!("deleted" in $$source)) {
             this["deleted"] = false;

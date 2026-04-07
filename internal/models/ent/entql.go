@@ -96,17 +96,16 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 		Type: "MediaAsset",
 		Fields: map[string]*sqlgraph.FieldSpec{
-			mediaasset.FieldCreatedAt:        {Type: field.TypeString, Column: mediaasset.FieldCreatedAt},
-			mediaasset.FieldUpdatedAt:        {Type: field.TypeString, Column: mediaasset.FieldUpdatedAt},
-			mediaasset.FieldDeletedAt:        {Type: field.TypeString, Column: mediaasset.FieldDeletedAt},
-			mediaasset.FieldUUID:             {Type: field.TypeString, Column: mediaasset.FieldUUID},
-			mediaasset.FieldAssetID:          {Type: field.TypeString, Column: mediaasset.FieldAssetID},
-			mediaasset.FieldOriginalFilename: {Type: field.TypeString, Column: mediaasset.FieldOriginalFilename},
-			mediaasset.FieldRelativePath:     {Type: field.TypeString, Column: mediaasset.FieldRelativePath},
-			mediaasset.FieldMimeType:         {Type: field.TypeString, Column: mediaasset.FieldMimeType},
-			mediaasset.FieldSize:             {Type: field.TypeInt64, Column: mediaasset.FieldSize},
-			mediaasset.FieldWidth:            {Type: field.TypeInt, Column: mediaasset.FieldWidth},
-			mediaasset.FieldHeight:           {Type: field.TypeInt, Column: mediaasset.FieldHeight},
+			mediaasset.FieldCreatedAt: {Type: field.TypeString, Column: mediaasset.FieldCreatedAt},
+			mediaasset.FieldUpdatedAt: {Type: field.TypeString, Column: mediaasset.FieldUpdatedAt},
+			mediaasset.FieldUUID:      {Type: field.TypeString, Column: mediaasset.FieldUUID},
+			mediaasset.FieldAssetID:   {Type: field.TypeString, Column: mediaasset.FieldAssetID},
+			mediaasset.FieldFilename:  {Type: field.TypeString, Column: mediaasset.FieldFilename},
+			mediaasset.FieldPath:      {Type: field.TypeString, Column: mediaasset.FieldPath},
+			mediaasset.FieldMimeType:  {Type: field.TypeString, Column: mediaasset.FieldMimeType},
+			mediaasset.FieldSize:      {Type: field.TypeInt64, Column: mediaasset.FieldSize},
+			mediaasset.FieldWidth:     {Type: field.TypeInt, Column: mediaasset.FieldWidth},
+			mediaasset.FieldHeight:    {Type: field.TypeInt, Column: mediaasset.FieldHeight},
 		},
 	}
 	graph.Nodes[4] = &sqlgraph.Node{
@@ -448,11 +447,6 @@ func (f *MediaAssetFilter) WhereUpdatedAt(p entql.StringP) {
 	f.Where(p.Field(mediaasset.FieldUpdatedAt))
 }
 
-// WhereDeletedAt applies the entql string predicate on the deleted_at field.
-func (f *MediaAssetFilter) WhereDeletedAt(p entql.StringP) {
-	f.Where(p.Field(mediaasset.FieldDeletedAt))
-}
-
 // WhereUUID applies the entql string predicate on the uuid field.
 func (f *MediaAssetFilter) WhereUUID(p entql.StringP) {
 	f.Where(p.Field(mediaasset.FieldUUID))
@@ -463,14 +457,14 @@ func (f *MediaAssetFilter) WhereAssetID(p entql.StringP) {
 	f.Where(p.Field(mediaasset.FieldAssetID))
 }
 
-// WhereOriginalFilename applies the entql string predicate on the original_filename field.
-func (f *MediaAssetFilter) WhereOriginalFilename(p entql.StringP) {
-	f.Where(p.Field(mediaasset.FieldOriginalFilename))
+// WhereFilename applies the entql string predicate on the filename field.
+func (f *MediaAssetFilter) WhereFilename(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldFilename))
 }
 
-// WhereRelativePath applies the entql string predicate on the relative_path field.
-func (f *MediaAssetFilter) WhereRelativePath(p entql.StringP) {
-	f.Where(p.Field(mediaasset.FieldRelativePath))
+// WherePath applies the entql string predicate on the path field.
+func (f *MediaAssetFilter) WherePath(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldPath))
 }
 
 // WhereMimeType applies the entql string predicate on the mime_type field.

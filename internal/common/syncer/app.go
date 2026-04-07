@@ -25,9 +25,8 @@ const (
 
 // Options describes app construction options.
 type Options struct {
-	Logger           Logger
-	MaxSyncAttempts  int
-	MediaRootResolve func() string
+	Logger          Logger
+	MaxSyncAttempts int
 }
 
 // App coordinates the sync system.
@@ -56,9 +55,6 @@ func NewApp(client *ent.Client, options Options) *App {
 		resource2.NewExtensionAdapter(client),
 		resource2.NewKeyBindingAdapter(client),
 		resource2.NewThemeAdapter(client),
-	}
-	if options.MediaRootResolve != nil {
-		adapters = append(adapters, resource2.NewMediaAssetAdapter(client, options.MediaRootResolve))
 	}
 
 	return &App{

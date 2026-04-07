@@ -404,6 +404,11 @@ export enum ExtensionName {
     HttpClient = "httpClient",
 
     /**
+     * 编辑器内联图片
+     */
+    InlineImage = "inlineImage",
+
+    /**
      * 代码块导出图片
      */
     BlockImage = "blockImage",

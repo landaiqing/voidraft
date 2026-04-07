@@ -19,7 +19,7 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 import * as $models from "./models.js";
 
 /**
- * DeleteImage removes one logical image asset and deletes its local file.
+ * DeleteImage permanently removes one indexed image asset and its local file.
  */
 export function DeleteImage(imageRef: string): Promise<$models.ImageDeleteResult | null> & { cancel(): void } {
     let $resultPromise = $Call.ByID(143616668, imageRef) as any;

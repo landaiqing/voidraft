@@ -370,6 +370,10 @@ export default {
       name: 'HTTP Client',
       description: 'Send HTTP requests directly in the editor and view responses'
     },
+    inlineImage: {
+      name: 'Inline Images',
+      description: 'Paste clipboard images into the editor and render them as inline image widgets'
+    },
     blockImage: {
       name: 'Block Image Export',
       description: 'Render the current code block to an image and copy it to the clipboard',
@@ -385,5 +389,31 @@ export default {
   monitor: {
     memory: 'Memory',
     clickToClean: 'Click to clean memory'
+  },
+  inlineImage: {
+    copy: 'Copy',
+    copied: 'Copied!',
+    draw: 'Draw',
+    delete: 'Delete',
+    drawDialog: {
+      title: 'Image Annotation',
+      select: 'Select',
+      pan: 'Pan',
+      pen: 'Brush',
+      color: 'Color',
+      strokeWidth: 'Stroke Width',
+      undo: 'Undo',
+      redo: 'Redo',
+      zoomIn: 'Zoom In',
+      zoomOut: 'Zoom Out',
+      resetZoom: 'Reset Zoom',
+      loading: 'Loading image...',
+      zoom: 'Zoom',
+      cancel: 'Cancel',
+      save: 'Save',
+      saving: 'Saving...',
+      loadFailed: 'Failed to load image',
+      saveFailed: 'Failed to save image'
+    }
   }
 };

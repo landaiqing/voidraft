@@ -63,11 +63,6 @@ func UpdatedAt(v string) predicate.MediaAsset {
 	return predicate.MediaAsset(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
-func DeletedAt(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEQ(FieldDeletedAt, v))
-}
-
 // UUID applies equality check predicate on the "uuid" field. It's identical to UUIDEQ.
 func UUID(v string) predicate.MediaAsset {
 	return predicate.MediaAsset(sql.FieldEQ(FieldUUID, v))
@@ -78,14 +73,14 @@ func AssetID(v string) predicate.MediaAsset {
 	return predicate.MediaAsset(sql.FieldEQ(FieldAssetID, v))
 }
 
-// OriginalFilename applies equality check predicate on the "original_filename" field. It's identical to OriginalFilenameEQ.
-func OriginalFilename(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEQ(FieldOriginalFilename, v))
+// Filename applies equality check predicate on the "filename" field. It's identical to FilenameEQ.
+func Filename(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldEQ(FieldFilename, v))
 }
 
-// RelativePath applies equality check predicate on the "relative_path" field. It's identical to RelativePathEQ.
-func RelativePath(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEQ(FieldRelativePath, v))
+// Path applies equality check predicate on the "path" field. It's identical to PathEQ.
+func Path(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldEQ(FieldPath, v))
 }
 
 // MimeType applies equality check predicate on the "mime_type" field. It's identical to MimeTypeEQ.
@@ -238,81 +233,6 @@ func UpdatedAtContainsFold(v string) predicate.MediaAsset {
 	return predicate.MediaAsset(sql.FieldContainsFold(FieldUpdatedAt, v))
 }
 
-// DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
-func DeletedAtEQ(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEQ(FieldDeletedAt, v))
-}
-
-// DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
-func DeletedAtNEQ(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNEQ(FieldDeletedAt, v))
-}
-
-// DeletedAtIn applies the In predicate on the "deleted_at" field.
-func DeletedAtIn(vs ...string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldIn(FieldDeletedAt, vs...))
-}
-
-// DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
-func DeletedAtNotIn(vs ...string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNotIn(FieldDeletedAt, vs...))
-}
-
-// DeletedAtGT applies the GT predicate on the "deleted_at" field.
-func DeletedAtGT(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldGT(FieldDeletedAt, v))
-}
-
-// DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
-func DeletedAtGTE(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldGTE(FieldDeletedAt, v))
-}
-
-// DeletedAtLT applies the LT predicate on the "deleted_at" field.
-func DeletedAtLT(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldLT(FieldDeletedAt, v))
-}
-
-// DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
-func DeletedAtLTE(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldLTE(FieldDeletedAt, v))
-}
-
-// DeletedAtContains applies the Contains predicate on the "deleted_at" field.
-func DeletedAtContains(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldContains(FieldDeletedAt, v))
-}
-
-// DeletedAtHasPrefix applies the HasPrefix predicate on the "deleted_at" field.
-func DeletedAtHasPrefix(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldHasPrefix(FieldDeletedAt, v))
-}
-
-// DeletedAtHasSuffix applies the HasSuffix predicate on the "deleted_at" field.
-func DeletedAtHasSuffix(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldHasSuffix(FieldDeletedAt, v))
-}
-
-// DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
-func DeletedAtIsNil() predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldIsNull(FieldDeletedAt))
-}
-
-// DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
-func DeletedAtNotNil() predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNotNull(FieldDeletedAt))
-}
-
-// DeletedAtEqualFold applies the EqualFold predicate on the "deleted_at" field.
-func DeletedAtEqualFold(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEqualFold(FieldDeletedAt, v))
-}
-
-// DeletedAtContainsFold applies the ContainsFold predicate on the "deleted_at" field.
-func DeletedAtContainsFold(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldContainsFold(FieldDeletedAt, v))
-}
-
 // UUIDEQ applies the EQ predicate on the "uuid" field.
 func UUIDEQ(v string) predicate.MediaAsset {
 	return predicate.MediaAsset(sql.FieldEQ(FieldUUID, v))
@@ -443,144 +363,144 @@ func AssetIDContainsFold(v string) predicate.MediaAsset {
 	return predicate.MediaAsset(sql.FieldContainsFold(FieldAssetID, v))
 }
 
-// OriginalFilenameEQ applies the EQ predicate on the "original_filename" field.
-func OriginalFilenameEQ(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEQ(FieldOriginalFilename, v))
+// FilenameEQ applies the EQ predicate on the "filename" field.
+func FilenameEQ(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldEQ(FieldFilename, v))
 }
 
-// OriginalFilenameNEQ applies the NEQ predicate on the "original_filename" field.
-func OriginalFilenameNEQ(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNEQ(FieldOriginalFilename, v))
+// FilenameNEQ applies the NEQ predicate on the "filename" field.
+func FilenameNEQ(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldNEQ(FieldFilename, v))
 }
 
-// OriginalFilenameIn applies the In predicate on the "original_filename" field.
-func OriginalFilenameIn(vs ...string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldIn(FieldOriginalFilename, vs...))
+// FilenameIn applies the In predicate on the "filename" field.
+func FilenameIn(vs ...string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldIn(FieldFilename, vs...))
 }
 
-// OriginalFilenameNotIn applies the NotIn predicate on the "original_filename" field.
-func OriginalFilenameNotIn(vs ...string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNotIn(FieldOriginalFilename, vs...))
+// FilenameNotIn applies the NotIn predicate on the "filename" field.
+func FilenameNotIn(vs ...string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldNotIn(FieldFilename, vs...))
 }
 
-// OriginalFilenameGT applies the GT predicate on the "original_filename" field.
-func OriginalFilenameGT(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldGT(FieldOriginalFilename, v))
+// FilenameGT applies the GT predicate on the "filename" field.
+func FilenameGT(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldGT(FieldFilename, v))
 }
 
-// OriginalFilenameGTE applies the GTE predicate on the "original_filename" field.
-func OriginalFilenameGTE(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldGTE(FieldOriginalFilename, v))
+// FilenameGTE applies the GTE predicate on the "filename" field.
+func FilenameGTE(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldGTE(FieldFilename, v))
 }
 
-// OriginalFilenameLT applies the LT predicate on the "original_filename" field.
-func OriginalFilenameLT(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldLT(FieldOriginalFilename, v))
+// FilenameLT applies the LT predicate on the "filename" field.
+func FilenameLT(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldLT(FieldFilename, v))
 }
 
-// OriginalFilenameLTE applies the LTE predicate on the "original_filename" field.
-func OriginalFilenameLTE(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldLTE(FieldOriginalFilename, v))
+// FilenameLTE applies the LTE predicate on the "filename" field.
+func FilenameLTE(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldLTE(FieldFilename, v))
 }
 
-// OriginalFilenameContains applies the Contains predicate on the "original_filename" field.
-func OriginalFilenameContains(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldContains(FieldOriginalFilename, v))
+// FilenameContains applies the Contains predicate on the "filename" field.
+func FilenameContains(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldContains(FieldFilename, v))
 }
 
-// OriginalFilenameHasPrefix applies the HasPrefix predicate on the "original_filename" field.
-func OriginalFilenameHasPrefix(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldHasPrefix(FieldOriginalFilename, v))
+// FilenameHasPrefix applies the HasPrefix predicate on the "filename" field.
+func FilenameHasPrefix(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldHasPrefix(FieldFilename, v))
 }
 
-// OriginalFilenameHasSuffix applies the HasSuffix predicate on the "original_filename" field.
-func OriginalFilenameHasSuffix(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldHasSuffix(FieldOriginalFilename, v))
+// FilenameHasSuffix applies the HasSuffix predicate on the "filename" field.
+func FilenameHasSuffix(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldHasSuffix(FieldFilename, v))
 }
 
-// OriginalFilenameIsNil applies the IsNil predicate on the "original_filename" field.
-func OriginalFilenameIsNil() predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldIsNull(FieldOriginalFilename))
+// FilenameIsNil applies the IsNil predicate on the "filename" field.
+func FilenameIsNil() predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldIsNull(FieldFilename))
 }
 
-// OriginalFilenameNotNil applies the NotNil predicate on the "original_filename" field.
-func OriginalFilenameNotNil() predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNotNull(FieldOriginalFilename))
+// FilenameNotNil applies the NotNil predicate on the "filename" field.
+func FilenameNotNil() predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldNotNull(FieldFilename))
 }
 
-// OriginalFilenameEqualFold applies the EqualFold predicate on the "original_filename" field.
-func OriginalFilenameEqualFold(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEqualFold(FieldOriginalFilename, v))
+// FilenameEqualFold applies the EqualFold predicate on the "filename" field.
+func FilenameEqualFold(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldEqualFold(FieldFilename, v))
 }
 
-// OriginalFilenameContainsFold applies the ContainsFold predicate on the "original_filename" field.
-func OriginalFilenameContainsFold(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldContainsFold(FieldOriginalFilename, v))
+// FilenameContainsFold applies the ContainsFold predicate on the "filename" field.
+func FilenameContainsFold(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldContainsFold(FieldFilename, v))
 }
 
-// RelativePathEQ applies the EQ predicate on the "relative_path" field.
-func RelativePathEQ(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEQ(FieldRelativePath, v))
+// PathEQ applies the EQ predicate on the "path" field.
+func PathEQ(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldEQ(FieldPath, v))
 }
 
-// RelativePathNEQ applies the NEQ predicate on the "relative_path" field.
-func RelativePathNEQ(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNEQ(FieldRelativePath, v))
+// PathNEQ applies the NEQ predicate on the "path" field.
+func PathNEQ(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldNEQ(FieldPath, v))
 }
 
-// RelativePathIn applies the In predicate on the "relative_path" field.
-func RelativePathIn(vs ...string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldIn(FieldRelativePath, vs...))
+// PathIn applies the In predicate on the "path" field.
+func PathIn(vs ...string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldIn(FieldPath, vs...))
 }
 
-// RelativePathNotIn applies the NotIn predicate on the "relative_path" field.
-func RelativePathNotIn(vs ...string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldNotIn(FieldRelativePath, vs...))
+// PathNotIn applies the NotIn predicate on the "path" field.
+func PathNotIn(vs ...string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldNotIn(FieldPath, vs...))
 }
 
-// RelativePathGT applies the GT predicate on the "relative_path" field.
-func RelativePathGT(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldGT(FieldRelativePath, v))
+// PathGT applies the GT predicate on the "path" field.
+func PathGT(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldGT(FieldPath, v))
 }
 
-// RelativePathGTE applies the GTE predicate on the "relative_path" field.
-func RelativePathGTE(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldGTE(FieldRelativePath, v))
+// PathGTE applies the GTE predicate on the "path" field.
+func PathGTE(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldGTE(FieldPath, v))
 }
 
-// RelativePathLT applies the LT predicate on the "relative_path" field.
-func RelativePathLT(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldLT(FieldRelativePath, v))
+// PathLT applies the LT predicate on the "path" field.
+func PathLT(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldLT(FieldPath, v))
 }
 
-// RelativePathLTE applies the LTE predicate on the "relative_path" field.
-func RelativePathLTE(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldLTE(FieldRelativePath, v))
+// PathLTE applies the LTE predicate on the "path" field.
+func PathLTE(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldLTE(FieldPath, v))
 }
 
-// RelativePathContains applies the Contains predicate on the "relative_path" field.
-func RelativePathContains(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldContains(FieldRelativePath, v))
+// PathContains applies the Contains predicate on the "path" field.
+func PathContains(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldContains(FieldPath, v))
 }
 
-// RelativePathHasPrefix applies the HasPrefix predicate on the "relative_path" field.
-func RelativePathHasPrefix(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldHasPrefix(FieldRelativePath, v))
+// PathHasPrefix applies the HasPrefix predicate on the "path" field.
+func PathHasPrefix(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldHasPrefix(FieldPath, v))
 }
 
-// RelativePathHasSuffix applies the HasSuffix predicate on the "relative_path" field.
-func RelativePathHasSuffix(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldHasSuffix(FieldRelativePath, v))
+// PathHasSuffix applies the HasSuffix predicate on the "path" field.
+func PathHasSuffix(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldHasSuffix(FieldPath, v))
 }
 
-// RelativePathEqualFold applies the EqualFold predicate on the "relative_path" field.
-func RelativePathEqualFold(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldEqualFold(FieldRelativePath, v))
+// PathEqualFold applies the EqualFold predicate on the "path" field.
+func PathEqualFold(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldEqualFold(FieldPath, v))
 }
 
-// RelativePathContainsFold applies the ContainsFold predicate on the "relative_path" field.
-func RelativePathContainsFold(v string) predicate.MediaAsset {
-	return predicate.MediaAsset(sql.FieldContainsFold(FieldRelativePath, v))
+// PathContainsFold applies the ContainsFold predicate on the "path" field.
+func PathContainsFold(v string) predicate.MediaAsset {
+	return predicate.MediaAsset(sql.FieldContainsFold(FieldPath, v))
 }
 
 // MimeTypeEQ applies the EQ predicate on the "mime_type" field.

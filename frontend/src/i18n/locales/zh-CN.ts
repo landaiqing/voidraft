@@ -372,6 +372,10 @@ export default {
             name: 'HTTP 客户端',
             description: '在编辑器中直接发送 HTTP 请求并查看响应'
         },
+        inlineImage: {
+            name: '内联图片',
+            description: '支持将剪贴板图片粘贴进编辑器，并以内联图片组件渲染'
+        },
         blockImage: {
             name: '代码块导出图片',
             description: '将当前代码块渲染为图片并复制到剪贴板',
@@ -387,5 +391,31 @@ export default {
     monitor: {
         memory: '内存',
         clickToClean: '点击清理内存'
+    },
+    inlineImage: {
+        copy: '复制',
+        copied: '已复制',
+        draw: '绘制',
+        delete: '删除',
+        drawDialog: {
+            title: '图片标注',
+            select: '选择',
+            pan: '拖动',
+            pen: '画笔',
+            color: '颜色',
+            strokeWidth: '线宽',
+            undo: '撤销',
+            redo: '重做',
+            zoomIn: '放大',
+            zoomOut: '缩小',
+            resetZoom: '重置缩放',
+            loading: '正在加载图片...',
+            zoom: '缩放',
+            cancel: '取消',
+            save: '保存',
+            saving: '保存中...',
+            loadFailed: '图片加载失败',
+            saveFailed: '图片保存失败'
+        }
     }
 };

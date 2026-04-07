@@ -27,6 +27,7 @@ const (
 	ContextMenu                 ExtensionName = "contextMenu"                 // 上下文菜单
 	Search                      ExtensionName = "search"                      // 搜索功能
 	HttpClient                  ExtensionName = "httpClient"                  // HTTP 客户端
+	InlineImage                 ExtensionName = "inlineImage"                 // 编辑器内联图片
 	BlockImage                  ExtensionName = "blockImage"                  // 代码块导出图片
 	BlockReadonly               ExtensionName = "blockReadonly"               // 代码块局部只读
 )
@@ -105,6 +106,11 @@ func NewDefaultExtensions() []Extension {
 		},
 		{
 			Name:    HttpClient,
+			Enabled: true,
+			Config:  ExtensionConfig{},
+		},
+		{
+			Name:    InlineImage,
 			Enabled: true,
 			Config:  ExtensionConfig{},
 		},

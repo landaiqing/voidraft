@@ -2545,27 +2545,26 @@ func (m *KeyBindingMutation) ResetEdge(name string) error {
 // MediaAssetMutation represents an operation that mutates the MediaAsset nodes in the graph.
 type MediaAssetMutation struct {
 	config
-	op                Op
-	typ               string
-	id                *int
-	created_at        *string
-	updated_at        *string
-	deleted_at        *string
-	uuid              *string
-	asset_id          *string
-	original_filename *string
-	relative_path     *string
-	mime_type         *string
-	size              *int64
-	addsize           *int64
-	width             *int
-	addwidth          *int
-	height            *int
-	addheight         *int
-	clearedFields     map[string]struct{}
-	done              bool
-	oldValue          func(context.Context) (*MediaAsset, error)
-	predicates        []predicate.MediaAsset
+	op            Op
+	typ           string
+	id            *int
+	created_at    *string
+	updated_at    *string
+	uuid          *string
+	asset_id      *string
+	filename      *string
+	_path         *string
+	mime_type     *string
+	size          *int64
+	addsize       *int64
+	width         *int
+	addwidth      *int
+	height        *int
+	addheight     *int
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*MediaAsset, error)
+	predicates    []predicate.MediaAsset
 }
 
 var _ ent.Mutation = (*MediaAssetMutation)(nil)
@@ -2738,55 +2737,6 @@ func (m *MediaAssetMutation) ResetUpdatedAt() {
 	m.updated_at = nil
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (m *MediaAssetMutation) SetDeletedAt(s string) {
-	m.deleted_at = &s
-}
-
-// DeletedAt returns the value of the "deleted_at" field in the mutation.
-func (m *MediaAssetMutation) DeletedAt() (r string, exists bool) {
-	v := m.deleted_at
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldDeletedAt returns the old "deleted_at" field's value of the MediaAsset entity.
-// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaAssetMutation) OldDeletedAt(ctx context.Context) (v *string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldDeletedAt is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldDeletedAt requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldDeletedAt: %w", err)
-	}
-	return oldValue.DeletedAt, nil
-}
-
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (m *MediaAssetMutation) ClearDeletedAt() {
-	m.deleted_at = nil
-	m.clearedFields[mediaasset.FieldDeletedAt] = struct{}{}
-}
-
-// DeletedAtCleared returns if the "deleted_at" field was cleared in this mutation.
-func (m *MediaAssetMutation) DeletedAtCleared() bool {
-	_, ok := m.clearedFields[mediaasset.FieldDeletedAt]
-	return ok
-}
-
-// ResetDeletedAt resets all changes to the "deleted_at" field.
-func (m *MediaAssetMutation) ResetDeletedAt() {
-	m.deleted_at = nil
-	delete(m.clearedFields, mediaasset.FieldDeletedAt)
-}
-
 // SetUUID sets the "uuid" field.
 func (m *MediaAssetMutation) SetUUID(s string) {
 	m.uuid = &s
@@ -2859,89 +2809,89 @@ func (m *MediaAssetMutation) ResetAssetID() {
 	m.asset_id = nil
 }
 
-// SetOriginalFilename sets the "original_filename" field.
-func (m *MediaAssetMutation) SetOriginalFilename(s string) {
-	m.original_filename = &s
+// SetFilename sets the "filename" field.
+func (m *MediaAssetMutation) SetFilename(s string) {
+	m.filename = &s
 }
 
-// OriginalFilename returns the value of the "original_filename" field in the mutation.
-func (m *MediaAssetMutation) OriginalFilename() (r string, exists bool) {
-	v := m.original_filename
+// Filename returns the value of the "filename" field in the mutation.
+func (m *MediaAssetMutation) Filename() (r string, exists bool) {
+	v := m.filename
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldOriginalFilename returns the old "original_filename" field's value of the MediaAsset entity.
+// OldFilename returns the old "filename" field's value of the MediaAsset entity.
 // If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaAssetMutation) OldOriginalFilename(ctx context.Context) (v *string, err error) {
+func (m *MediaAssetMutation) OldFilename(ctx context.Context) (v *string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldOriginalFilename is only allowed on UpdateOne operations")
+		return v, errors.New("OldFilename is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldOriginalFilename requires an ID field in the mutation")
+		return v, errors.New("OldFilename requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldOriginalFilename: %w", err)
+		return v, fmt.Errorf("querying old value for OldFilename: %w", err)
 	}
-	return oldValue.OriginalFilename, nil
+	return oldValue.Filename, nil
 }
 
-// ClearOriginalFilename clears the value of the "original_filename" field.
-func (m *MediaAssetMutation) ClearOriginalFilename() {
-	m.original_filename = nil
-	m.clearedFields[mediaasset.FieldOriginalFilename] = struct{}{}
+// ClearFilename clears the value of the "filename" field.
+func (m *MediaAssetMutation) ClearFilename() {
+	m.filename = nil
+	m.clearedFields[mediaasset.FieldFilename] = struct{}{}
 }
 
-// OriginalFilenameCleared returns if the "original_filename" field was cleared in this mutation.
-func (m *MediaAssetMutation) OriginalFilenameCleared() bool {
-	_, ok := m.clearedFields[mediaasset.FieldOriginalFilename]
+// FilenameCleared returns if the "filename" field was cleared in this mutation.
+func (m *MediaAssetMutation) FilenameCleared() bool {
+	_, ok := m.clearedFields[mediaasset.FieldFilename]
 	return ok
 }
 
-// ResetOriginalFilename resets all changes to the "original_filename" field.
-func (m *MediaAssetMutation) ResetOriginalFilename() {
-	m.original_filename = nil
-	delete(m.clearedFields, mediaasset.FieldOriginalFilename)
+// ResetFilename resets all changes to the "filename" field.
+func (m *MediaAssetMutation) ResetFilename() {
+	m.filename = nil
+	delete(m.clearedFields, mediaasset.FieldFilename)
 }
 
-// SetRelativePath sets the "relative_path" field.
-func (m *MediaAssetMutation) SetRelativePath(s string) {
-	m.relative_path = &s
+// SetPath sets the "path" field.
+func (m *MediaAssetMutation) SetPath(s string) {
+	m._path = &s
 }
 
-// RelativePath returns the value of the "relative_path" field in the mutation.
-func (m *MediaAssetMutation) RelativePath() (r string, exists bool) {
-	v := m.relative_path
+// Path returns the value of the "path" field in the mutation.
+func (m *MediaAssetMutation) Path() (r string, exists bool) {
+	v := m._path
 	if v == nil {
 		return
 	}
 	return *v, true
 }
 
-// OldRelativePath returns the old "relative_path" field's value of the MediaAsset entity.
+// OldPath returns the old "path" field's value of the MediaAsset entity.
 // If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *MediaAssetMutation) OldRelativePath(ctx context.Context) (v string, err error) {
+func (m *MediaAssetMutation) OldPath(ctx context.Context) (v string, err error) {
 	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldRelativePath is only allowed on UpdateOne operations")
+		return v, errors.New("OldPath is only allowed on UpdateOne operations")
 	}
 	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldRelativePath requires an ID field in the mutation")
+		return v, errors.New("OldPath requires an ID field in the mutation")
 	}
 	oldValue, err := m.oldValue(ctx)
 	if err != nil {
-		return v, fmt.Errorf("querying old value for OldRelativePath: %w", err)
+		return v, fmt.Errorf("querying old value for OldPath: %w", err)
 	}
-	return oldValue.RelativePath, nil
+	return oldValue.Path, nil
 }
 
-// ResetRelativePath resets all changes to the "relative_path" field.
-func (m *MediaAssetMutation) ResetRelativePath() {
-	m.relative_path = nil
+// ResetPath resets all changes to the "path" field.
+func (m *MediaAssetMutation) ResetPath() {
+	m._path = nil
 }
 
 // SetMimeType sets the "mime_type" field.
@@ -3182,15 +3132,12 @@ func (m *MediaAssetMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *MediaAssetMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 10)
 	if m.created_at != nil {
 		fields = append(fields, mediaasset.FieldCreatedAt)
 	}
 	if m.updated_at != nil {
 		fields = append(fields, mediaasset.FieldUpdatedAt)
-	}
-	if m.deleted_at != nil {
-		fields = append(fields, mediaasset.FieldDeletedAt)
 	}
 	if m.uuid != nil {
 		fields = append(fields, mediaasset.FieldUUID)
@@ -3198,11 +3145,11 @@ func (m *MediaAssetMutation) Fields() []string {
 	if m.asset_id != nil {
 		fields = append(fields, mediaasset.FieldAssetID)
 	}
-	if m.original_filename != nil {
-		fields = append(fields, mediaasset.FieldOriginalFilename)
+	if m.filename != nil {
+		fields = append(fields, mediaasset.FieldFilename)
 	}
-	if m.relative_path != nil {
-		fields = append(fields, mediaasset.FieldRelativePath)
+	if m._path != nil {
+		fields = append(fields, mediaasset.FieldPath)
 	}
 	if m.mime_type != nil {
 		fields = append(fields, mediaasset.FieldMimeType)
@@ -3228,16 +3175,14 @@ func (m *MediaAssetMutation) Field(name string) (ent.Value, bool) {
 		return m.CreatedAt()
 	case mediaasset.FieldUpdatedAt:
 		return m.UpdatedAt()
-	case mediaasset.FieldDeletedAt:
-		return m.DeletedAt()
 	case mediaasset.FieldUUID:
 		return m.UUID()
 	case mediaasset.FieldAssetID:
 		return m.AssetID()
-	case mediaasset.FieldOriginalFilename:
-		return m.OriginalFilename()
-	case mediaasset.FieldRelativePath:
-		return m.RelativePath()
+	case mediaasset.FieldFilename:
+		return m.Filename()
+	case mediaasset.FieldPath:
+		return m.Path()
 	case mediaasset.FieldMimeType:
 		return m.MimeType()
 	case mediaasset.FieldSize:
@@ -3259,16 +3204,14 @@ func (m *MediaAssetMutation) OldField(ctx context.Context, name string) (ent.Val
 		return m.OldCreatedAt(ctx)
 	case mediaasset.FieldUpdatedAt:
 		return m.OldUpdatedAt(ctx)
-	case mediaasset.FieldDeletedAt:
-		return m.OldDeletedAt(ctx)
 	case mediaasset.FieldUUID:
 		return m.OldUUID(ctx)
 	case mediaasset.FieldAssetID:
 		return m.OldAssetID(ctx)
-	case mediaasset.FieldOriginalFilename:
-		return m.OldOriginalFilename(ctx)
-	case mediaasset.FieldRelativePath:
-		return m.OldRelativePath(ctx)
+	case mediaasset.FieldFilename:
+		return m.OldFilename(ctx)
+	case mediaasset.FieldPath:
+		return m.OldPath(ctx)
 	case mediaasset.FieldMimeType:
 		return m.OldMimeType(ctx)
 	case mediaasset.FieldSize:
@@ -3300,13 +3243,6 @@ func (m *MediaAssetMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetUpdatedAt(v)
 		return nil
-	case mediaasset.FieldDeletedAt:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetDeletedAt(v)
-		return nil
 	case mediaasset.FieldUUID:
 		v, ok := value.(string)
 		if !ok {
@@ -3321,19 +3257,19 @@ func (m *MediaAssetMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAssetID(v)
 		return nil
-	case mediaasset.FieldOriginalFilename:
+	case mediaasset.FieldFilename:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetOriginalFilename(v)
+		m.SetFilename(v)
 		return nil
-	case mediaasset.FieldRelativePath:
+	case mediaasset.FieldPath:
 		v, ok := value.(string)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
-		m.SetRelativePath(v)
+		m.SetPath(v)
 		return nil
 	case mediaasset.FieldMimeType:
 		v, ok := value.(string)
@@ -3432,11 +3368,8 @@ func (m *MediaAssetMutation) AddField(name string, value ent.Value) error {
 // mutation.
 func (m *MediaAssetMutation) ClearedFields() []string {
 	var fields []string
-	if m.FieldCleared(mediaasset.FieldDeletedAt) {
-		fields = append(fields, mediaasset.FieldDeletedAt)
-	}
-	if m.FieldCleared(mediaasset.FieldOriginalFilename) {
-		fields = append(fields, mediaasset.FieldOriginalFilename)
+	if m.FieldCleared(mediaasset.FieldFilename) {
+		fields = append(fields, mediaasset.FieldFilename)
 	}
 	return fields
 }
@@ -3452,11 +3385,8 @@ func (m *MediaAssetMutation) FieldCleared(name string) bool {
 // error if the field is not defined in the schema.
 func (m *MediaAssetMutation) ClearField(name string) error {
 	switch name {
-	case mediaasset.FieldDeletedAt:
-		m.ClearDeletedAt()
-		return nil
-	case mediaasset.FieldOriginalFilename:
-		m.ClearOriginalFilename()
+	case mediaasset.FieldFilename:
+		m.ClearFilename()
 		return nil
 	}
 	return fmt.Errorf("unknown MediaAsset nullable field %s", name)
@@ -3472,20 +3402,17 @@ func (m *MediaAssetMutation) ResetField(name string) error {
 	case mediaasset.FieldUpdatedAt:
 		m.ResetUpdatedAt()
 		return nil
-	case mediaasset.FieldDeletedAt:
-		m.ResetDeletedAt()
-		return nil
 	case mediaasset.FieldUUID:
 		m.ResetUUID()
 		return nil
 	case mediaasset.FieldAssetID:
 		m.ResetAssetID()
 		return nil
-	case mediaasset.FieldOriginalFilename:
-		m.ResetOriginalFilename()
+	case mediaasset.FieldFilename:
+		m.ResetFilename()
 		return nil
-	case mediaasset.FieldRelativePath:
-		m.ResetRelativePath()
+	case mediaasset.FieldPath:
+		m.ResetPath()
 		return nil
 	case mediaasset.FieldMimeType:
 		m.ResetMimeType()

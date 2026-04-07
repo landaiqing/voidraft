@@ -212,15 +212,11 @@ func init() {
 	keybinding.ScopeValidator = keybindingDescScope.Validators[0].(func(string) error)
 	mediaassetMixin := schema.MediaAsset{}.Mixin()
 	mediaassetMixinHooks0 := mediaassetMixin[0].Hooks()
-	mediaassetMixinHooks1 := mediaassetMixin[1].Hooks()
 	mediaasset.Hooks[0] = mediaassetMixinHooks0[0]
-	mediaasset.Hooks[1] = mediaassetMixinHooks1[0]
-	mediaassetMixinInters1 := mediaassetMixin[1].Interceptors()
-	mediaasset.Interceptors[0] = mediaassetMixinInters1[0]
 	mediaassetMixinFields0 := mediaassetMixin[0].Fields()
 	_ = mediaassetMixinFields0
-	mediaassetMixinFields2 := mediaassetMixin[2].Fields()
-	_ = mediaassetMixinFields2
+	mediaassetMixinFields1 := mediaassetMixin[1].Fields()
+	_ = mediaassetMixinFields1
 	mediaassetFields := schema.MediaAsset{}.Fields()
 	_ = mediaassetFields
 	// mediaassetDescCreatedAt is the schema descriptor for created_at field.
@@ -232,7 +228,7 @@ func init() {
 	// mediaasset.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	mediaasset.DefaultUpdatedAt = mediaassetDescUpdatedAt.Default.(func() string)
 	// mediaassetDescUUID is the schema descriptor for uuid field.
-	mediaassetDescUUID := mediaassetMixinFields2[0].Descriptor()
+	mediaassetDescUUID := mediaassetMixinFields1[0].Descriptor()
 	// mediaasset.DefaultUUID holds the default value on creation for the uuid field.
 	mediaasset.DefaultUUID = mediaassetDescUUID.Default.(func() string)
 	// mediaassetDescAssetID is the schema descriptor for asset_id field.
@@ -253,22 +249,22 @@ func init() {
 			return nil
 		}
 	}()
-	// mediaassetDescOriginalFilename is the schema descriptor for original_filename field.
-	mediaassetDescOriginalFilename := mediaassetFields[1].Descriptor()
-	// mediaasset.OriginalFilenameValidator is a validator for the "original_filename" field. It is called by the builders before save.
-	mediaasset.OriginalFilenameValidator = mediaassetDescOriginalFilename.Validators[0].(func(string) error)
-	// mediaassetDescRelativePath is the schema descriptor for relative_path field.
-	mediaassetDescRelativePath := mediaassetFields[2].Descriptor()
-	// mediaasset.RelativePathValidator is a validator for the "relative_path" field. It is called by the builders before save.
-	mediaasset.RelativePathValidator = func() func(string) error {
-		validators := mediaassetDescRelativePath.Validators
+	// mediaassetDescFilename is the schema descriptor for filename field.
+	mediaassetDescFilename := mediaassetFields[1].Descriptor()
+	// mediaasset.FilenameValidator is a validator for the "filename" field. It is called by the builders before save.
+	mediaasset.FilenameValidator = mediaassetDescFilename.Validators[0].(func(string) error)
+	// mediaassetDescPath is the schema descriptor for path field.
+	mediaassetDescPath := mediaassetFields[2].Descriptor()
+	// mediaasset.PathValidator is a validator for the "path" field. It is called by the builders before save.
+	mediaasset.PathValidator = func() func(string) error {
+		validators := mediaassetDescPath.Validators
 		fns := [...]func(string) error{
 			validators[0].(func(string) error),
 			validators[1].(func(string) error),
 		}
-		return func(relative_path string) error {
+		return func(_path string) error {
 			for _, fn := range fns {
-				if err := fn(relative_path); err != nil {
+				if err := fn(_path); err != nil {
 					return err
 				}
 			}

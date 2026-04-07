@@ -212,11 +212,11 @@
             </div>
             <div class="media-meta-row">
               <span class="media-meta-label">Relative Path</span>
-              <code class="media-meta-value">{{ selectedImage.relative_path }}</code>
+              <code class="media-meta-value">{{ selectedImage.path }}</code>
             </div>
             <div class="media-meta-row">
               <span class="media-meta-label">Original Name</span>
-              <span class="media-meta-value">{{ selectedImage.original_filename || '-' }}</span>
+              <span class="media-meta-value">{{ selectedImage.filename || '-' }}</span>
             </div>
             <div class="media-meta-row">
               <span class="media-meta-label">Size</span>

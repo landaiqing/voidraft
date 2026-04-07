@@ -15,6 +15,7 @@ import {highlightActiveLineGutter, highlightWhitespace, highlightTrailingWhitesp
 import createEditorContextMenu from '../extensions/contextMenu';
 import {blockLineNumbers} from '../extensions/codeblock';
 import {createHttpClientExtension} from '../extensions/httpclient';
+import {createInlineImageExtension} from '../extensions/inlineImage';
 import {createBlockImageExtension} from '../extensions/blockImage';
 import {createBlockReadonlyExtension} from '../extensions/blockReadonly';
 import {ExtensionName} from '@/../bindings/voidraft/internal/models/models';
@@ -106,6 +107,11 @@ const EXTENSION_REGISTRY: Record<ValidExtensionName, ExtensionEntry> = {
         definition: defineExtension(() => createHttpClientExtension()),
         displayNameKey: 'extensions.httpClient.name',
         descriptionKey: 'extensions.httpClient.description'
+    },
+    [ExtensionName.InlineImage]: {
+        definition: defineExtension(() => createInlineImageExtension()),
+        displayNameKey: 'extensions.inlineImage.name',
+        descriptionKey: 'extensions.inlineImage.description'
     },
     [ExtensionName.BlockImage]: {
         definition: defineExtension(() => createBlockImageExtension()),

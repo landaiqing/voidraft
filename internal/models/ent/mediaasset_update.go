@@ -42,56 +42,36 @@ func (_u *MediaAssetUpdate) SetNillableUpdatedAt(v *string) *MediaAssetUpdate {
 	return _u
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *MediaAssetUpdate) SetDeletedAt(v string) *MediaAssetUpdate {
-	_u.mutation.SetDeletedAt(v)
+// SetFilename sets the "filename" field.
+func (_u *MediaAssetUpdate) SetFilename(v string) *MediaAssetUpdate {
+	_u.mutation.SetFilename(v)
 	return _u
 }
 
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *MediaAssetUpdate) SetNillableDeletedAt(v *string) *MediaAssetUpdate {
+// SetNillableFilename sets the "filename" field if the given value is not nil.
+func (_u *MediaAssetUpdate) SetNillableFilename(v *string) *MediaAssetUpdate {
 	if v != nil {
-		_u.SetDeletedAt(*v)
+		_u.SetFilename(*v)
 	}
 	return _u
 }
 
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *MediaAssetUpdate) ClearDeletedAt() *MediaAssetUpdate {
-	_u.mutation.ClearDeletedAt()
+// ClearFilename clears the value of the "filename" field.
+func (_u *MediaAssetUpdate) ClearFilename() *MediaAssetUpdate {
+	_u.mutation.ClearFilename()
 	return _u
 }
 
-// SetOriginalFilename sets the "original_filename" field.
-func (_u *MediaAssetUpdate) SetOriginalFilename(v string) *MediaAssetUpdate {
-	_u.mutation.SetOriginalFilename(v)
+// SetPath sets the "path" field.
+func (_u *MediaAssetUpdate) SetPath(v string) *MediaAssetUpdate {
+	_u.mutation.SetPath(v)
 	return _u
 }
 
-// SetNillableOriginalFilename sets the "original_filename" field if the given value is not nil.
-func (_u *MediaAssetUpdate) SetNillableOriginalFilename(v *string) *MediaAssetUpdate {
+// SetNillablePath sets the "path" field if the given value is not nil.
+func (_u *MediaAssetUpdate) SetNillablePath(v *string) *MediaAssetUpdate {
 	if v != nil {
-		_u.SetOriginalFilename(*v)
-	}
-	return _u
-}
-
-// ClearOriginalFilename clears the value of the "original_filename" field.
-func (_u *MediaAssetUpdate) ClearOriginalFilename() *MediaAssetUpdate {
-	_u.mutation.ClearOriginalFilename()
-	return _u
-}
-
-// SetRelativePath sets the "relative_path" field.
-func (_u *MediaAssetUpdate) SetRelativePath(v string) *MediaAssetUpdate {
-	_u.mutation.SetRelativePath(v)
-	return _u
-}
-
-// SetNillableRelativePath sets the "relative_path" field if the given value is not nil.
-func (_u *MediaAssetUpdate) SetNillableRelativePath(v *string) *MediaAssetUpdate {
-	if v != nil {
-		_u.SetRelativePath(*v)
+		_u.SetPath(*v)
 	}
 	return _u
 }
@@ -207,14 +187,14 @@ func (_u *MediaAssetUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *MediaAssetUpdate) check() error {
-	if v, ok := _u.mutation.OriginalFilename(); ok {
-		if err := mediaasset.OriginalFilenameValidator(v); err != nil {
-			return &ValidationError{Name: "original_filename", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.original_filename": %w`, err)}
+	if v, ok := _u.mutation.Filename(); ok {
+		if err := mediaasset.FilenameValidator(v); err != nil {
+			return &ValidationError{Name: "filename", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.filename": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.RelativePath(); ok {
-		if err := mediaasset.RelativePathValidator(v); err != nil {
-			return &ValidationError{Name: "relative_path", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.relative_path": %w`, err)}
+	if v, ok := _u.mutation.Path(); ok {
+		if err := mediaasset.PathValidator(v); err != nil {
+			return &ValidationError{Name: "path", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.path": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.MimeType(); ok {
@@ -261,20 +241,14 @@ func (_u *MediaAssetUpdate) sqlSave(ctx context.Context) (_node int, err error) 
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(mediaasset.FieldUpdatedAt, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(mediaasset.FieldDeletedAt, field.TypeString, value)
+	if value, ok := _u.mutation.Filename(); ok {
+		_spec.SetField(mediaasset.FieldFilename, field.TypeString, value)
 	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(mediaasset.FieldDeletedAt, field.TypeString)
+	if _u.mutation.FilenameCleared() {
+		_spec.ClearField(mediaasset.FieldFilename, field.TypeString)
 	}
-	if value, ok := _u.mutation.OriginalFilename(); ok {
-		_spec.SetField(mediaasset.FieldOriginalFilename, field.TypeString, value)
-	}
-	if _u.mutation.OriginalFilenameCleared() {
-		_spec.ClearField(mediaasset.FieldOriginalFilename, field.TypeString)
-	}
-	if value, ok := _u.mutation.RelativePath(); ok {
-		_spec.SetField(mediaasset.FieldRelativePath, field.TypeString, value)
+	if value, ok := _u.mutation.Path(); ok {
+		_spec.SetField(mediaasset.FieldPath, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.MimeType(); ok {
 		_spec.SetField(mediaasset.FieldMimeType, field.TypeString, value)
@@ -333,56 +307,36 @@ func (_u *MediaAssetUpdateOne) SetNillableUpdatedAt(v *string) *MediaAssetUpdate
 	return _u
 }
 
-// SetDeletedAt sets the "deleted_at" field.
-func (_u *MediaAssetUpdateOne) SetDeletedAt(v string) *MediaAssetUpdateOne {
-	_u.mutation.SetDeletedAt(v)
+// SetFilename sets the "filename" field.
+func (_u *MediaAssetUpdateOne) SetFilename(v string) *MediaAssetUpdateOne {
+	_u.mutation.SetFilename(v)
 	return _u
 }
 
-// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
-func (_u *MediaAssetUpdateOne) SetNillableDeletedAt(v *string) *MediaAssetUpdateOne {
+// SetNillableFilename sets the "filename" field if the given value is not nil.
+func (_u *MediaAssetUpdateOne) SetNillableFilename(v *string) *MediaAssetUpdateOne {
 	if v != nil {
-		_u.SetDeletedAt(*v)
+		_u.SetFilename(*v)
 	}
 	return _u
 }
 
-// ClearDeletedAt clears the value of the "deleted_at" field.
-func (_u *MediaAssetUpdateOne) ClearDeletedAt() *MediaAssetUpdateOne {
-	_u.mutation.ClearDeletedAt()
+// ClearFilename clears the value of the "filename" field.
+func (_u *MediaAssetUpdateOne) ClearFilename() *MediaAssetUpdateOne {
+	_u.mutation.ClearFilename()
 	return _u
 }
 
-// SetOriginalFilename sets the "original_filename" field.
-func (_u *MediaAssetUpdateOne) SetOriginalFilename(v string) *MediaAssetUpdateOne {
-	_u.mutation.SetOriginalFilename(v)
+// SetPath sets the "path" field.
+func (_u *MediaAssetUpdateOne) SetPath(v string) *MediaAssetUpdateOne {
+	_u.mutation.SetPath(v)
 	return _u
 }
 
-// SetNillableOriginalFilename sets the "original_filename" field if the given value is not nil.
-func (_u *MediaAssetUpdateOne) SetNillableOriginalFilename(v *string) *MediaAssetUpdateOne {
+// SetNillablePath sets the "path" field if the given value is not nil.
+func (_u *MediaAssetUpdateOne) SetNillablePath(v *string) *MediaAssetUpdateOne {
 	if v != nil {
-		_u.SetOriginalFilename(*v)
-	}
-	return _u
-}
-
-// ClearOriginalFilename clears the value of the "original_filename" field.
-func (_u *MediaAssetUpdateOne) ClearOriginalFilename() *MediaAssetUpdateOne {
-	_u.mutation.ClearOriginalFilename()
-	return _u
-}
-
-// SetRelativePath sets the "relative_path" field.
-func (_u *MediaAssetUpdateOne) SetRelativePath(v string) *MediaAssetUpdateOne {
-	_u.mutation.SetRelativePath(v)
-	return _u
-}
-
-// SetNillableRelativePath sets the "relative_path" field if the given value is not nil.
-func (_u *MediaAssetUpdateOne) SetNillableRelativePath(v *string) *MediaAssetUpdateOne {
-	if v != nil {
-		_u.SetRelativePath(*v)
+		_u.SetPath(*v)
 	}
 	return _u
 }
@@ -511,14 +465,14 @@ func (_u *MediaAssetUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *MediaAssetUpdateOne) check() error {
-	if v, ok := _u.mutation.OriginalFilename(); ok {
-		if err := mediaasset.OriginalFilenameValidator(v); err != nil {
-			return &ValidationError{Name: "original_filename", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.original_filename": %w`, err)}
+	if v, ok := _u.mutation.Filename(); ok {
+		if err := mediaasset.FilenameValidator(v); err != nil {
+			return &ValidationError{Name: "filename", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.filename": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.RelativePath(); ok {
-		if err := mediaasset.RelativePathValidator(v); err != nil {
-			return &ValidationError{Name: "relative_path", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.relative_path": %w`, err)}
+	if v, ok := _u.mutation.Path(); ok {
+		if err := mediaasset.PathValidator(v); err != nil {
+			return &ValidationError{Name: "path", err: fmt.Errorf(`ent: validator failed for field "MediaAsset.path": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.MimeType(); ok {
@@ -582,20 +536,14 @@ func (_u *MediaAssetUpdateOne) sqlSave(ctx context.Context) (_node *MediaAsset, 
 	if value, ok := _u.mutation.UpdatedAt(); ok {
 		_spec.SetField(mediaasset.FieldUpdatedAt, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.DeletedAt(); ok {
-		_spec.SetField(mediaasset.FieldDeletedAt, field.TypeString, value)
+	if value, ok := _u.mutation.Filename(); ok {
+		_spec.SetField(mediaasset.FieldFilename, field.TypeString, value)
 	}
-	if _u.mutation.DeletedAtCleared() {
-		_spec.ClearField(mediaasset.FieldDeletedAt, field.TypeString)
+	if _u.mutation.FilenameCleared() {
+		_spec.ClearField(mediaasset.FieldFilename, field.TypeString)
 	}
-	if value, ok := _u.mutation.OriginalFilename(); ok {
-		_spec.SetField(mediaasset.FieldOriginalFilename, field.TypeString, value)
-	}
-	if _u.mutation.OriginalFilenameCleared() {
-		_spec.ClearField(mediaasset.FieldOriginalFilename, field.TypeString)
-	}
-	if value, ok := _u.mutation.RelativePath(); ok {
-		_spec.SetField(mediaasset.FieldRelativePath, field.TypeString, value)
+	if value, ok := _u.mutation.Path(); ok {
+		_spec.SetField(mediaasset.FieldPath, field.TypeString, value)
 	}
 	if value, ok := _u.mutation.MimeType(); ok {
 		_spec.SetField(mediaasset.FieldMimeType, field.TypeString, value)

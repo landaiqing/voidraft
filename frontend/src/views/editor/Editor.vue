@@ -11,6 +11,8 @@ import ContextMenu from '@/views/editor/extensions/contextMenu/ContextMenu.vue';
 import {contextMenuManager} from '@/views/editor/extensions/contextMenu/manager';
 import TranslatorDialog from './extensions/translator/TranslatorDialog.vue';
 import {translatorManager} from './extensions/translator/manager';
+import DrawImageDialog from '@/components/inlineImage/DrawImageDialog.vue';
+import {inlineImageDrawManager} from './extensions/inlineImage/manager';
 
 
 const editorStore = useEditorStore();
@@ -19,6 +21,7 @@ const configStore = useConfigStore();
 const windowStore = useWindowStore();
 const tabStore = useTabStore();
 
+const editorContainerElement = ref<HTMLElement | null>(null);
 const editorElement = ref<HTMLElement | null>(null);
 
 const enableLoadingAnimation = computed(() => configStore.config.general.enableLoadingAnimation);
@@ -43,11 +46,12 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   contextMenuManager.destroy();
   translatorManager.destroy();
+  inlineImageDrawManager.destroy();
 });
 </script>
 
 <template>
-  <div class="editor-container">
+  <div ref="editorContainerElement" class="editor-container">
     <!-- 加载动画   -->
     <transition name="loading-fade">
       <LoadingScreen v-if="editorStore.isLoading && enableLoadingAnimation" text="VOIDRAFT"/>
@@ -61,6 +65,8 @@ onBeforeUnmount(() => {
     <ContextMenu :portal-target="editorElement"/>
     <!-- 翻译器弹窗 -->
     <TranslatorDialog :portal-target="editorElement"/>
+    <!-- 图片绘图弹窗 -->
+    <DrawImageDialog :portal-target="editorContainerElement"/>
   </div>
 </template>
 

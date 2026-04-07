@@ -760,8 +760,7 @@ func (c *MediaAssetClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *MediaAssetClient) Interceptors() []Interceptor {
-	inters := c.inters.MediaAsset
-	return append(inters[:len(inters):len(inters)], mediaasset.Interceptors[:]...)
+	return c.inters.MediaAsset
 }
 
 func (c *MediaAssetClient) mutate(ctx context.Context, m *MediaAssetMutation) (Value, error) {

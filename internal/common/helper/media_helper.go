@@ -11,6 +11,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -92,6 +93,9 @@ func (h *MediaHelper) NormalizeImageReference(value string, routePrefix string) 
 	clean := strings.TrimSpace(value)
 	if clean == "" {
 		return "", fmt.Errorf("image path is required")
+	}
+	if parsed, err := url.Parse(clean); err == nil && parsed.Scheme != "" && strings.TrimSpace(parsed.Path) != "" {
+		clean = parsed.Path
 	}
 	if strings.TrimSpace(routePrefix) != "" && strings.HasPrefix(clean, routePrefix+"/") {
 		clean = strings.TrimPrefix(clean, routePrefix+"/")

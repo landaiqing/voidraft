@@ -13,7 +13,6 @@ import (
 	"voidraft/internal/common/helper"
 	entmodel "voidraft/internal/models/ent"
 	"voidraft/internal/models/ent/mediaasset"
-	schemamixin "voidraft/internal/models/schema/mixin"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
@@ -56,24 +55,23 @@ type ImageImportRequest struct {
 
 // ImageAsset describes one imported image asset.
 type ImageAsset struct {
-	ID               string `json:"id"`
-	Filename         string `json:"filename"`
-	OriginalFilename string `json:"original_filename,omitempty"`
-	RelativePath     string `json:"relative_path"`
-	URL              string `json:"url"`
-	MimeType         string `json:"mime_type"`
-	Size             int64  `json:"size"`
-	Width            int    `json:"width"`
-	Height           int    `json:"height"`
-	SHA256           string `json:"sha256"`
-	CreatedAt        string `json:"created_at"`
-	UpdatedAt        string `json:"updated_at"`
+	ID        string `json:"id"`
+	Filename  string `json:"filename,omitempty"`
+	Path      string `json:"path"`
+	URL       string `json:"url"`
+	MimeType  string `json:"mime_type"`
+	Size      int64  `json:"size"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	SHA256    string `json:"sha256"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 // ImageDeleteResult describes the outcome of a delete operation.
 type ImageDeleteResult struct {
-	RelativePath string `json:"relative_path"`
-	Deleted      bool   `json:"deleted"`
+	Path    string `json:"path"`
+	Deleted bool   `json:"deleted"`
 }
 
 // NewMediaHTTPService creates a media HTTP service.
@@ -198,7 +196,7 @@ func (s *MediaHTTPService) ImportImage(ctx context.Context, request *ImageImport
 
 	existing, err := client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(payload.Digest)).
-		Only(schemamixin.SkipSoftDelete(ctx))
+		Only(ctx)
 	if err != nil && !entmodel.IsNotFound(err) {
 		return nil, fmt.Errorf("lookup image asset: %w", err)
 	}
@@ -209,14 +207,14 @@ func (s *MediaHTTPService) ImportImage(ctx context.Context, request *ImageImport
 	return s.createIndexedImage(ctx, client, rootPath, request, data, payload)
 }
 
-// DeleteImage removes one logical image asset and deletes its local file.
+// DeleteImage permanently removes one indexed image asset and its local file.
 func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*ImageDeleteResult, error) {
-	client, rootPath, err := s.ensureDependencies()
+	_, rootPath, err := s.ensureDependencies()
 	if err != nil {
 		return nil, err
 	}
 
-	asset, err := s.findAssetByReference(ctx, imageRef, true)
+	asset, err := s.findAssetByReference(ctx, imageRef)
 	if err != nil {
 		return nil, err
 	}
@@ -233,18 +231,11 @@ func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*I
 			s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
 		}
 		return &ImageDeleteResult{
-			RelativePath: relativePath,
-			Deleted:      deleted,
+			Path:    relativePath,
+			Deleted: deleted,
 		}, nil
 	}
-	if asset.DeletedAt != nil {
-		return &ImageDeleteResult{
-			RelativePath: asset.RelativePath,
-			Deleted:      false,
-		}, nil
-	}
-
-	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.RelativePath, "")
+	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.Path, "")
 	if err != nil {
 		return nil, err
 	}
@@ -253,23 +244,22 @@ func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*I
 		return nil, err
 	}
 
-	deletedAt := s.now().UTC().Format(time.RFC3339)
-	if err := client.MediaAsset.UpdateOneID(asset.ID).
-		SetDeletedAt(deletedAt).
-		SetUpdatedAt(deletedAt).
-		Exec(schemamixin.SkipAutoUpdate(ctx)); err != nil {
+	if err := s.hardDeleteAsset(ctx, asset.ID); err != nil {
 		rollbackErr := s.mediaHelper.RestoreStagedFile(absPath, stagedPath)
-		return nil, helper.WrapRollbackError("logical delete image asset", err, rollbackErr)
+		return nil, helper.WrapRollbackError("delete image asset", err, rollbackErr)
 	}
 
 	if err := s.mediaHelper.DiscardStagedFile(stagedPath); err != nil {
 		s.logger.Warning("discard staged image after delete %s: %v", stagedPath, err)
 	}
+	if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
+		s.logger.Warning("discard remaining staged images after delete %s: %v", absPath, err)
+	}
 	s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
 
 	return &ImageDeleteResult{
-		RelativePath: asset.RelativePath,
-		Deleted:      true,
+		Path:    asset.Path,
+		Deleted: true,
 	}, nil
 }
 
@@ -281,47 +271,18 @@ func (s *MediaHTTPService) importExistingImage(ctx context.Context, client *entm
 		return nil, fmt.Errorf("media index database is not configured")
 	}
 
-	originalName := coalesceOriginalFilename(asset.OriginalFilename, request.Filename)
-	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.RelativePath, "")
+	filename := coalesceFilename(asset.Filename, request.Filename)
+	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.Path, "")
 	if err != nil {
 		return nil, err
 	}
 
 	switch {
-	case asset.DeletedAt != nil:
-		stagedPath, err := s.mediaHelper.StageFile(absPath, s.now().UTC())
-		if err != nil {
-			return nil, err
-		}
-		if err := s.mediaHelper.WriteBinaryFile(absPath, data); err != nil {
-			rollbackErr := s.mediaHelper.RollbackFileChange(absPath, stagedPath)
-			return nil, helper.WrapRollbackError("write restored image asset", err, rollbackErr)
-		}
-		if err := client.MediaAsset.UpdateOneID(asset.ID).
-			ClearDeletedAt().
-			SetMimeType(payload.MimeType).
-			SetSize(int64(len(data))).
-			SetWidth(payload.Width).
-			SetHeight(payload.Height).
-			SetNillableOriginalFilename(originalName).
-			Exec(ctx); err != nil {
-			rollbackErr := s.mediaHelper.RollbackFileChange(absPath, stagedPath)
-			return nil, helper.WrapRollbackError("restore deleted image asset", err, rollbackErr)
-		}
-		if err := s.mediaHelper.DiscardStagedFile(stagedPath); err != nil {
-			s.logger.Warning("discard staged image after restore %s: %v", stagedPath, err)
-		}
-		fresh, err := client.MediaAsset.Get(ctx, asset.ID)
-		if err != nil {
-			return nil, fmt.Errorf("reload restored image asset: %w", err)
-		}
-		return s.imageAssetFromEntity(fresh), nil
-
 	case s.mediaHelper.FileExists(absPath):
-		if asset.OriginalFilename == nil && originalName != nil {
+		if asset.Filename == nil && filename != nil {
 			if err := client.MediaAsset.UpdateOneID(asset.ID).
-				SetOriginalFilename(*originalName).
-				Exec(schemamixin.SkipAutoUpdate(ctx)); err != nil {
+				SetFilename(*filename).
+				Exec(ctx); err != nil {
 				return nil, fmt.Errorf("repair indexed image asset: %w", err)
 			}
 			fresh, err := client.MediaAsset.Get(ctx, asset.ID)
@@ -336,10 +297,10 @@ func (s *MediaHTTPService) importExistingImage(ctx context.Context, client *entm
 		if err := s.mediaHelper.WriteBinaryFile(absPath, data); err != nil {
 			return nil, err
 		}
-		if asset.OriginalFilename == nil && originalName != nil {
+		if asset.Filename == nil && filename != nil {
 			if err := client.MediaAsset.UpdateOneID(asset.ID).
-				SetOriginalFilename(*originalName).
-				Exec(schemamixin.SkipAutoUpdate(ctx)); err != nil {
+				SetFilename(*filename).
+				Exec(ctx); err != nil {
 				return nil, fmt.Errorf("repair image asset filename: %w", err)
 			}
 			fresh, err := client.MediaAsset.Get(ctx, asset.ID)
@@ -369,8 +330,8 @@ func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmo
 
 	asset, err := client.MediaAsset.Create().
 		SetAssetID(payload.Digest).
-		SetNillableOriginalFilename(optionalString(originalFilename(request.Filename))).
-		SetRelativePath(relativePath).
+		SetNillableFilename(optionalString(originalFilename(request.Filename))).
+		SetPath(relativePath).
 		SetMimeType(payload.MimeType).
 		SetSize(int64(len(data))).
 		SetWidth(payload.Width).
@@ -383,7 +344,7 @@ func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmo
 		if entmodel.IsConstraintError(err) {
 			existing, lookupErr := client.MediaAsset.Query().
 				Where(mediaasset.AssetIDEQ(payload.Digest)).
-				Only(schemamixin.SkipSoftDelete(ctx))
+				Only(ctx)
 			if lookupErr == nil && existing != nil {
 				return s.importExistingImage(ctx, client, rootPath, existing, request, data, payload)
 			}
@@ -404,23 +365,10 @@ func (s *MediaHTTPService) reconcileMediaIndex(ctx context.Context) error {
 	}
 
 	if err := s.walkIndexedMediaAssets(ctx, client, func(row *entmodel.MediaAsset) error {
-		_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, row.RelativePath, "")
+		_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, row.Path, "")
 		if err != nil {
 			return err
 		}
-		if row.DeletedAt != nil {
-			if removed, err := s.mediaHelper.RemoveImageArtifacts(absPath); err != nil {
-				return err
-			} else if removed {
-				s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
-			}
-			if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
-				return err
-			}
-			s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
-			return nil
-		}
-
 		if s.mediaHelper.FileExists(absPath) {
 			if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
 				return err
@@ -432,7 +380,7 @@ func (s *MediaHTTPService) reconcileMediaIndex(ctx context.Context) error {
 		} else if restored {
 			return nil
 		}
-		if err := s.hardDeleteAsset(schemamixin.SkipSoftDelete(ctx), row.ID); err != nil {
+		if err := s.hardDeleteAsset(ctx, row.ID); err != nil {
 			return err
 		}
 		return nil
@@ -509,7 +457,7 @@ func (s *MediaHTTPService) walkIndexedMediaAssets(ctx context.Context, client *e
 			query = query.Where(mediaasset.AssetIDGT(lastAssetID))
 		}
 
-		rows, err := query.All(schemamixin.SkipSoftDelete(ctx))
+		rows, err := query.All(ctx)
 		if err != nil {
 			return err
 		}
@@ -526,7 +474,7 @@ func (s *MediaHTTPService) walkIndexedMediaAssets(ctx context.Context, client *e
 	}
 }
 
-func (s *MediaHTTPService) findAssetByReference(ctx context.Context, value string, includeDeleted bool) (*entmodel.MediaAsset, error) {
+func (s *MediaHTTPService) findAssetByReference(ctx context.Context, value string) (*entmodel.MediaAsset, error) {
 	client, _, err := s.ensureDependencies()
 	if err != nil {
 		return nil, err
@@ -539,15 +487,10 @@ func (s *MediaHTTPService) findAssetByReference(ctx context.Context, value strin
 	clean = strings.SplitN(clean, "#", 2)[0]
 	clean = strings.SplitN(clean, "?", 2)[0]
 
-	queryCtx := ctx
-	if includeDeleted {
-		queryCtx = schemamixin.SkipSoftDelete(ctx)
-	}
-
 	if relativePath, err := s.mediaHelper.NormalizeImageReference(clean, mediaServiceRoute); err == nil {
 		asset, err := client.MediaAsset.Query().
-			Where(mediaasset.RelativePathEQ(relativePath)).
-			Only(queryCtx)
+			Where(mediaasset.PathEQ(relativePath)).
+			Only(ctx)
 		if entmodel.IsNotFound(err) {
 			return nil, nil
 		}
@@ -563,7 +506,7 @@ func (s *MediaHTTPService) findAssetByReference(ctx context.Context, value strin
 
 	asset, err := client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(clean)).
-		Only(queryCtx)
+		Only(ctx)
 	if entmodel.IsNotFound(err) {
 		return nil, nil
 	}
@@ -584,8 +527,8 @@ func (s *MediaHTTPService) nextAvailableRelativePath(ctx context.Context, digest
 	relativePath := path.Join(relativeDir, filename)
 
 	existsInIndex, err := client.MediaAsset.Query().
-		Where(mediaasset.RelativePathEQ(relativePath)).
-		Exist(schemamixin.SkipSoftDelete(ctx))
+		Where(mediaasset.PathEQ(relativePath)).
+		Exist(ctx)
 	if err != nil {
 		return "", fmt.Errorf("check media path collision: %w", err)
 	}
@@ -618,7 +561,7 @@ func (s *MediaHTTPService) nextAvailableRelativePath(ctx context.Context, digest
 }
 
 func (s *MediaHTTPService) hardDeleteAsset(ctx context.Context, id int) error {
-	if err := s.dbService.Client.MediaAsset.DeleteOneID(id).Exec(schemamixin.SkipSoftDelete(ctx)); err != nil && !entmodel.IsNotFound(err) {
+	if err := s.dbService.Client.MediaAsset.DeleteOneID(id).Exec(ctx); err != nil && !entmodel.IsNotFound(err) {
 		return fmt.Errorf("delete media asset index row: %w", err)
 	}
 	return nil
@@ -634,25 +577,25 @@ func (s *MediaHTTPService) imageAssetFromEntity(asset *entmodel.MediaAsset) *Ima
 	}
 
 	result := &ImageAsset{
-		ID:           asset.AssetID,
-		Filename:     path.Base(asset.RelativePath),
-		RelativePath: asset.RelativePath,
-		URL:          s.mediaHelper.URL(mediaServiceRoute, asset.RelativePath),
-		MimeType:     asset.MimeType,
-		Size:         asset.Size,
-		Width:        asset.Width,
-		Height:       asset.Height,
-		SHA256:       asset.AssetID,
-		CreatedAt:    asset.CreatedAt,
-		UpdatedAt:    asset.UpdatedAt,
+		ID:        asset.AssetID,
+		Filename:  path.Base(asset.Path),
+		Path:      asset.Path,
+		URL:       s.mediaHelper.URL(mediaServiceRoute, asset.Path),
+		MimeType:  asset.MimeType,
+		Size:      asset.Size,
+		Width:     asset.Width,
+		Height:    asset.Height,
+		SHA256:    asset.AssetID,
+		CreatedAt: asset.CreatedAt,
+		UpdatedAt: asset.UpdatedAt,
 	}
-	if asset.OriginalFilename != nil {
-		result.OriginalFilename = *asset.OriginalFilename
+	if asset.Filename != nil && strings.TrimSpace(*asset.Filename) != "" {
+		result.Filename = *asset.Filename
 	}
 	return result
 }
 
-func coalesceOriginalFilename(existing *string, imported string) *string {
+func coalesceFilename(existing *string, imported string) *string {
 	if existing != nil && strings.TrimSpace(*existing) != "" {
 		value := strings.TrimSpace(*existing)
 		return &value

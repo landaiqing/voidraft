@@ -232,16 +232,6 @@ func (s *SyncService) ensureApp() error {
 	s.app = syncer.NewApp(s.dbService.Client, syncer.Options{
 		Logger:          s.logger,
 		MaxSyncAttempts: 3,
-		MediaRootResolve: func() string {
-			if s.configService == nil {
-				return ""
-			}
-			config, err := s.configService.GetConfig()
-			if err != nil {
-				return ""
-			}
-			return helper.NewMediaHelper().RootPath(config.General.DataPath)
-		},
 	})
 	return nil
 }

@@ -19,7 +19,6 @@ import (
 	"voidraft/internal/models/ent"
 	"voidraft/internal/models/ent/enttest"
 	"voidraft/internal/models/ent/mediaasset"
-	schemamixin "voidraft/internal/models/schema/mixin"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -41,10 +40,10 @@ func newIndexedMediaHTTPService(t *testing.T) (*MediaHTTPService, string) {
 	return service, rootPath
 }
 
-func failMediaAssetUpdates(client *ent.Client, err error) {
+func failMediaAssetDeletes(client *ent.Client, err error) {
 	client.MediaAsset.Use(func(next ent.Mutator) ent.Mutator {
 		return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-			if m.Op().Is(ent.OpUpdate | ent.OpUpdateOne) {
+			if m.Op().Is(ent.OpDelete | ent.OpDeleteOne) {
 				return nil, err
 			}
 			return next.Mutate(ctx, m)
@@ -180,11 +179,11 @@ func TestMediaHTTPServiceImportImageStoresByDateFolders(t *testing.T) {
 	}
 
 	expectedRelativePrefix := "images/2026/03/30/"
-	if got := result.RelativePath; len(got) <= len(expectedRelativePrefix) || got[:len(expectedRelativePrefix)] != expectedRelativePrefix {
+	if got := result.Path; len(got) <= len(expectedRelativePrefix) || got[:len(expectedRelativePrefix)] != expectedRelativePrefix {
 		t.Fatalf("expected relative path to start with %q, got %q", expectedRelativePrefix, got)
 	}
-	if result.URL != "/media/"+result.RelativePath {
-		t.Fatalf("expected url %q, got %q", "/media/"+result.RelativePath, result.URL)
+	if result.URL != "/media/"+result.Path {
+		t.Fatalf("expected url %q, got %q", "/media/"+result.Path, result.URL)
 	}
 	if result.Width != 2 || result.Height != 3 {
 		t.Fatalf("expected dimensions 2x3, got %dx%d", result.Width, result.Height)
@@ -200,7 +199,7 @@ func TestMediaHTTPServiceImportImageStoresByDateFolders(t *testing.T) {
 		t.Fatalf("expected managed filename %q, got %q", expectedFilename, result.Filename)
 	}
 
-	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
 	if _, err := os.Stat(absImagePath); err != nil {
 		t.Fatalf("stat imported image: %v", err)
 	}
@@ -211,8 +210,8 @@ func TestMediaHTTPServiceImportImageStoresByDateFolders(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query indexed asset: %v", err)
 	}
-	if indexed.RelativePath != result.RelativePath {
-		t.Fatalf("expected indexed path %q, got %q", result.RelativePath, indexed.RelativePath)
+	if indexed.Path != result.Path {
+		t.Fatalf("expected indexed path %q, got %q", result.Path, indexed.Path)
 	}
 }
 
@@ -254,8 +253,8 @@ func TestMediaHTTPServiceImportImageDeduplicatesByContentHash(t *testing.T) {
 	if first.ID != second.ID {
 		t.Fatalf("expected deduplicated asset ids to match, got %q and %q", first.ID, second.ID)
 	}
-	if first.RelativePath != second.RelativePath {
-		t.Fatalf("expected deduplicated path to match, got %q and %q", first.RelativePath, second.RelativePath)
+	if first.Path != second.Path {
+		t.Fatalf("expected deduplicated path to match, got %q and %q", first.Path, second.Path)
 	}
 
 	rows, err := service.dbService.Client.MediaAsset.Query().All(context.Background())
@@ -266,7 +265,7 @@ func TestMediaHTTPServiceImportImageDeduplicatesByContentHash(t *testing.T) {
 		t.Fatalf("expected 1 indexed row after duplicate import, got %d", len(rows))
 	}
 
-	if _, err := os.Stat(filepath.Join(rootPath, filepath.FromSlash(first.RelativePath))); err != nil {
+	if _, err := os.Stat(filepath.Join(rootPath, filepath.FromSlash(first.Path))); err != nil {
 		t.Fatalf("expected deduplicated image file to exist: %v", err)
 	}
 }
@@ -282,7 +281,7 @@ func TestMediaHTTPServiceReconcileMediaIndexRemovesMissingFiles(t *testing.T) {
 		t.Fatalf("import image: %v", err)
 	}
 
-	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
 	if err := os.Remove(absImagePath); err != nil {
 		t.Fatalf("remove local image file: %v", err)
 	}
@@ -292,7 +291,7 @@ func TestMediaHTTPServiceReconcileMediaIndexRemovesMissingFiles(t *testing.T) {
 	}
 	_, err = service.dbService.Client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(result.ID)).
-		Only(schemamixin.SkipSoftDelete(context.Background()))
+		Only(context.Background())
 	if !ent.IsNotFound(err) {
 		t.Fatalf("expected manually deleted asset index row to be removed, err=%v", err)
 	}
@@ -309,7 +308,7 @@ func TestMediaHTTPServiceReconcileMediaIndexRestoresStagedFiles(t *testing.T) {
 		t.Fatalf("import image: %v", err)
 	}
 
-	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
 	stagedPath, err := service.mediaHelper.StageFile(absImagePath, service.now().UTC())
 	if err != nil {
 		t.Fatalf("stage image file: %v", err)
@@ -329,18 +328,15 @@ func TestMediaHTTPServiceReconcileMediaIndexRestoresStagedFiles(t *testing.T) {
 		t.Fatalf("expected staged file to be consumed, stat err=%v", err)
 	}
 
-	reloaded, err := service.dbService.Client.MediaAsset.Query().
+	_, err = service.dbService.Client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(result.ID)).
 		Only(context.Background())
 	if err != nil {
 		t.Fatalf("reload asset after staged reconcile: %v", err)
 	}
-	if reloaded.DeletedAt != nil {
-		t.Fatal("expected asset to remain active after staged reconcile")
-	}
 }
 
-func TestMediaHTTPServiceDeleteImageRemovesFileAndMarksIndexedRowDeleted(t *testing.T) {
+func TestMediaHTTPServiceDeleteImageRemovesFileAndHardDeletesIndexedRow(t *testing.T) {
 	service, rootPath := newIndexedMediaHTTPService(t)
 
 	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
@@ -359,19 +355,16 @@ func TestMediaHTTPServiceDeleteImageRemovesFileAndMarksIndexedRowDeleted(t *test
 		t.Fatal("expected deleted=true")
 	}
 
-	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
 	if _, err := os.Stat(absImagePath); !os.IsNotExist(err) {
 		t.Fatalf("expected image file to be removed, stat err=%v", err)
 	}
 
 	reloaded, err := service.dbService.Client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(result.ID)).
-		Only(schemamixin.SkipSoftDelete(context.Background()))
-	if err != nil {
-		t.Fatalf("reload deleted asset: %v", err)
-	}
-	if reloaded.DeletedAt == nil {
-		t.Fatal("expected deleted_at to be set after logical delete")
+		Only(context.Background())
+	if !ent.IsNotFound(err) {
+		t.Fatalf("expected deleted asset row to be removed, err=%v row=%v", err, reloaded)
 	}
 }
 
@@ -387,13 +380,13 @@ func TestMediaHTTPServiceDeleteImageRestoresFileWhenIndexUpdateFails(t *testing.
 		t.Fatalf("import image: %v", err)
 	}
 
-	failMediaAssetUpdates(service.dbService.Client, fmt.Errorf("forced update failure"))
+	failMediaAssetDeletes(service.dbService.Client, fmt.Errorf("forced delete failure"))
 
 	if _, err := service.DeleteImage(context.Background(), result.ID); err == nil {
 		t.Fatal("expected delete image to fail")
 	}
 
-	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
 	restoredData, err := os.ReadFile(absImagePath)
 	if err != nil {
 		t.Fatalf("expected image file to be restored: %v", err)
@@ -404,16 +397,16 @@ func TestMediaHTTPServiceDeleteImageRestoresFileWhenIndexUpdateFails(t *testing.
 
 	reloaded, err := service.dbService.Client.MediaAsset.Query().
 		Where(mediaasset.AssetIDEQ(result.ID)).
-		Only(schemamixin.SkipSoftDelete(context.Background()))
+		Only(context.Background())
 	if err != nil {
 		t.Fatalf("reload asset after failed delete: %v", err)
 	}
-	if reloaded.DeletedAt != nil {
-		t.Fatal("expected deleted_at to remain nil after failed delete")
+	if reloaded.Path != result.Path {
+		t.Fatalf("expected asset path %q after failed delete, got %q", result.Path, reloaded.Path)
 	}
 }
 
-func TestMediaHTTPServiceImportImageRestoreDeletedAssetRollsBackFileWhenIndexUpdateFails(t *testing.T) {
+func TestMediaHTTPServiceDeleteImageAllowsCleanReimport(t *testing.T) {
 	service, rootPath := newIndexedMediaHTTPService(t)
 	imageData := mustEncodePNG(t, 2, 2)
 
@@ -426,31 +419,30 @@ func TestMediaHTTPServiceImportImageRestoreDeletedAssetRollsBackFileWhenIndexUpd
 	}
 
 	if _, err := service.DeleteImage(context.Background(), result.ID); err != nil {
-		t.Fatalf("delete image before restore rollback test: %v", err)
+		t.Fatalf("delete image before reimport test: %v", err)
 	}
 
-	failMediaAssetUpdates(service.dbService.Client, fmt.Errorf("forced restore failure"))
-
-	if _, err := service.ImportImage(context.Background(), &ImageImportRequest{
+	reimported, err := service.ImportImage(context.Background(), &ImageImportRequest{
 		Filename: "restore-rollback.png",
 		Data:     imageData,
-	}); err == nil {
-		t.Fatal("expected restore import to fail")
+	})
+	if err != nil {
+		t.Fatalf("reimport image after delete: %v", err)
 	}
 
-	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.RelativePath))
-	if _, err := os.Stat(absImagePath); !os.IsNotExist(err) {
-		t.Fatalf("expected restored file rollback to remove image, stat err=%v", err)
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
+	if _, err := os.Stat(absImagePath); err != nil {
+		t.Fatalf("expected reimported image file to exist, stat err=%v", err)
 	}
 
 	reloaded, err := service.dbService.Client.MediaAsset.Query().
-		Where(mediaasset.AssetIDEQ(result.ID)).
-		Only(schemamixin.SkipSoftDelete(context.Background()))
+		Where(mediaasset.AssetIDEQ(reimported.ID)).
+		Only(context.Background())
 	if err != nil {
-		t.Fatalf("reload asset after failed restore: %v", err)
+		t.Fatalf("reload asset after reimport: %v", err)
 	}
-	if reloaded.DeletedAt == nil {
-		t.Fatal("expected deleted_at to remain set after failed restore")
+	if reloaded.Path != result.Path {
+		t.Fatalf("expected reimported image path %q to match deleted path %q", reloaded.Path, result.Path)
 	}
 }
 

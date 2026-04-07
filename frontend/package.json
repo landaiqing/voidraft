@@ -64,6 +64,7 @@
     "codemirror-lang-elixir": "^4.0.1",
     "colors-named": "^1.0.5",
     "colors-named-hex": "^1.0.4",
+    "fabric": "^7.2.0",
     "groovy-beautify": "^0.0.17",
     "hsl-matcher": "^1.2.4",
     "katex": "^0.16.44",
