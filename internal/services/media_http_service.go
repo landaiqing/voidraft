@@ -8,7 +8,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 	"voidraft/internal/common/helper"
 	entmodel "voidraft/internal/models/ent"
@@ -21,28 +20,22 @@ import (
 const (
 	mediaServiceRoute        = "/media"
 	mediaDirName             = helper.MediaDirName
-	mediaImagesDirName       = helper.MediaImagesDirName
 	mediaCacheControl        = helper.MediaCacheControl
-	mediaAssetBatchSize      = 256
 	headerCacheControl       = helper.MediaHeaderCacheControl
 	headerETag               = helper.MediaHeaderETag
 	headerIfNoneMatch        = helper.MediaHeaderIfNoneMatch
 	headerXContentTypeOption = helper.MediaHeaderXContentType
 )
 
-// MediaHTTPService serves media files and manages the indexed image store.
+// MediaHTTPService 负责媒体上传、删除和 HTTP 文件访问。
 type MediaHTTPService struct {
 	configService   *ConfigService
 	dbService       *DatabaseService
 	logger          *log.LogService
 	mediaHelper     *helper.MediaHelper
-	cancelObservers []helper.CancelFunc
-
-	rootMu   sync.RWMutex
-	rootPath string
-	now      func() time.Time
-
-	reconcileMu sync.Mutex
+	mediaReferences *MediaReferenceService
+	syncService     *MediaSyncService
+	now             func() time.Time
 }
 
 // ImageImportRequest describes an image import payload.
@@ -75,53 +68,36 @@ type ImageDeleteResult struct {
 }
 
 // NewMediaHTTPService creates a media HTTP service.
-func NewMediaHTTPService(configService *ConfigService, logger *log.LogService, dbServices ...*DatabaseService) *MediaHTTPService {
+func NewMediaHTTPService(configService *ConfigService, logger *log.LogService, dbService *DatabaseService, syncService *MediaSyncService) *MediaHTTPService {
 	if logger == nil {
 		logger = log.New()
 	}
 
-	var dbService *DatabaseService
-	if len(dbServices) > 0 {
-		dbService = dbServices[0]
-	}
-
-	return &MediaHTTPService{
+	service := &MediaHTTPService{
 		configService: configService,
 		dbService:     dbService,
 		logger:        logger,
+		syncService:   syncService,
 		mediaHelper:   helper.NewMediaHelper(),
 		now:           time.Now,
 	}
+	if service.syncService != nil {
+		service.mediaReferences = service.syncService.mediaReferences
+	}
+
+	return service
 }
 
-// ServiceStartup configures the service and starts config watchers.
+// ServiceStartup keeps the HTTP service lightweight. Root state is managed by MediaSyncService.
 func (s *MediaHTTPService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	_ = options
-
-	if err := s.configureFromConfig(); err != nil {
-		return err
+	_, _ = ctx, options
+	if s.syncService == nil {
+		return fmt.Errorf("media sync service is not configured")
 	}
-	if err := s.reconcileMediaIndex(ctx); err != nil {
-		return err
-	}
-
-	if s.configService != nil {
-		s.cancelObservers = []helper.CancelFunc{
-			s.configService.Watch("general.dataPath", s.onDataPathChange),
-		}
-	}
-
 	return nil
 }
 
-// ServiceShutdown stops config watchers.
 func (s *MediaHTTPService) ServiceShutdown() error {
-	for _, cancel := range s.cancelObservers {
-		if cancel != nil {
-			cancel()
-		}
-	}
-	s.cancelObservers = nil
 	return nil
 }
 
@@ -133,7 +109,13 @@ func (s *MediaHTTPService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rootPath := s.currentRootPath()
+	syncService, err := s.requireSyncService()
+	if err != nil {
+		http.Error(w, "media service is not configured", http.StatusServiceUnavailable)
+		return
+	}
+
+	rootPath, _ := syncService.currentRootState()
 	if rootPath == "" {
 		http.Error(w, "media service is not configured", http.StatusServiceUnavailable)
 		return
@@ -179,7 +161,12 @@ func (s *MediaHTTPService) ImportImage(ctx context.Context, request *ImageImport
 		return nil, fmt.Errorf("image import request is required")
 	}
 
-	client, rootPath, err := s.ensureDependencies()
+	syncService, err := s.requireSyncService()
+	if err != nil {
+		return nil, err
+	}
+
+	client, rootPath, err := syncService.ensureDependencies()
 	if err != nil {
 		return nil, err
 	}
@@ -207,18 +194,27 @@ func (s *MediaHTTPService) ImportImage(ctx context.Context, request *ImageImport
 	return s.createIndexedImage(ctx, client, rootPath, request, data, payload)
 }
 
-// DeleteImage permanently removes one indexed image asset and its local file.
+// DeleteImage permanently removes one indexed image asset and its local file when no active document still references it.
 func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*ImageDeleteResult, error) {
-	_, rootPath, err := s.ensureDependencies()
+	syncService, err := s.requireSyncService()
 	if err != nil {
 		return nil, err
 	}
 
-	asset, err := s.findAssetByReference(ctx, imageRef)
+	_, rootPath, err := syncService.ensureDependencies()
+	if err != nil {
+		return nil, err
+	}
+	rootVersion := syncService.currentRootVersion()
+
+	asset, err := syncService.findAssetByReference(ctx, imageRef)
 	if err != nil {
 		return nil, err
 	}
 	if asset == nil {
+		if rootVersion != syncService.currentRootVersion() {
+			return &ImageDeleteResult{Deleted: false}, nil
+		}
 		relativePath, absPath, pathErr := s.mediaHelper.ResolveManagedImagePath(rootPath, imageRef, mediaServiceRoute)
 		if pathErr != nil {
 			return &ImageDeleteResult{Deleted: false}, nil
@@ -235,32 +231,19 @@ func (s *MediaHTTPService) DeleteImage(ctx context.Context, imageRef string) (*I
 			Deleted: deleted,
 		}, nil
 	}
-	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, asset.Path, "")
+
+	referenced, err := syncService.isAssetReferencedByActiveDocuments(ctx, asset)
 	if err != nil {
 		return nil, err
 	}
-	stagedPath, err := s.mediaHelper.StageFile(absPath, s.now().UTC())
-	if err != nil {
-		return nil, err
+	if referenced {
+		return &ImageDeleteResult{
+			Path:    asset.Path,
+			Deleted: false,
+		}, nil
 	}
 
-	if err := s.hardDeleteAsset(ctx, asset.ID); err != nil {
-		rollbackErr := s.mediaHelper.RestoreStagedFile(absPath, stagedPath)
-		return nil, helper.WrapRollbackError("delete image asset", err, rollbackErr)
-	}
-
-	if err := s.mediaHelper.DiscardStagedFile(stagedPath); err != nil {
-		s.logger.Warning("discard staged image after delete %s: %v", stagedPath, err)
-	}
-	if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
-		s.logger.Warning("discard remaining staged images after delete %s: %v", absPath, err)
-	}
-	s.mediaHelper.TrimEmptyMediaDirs(rootPath, absPath)
-
-	return &ImageDeleteResult{
-		Path:    asset.Path,
-		Deleted: true,
-	}, nil
+	return syncService.deleteAssetEntityIfVersionMatches(ctx, asset, rootVersion)
 }
 
 func (s *MediaHTTPService) importExistingImage(ctx context.Context, client *entmodel.Client, rootPath string, asset *entmodel.MediaAsset, request *ImageImportRequest, data []byte, payload *helper.ImagePayload) (*ImageAsset, error) {
@@ -314,8 +297,13 @@ func (s *MediaHTTPService) importExistingImage(ctx context.Context, client *entm
 }
 
 func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmodel.Client, rootPath string, request *ImageImportRequest, data []byte, payload *helper.ImagePayload) (*ImageAsset, error) {
+	syncService, err := s.requireSyncService()
+	if err != nil {
+		return nil, err
+	}
+
 	importedAt := s.now().UTC()
-	relativePath, err := s.nextAvailableRelativePath(ctx, payload.Digest, payload.Extension, importedAt)
+	relativePath, err := syncService.nextAvailableRelativePath(ctx, payload.Digest, payload.Extension, importedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -355,216 +343,50 @@ func (s *MediaHTTPService) createIndexedImage(ctx context.Context, client *entmo
 	return s.imageAssetFromEntity(asset), nil
 }
 
-func (s *MediaHTTPService) reconcileMediaIndex(ctx context.Context) error {
-	s.reconcileMu.Lock()
-	defer s.reconcileMu.Unlock()
-
-	client, rootPath, err := s.ensureDependencies()
-	if err != nil {
-		return err
+func (s *MediaHTTPService) requireSyncService() (*MediaSyncService, error) {
+	if s.syncService == nil {
+		return nil, fmt.Errorf("media sync service is not configured")
 	}
-
-	if err := s.walkIndexedMediaAssets(ctx, client, func(row *entmodel.MediaAsset) error {
-		_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, row.Path, "")
-		if err != nil {
-			return err
-		}
-		if s.mediaHelper.FileExists(absPath) {
-			if err := s.mediaHelper.DiscardStagedFiles(absPath); err != nil {
-				return err
-			}
-			return nil
-		}
-		if restored, err := s.mediaHelper.RestoreLatestStagedFile(absPath); err != nil {
-			return err
-		} else if restored {
-			return nil
-		}
-		if err := s.hardDeleteAsset(ctx, row.ID); err != nil {
-			return err
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("query indexed media assets: %w", err)
-	}
-	return nil
-}
-
-func (s *MediaHTTPService) ensureDependencies() (*entmodel.Client, string, error) {
-	if s.dbService == nil || s.dbService.Client == nil {
-		return nil, "", fmt.Errorf("media index database is not configured")
-	}
-
-	rootPath := s.currentRootPath()
-	if rootPath == "" {
-		return nil, "", fmt.Errorf("media service is not configured")
-	}
-
-	return s.dbService.Client, rootPath, nil
-}
-
-func (s *MediaHTTPService) configureFromConfig() error {
-	if s.configService == nil {
-		return nil
-	}
-
-	config, err := s.configService.GetConfig()
-	if err != nil {
-		return fmt.Errorf("load media config: %w", err)
-	}
-
-	return s.configureRootPath(s.mediaHelper.RootPath(config.General.DataPath))
+	return s.syncService, nil
 }
 
 func (s *MediaHTTPService) configureRootPath(rootPath string) error {
-	if err := s.mediaHelper.EnsureRoot(rootPath); err != nil {
+	syncService, err := s.requireSyncService()
+	if err != nil {
 		return err
 	}
-
-	s.rootMu.Lock()
-	s.rootPath = rootPath
-	s.rootMu.Unlock()
-
-	s.logger.Info("media service configured", "rootPath", rootPath)
-	return nil
+	return syncService.configureRootPath(rootPath)
 }
 
-func (s *MediaHTTPService) onDataPathChange(oldValue interface{}, newValue interface{}) {
-	_, _ = oldValue, newValue
-
-	if err := s.configureFromConfig(); err != nil {
-		s.logger.Error("reconfigure media service after data path change: %v", err)
-		return
+func (s *MediaHTTPService) currentRootVersion() uint64 {
+	if s.syncService == nil {
+		return 0
 	}
-	if err := s.reconcileMediaIndex(context.Background()); err != nil {
-		s.logger.Error("reconcile media index after data path change: %v", err)
-	}
+	return s.syncService.currentRootVersion()
 }
 
-func (s *MediaHTTPService) currentRootPath() string {
-	s.rootMu.RLock()
-	defer s.rootMu.RUnlock()
-	return s.rootPath
-}
-
-func (s *MediaHTTPService) walkIndexedMediaAssets(ctx context.Context, client *entmodel.Client, visitor func(*entmodel.MediaAsset) error) error {
-	lastAssetID := ""
-	for {
-		query := client.MediaAsset.Query().
-			Order(mediaasset.ByAssetID()).
-			Limit(mediaAssetBatchSize)
-		if lastAssetID != "" {
-			query = query.Where(mediaasset.AssetIDGT(lastAssetID))
-		}
-
-		rows, err := query.All(ctx)
-		if err != nil {
-			return err
-		}
-		if len(rows) == 0 {
-			return nil
-		}
-
-		for _, row := range rows {
-			if err := visitor(row); err != nil {
-				return err
-			}
-		}
-		lastAssetID = rows[len(rows)-1].AssetID
-	}
-}
-
-func (s *MediaHTTPService) findAssetByReference(ctx context.Context, value string) (*entmodel.MediaAsset, error) {
-	client, _, err := s.ensureDependencies()
+func (s *MediaHTTPService) reconcileMediaIndex(ctx context.Context) error {
+	syncService, err := s.requireSyncService()
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	clean := strings.TrimSpace(value)
-	if clean == "" {
-		return nil, fmt.Errorf("image path is required")
-	}
-	clean = strings.SplitN(clean, "#", 2)[0]
-	clean = strings.SplitN(clean, "?", 2)[0]
-
-	if relativePath, err := s.mediaHelper.NormalizeImageReference(clean, mediaServiceRoute); err == nil {
-		asset, err := client.MediaAsset.Query().
-			Where(mediaasset.PathEQ(relativePath)).
-			Only(ctx)
-		if entmodel.IsNotFound(err) {
-			return nil, nil
-		}
-		if err != nil {
-			return nil, fmt.Errorf("lookup image asset by path: %w", err)
-		}
-		return asset, nil
-	}
-
-	if !s.mediaHelper.IsValidAssetID(clean) {
-		return nil, fmt.Errorf("invalid image asset id")
-	}
-
-	asset, err := client.MediaAsset.Query().
-		Where(mediaasset.AssetIDEQ(clean)).
-		Only(ctx)
-	if entmodel.IsNotFound(err) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("lookup image asset by id: %w", err)
-	}
-	return asset, nil
+	return syncService.reconcileMediaIndex(ctx)
 }
 
-func (s *MediaHTTPService) nextAvailableRelativePath(ctx context.Context, digest string, extension string, importedAt time.Time) (string, error) {
-	client, rootPath, err := s.ensureDependencies()
+func (s *MediaHTTPService) cleanupRemovedMediaReferences(ctx context.Context, refs []MediaReference, expectedRootVersion uint64) error {
+	syncService, err := s.requireSyncService()
 	if err != nil {
-		return "", err
+		return err
 	}
-
-	relativeDir := s.mediaHelper.ImageRelativeDir(importedAt)
-	filename := s.mediaHelper.BuildStoredImageFilename(digest, extension)
-	relativePath := path.Join(relativeDir, filename)
-
-	existsInIndex, err := client.MediaAsset.Query().
-		Where(mediaasset.PathEQ(relativePath)).
-		Exist(ctx)
-	if err != nil {
-		return "", fmt.Errorf("check media path collision: %w", err)
-	}
-	if existsInIndex {
-		return "", fmt.Errorf("managed media path already indexed: %s", relativePath)
-	}
-
-	_, absPath, err := s.mediaHelper.ResolveManagedImagePath(rootPath, relativePath, "")
-	if err != nil {
-		return "", err
-	}
-	if _, err := os.Stat(absPath); err == nil {
-		data, readErr := os.ReadFile(absPath)
-		if readErr != nil {
-			return "", fmt.Errorf("read existing managed media path: %w", readErr)
-		}
-		payload, inspectErr := s.mediaHelper.InspectImagePayload(data, "", filepath.Base(absPath))
-		if inspectErr != nil {
-			return "", fmt.Errorf("inspect existing managed media path: %w", inspectErr)
-		}
-		if payload.Digest != digest || payload.Extension != strings.ToLower(filepath.Ext(absPath)) {
-			return "", fmt.Errorf("managed media path occupied by unexpected file: %s", relativePath)
-		}
-		return relativePath, nil
-	} else if !os.IsNotExist(err) {
-		return "", fmt.Errorf("stat candidate media path: %w", err)
-	}
-
-	return relativePath, nil
+	return syncService.cleanupRemovedMediaReferences(ctx, refs, expectedRootVersion)
 }
 
-func (s *MediaHTTPService) hardDeleteAsset(ctx context.Context, id int) error {
-	if err := s.dbService.Client.MediaAsset.DeleteOneID(id).Exec(ctx); err != nil && !entmodel.IsNotFound(err) {
-		return fmt.Errorf("delete media asset index row: %w", err)
+func (s *MediaHTTPService) sweepOrphanedAssets(ctx context.Context, expectedRootVersion uint64) error {
+	syncService, err := s.requireSyncService()
+	if err != nil {
+		return err
 	}
-	return nil
+	return syncService.sweepOrphanedAssets(ctx, expectedRootVersion)
 }
 
 func buildMediaETag(info os.FileInfo) string {

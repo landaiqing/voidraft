@@ -15,6 +15,7 @@ type ServiceManager struct {
 	databaseService     *DatabaseService
 	documentService     *DocumentService
 	mediaHTTPService    *MediaHTTPService
+	mediaSyncService    *MediaSyncService
 	windowService       *WindowService
 	windowSnapService   *WindowSnapService
 	migrationService    *MigrationService
@@ -39,7 +40,7 @@ type ServiceManager struct {
 // NewServiceManager creates a new service manager instance.
 func NewServiceManager() *ServiceManager {
 	logger := log.NewWithConfig(&log.Config{
-		LogLevel: slog.LevelDebug,
+		LogLevel: slog.LevelError,
 	})
 
 	badgeService := dock.New()
@@ -47,8 +48,9 @@ func NewServiceManager() *ServiceManager {
 	configService := NewConfigService(logger)
 	databaseService := NewDatabaseService(configService, logger)
 	migrationService := NewMigrationService(databaseService, configService, logger)
-	documentService := NewDocumentService(databaseService, logger)
-	mediaHTTPService := NewMediaHTTPService(configService, logger, databaseService)
+	mediaSyncService := NewMediaSyncService(configService, logger, databaseService)
+	mediaHTTPService := NewMediaHTTPService(configService, logger, databaseService, mediaSyncService)
+	documentService := NewDocumentService(databaseService, logger, mediaSyncService)
 	windowSnapService := NewWindowSnapService(logger, configService)
 	windowService := NewWindowService(logger, documentService, windowSnapService)
 	systemService := NewSystemService(logger)
@@ -70,6 +72,7 @@ func NewServiceManager() *ServiceManager {
 		databaseService:     databaseService,
 		documentService:     documentService,
 		mediaHTTPService:    mediaHTTPService,
+		mediaSyncService:    mediaSyncService,
 		windowService:       windowService,
 		windowSnapService:   windowSnapService,
 		migrationService:    migrationService,
@@ -97,6 +100,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 	return []application.Service{
 		application.NewService(sm.configService),
 		application.NewService(sm.databaseService),
+		application.NewService(sm.mediaSyncService),
 		application.NewService(sm.documentService),
 		application.NewServiceWithOptions(sm.mediaHTTPService, application.ServiceOptions{
 			Route: mediaServiceRoute,

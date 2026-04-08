@@ -276,6 +276,26 @@ export class ImageImportRequest {
 }
 
 /**
+ * MediaSyncService 管理媒体根目录状态、索引修复和孤儿资源清理。
+ */
+export class MediaSyncService {
+
+    /** Creates a new MediaSyncService instance. */
+    constructor($$source: Partial<MediaSyncService> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MediaSyncService instance from a string or object.
+     */
+    static createFrom($$source: any = {}): MediaSyncService {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MediaSyncService($$parsedSource as Partial<MediaSyncService>);
+    }
+}
+
+/**
  * MemoryStats 内存统计信息
  */
 export class MemoryStats {

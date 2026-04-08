@@ -10,6 +10,7 @@ import * as HotkeyService from "./hotkeyservice.js";
 import * as HttpClientService from "./httpclientservice.js";
 import * as KeyBindingService from "./keybindingservice.js";
 import * as MediaHTTPService from "./mediahttpservice.js";
+import * as MediaSyncService from "./mediasyncservice.js";
 import * as MigrationService from "./migrationservice.js";
 import * as SelfUpdateService from "./selfupdateservice.js";
 import * as StartupService from "./startupservice.js";
@@ -29,6 +30,7 @@ export {
     HttpClientService,
     KeyBindingService,
     MediaHTTPService,
+    MediaSyncService,
     MigrationService,
     SelfUpdateService,
     StartupService,

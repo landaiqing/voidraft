@@ -1,14 +1,24 @@
-import type {Compartment} from '@codemirror/state';
+import {EditorSelection, type Compartment} from '@codemirror/state';
 import {EditorView, WidgetType} from '@codemirror/view';
 import i18n from '@/i18n';
 import {copyImage, deleteImageAsset} from './clipboard';
 import {inlineImageDrawManager} from './manager';
-import {removeInlineImage, setInlineImageDisplayDimensions} from './inlineImageParsing';
+import {parseInlineImages, removeInlineImage, setInlineImageDisplayDimensions} from './inlineImageParsing';
 
 const FOLDED_HEIGHT = 16;
 
 function t(key: string): string {
   return i18n.global.t(key);
+}
+
+function withDialogCacheBust(url: string): string {
+  const cleanUrl = url.trim();
+  if (!cleanUrl) {
+    return cleanUrl;
+  }
+
+  const separator = cleanUrl.includes('?') ? '&' : '?';
+  return `${cleanUrl}${separator}dialog_ts=${Date.now()}`;
 }
 
 export interface InlineImageWidgetConfig {
@@ -72,10 +82,12 @@ export class InlineImageWidget extends WidgetType {
 
   override toDOM(view: EditorView): HTMLElement {
     const wrap = document.createElement('div');
-    wrap.className = this.getClassName();
+    this.syncWrapClassName(wrap);
     wrap.dataset.id = this.id;
     wrap.dataset.idealWidth = String(this.idealWidth);
     wrap.dataset.idealHeight = String(this.idealHeight);
+    this.attachSelectionBehavior(view, wrap);
+    this.attachHoverBehavior(wrap);
 
     const inner = document.createElement('div');
     inner.className = 'inner';
@@ -149,7 +161,10 @@ export class InlineImageWidget extends WidgetType {
     if (drawButton) {
       drawButton.addEventListener('click', event => {
         event.preventDefault();
-        inlineImageDrawManager.show(view, this.id, this.assetRef || this.path, this.path);
+        const currentImage = parseInlineImages(view.state).find(image => image.id === this.id);
+        const imageUrl = currentImage?.file || this.path;
+        const assetRef = currentImage?.assetRef || this.assetRef || imageUrl;
+        inlineImageDrawManager.show(view, this.id, assetRef, withDialogCacheBust(imageUrl));
       });
     }
 
@@ -177,7 +192,7 @@ export class InlineImageWidget extends WidgetType {
   }
 
   override updateDOM(dom: HTMLElement): boolean {
-    dom.className = this.getClassName();
+    this.syncWrapClassName(dom);
     dom.dataset.id = this.id;
     dom.dataset.idealWidth = String(this.idealWidth);
     dom.dataset.idealHeight = String(this.idealHeight);
@@ -199,6 +214,14 @@ export class InlineImageWidget extends WidgetType {
 
   private getClassName(): string {
     return `inline-image${this.selected ? ' selected' : ''}${this.isFolded ? ' folded' : ''}`;
+  }
+
+  private syncWrapClassName(dom: HTMLElement): void {
+    const isControlsVisible = dom.classList.contains('controls-visible');
+    dom.className = this.getClassName();
+    if (isControlsVisible) {
+      dom.classList.add('controls-visible');
+    }
   }
 
   private getWidth(): string {
@@ -227,6 +250,45 @@ export class InlineImageWidget extends WidgetType {
     }
 
     return `${height}px`;
+  }
+
+  private attachHoverBehavior(wrap: HTMLDivElement): void {
+    wrap.addEventListener('mouseenter', () => {
+      wrap.classList.add('controls-visible');
+    });
+
+    wrap.addEventListener('mouseleave', () => {
+      wrap.classList.remove('controls-visible');
+    });
+  }
+
+  private attachSelectionBehavior(view: EditorView, wrap: HTMLDivElement): void {
+    wrap.addEventListener('mousedown', event => {
+      if (event.button !== 0) {
+        return;
+      }
+
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+
+      if (target.closest('button, .resize-handle')) {
+        return;
+      }
+
+      const currentImage = parseInlineImages(view.state).find(image => image.id === this.id);
+      if (!currentImage) {
+        return;
+      }
+
+      event.preventDefault();
+      view.focus();
+      view.dispatch({
+        selection: EditorSelection.cursor(currentImage.from, 1),
+        scrollIntoView: true,
+      });
+    });
   }
 
   private attachResizeBehavior(

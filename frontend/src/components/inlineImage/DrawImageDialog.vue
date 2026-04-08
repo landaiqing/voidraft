@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {computed} from 'vue';
 import {useI18n} from 'vue-i18n';
+import {useThemeStore} from '@/stores/themeStore';
 import DrawImageFooter from './draw/DrawImageFooter.vue';
 import DrawImageToolbar from './draw/DrawImageToolbar.vue';
 import {useInlineImageDraw} from './draw/useInlineImageDraw';
@@ -10,6 +11,7 @@ const props = defineProps<{
 }>();
 
 const {t} = useI18n();
+const themeStore = useThemeStore();
 const {
   dialogRef,
   headerRef,
@@ -50,6 +52,11 @@ const {
 } = useInlineImageDraw();
 
 const teleportTarget = computed<HTMLElement | string>(() => props.portalTarget ?? 'body');
+const themedDialogStyle = computed(() => ({
+  ...dialogStyle.value,
+  '--inline-image-draw-stage-base': themeStore.isDarkMode ? '#181b20' : '#ffffff',
+  '--inline-image-draw-stage-grid': themeStore.isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(224, 228, 233, 0.95)',
+}));
 
 function handleBrushColorUpdate(value: string): void {
   brushColor.value = value;
@@ -68,7 +75,7 @@ function handleBrushWidthUpdate(value: number): void {
           <div
             ref="dialogRef"
             class="inline-image-draw-dialog"
-            :style="dialogStyle"
+            :style="themedDialogStyle"
             tabindex="-1"
           >
             <div ref="headerRef" class="inline-image-draw-header">
@@ -168,6 +175,8 @@ function handleBrushWidthUpdate(value: number): void {
   flex-direction: column;
   max-width: calc(100vw - 56px);
   max-height: calc(100vh - 56px);
+  --inline-image-draw-stage-base: #ffffff;
+  --inline-image-draw-stage-grid: rgba(224, 228, 233, 0.95);
   background: var(--settings-card-bg, #fff);
   color: var(--text-primary, #111);
   border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
@@ -207,7 +216,7 @@ function handleBrushWidthUpdate(value: number): void {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary, #f5f5f5);
+  background: var(--inline-image-draw-stage-base);
 }
 
 .inline-image-draw-stage {
@@ -218,13 +227,14 @@ function handleBrushWidthUpdate(value: number): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  background:
-    linear-gradient(45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255, 255, 255, 0.04) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.04) 75%);
-  background-size: 18px 18px;
-  background-position: 0 0, 0 9px, 9px -9px, -9px 0;
+  background-color: var(--inline-image-draw-stage-base);
+  background-image:
+    linear-gradient(45deg, var(--inline-image-draw-stage-grid) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--inline-image-draw-stage-grid) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--inline-image-draw-stage-grid) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--inline-image-draw-stage-grid) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
   box-sizing: border-box;
 }
 

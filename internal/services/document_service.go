@@ -32,16 +32,17 @@ type DocumentSaveResult struct {
 
 // DocumentService 文档服务
 type DocumentService struct {
-	db     *DatabaseService
-	logger *log.LogService
+	db        *DatabaseService
+	logger    *log.LogService
+	mediaSync *MediaSyncService
 }
 
 // NewDocumentService 创建文档服务
-func NewDocumentService(db *DatabaseService, logger *log.LogService) *DocumentService {
+func NewDocumentService(db *DatabaseService, logger *log.LogService, mediaSync *MediaSyncService) *DocumentService {
 	if logger == nil {
 		logger = log.New()
 	}
-	return &DocumentService{db: db, logger: logger}
+	return &DocumentService{db: db, logger: logger, mediaSync: mediaSync}
 }
 
 // ServiceStartup 服务启动
@@ -166,7 +167,13 @@ func (s *DocumentService) DeleteDocument(ctx context.Context, id int) error {
 	if count <= 1 {
 		return errors.New("cannot delete the last document")
 	}
-	return s.db.Client.Document.DeleteOneID(id).Exec(ctx)
+	if err := s.db.Client.Document.DeleteOneID(id).Exec(ctx); err != nil {
+		return err
+	}
+	if s.mediaSync != nil {
+		s.mediaSync.scheduleOrphanCleanupForDeletedContent(doc.Content)
+	}
+	return nil
 }
 
 // ListAllDocumentsMeta lists document metadata.

@@ -85,7 +85,10 @@ function createInlineImageTheme(): Extension {
       position: 'relative',
       border: '1px solid var(--image-border-color)',
     },
-    '.inline-image .inner:hover .buttons-container': {
+    '.inline-image.controls-visible .buttons-container': {
+      opacity: '1',
+    },
+    '.inline-image.selected .buttons-container': {
       opacity: '1',
     },
     '.inline-image img': {
@@ -291,5 +294,17 @@ export function createInlineImageWidgetExtension(options: InlineImageWidgetExten
 }
 
 export function inlineImageIsSelected(image: ParsedInlineImage, selection: SelectionRange): boolean {
-  return selection.from === selection.to && (selection.from === image.from || selection.from === image.to);
+  if (selection.from !== selection.to) {
+    return false;
+  }
+
+  if (selection.from === image.from) {
+    return selection.assoc >= 0;
+  }
+
+  if (selection.from === image.to) {
+    return selection.assoc < 0;
+  }
+
+  return false;
 }

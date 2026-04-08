@@ -15,7 +15,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	commonhelper "voidraft/internal/common/helper"
 	"voidraft/internal/models/ent"
 	"voidraft/internal/models/ent/enttest"
 	"voidraft/internal/models/ent/mediaasset"
@@ -32,7 +31,9 @@ func newIndexedMediaHTTPService(t *testing.T) (*MediaHTTPService, string) {
 		_ = client.Close()
 	})
 
-	service := NewMediaHTTPService(nil, nil, &DatabaseService{Client: client})
+	dbService := &DatabaseService{Client: client}
+	syncService := NewMediaSyncService(nil, nil, dbService)
+	service := NewMediaHTTPService(nil, nil, dbService, syncService)
 	rootPath := filepath.Join(t.TempDir(), "media")
 	if err := service.configureRootPath(rootPath); err != nil {
 		t.Fatalf("configure root path: %v", err)
@@ -52,7 +53,7 @@ func failMediaAssetDeletes(client *ent.Client, err error) {
 }
 
 func TestMediaHTTPServiceConfigureRootPathCreatesDirectories(t *testing.T) {
-	service := NewMediaHTTPService(nil, nil)
+	service := NewMediaHTTPService(nil, nil, nil, NewMediaSyncService(nil, nil, nil))
 	rootPath := filepath.Join(t.TempDir(), "data", "media")
 
 	if err := service.configureRootPath(rootPath); err != nil {
@@ -74,7 +75,7 @@ func TestMediaHTTPServiceConfigureRootPathCreatesDirectories(t *testing.T) {
 }
 
 func TestMediaHTTPServiceServeHTTPServesExistingFile(t *testing.T) {
-	service := NewMediaHTTPService(nil, nil)
+	service := NewMediaHTTPService(nil, nil, nil, NewMediaSyncService(nil, nil, nil))
 	rootPath := filepath.Join(t.TempDir(), "media")
 	if err := service.configureRootPath(rootPath); err != nil {
 		t.Fatalf("configure root path: %v", err)
@@ -106,7 +107,7 @@ func TestMediaHTTPServiceServeHTTPServesExistingFile(t *testing.T) {
 }
 
 func TestMediaHTTPServiceServeHTTPRejectsUnsafePaths(t *testing.T) {
-	service := NewMediaHTTPService(nil, nil)
+	service := NewMediaHTTPService(nil, nil, nil, NewMediaSyncService(nil, nil, nil))
 	rootPath := filepath.Join(t.TempDir(), "media")
 	if err := service.configureRootPath(rootPath); err != nil {
 		t.Fatalf("configure root path: %v", err)
@@ -132,7 +133,7 @@ func TestMediaHTTPServiceServeHTTPRejectsUnsafePaths(t *testing.T) {
 }
 
 func TestMediaHTTPServiceServeHTTPReturnsNotModifiedWhenETagMatches(t *testing.T) {
-	service := NewMediaHTTPService(nil, nil)
+	service := NewMediaHTTPService(nil, nil, nil, NewMediaSyncService(nil, nil, nil))
 	rootPath := filepath.Join(t.TempDir(), "media")
 	if err := service.configureRootPath(rootPath); err != nil {
 		t.Fatalf("configure root path: %v", err)
@@ -164,7 +165,6 @@ func TestMediaHTTPServiceServeHTTPReturnsNotModifiedWhenETagMatches(t *testing.T
 
 func TestMediaHTTPServiceImportImageStoresByDateFolders(t *testing.T) {
 	service, rootPath := newIndexedMediaHTTPService(t)
-	mediaHelper := commonhelper.NewMediaHelper()
 	service.now = func() time.Time {
 		return time.Date(2026, 3, 30, 12, 34, 56, 0, time.UTC)
 	}
@@ -194,9 +194,8 @@ func TestMediaHTTPServiceImportImageStoresByDateFolders(t *testing.T) {
 	if result.ID == "" || result.ID != result.SHA256 {
 		t.Fatalf("expected stable asset id to match sha256, got id=%q sha256=%q", result.ID, result.SHA256)
 	}
-	expectedFilename := mediaHelper.BuildStoredImageFilename(result.SHA256, ".png")
-	if result.Filename != expectedFilename {
-		t.Fatalf("expected managed filename %q, got %q", expectedFilename, result.Filename)
+	if result.Filename != "clipboard-image.png" {
+		t.Fatalf("expected original filename %q, got %q", "clipboard-image.png", result.Filename)
 	}
 
 	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
@@ -368,6 +367,285 @@ func TestMediaHTTPServiceDeleteImageRemovesFileAndHardDeletesIndexedRow(t *testi
 	}
 }
 
+func TestMediaHTTPServiceDeleteImageSkipsReferencedAsset(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "referenced.png",
+		Data:     mustEncodePNG(t, 1, 1),
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+
+	if _, err := service.dbService.Client.Document.Create().
+		SetTitle("ref-doc").
+		SetContent(buildInlineImageDocumentContent(result)).
+		Save(context.Background()); err != nil {
+		t.Fatalf("create document with image reference: %v", err)
+	}
+
+	deleteResult, err := service.DeleteImage(context.Background(), result.ID)
+	if err != nil {
+		t.Fatalf("delete image: %v", err)
+	}
+	if deleteResult.Deleted {
+		t.Fatal("expected referenced asset to be kept")
+	}
+
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
+	if _, err := os.Stat(absImagePath); err != nil {
+		t.Fatalf("expected referenced image file to remain: %v", err)
+	}
+
+	if _, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(context.Background()); err != nil {
+		t.Fatalf("expected referenced asset row to remain: %v", err)
+	}
+}
+
+func TestMediaHTTPServiceCleanupRemovedMediaReferencesDeletesOrphanedAsset(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "orphan-cleanup.png",
+		Data:     mustEncodePNG(t, 2, 1),
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+
+	content := buildInlineImageDocumentContent(result)
+	doc, err := service.dbService.Client.Document.Create().
+		SetTitle("cleanup-doc").
+		SetContent(content).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+
+	if _, err := service.dbService.Client.Document.UpdateOneID(doc.ID).
+		SetContent("").
+		Save(context.Background()); err != nil {
+		t.Fatalf("update document content: %v", err)
+	}
+
+	if err := service.cleanupRemovedMediaReferences(
+		context.Background(),
+		service.mediaReferences.DiffRemovedReferences(content, ""),
+		service.currentRootVersion(),
+	); err != nil {
+		t.Fatalf("cleanup removed media references: %v", err)
+	}
+
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
+	if _, err := os.Stat(absImagePath); !os.IsNotExist(err) {
+		t.Fatalf("expected orphaned image file to be removed, stat err=%v", err)
+	}
+
+	_, err = service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(context.Background())
+	if !ent.IsNotFound(err) {
+		t.Fatalf("expected orphaned asset row to be removed, err=%v", err)
+	}
+}
+
+func TestMediaHTTPServiceCleanupRemovedMediaReferencesKeepsSharedAsset(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "shared-cleanup.png",
+		Data:     mustEncodePNG(t, 2, 1),
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+
+	content := buildInlineImageDocumentContent(result)
+	firstDoc, err := service.dbService.Client.Document.Create().
+		SetTitle("cleanup-doc-1").
+		SetContent(content).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create first document: %v", err)
+	}
+	if _, err := service.dbService.Client.Document.Create().
+		SetTitle("cleanup-doc-2").
+		SetContent(content).
+		Save(context.Background()); err != nil {
+		t.Fatalf("create second document: %v", err)
+	}
+
+	if _, err := service.dbService.Client.Document.UpdateOneID(firstDoc.ID).
+		SetContent("").
+		Save(context.Background()); err != nil {
+		t.Fatalf("update first document content: %v", err)
+	}
+
+	if err := service.cleanupRemovedMediaReferences(
+		context.Background(),
+		service.mediaReferences.DiffRemovedReferences(content, ""),
+		service.currentRootVersion(),
+	); err != nil {
+		t.Fatalf("cleanup removed media references: %v", err)
+	}
+
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
+	if _, err := os.Stat(absImagePath); err != nil {
+		t.Fatalf("expected shared image file to remain: %v", err)
+	}
+
+	if _, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(context.Background()); err != nil {
+		t.Fatalf("expected shared asset row to remain: %v", err)
+	}
+}
+
+func TestMediaHTTPServiceCleanupRemovedMediaReferencesSkipsStaleRootVersion(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "stale-root.png",
+		Data:     mustEncodePNG(t, 1, 2),
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+
+	content := buildInlineImageDocumentContent(result)
+	doc, err := service.dbService.Client.Document.Create().
+		SetTitle("stale-root-doc").
+		SetContent(content).
+		Save(context.Background())
+	if err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+	if _, err := service.dbService.Client.Document.UpdateOneID(doc.ID).
+		SetContent("").
+		Save(context.Background()); err != nil {
+		t.Fatalf("update document content: %v", err)
+	}
+
+	staleVersion := service.currentRootVersion()
+	newRootPath := filepath.Join(t.TempDir(), "other-media-root")
+	if err := service.configureRootPath(newRootPath); err != nil {
+		t.Fatalf("reconfigure media root: %v", err)
+	}
+
+	if err := service.cleanupRemovedMediaReferences(
+		context.Background(),
+		service.mediaReferences.DiffRemovedReferences(content, ""),
+		staleVersion,
+	); err != nil {
+		t.Fatalf("cleanup removed media references: %v", err)
+	}
+
+	oldAbsImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
+	if _, err := os.Stat(oldAbsImagePath); err != nil {
+		t.Fatalf("expected old-root image file to remain after stale cleanup: %v", err)
+	}
+
+	if _, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(context.Background()); err != nil {
+		t.Fatalf("expected asset row to remain after stale cleanup: %v", err)
+	}
+}
+
+func TestMediaHTTPServiceSweepOrphanedAssetsDeletesUnindexedFilesFromImagesDir(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	strayDir := filepath.Join(rootPath, "images", "2024", "12", "31")
+	strayPath := filepath.Join(strayDir, "orphan.png")
+	if err := os.MkdirAll(strayDir, 0755); err != nil {
+		t.Fatalf("create stray image dir: %v", err)
+	}
+	if err := os.WriteFile(strayPath, mustEncodePNG(t, 1, 1), 0644); err != nil {
+		t.Fatalf("write stray image file: %v", err)
+	}
+
+	emptyDir := filepath.Join(rootPath, "images", "2024", "11", "01")
+	if err := os.MkdirAll(emptyDir, 0755); err != nil {
+		t.Fatalf("create empty image dir: %v", err)
+	}
+
+	if err := service.sweepOrphanedAssets(context.Background(), service.currentRootVersion()); err != nil {
+		t.Fatalf("sweep orphaned assets: %v", err)
+	}
+
+	if _, err := os.Stat(strayPath); !os.IsNotExist(err) {
+		t.Fatalf("expected unindexed image file to be deleted, stat err=%v", err)
+	}
+	if _, err := os.Stat(strayDir); !os.IsNotExist(err) {
+		t.Fatalf("expected stray image dir to be trimmed, stat err=%v", err)
+	}
+	if _, err := os.Stat(emptyDir); !os.IsNotExist(err) {
+		t.Fatalf("expected empty image dir to be removed, stat err=%v", err)
+	}
+}
+
+func TestMediaHTTPServiceSweepOrphanedAssetsKeepsReferencedIndexedFiles(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	result, err := service.ImportImage(context.Background(), &ImageImportRequest{
+		Filename: "kept.png",
+		Data:     mustEncodePNG(t, 2, 2),
+	})
+	if err != nil {
+		t.Fatalf("import image: %v", err)
+	}
+	if _, err := service.dbService.Client.Document.Create().
+		SetTitle("kept-doc").
+		SetContent(buildInlineImageDocumentContent(result)).
+		Save(context.Background()); err != nil {
+		t.Fatalf("create referencing document: %v", err)
+	}
+
+	if err := service.sweepOrphanedAssets(context.Background(), service.currentRootVersion()); err != nil {
+		t.Fatalf("sweep orphaned assets: %v", err)
+	}
+
+	absImagePath := filepath.Join(rootPath, filepath.FromSlash(result.Path))
+	if _, err := os.Stat(absImagePath); err != nil {
+		t.Fatalf("expected indexed image file to remain: %v", err)
+	}
+	if _, err := service.dbService.Client.MediaAsset.Query().
+		Where(mediaasset.AssetIDEQ(result.ID)).
+		Only(context.Background()); err != nil {
+		t.Fatalf("expected indexed asset row to remain: %v", err)
+	}
+}
+
+func TestMediaHTTPServiceSweepOrphanedAssetsSkipsUnindexedFileDeletionOnStaleRootVersion(t *testing.T) {
+	service, rootPath := newIndexedMediaHTTPService(t)
+
+	strayDir := filepath.Join(rootPath, "images", "2025", "01", "15")
+	strayPath := filepath.Join(strayDir, "stale-orphan.png")
+	if err := os.MkdirAll(strayDir, 0755); err != nil {
+		t.Fatalf("create stale stray dir: %v", err)
+	}
+	if err := os.WriteFile(strayPath, mustEncodePNG(t, 1, 1), 0644); err != nil {
+		t.Fatalf("write stale stray file: %v", err)
+	}
+
+	staleVersion := service.currentRootVersion()
+	newRootPath := filepath.Join(t.TempDir(), "other-media-root")
+	if err := service.configureRootPath(newRootPath); err != nil {
+		t.Fatalf("reconfigure media root: %v", err)
+	}
+
+	if err := service.sweepOrphanedAssets(context.Background(), staleVersion); err != nil {
+		t.Fatalf("sweep orphaned assets with stale root version: %v", err)
+	}
+
+	if _, err := os.Stat(strayPath); err != nil {
+		t.Fatalf("expected old-root unindexed file to remain after stale sweep: %v", err)
+	}
+}
+
 func TestMediaHTTPServiceDeleteImageRestoresFileWhenIndexUpdateFails(t *testing.T) {
 	service, rootPath := newIndexedMediaHTTPService(t)
 	imageData := mustEncodePNG(t, 2, 2)
@@ -461,4 +739,15 @@ func mustEncodePNG(t *testing.T, width int, height int) []byte {
 		t.Fatalf("encode png: %v", err)
 	}
 	return buffer.Bytes()
+}
+
+func buildInlineImageDocumentContent(asset *ImageAsset) string {
+	return fmt.Sprintf(
+		"before <∞img;id=tag-%s;asset=%s;file=%s;w=%d;h=%d∞> after",
+		asset.ID[:8],
+		asset.ID,
+		asset.URL,
+		asset.Width,
+		asset.Height,
+	)
 }
