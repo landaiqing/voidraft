@@ -1,57 +1,88 @@
 import {defineStore} from 'pinia';
-import {ref} from 'vue';
+import {computed, ref} from 'vue';
 import {SyncService} from '@/../bindings/voidraft/internal/services';
-import {SyncConnectionResult, SyncStatus} from '@/../bindings/voidraft/internal/services/models';
+import {SyncRunRecord} from '@/../bindings/voidraft/internal/models/models';
+
+const DEFAULT_RUNS_PAGE_SIZE = 8;
 
 export const useSyncStore = defineStore('sync', () => {
   const isSyncing = ref(false);
-  const isTestingConnection = ref(false);
-  const status = ref<SyncStatus | null>(null);
+  const isLoadingRuns = ref(false);
+  const runs = ref<SyncRunRecord[]>([]);
+  const currentPage = ref(1);
+  const hasMoreRuns = ref(false);
+  const canLoadPrevRuns = computed(() => currentPage.value > 1);
+  const canLoadNextRuns = computed(() => hasMoreRuns.value);
 
-  /** Loads the latest sync status. */
-  const loadStatus = async (): Promise<SyncStatus | null> => {
-    status.value = await SyncService.GetStatus();
-    return status.value;
+  /** Loads recent sync records. */
+  const loadRuns = async (page = 1): Promise<void> => {
+    const safePage = Math.max(page, 1);
+    isLoadingRuns.value = true;
+    try {
+      const items = await SyncService.ListSyncRunLogs(safePage, DEFAULT_RUNS_PAGE_SIZE + 1);
+      hasMoreRuns.value = items.length > DEFAULT_RUNS_PAGE_SIZE;
+      runs.value = hasMoreRuns.value ? items.slice(0, DEFAULT_RUNS_PAGE_SIZE) : items;
+      currentPage.value = safePage;
+    } finally {
+      isLoadingRuns.value = false;
+    }
   };
 
-  /** Runs one sync and caches the latest status. */
-  const sync = async (): Promise<SyncStatus | null> => {
-    if (isSyncing.value) {
-      return status.value;
+  /** Loads previous sync log page. */
+  const loadPrevRunsPage = async (): Promise<void> => {
+    if (!canLoadPrevRuns.value || isLoadingRuns.value) {
+      return;
     }
+
+    await loadRuns(currentPage.value - 1);
+  };
+
+  /** Loads next sync log page. */
+  const loadNextRunsPage = async (): Promise<void> => {
+    if (!canLoadNextRuns.value || isLoadingRuns.value) {
+      return;
+    }
+
+    await loadRuns(currentPage.value + 1);
+  };
+
+  /** Runs one sync. */
+  const sync = async (): Promise<void> => {
+    if (isSyncing.value) {
+      return;
+    }
+
+    let syncError: unknown = null;
 
     isSyncing.value = true;
     try {
-      status.value = await SyncService.Sync();
-      return status.value;
+      await SyncService.Sync();
     } catch (error) {
-      await loadStatus();
-      throw error;
+      syncError = error;
     } finally {
       isSyncing.value = false;
-    }
-  };
-
-  /** Verifies the selected target config immediately. */
-  const testConnection = async (): Promise<SyncConnectionResult | null> => {
-    if (isTestingConnection.value) {
-      return null;
+      try {
+        await loadRuns(1);
+      } catch {
+      }
     }
 
-    isTestingConnection.value = true;
-    try {
-      return await SyncService.TestConnection();
-    } finally {
-      isTestingConnection.value = false;
+    if (syncError) {
+      throw syncError;
     }
   };
 
   return {
     isSyncing,
-    isTestingConnection,
-    status,
-    loadStatus,
-    sync,
-    testConnection
+    isLoadingRuns,
+    runs,
+    currentPage,
+    hasMoreRuns,
+    canLoadPrevRuns,
+    canLoadNextRuns,
+    loadRuns,
+    loadPrevRunsPage,
+    loadNextRunsPage,
+    sync
   };
 });

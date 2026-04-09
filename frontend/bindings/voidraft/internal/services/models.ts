@@ -276,26 +276,6 @@ export class ImageImportRequest {
 }
 
 /**
- * MediaSyncService 管理媒体根目录状态、索引修复和孤儿资源清理。
- */
-export class MediaSyncService {
-
-    /** Creates a new MediaSyncService instance. */
-    constructor($$source: Partial<MediaSyncService> = {}) {
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new MediaSyncService instance from a string or object.
-     */
-    static createFrom($$source: any = {}): MediaSyncService {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new MediaSyncService($$parsedSource as Partial<MediaSyncService>);
-    }
-}
-
-/**
  * MemoryStats 内存统计信息
  */
 export class MemoryStats {
@@ -506,71 +486,6 @@ export class SelfUpdateResult {
     static createFrom($$source: any = {}): SelfUpdateResult {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new SelfUpdateResult($$parsedSource as Partial<SelfUpdateResult>);
-    }
-}
-
-/**
- * SyncConnectionResult describes a connection test result.
- */
-export class SyncConnectionResult {
-    "target_id": string;
-    "resolved_branch"?: string;
-
-    /** Creates a new SyncConnectionResult instance. */
-    constructor($$source: Partial<SyncConnectionResult> = {}) {
-        if (!("target_id" in $$source)) {
-            this["target_id"] = "";
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new SyncConnectionResult instance from a string or object.
-     */
-    static createFrom($$source: any = {}): SyncConnectionResult {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new SyncConnectionResult($$parsedSource as Partial<SyncConnectionResult>);
-    }
-}
-
-/**
- * SyncStatus describes the latest manual sync state.
- */
-export class SyncStatus {
-    "target_id"?: string;
-    "last_sync_at"?: string;
-    "last_success_at"?: string;
-    "last_error"?: string;
-    "local_changed": boolean;
-    "remote_changed": boolean;
-    "applied_to_local": boolean;
-    "published": boolean;
-
-    /** Creates a new SyncStatus instance. */
-    constructor($$source: Partial<SyncStatus> = {}) {
-        if (!("local_changed" in $$source)) {
-            this["local_changed"] = false;
-        }
-        if (!("remote_changed" in $$source)) {
-            this["remote_changed"] = false;
-        }
-        if (!("applied_to_local" in $$source)) {
-            this["applied_to_local"] = false;
-        }
-        if (!("published" in $$source)) {
-            this["published"] = false;
-        }
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new SyncStatus instance from a string or object.
-     */
-    static createFrom($$source: any = {}): SyncStatus {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new SyncStatus($$parsedSource as Partial<SyncStatus>);
     }
 }
 

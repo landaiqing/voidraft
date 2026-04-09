@@ -12,6 +12,7 @@ import (
 	"voidraft/internal/models/ent/keybinding"
 	"voidraft/internal/models/ent/mediaasset"
 	"voidraft/internal/models/ent/predicate"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 
 	"entgo.io/ent/dialect/sql"
@@ -181,6 +182,33 @@ func (f TraverseMediaAsset) Traverse(ctx context.Context, q ent.Query) error {
 	return fmt.Errorf("unexpected query type %T. expect *ent.MediaAssetQuery", q)
 }
 
+// The SyncRunLogFunc type is an adapter to allow the use of ordinary function as a Querier.
+type SyncRunLogFunc func(context.Context, *ent.SyncRunLogQuery) (ent.Value, error)
+
+// Query calls f(ctx, q).
+func (f SyncRunLogFunc) Query(ctx context.Context, q ent.Query) (ent.Value, error) {
+	if q, ok := q.(*ent.SyncRunLogQuery); ok {
+		return f(ctx, q)
+	}
+	return nil, fmt.Errorf("unexpected query type %T. expect *ent.SyncRunLogQuery", q)
+}
+
+// The TraverseSyncRunLog type is an adapter to allow the use of ordinary function as Traverser.
+type TraverseSyncRunLog func(context.Context, *ent.SyncRunLogQuery) error
+
+// Intercept is a dummy implementation of Intercept that returns the next Querier in the pipeline.
+func (f TraverseSyncRunLog) Intercept(next ent.Querier) ent.Querier {
+	return next
+}
+
+// Traverse calls f(ctx, q).
+func (f TraverseSyncRunLog) Traverse(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SyncRunLogQuery); ok {
+		return f(ctx, q)
+	}
+	return fmt.Errorf("unexpected query type %T. expect *ent.SyncRunLogQuery", q)
+}
+
 // The ThemeFunc type is an adapter to allow the use of ordinary function as a Querier.
 type ThemeFunc func(context.Context, *ent.ThemeQuery) (ent.Value, error)
 
@@ -219,6 +247,8 @@ func NewQuery(q ent.Query) (Query, error) {
 		return &query[*ent.KeyBindingQuery, predicate.KeyBinding, keybinding.OrderOption]{typ: ent.TypeKeyBinding, tq: q}, nil
 	case *ent.MediaAssetQuery:
 		return &query[*ent.MediaAssetQuery, predicate.MediaAsset, mediaasset.OrderOption]{typ: ent.TypeMediaAsset, tq: q}, nil
+	case *ent.SyncRunLogQuery:
+		return &query[*ent.SyncRunLogQuery, predicate.SyncRunLog, syncrunlog.OrderOption]{typ: ent.TypeSyncRunLog, tq: q}, nil
 	case *ent.ThemeQuery:
 		return &query[*ent.ThemeQuery, predicate.Theme, theme.OrderOption]{typ: ent.TypeTheme, tq: q}, nil
 	default:

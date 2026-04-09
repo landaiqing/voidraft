@@ -56,6 +56,18 @@ func (f MediaAssetFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, 
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MediaAssetMutation", m)
 }
 
+// The SyncRunLogFunc type is an adapter to allow the use of ordinary
+// function as SyncRunLog mutator.
+type SyncRunLogFunc func(context.Context, *ent.SyncRunLogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f SyncRunLogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.SyncRunLogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.SyncRunLogMutation", m)
+}
+
 // The ThemeFunc type is an adapter to allow the use of ordinary
 // function as Theme mutator.
 type ThemeFunc func(context.Context, *ent.ThemeMutation) (ent.Value, error)

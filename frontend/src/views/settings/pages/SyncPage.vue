@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed, onMounted} from 'vue';
 import {useI18n} from 'vue-i18n';
-import {AuthMethod, SyncTarget} from '@/../bindings/voidraft/internal/models/models';
+import {AuthMethod, SyncRunRecord, SyncRunStatus, SyncRunTriggerType, SyncTarget} from '@/../bindings/voidraft/internal/models/models';
 import {DialogService} from '@/../bindings/voidraft/internal/services';
 import toast from '@/components/toast';
 import {useConfigStore} from '@/stores/configStore';
@@ -16,18 +16,14 @@ const syncStore = useSyncStore();
 
 const syncConfig = computed(() => configStore.config.sync);
 const isGitTarget = computed(() => syncConfig.value.target === SyncTarget.SyncTargetGit);
-const isSyncEnabled = computed(() => isGitTarget.value ? syncConfig.value.git.enabled : syncConfig.value.localfs.enabled);
-const isAutoSyncEnabled = computed(() => isGitTarget.value ? syncConfig.value.git.auto_sync : syncConfig.value.localfs.auto_sync);
-const currentInterval = computed(() => isGitTarget.value ? syncConfig.value.git.sync_interval : syncConfig.value.localfs.sync_interval);
-const syncStatus = computed(() => syncStore.status);
-const lastSyncText = computed(() => formatTimestamp(syncStatus.value?.last_sync_at));
-const lastSuccessText = computed(() => formatTimestamp(syncStatus.value?.last_success_at));
+const isSyncEnabled = computed(() => syncConfig.value.enabled);
+const isAutoSyncEnabled = computed(() => syncConfig.value.auto_sync);
+const currentInterval = computed(() => syncConfig.value.sync_interval);
 const hasTargetConfig = computed(() => (
   isGitTarget.value
     ? Boolean(syncConfig.value.git.repo_url.trim())
     : Boolean(syncConfig.value.localfs.root_path.trim())
 ));
-const canTestConnection = computed(() => hasTargetConfig.value);
 const canSync = computed(() => isSyncEnabled.value && hasTargetConfig.value);
 
 const authMethodOptions = computed(() => [
@@ -63,18 +59,84 @@ const selectLocalFSDirectory = async () => {
   }
 };
 
-/** Tests the current sync target immediately. */
-const handleTestConnection = async () => {
-  try {
-    const result = await syncStore.testConnection();
-    if (result?.resolved_branch) {
-      toast.success(t('settings.sync.testConnectionSuccessWithBranch', {branch: result.resolved_branch}));
-      return;
-    }
-    toast.success(t('settings.sync.testConnectionSuccess'));
-  } catch (error) {
-    toast.error(error instanceof Error ? error.message : String(error));
+const formatRunTime = (value: string): string => {
+  if (!value) {
+    return '-';
   }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleString();
+};
+
+const formatRunDuration = (run: SyncRunRecord): string => {
+  const startedAt = new Date(run.started_at);
+  const finishedAt = new Date(run.finished_at);
+  if (Number.isNaN(startedAt.getTime()) || Number.isNaN(finishedAt.getTime())) {
+    return '-';
+  }
+
+  const durationMs = Math.max(finishedAt.getTime() - startedAt.getTime(), 0);
+  if (durationMs < 1000) {
+    return `${durationMs}ms`;
+  }
+
+  return `${(durationMs / 1000).toFixed(durationMs >= 10000 ? 0 : 1)}s`;
+};
+
+const formatRunStatus = (status: SyncRunStatus): string => {
+  return status === SyncRunStatus.SyncRunStatusSuccess
+    ? t('settings.sync.historyStatus.success')
+    : t('settings.sync.historyStatus.failed');
+};
+
+const formatRunTrigger = (trigger: SyncRunTriggerType): string => {
+  return trigger === SyncRunTriggerType.SyncRunTriggerAuto
+    ? t('settings.sync.historyTrigger.auto')
+    : t('settings.sync.historyTrigger.manual');
+};
+
+const formatRunTarget = (target: SyncTarget): string => {
+  return target === SyncTarget.SyncTargetLocalFS
+    ? t('settings.sync.targetTypes.localfs')
+    : t('settings.sync.targetTypes.git');
+};
+
+const formatRunSummary = (run: SyncRunRecord): string => {
+  const parts: string[] = [];
+  const {flow, changes, error} = run.details;
+
+  if (flow.pulled && flow.pushed) {
+    parts.push(t('settings.sync.historyFlow.pulledAndPushed'));
+  } else if (flow.pulled) {
+    parts.push(t('settings.sync.historyFlow.pulled'));
+  } else if (flow.pushed) {
+    parts.push(t('settings.sync.historyFlow.pushed'));
+  }
+
+  const changed = changes.added + changes.updated + changes.deleted;
+  if (changed > 0) {
+    parts.push(`+${changes.added} ~${changes.updated} -${changes.deleted}`);
+  } else {
+    parts.push(t('settings.sync.historyFlow.noChanges'));
+  }
+
+  if (run.status === SyncRunStatus.SyncRunStatusFailed && error?.stage) {
+    parts.push(error.stage);
+  }
+
+  return parts.join(' · ');
+};
+
+const handlePrevPage = async () => {
+  await syncStore.loadPrevRunsPage();
+};
+
+const handleNextPage = async () => {
+  await syncStore.loadNextRunsPage();
 };
 
 /** Runs one manual sync. */
@@ -87,13 +149,10 @@ const handleSync = async () => {
   }
 };
 
-/** Formats a sync timestamp for display. */
-const formatTimestamp = (value?: string) => (
-  value ? new Date(value).toLocaleString() : t('settings.none')
-);
-
-onMounted(() => {
-  void syncStore.loadStatus();
+onMounted(async () => {
+  if (syncStore.runs.length === 0) {
+    await syncStore.loadRuns(1);
+  }
 });
 </script>
 
@@ -156,7 +215,18 @@ onMounted(() => {
             :value="syncConfig.git.repo_url"
             :placeholder="t('settings.sync.repoUrlPlaceholder')"
             :disabled="!isSyncEnabled"
-            @input="(e) => configStore.setRepoUrl((e.target as HTMLInputElement).value)"
+            @change="(e) => configStore.setRepoUrl((e.target as HTMLInputElement).value)"
+          />
+        </SettingItem>
+
+        <SettingItem :title="t('settings.sync.branch')">
+          <input
+            type="text"
+            class="branch-input"
+            :value="syncConfig.git.branch"
+            :placeholder="t('settings.sync.branchPlaceholder')"
+            :disabled="!isSyncEnabled"
+            @change="(e) => configStore.setGitBranch((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -198,7 +268,7 @@ onMounted(() => {
             :value="syncConfig.git.username ?? ''"
             :placeholder="t('settings.sync.usernamePlaceholder')"
             :disabled="!isSyncEnabled"
-            @input="(e) => configStore.setUsername((e.target as HTMLInputElement).value)"
+            @change="(e) => configStore.setUsername((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
 
@@ -209,7 +279,7 @@ onMounted(() => {
             :value="syncConfig.git.password ?? ''"
             :placeholder="t('settings.sync.passwordPlaceholder')"
             :disabled="!isSyncEnabled"
-            @input="(e) => configStore.setPassword((e.target as HTMLInputElement).value)"
+            @change="(e) => configStore.setPassword((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -222,7 +292,7 @@ onMounted(() => {
             :value="syncConfig.git.token ?? ''"
             :placeholder="t('settings.sync.tokenPlaceholder')"
             :disabled="!isSyncEnabled"
-            @input="(e) => configStore.setToken((e.target as HTMLInputElement).value)"
+            @change="(e) => configStore.setToken((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -247,7 +317,7 @@ onMounted(() => {
             :value="syncConfig.git.ssh_key_passphrase ?? ''"
             :placeholder="t('settings.sync.sshKeyPassphrasePlaceholder')"
             :disabled="!isSyncEnabled"
-            @input="(e) => configStore.setSshKeyPassphrase((e.target as HTMLInputElement).value)"
+            @change="(e) => configStore.setSshKeyPassphrase((e.target as HTMLInputElement).value)"
           />
         </SettingItem>
       </template>
@@ -258,17 +328,8 @@ onMounted(() => {
         <div class="sync-action">
           <div class="sync-actions">
             <button
-              class="sync-button secondary"
-              :disabled="!canTestConnection || syncStore.isSyncing || syncStore.isTestingConnection"
-              @click="handleTestConnection"
-            >
-              <span v-if="syncStore.isTestingConnection" class="loading-spinner"></span>
-              {{ syncStore.isTestingConnection ? t('settings.sync.testingConnection') : t('settings.sync.actions.testConnection') }}
-            </button>
-
-            <button
               class="sync-button"
-              :disabled="!canSync || syncStore.isSyncing || syncStore.isTestingConnection"
+              :disabled="!canSync || syncStore.isSyncing"
               :class="{ 'syncing': syncStore.isSyncing }"
               @click="handleSync"
             >
@@ -276,22 +337,95 @@ onMounted(() => {
               {{ syncStore.isSyncing ? t('settings.sync.syncing') : t('settings.sync.actions.sync') }}
             </button>
           </div>
-
-          <div v-if="syncStatus" class="sync-status">
-            <div>{{ t('settings.sync.lastSync') }}: {{ lastSyncText }}</div>
-            <div>{{ t('settings.sync.lastSuccess') }}: {{ lastSuccessText }}</div>
-            <div v-if="syncStatus.last_error" class="sync-status-error">
-              {{ t('settings.sync.lastError') }}: {{ syncStatus.last_error }}
-            </div>
-          </div>
         </div>
       </SettingItem>
+    </SettingSection>
+
+    <SettingSection :title="t('settings.sync.syncHistory')">
+      <div v-if="syncStore.isLoadingRuns" class="sync-history-empty">
+        {{ t('settings.sync.historyLoading') }}
+      </div>
+
+      <div v-else-if="syncStore.runs.length === 0" class="sync-history-empty">
+        {{ t('settings.sync.historyEmpty') }}
+      </div>
+
+      <div v-else class="sync-history-list">
+        <div
+          v-for="run in syncStore.runs"
+          :key="run.id"
+          class="sync-history-item"
+        >
+          <div class="sync-history-row sync-history-row-primary">
+            <span class="sync-history-time">{{ formatRunTime(run.started_at) }}</span>
+            <span class="sync-history-meta">
+              {{ formatRunTarget(run.target_type) }} · {{ formatRunTrigger(run.trigger_type) }} · {{ formatRunDuration(run) }}<template v-if="run.branch"> · {{ run.branch }}</template>
+            </span>
+            <span
+              class="sync-history-status"
+              :class="{ success: run.status === SyncRunStatus.SyncRunStatusSuccess, failed: run.status === SyncRunStatus.SyncRunStatusFailed }"
+            >
+              {{ formatRunStatus(run.status) }}
+            </span>
+          </div>
+
+          <div class="sync-history-row sync-history-row-secondary">
+            <span class="sync-history-path" :title="run.target_path || '-'">
+              {{ run.target_path || '-' }}
+            </span>
+            <span class="sync-history-summary" :title="run.details.error?.message || formatRunSummary(run)">
+              {{ formatRunSummary(run) }}
+            </span>
+          </div>
+
+          <details class="sync-history-details">
+            <summary>
+              <span class="sync-history-details-arrow"></span>
+              <span>{{ t('settings.sync.historyDetails') }}</span>
+            </summary>
+            <div class="sync-history-detail-grid">
+              <div>{{ t('settings.sync.historyFields.attempt') }}: {{ run.details.attempt }}/{{ run.details.max_attempts }}</div>
+              <div>{{ t('settings.sync.historyFields.pulled') }}: {{ run.details.flow.pulled ? t('settings.sync.historyBoolean.yes') : t('settings.sync.historyBoolean.no') }}</div>
+              <div>{{ t('settings.sync.historyFields.pushed') }}: {{ run.details.flow.pushed ? t('settings.sync.historyBoolean.yes') : t('settings.sync.historyBoolean.no') }}</div>
+              <div>{{ t('settings.sync.historyFields.changes') }}: +{{ run.details.changes.added }} ~{{ run.details.changes.updated }} -{{ run.details.changes.deleted }}</div>
+              <div v-if="run.details.error?.stage">{{ t('settings.sync.historyFields.errorStage') }}: {{ run.details.error.stage }}</div>
+              <div v-if="run.details.error?.message">{{ t('settings.sync.historyFields.errorMessage') }}: {{ run.details.error.message }}</div>
+              <div v-if="run.details.paths.data_path">{{ t('settings.sync.historyFields.dataPath') }}: {{ run.details.paths.data_path }}</div>
+              <div v-if="run.details.paths.repo_path">{{ t('settings.sync.historyFields.repoPath') }}: {{ run.details.paths.repo_path }}</div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div
+        v-if="syncStore.runs.length > 0 && (syncStore.currentPage > 1 || syncStore.hasMoreRuns)"
+        class="sync-history-pagination"
+      >
+        <button
+          class="sync-page-button"
+          :disabled="!syncStore.canLoadPrevRuns || syncStore.isLoadingRuns"
+          @click="handlePrevPage"
+        >
+          {{ t('settings.sync.pagination.prev') }}
+        </button>
+        <span class="sync-page-indicator">
+          {{ t('settings.sync.pagination.page', { page: syncStore.currentPage }) }}
+        </span>
+        <button
+          class="sync-page-button"
+          :disabled="!syncStore.canLoadNextRuns || syncStore.isLoadingRuns"
+          @click="handleNextPage"
+        >
+          {{ t('settings.sync.pagination.next') }}
+        </button>
+      </div>
     </SettingSection>
   </div>
 </template>
 
 <style scoped lang="scss">
 .repo-url-input,
+.branch-input,
 .localfs-root-path-input,
 .username-input,
 .password-input,
@@ -379,10 +513,6 @@ onMounted(() => {
     cursor: not-allowed;
   }
 
-  &.secondary {
-    background-color: transparent;
-  }
-
   .loading-spinner {
     display: inline-block;
     width: 14px;
@@ -407,22 +537,177 @@ onMounted(() => {
   align-items: flex-start;
 }
 
+.sync-history-empty {
+  color: var(--settings-text-secondary);
+  font-size: 12px;
+}
+
+.sync-history-list {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sync-history-item {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  border: 1px solid var(--settings-input-border);
+  border-radius: 6px;
+  background-color: var(--settings-input-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.sync-history-row {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  align-items: center;
+}
+
+.sync-history-row-primary {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.sync-history-row-secondary {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.sync-history-time {
+  font-size: 12px;
+  color: var(--settings-text);
+  white-space: nowrap;
+}
+
+.sync-history-meta,
+.sync-history-branch,
+.sync-history-summary,
+.sync-history-path,
+.sync-history-detail-grid {
+  font-size: 11px;
+  color: var(--settings-text-secondary);
+}
+
+.sync-history-meta,
+.sync-history-branch,
+.sync-history-summary,
+.sync-history-path {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sync-history-path {
+  color: var(--settings-text);
+}
+
+.sync-history-status {
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid var(--settings-input-border);
+  white-space: nowrap;
+
+  &.success {
+    color: #20c997;
+    border-color: rgba(32, 201, 151, 0.35);
+    background-color: rgba(32, 201, 151, 0.08);
+  }
+
+  &.failed {
+    color: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.35);
+    background-color: rgba(255, 107, 107, 0.08);
+  }
+}
+
+.sync-history-details {
+  font-size: 11px;
+
+  summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--settings-text);
+    user-select: none;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+  }
+
+  &[open] .sync-history-details-arrow {
+    transform: rotate(90deg);
+  }
+}
+
+.sync-history-details-arrow {
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 5px solid var(--settings-text-secondary);
+  transition: transform 0.18s ease;
+}
+
+.sync-history-detail-grid {
+  margin-top: 6px;
+  display: grid;
+  gap: 4px;
+
+  > div {
+    overflow-wrap: anywhere;
+  }
+}
+
+.sync-history-pagination {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.sync-page-button {
+  padding: 4px 10px;
+  border: 1px solid var(--settings-input-border);
+  border-radius: 4px;
+  background-color: var(--settings-input-bg);
+  color: var(--settings-text);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background-color: var(--settings-hover);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.sync-page-indicator {
+  font-size: 11px;
+  color: var(--settings-text-secondary);
+  white-space: nowrap;
+}
+
 .sync-actions {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-}
-
-.sync-status {
-  font-size: 12px;
-  color: var(--settings-text-secondary);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.sync-status-error {
-  color: #ff7875;
 }
 
 .disabled-setting {

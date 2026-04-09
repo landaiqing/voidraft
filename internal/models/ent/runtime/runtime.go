@@ -7,6 +7,7 @@ import (
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
 	"voidraft/internal/models/ent/mediaasset"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 	"voidraft/internal/models/schema"
 )
@@ -301,6 +302,24 @@ func init() {
 	mediaassetDescHeight := mediaassetFields[6].Descriptor()
 	// mediaasset.HeightValidator is a validator for the "height" field. It is called by the builders before save.
 	mediaasset.HeightValidator = mediaassetDescHeight.Validators[0].(func(int) error)
+	syncrunlogFields := schema.SyncRunLog{}.Fields()
+	_ = syncrunlogFields
+	// syncrunlogDescTargetPath is the schema descriptor for target_path field.
+	syncrunlogDescTargetPath := syncrunlogFields[1].Descriptor()
+	// syncrunlog.DefaultTargetPath holds the default value on creation for the target_path field.
+	syncrunlog.DefaultTargetPath = syncrunlogDescTargetPath.Default.(string)
+	// syncrunlogDescBranch is the schema descriptor for branch field.
+	syncrunlogDescBranch := syncrunlogFields[2].Descriptor()
+	// syncrunlog.DefaultBranch holds the default value on creation for the branch field.
+	syncrunlog.DefaultBranch = syncrunlogDescBranch.Default.(string)
+	// syncrunlogDescStartedAt is the schema descriptor for started_at field.
+	syncrunlogDescStartedAt := syncrunlogFields[5].Descriptor()
+	// syncrunlog.DefaultStartedAt holds the default value on creation for the started_at field.
+	syncrunlog.DefaultStartedAt = syncrunlogDescStartedAt.Default.(func() string)
+	// syncrunlogDescFinishedAt is the schema descriptor for finished_at field.
+	syncrunlogDescFinishedAt := syncrunlogFields[6].Descriptor()
+	// syncrunlog.DefaultFinishedAt holds the default value on creation for the finished_at field.
+	syncrunlog.DefaultFinishedAt = syncrunlogDescFinishedAt.Default.(func() string)
 	themeMixin := schema.Theme{}.Mixin()
 	themeMixinHooks1 := themeMixin[1].Hooks()
 	themeMixinHooks2 := themeMixin[2].Hooks()

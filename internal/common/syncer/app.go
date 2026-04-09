@@ -3,6 +3,8 @@ package syncer
 import (
 	"context"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 	"voidraft/internal/common/syncer/backend"
@@ -10,37 +12,45 @@ import (
 	snapshotstorebackend "voidraft/internal/common/syncer/backend/snapshotstore"
 	localfsblob "voidraft/internal/common/syncer/backend/snapshotstore/blob/localfs"
 	"voidraft/internal/common/syncer/engine"
-	merge2 "voidraft/internal/common/syncer/merge"
-	resource2 "voidraft/internal/common/syncer/resource"
+	"voidraft/internal/common/syncer/merge"
+	"voidraft/internal/common/syncer/resource"
 	"voidraft/internal/common/syncer/scheduler"
-	snapshot2 "voidraft/internal/common/syncer/snapshot"
+	"voidraft/internal/common/syncer/snapshot"
+	"voidraft/internal/models"
 	"voidraft/internal/models/ent"
+
+	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
 
 const (
-	defaultAuthorName   = "voidraft"
-	defaultAuthorEmail  = "sync@voidraft.app"
-	defaultSyncAttempts = 3
+	defaultAuthorName     = "voidraft"
+	defaultAuthorEmail    = "sync@voidraft.app"
+	defaultRemoteName     = "origin"
+	defaultSyncRepoDir    = "sync"
+	defaultLocalFSHeadKey = "head.json"
+	defaultSyncAttempts   = 3
 )
 
 // Options describes app construction options.
 type Options struct {
-	Logger          Logger
+	Logger          *log.LogService
 	MaxSyncAttempts int
 }
 
 // App coordinates the sync system.
 type App struct {
-	logger          Logger
-	snapshotter     snapshot2.Snapshotter
-	store           snapshot2.Store
-	merger          merge2.Merger
+	client          *ent.Client
+	logger          *log.LogService
+	snapshotter     snapshot.Snapshotter
+	store           snapshot.Store
+	merger          merge.Merger
 	maxSyncAttempts int
 
-	mu         sync.RWMutex
-	syncMu     sync.Mutex
-	config     Config
-	schedulers map[string]*scheduler.Ticker
+	mu        sync.RWMutex
+	syncMu    sync.Mutex
+	config    models.SyncConfig
+	dataPath  string
+	scheduler *scheduler.Ticker
 }
 
 // NewApp creates a new sync app.
@@ -50,103 +60,103 @@ func NewApp(client *ent.Client, options Options) *App {
 		maxSyncAttempts = defaultSyncAttempts
 	}
 
-	adapters := []resource2.Adapter{
-		resource2.NewDocumentAdapter(client),
-		resource2.NewExtensionAdapter(client),
-		resource2.NewKeyBindingAdapter(client),
-		resource2.NewThemeAdapter(client),
+	adapters := []resource.Adapter{
+		resource.NewDocumentAdapter(client),
+		resource.NewExtensionAdapter(client),
+		resource.NewKeyBindingAdapter(client),
+		resource.NewThemeAdapter(client),
 	}
 
 	return &App{
+		client:          client,
 		logger:          options.Logger,
-		snapshotter:     resource2.NewRegistry(adapters...),
-		store:           snapshot2.NewFileStore(),
-		merger:          merge2.NewUpdatedAtWinsMerger(),
+		snapshotter:     resource.NewRegistry(adapters...),
+		store:           snapshot.NewFileStore(),
+		merger:          merge.NewUpdatedAtWinsMerger(),
 		maxSyncAttempts: maxSyncAttempts,
-		schedulers:      make(map[string]*scheduler.Ticker),
 	}
 }
 
 // Reconfigure replaces the current sync configuration.
-func (a *App) Reconfigure(ctx context.Context, cfg Config) error {
+func (a *App) Reconfigure(ctx context.Context, dataPath string, cfg models.SyncConfig) error {
 	_ = ctx
 
-	normalized := cfg.Normalize()
-	for _, target := range normalized.Targets {
-		if !target.Enabled || !target.Ready() {
-			continue
-		}
-		if err := target.Validate(); err != nil {
-			return fmt.Errorf("validate target %s: %w", target.Kind, err)
-		}
-	}
-
 	a.mu.Lock()
-	a.config = normalized
+	a.config = cfg
+	a.dataPath = dataPath
 	a.mu.Unlock()
 
 	return nil
 }
 
-// Start starts auto-sync schedulers for the current config.
+// Start starts auto-sync scheduler for the current config.
 func (a *App) Start(ctx context.Context) error {
-	targets := a.targetsSnapshot()
-	if err := a.verifyTargets(ctx, targets); err != nil {
+	cfg, dataPath := a.configSnapshot()
+	if !cfg.Enabled || !cfg.AutoSync || cfg.SyncInterval <= 0 || !a.isConfigured(cfg, dataPath) {
+		a.mu.Lock()
+		defer a.mu.Unlock()
+		a.stopSchedulerLocked()
+		return nil
+	}
+
+	if err := a.verifyConfig(ctx, cfg, dataPath); err != nil {
 		return err
 	}
+
+	interval := time.Duration(cfg.SyncInterval) * time.Minute
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	a.stopSchedulersLocked()
+	a.stopSchedulerLocked()
 
-	for _, target := range targets {
-		if !target.Ready() || !target.Schedule.AutoSync || target.Schedule.Interval <= 0 {
-			continue
-		}
-
-		targetID := target.Kind
-		task := scheduler.NewTicker()
-		task.Start(target.Schedule.Interval, func(runCtx context.Context) error {
-			_, err := a.Sync(runCtx, targetID)
-			if err != nil && a.logger != nil {
-				a.logger.Error("sync auto run failed for target %s: %v", targetID, err)
-			}
-			return err
-		})
-		a.schedulers[targetID] = task
-	}
+	task := scheduler.NewTicker()
+	task.Start(interval, func(runCtx context.Context) error {
+		return a.Sync(runCtx, models.SyncRunTriggerAuto)
+	})
+	a.scheduler = task
 
 	return nil
 }
 
-// Stop stops all running auto-sync schedulers.
+// Stop stops the running auto-sync scheduler.
 func (a *App) Stop(ctx context.Context) error {
 	_ = ctx
 
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	a.stopSchedulersLocked()
+	a.stopSchedulerLocked()
 	return nil
 }
 
-// Sync runs one full sync for the given target.
-func (a *App) Sync(ctx context.Context, targetID string) (*SyncResult, error) {
-	target, err := a.currentTarget(targetID)
-	if err != nil {
-		return nil, err
+// Sync runs one full sync for the current target.
+func (a *App) Sync(ctx context.Context, trigger models.SyncRunTriggerType) error {
+	cfg, dataPath := a.configSnapshot()
+	startedAt := time.Now()
+
+	if !cfg.Enabled {
+		return ErrSyncDisabled
 	}
-	if !target.Enabled {
-		return nil, ErrTargetDisabled
-	}
-	if !target.Ready() {
-		return nil, ErrTargetNotReady
+	if err := a.validateConfig(cfg, dataPath); err != nil {
+		a.recordSyncRun(cfg, dataPath, trigger, startedAt, time.Now(), nil, err, "validate_config", false)
+		return err
 	}
 
-	backendInstance, err := a.newBackend(target)
+	if a.logger != nil {
+		a.logger.Info(
+			"sync started trigger=%s target=%s branch=%s target_path=%s",
+			trigger,
+			cfg.Target,
+			a.syncBranch(cfg),
+			a.syncTargetPath(cfg),
+		)
+	}
+
+	backendInstance, err := a.newBackend(cfg, dataPath)
 	if err != nil {
-		return nil, err
+		a.recordSyncRun(cfg, dataPath, trigger, startedAt, time.Now(), nil, err, "prepare_backend", false)
+		return err
 	}
 	defer func() {
 		_ = backendInstance.Close()
@@ -167,134 +177,129 @@ func (a *App) Sync(ctx context.Context, targetID string) (*SyncResult, error) {
 	defer a.syncMu.Unlock()
 
 	result, err := syncEngine.Sync(ctx, engine.SyncOptions{
-		CommitMessage: a.commitMessage(target),
+		CommitMessage: a.commitMessage(cfg),
 	})
+	finishedAt := time.Now()
+	a.recordSyncRun(cfg, dataPath, trigger, startedAt, finishedAt, result, err, "", false)
 	if err != nil {
-		return nil, err
+		a.logSyncFailure(cfg, trigger, err)
+		return err
 	}
-
-	return &SyncResult{
-		TargetID:       target.Kind,
-		LocalChanged:   result.LocalChanged,
-		RemoteChanged:  result.RemoteChanged,
-		AppliedToLocal: result.AppliedToLocal,
-		Published:      result.Published,
-	}, nil
+	a.logSyncSuccess(cfg, trigger, result)
+	return nil
 }
 
-// TestTarget verifies a target config and returns resolved backend details.
-func (a *App) TestTarget(ctx context.Context, target TargetConfig) (string, error) {
-	if err := target.Validate(); err != nil {
-		return "", err
+func (a *App) verifyConfig(ctx context.Context, cfg models.SyncConfig, dataPath string) error {
+	if err := a.validateConfig(cfg, dataPath); err != nil {
+		return err
 	}
 
-	backendInstance, err := a.newBackend(target)
+	backendInstance, err := a.newBackend(cfg, dataPath)
 	if err != nil {
-		return "", err
+		return err
 	}
 	defer func() {
 		_ = backendInstance.Close()
 	}()
 
 	if err := backendInstance.Verify(ctx); err != nil {
-		return "", err
-	}
-
-	if resolver, ok := backendInstance.(interface{ ResolvedBranch() string }); ok {
-		return resolver.ResolvedBranch(), nil
-	}
-	return "", nil
-}
-
-// commitMessage builds the sync commit message.
-func (a *App) commitMessage(target TargetConfig) string {
-	return fmt.Sprintf("Sync %s %s", target.Kind, time.Now().Format(time.RFC3339))
-}
-
-// currentTarget returns the current target config from memory.
-func (a *App) currentTarget(targetID string) (TargetConfig, error) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	return a.config.Target(targetID)
-}
-
-// targetsSnapshot returns a stable copy of the configured targets.
-func (a *App) targetsSnapshot() []TargetConfig {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-
-	targets := make([]TargetConfig, len(a.config.Targets))
-	copy(targets, a.config.Targets)
-	return targets
-}
-
-// verifyTargets verifies all ready targets before scheduling.
-func (a *App) verifyTargets(ctx context.Context, targets []TargetConfig) error {
-	for _, target := range targets {
-		if !target.Ready() {
-			continue
-		}
-
-		if _, err := a.TestTarget(ctx, target); err != nil {
-			return fmt.Errorf("verify target %s: %w", target.Kind, err)
-		}
+		return err
 	}
 	return nil
 }
 
-// newBackend creates a backend instance from the target config.
-func (a *App) newBackend(target TargetConfig) (backend.Backend, error) {
-	switch target.Kind {
-	case TargetKindGit:
-		if target.Git == nil {
-			return nil, fmt.Errorf("target %s: git config is nil", target.Kind)
+// commitMessage builds the sync commit message.
+func (a *App) commitMessage(cfg models.SyncConfig) string {
+	return fmt.Sprintf("Sync %s %s", cfg.Target, time.Now().Format(time.RFC3339))
+}
+
+func (a *App) configSnapshot() (models.SyncConfig, string) {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	cfg := a.config
+	if cfg.Target == "" {
+		cfg.Target = models.SyncTargetGit
+	}
+	if cfg.SyncInterval <= 0 {
+		cfg.SyncInterval = 60
+	}
+	if strings.TrimSpace(cfg.Git.Branch) == "" {
+		cfg.Git.Branch = models.DefaultGitSyncBranch
+	}
+	return cfg, a.dataPath
+}
+
+func (a *App) validateConfig(cfg models.SyncConfig, dataPath string) error {
+	switch cfg.Target {
+	case models.SyncTargetGit:
+		if strings.TrimSpace(dataPath) == "" {
+			return ErrSyncNotConfigured
 		}
+		if strings.TrimSpace(cfg.Git.RepoURL) == "" {
+			return ErrSyncNotConfigured
+		}
+	case models.SyncTargetLocalFS:
+		if strings.TrimSpace(cfg.LocalFS.RootPath) == "" {
+			return ErrSyncNotConfigured
+		}
+	default:
+		return fmt.Errorf("%w: %s", ErrUnsupportedTarget, cfg.Target)
+	}
+	return nil
+}
+
+func (a *App) isConfigured(cfg models.SyncConfig, dataPath string) bool {
+	switch cfg.Target {
+	case models.SyncTargetGit:
+		return strings.TrimSpace(dataPath) != "" && strings.TrimSpace(cfg.Git.RepoURL) != ""
+	case models.SyncTargetLocalFS:
+		return strings.TrimSpace(cfg.LocalFS.RootPath) != ""
+	default:
+		return false
+	}
+}
+
+// newBackend creates a backend instance from the current sync config.
+func (a *App) newBackend(cfg models.SyncConfig, dataPath string) (backend.Backend, error) {
+	switch cfg.Target {
+	case models.SyncTargetGit:
 		return git.New(git.Config{
-			RepoPath:    target.Git.RepoPath,
-			RepoURL:     target.Git.RepoURL,
-			Branch:      target.Git.Branch,
-			RemoteName:  target.Git.RemoteName,
-			AuthorName:  fallbackString(target.Git.AuthorName, defaultAuthorName),
-			AuthorEmail: fallbackString(target.Git.AuthorEmail, defaultAuthorEmail),
+			RepoPath:    filepath.Join(dataPath, defaultSyncRepoDir),
+			RepoURL:     cfg.Git.RepoURL,
+			Branch:      cfg.Git.Branch,
+			RemoteName:  defaultRemoteName,
+			AuthorName:  defaultAuthorName,
+			AuthorEmail: defaultAuthorEmail,
 			Auth: git.AuthConfig{
-				Method:         target.Git.Auth.Method,
-				Username:       target.Git.Auth.Username,
-				Password:       target.Git.Auth.Password,
-				Token:          target.Git.Auth.Token,
-				SSHKeyPath:     target.Git.Auth.SSHKeyPath,
-				SSHKeyPassword: target.Git.Auth.SSHKeyPassword,
+				Method:         string(cfg.Git.AuthMethod),
+				Username:       cfg.Git.Username,
+				Password:       cfg.Git.Password,
+				Token:          cfg.Git.Token,
+				SSHKeyPath:     cfg.Git.SSHKeyPath,
+				SSHKeyPassword: cfg.Git.SSHKeyPass,
 			},
 		})
-	case TargetKindLocalFS:
-		if target.LocalFS == nil {
-			return nil, fmt.Errorf("target %s: localfs config is nil", target.Kind)
-		}
-		store, err := localfsblob.New(target.LocalFS.RootPath)
+	case models.SyncTargetLocalFS:
+		store, err := localfsblob.New(cfg.LocalFS.RootPath)
 		if err != nil {
 			return nil, err
 		}
 		return snapshotstorebackend.New(snapshotstorebackend.Config{
 			Store:     store,
-			Namespace: target.LocalFS.Namespace,
-			HeadKey:   target.LocalFS.HeadKey,
+			Namespace: string(models.SyncTargetLocalFS),
+			HeadKey:   defaultLocalFSHeadKey,
 		})
 	default:
-		return nil, fmt.Errorf("%w: %s", ErrUnsupportedBackend, target.Kind)
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedTarget, cfg.Target)
 	}
 }
 
-// stopSchedulersLocked stops all schedulers while the app lock is held.
-func (a *App) stopSchedulersLocked() {
-	for targetID, task := range a.schedulers {
-		task.Stop()
-		delete(a.schedulers, targetID)
+// stopSchedulerLocked stops the scheduler while the app lock is held.
+func (a *App) stopSchedulerLocked() {
+	if a.scheduler == nil {
+		return
 	}
-}
-
-// fallbackString returns the first non-empty string.
-func fallbackString(value string, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
+	a.scheduler.Stop()
+	a.scheduler = nil
 }

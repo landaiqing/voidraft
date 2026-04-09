@@ -20,9 +20,6 @@ import * as ent$0 from "../models/ent/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as $models from "./models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as $internal from "./internal.js";
 
 /**
  * CreateDocument 创建文档
@@ -81,11 +78,6 @@ export function LockDocument(id: number): Promise<void> & { cancel(): void } {
  */
 export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1474135487, options) as any;
-    return $resultPromise;
-}
-
-export function SetMediaCleanupScheduler(scheduler: $internal.mediaOrphanCleanupScheduler): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(1739858306, scheduler) as any;
     return $resultPromise;
 }
 

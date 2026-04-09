@@ -195,6 +195,46 @@ var (
 			},
 		},
 	}
+	// SyncRunLogsColumns holds the columns for the "sync_run_logs" table.
+	SyncRunLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "target_type", Type: field.TypeEnum, Enums: []string{"git", "localfs"}},
+		{Name: "target_path", Type: field.TypeString, Default: ""},
+		{Name: "branch", Type: field.TypeString, Default: ""},
+		{Name: "trigger_type", Type: field.TypeEnum, Enums: []string{"manual", "auto"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"success", "failed"}},
+		{Name: "started_at", Type: field.TypeString},
+		{Name: "finished_at", Type: field.TypeString},
+		{Name: "details", Type: field.TypeJSON},
+	}
+	// SyncRunLogsTable holds the schema information for the "sync_run_logs" table.
+	SyncRunLogsTable = &schema.Table{
+		Name:       "sync_run_logs",
+		Columns:    SyncRunLogsColumns,
+		PrimaryKey: []*schema.Column{SyncRunLogsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "syncrunlog_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[6]},
+			},
+			{
+				Name:    "syncrunlog_status_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[5], SyncRunLogsColumns[6]},
+			},
+			{
+				Name:    "syncrunlog_target_type_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[1], SyncRunLogsColumns[6]},
+			},
+			{
+				Name:    "syncrunlog_trigger_type_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[4], SyncRunLogsColumns[6]},
+			},
+		},
+	}
 	// ThemesColumns holds the columns for the "themes" table.
 	ThemesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -230,6 +270,7 @@ var (
 		ExtensionsTable,
 		KeyBindingsTable,
 		MediaAssetsTable,
+		SyncRunLogsTable,
 		ThemesTable,
 	}
 )
@@ -246,6 +287,9 @@ func init() {
 	}
 	MediaAssetsTable.Annotation = &entsql.Annotation{
 		Table: "media_assets",
+	}
+	SyncRunLogsTable.Annotation = &entsql.Annotation{
+		Table: "sync_run_logs",
 	}
 	ThemesTable.Annotation = &entsql.Annotation{
 		Table: "themes",

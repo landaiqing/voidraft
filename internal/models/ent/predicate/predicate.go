@@ -18,5 +18,8 @@ type KeyBinding func(*sql.Selector)
 // MediaAsset is the predicate function for mediaasset builders.
 type MediaAsset func(*sql.Selector)
 
+// SyncRunLog is the predicate function for syncrunlog builders.
+type SyncRunLog func(*sql.Selector)
+
 // Theme is the predicate function for theme builders.
 type Theme func(*sql.Selector)

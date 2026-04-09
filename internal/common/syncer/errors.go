@@ -3,14 +3,10 @@ package syncer
 import "errors"
 
 var (
-	// ErrTargetNotFound 表示目标不存在。
-	ErrTargetNotFound = errors.New("sync target not found")
-	// ErrTargetDisabled 表示目标未启用。
-	ErrTargetDisabled = errors.New("sync target is disabled")
-	// ErrTargetNotReady 表示目标缺少必要配置。
-	ErrTargetNotReady = errors.New("sync target is not ready")
-	// ErrUnsupportedBackend 表示后端类型未实现。
-	ErrUnsupportedBackend = errors.New("sync backend is not supported")
-	// ErrUnsupportedDriver 表示后端驱动未实现。
-	ErrUnsupportedDriver = errors.New("sync driver is not supported")
+	// ErrSyncDisabled 表示同步未启用。
+	ErrSyncDisabled = errors.New("sync is disabled")
+	// ErrSyncNotConfigured 表示同步缺少必要配置。
+	ErrSyncNotConfigured = errors.New("sync is not configured")
+	// ErrUnsupportedTarget 表示同步目标未实现。
+	ErrUnsupportedTarget = errors.New("sync target is not supported")
 )

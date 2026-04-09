@@ -3,39 +3,16 @@ package services
 import (
 	"context"
 	"fmt"
-	"path/filepath"
-	"sync"
-	"time"
+	"strings"
 	"voidraft/internal/common/helper"
 	"voidraft/internal/common/syncer"
 	"voidraft/internal/models"
+	"voidraft/internal/models/ent"
+	"voidraft/internal/models/ent/syncrunlog"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
 )
-
-const (
-	syncDir        = "sync"
-	localFSHeadKey = "head.json"
-)
-
-// SyncStatus describes the latest manual sync state.
-type SyncStatus struct {
-	TargetID       string `json:"target_id,omitempty"`
-	LastSyncAt     string `json:"last_sync_at,omitempty"`
-	LastSuccessAt  string `json:"last_success_at,omitempty"`
-	LastError      string `json:"last_error,omitempty"`
-	LocalChanged   bool   `json:"local_changed"`
-	RemoteChanged  bool   `json:"remote_changed"`
-	AppliedToLocal bool   `json:"applied_to_local"`
-	Published      bool   `json:"published"`
-}
-
-// SyncConnectionResult describes a connection test result.
-type SyncConnectionResult struct {
-	TargetID       string `json:"target_id"`
-	ResolvedBranch string `json:"resolved_branch,omitempty"`
-}
 
 // SyncService exposes app-layer sync operations.
 type SyncService struct {
@@ -44,8 +21,6 @@ type SyncService struct {
 	logger          *log.LogService
 	app             *syncer.App
 	cancelObservers []helper.CancelFunc
-	statusMu        sync.RWMutex
-	status          SyncStatus
 }
 
 // NewSyncService creates a new sync service instance.
@@ -84,12 +59,12 @@ func (s *SyncService) Initialize() error {
 		return err
 	}
 
-	config, err := s.buildConfig()
+	cfg, dataPath, err := s.currentSyncConfig()
 	if err != nil {
 		return err
 	}
 
-	if err := s.app.Reconfigure(context.Background(), config); err != nil {
+	if err := s.app.Reconfigure(context.Background(), dataPath, cfg); err != nil {
 		return fmt.Errorf("reconfigure sync app: %w", err)
 	}
 	if err := s.app.Start(context.Background()); err != nil {
@@ -111,10 +86,7 @@ func (s *SyncService) HandleConfigChange(config *models.SyncConfig) error {
 
 // StartAutoSync starts auto-sync scheduling.
 func (s *SyncService) StartAutoSync() error {
-	if err := s.ensureApp(); err != nil {
-		return err
-	}
-	return s.app.Start(context.Background())
+	return s.Initialize()
 }
 
 // StopAutoSync stops auto-sync scheduling.
@@ -127,71 +99,60 @@ func (s *SyncService) StopAutoSync() {
 	}
 }
 
-// Sync runs one manual sync and returns the latest status.
-func (s *SyncService) Sync() (*SyncStatus, error) {
+// Sync runs one manual sync.
+func (s *SyncService) Sync() error {
 	if err := s.ensureApp(); err != nil {
-		return nil, err
+		return err
 	}
 
-	targetID, err := s.selectedTargetID()
+	cfg, dataPath, err := s.currentSyncConfig()
 	if err != nil {
-		return nil, err
+		return err
+	}
+	if err := s.app.Reconfigure(context.Background(), dataPath, cfg); err != nil {
+		return fmt.Errorf("reconfigure sync app: %w", err)
 	}
 
-	syncedAt := time.Now().Format(time.RFC3339)
-	result, err := s.app.Sync(context.Background(), targetID)
-	if err != nil {
-		status := s.statusSnapshot()
-		status.TargetID = targetID
-		status.LastSyncAt = syncedAt
-		status.LastError = err.Error()
-		status.LocalChanged = false
-		status.RemoteChanged = false
-		status.AppliedToLocal = false
-		status.Published = false
-		s.storeStatus(status)
-		return nil, err
-	}
-
-	status := SyncStatus{
-		TargetID:       targetID,
-		LastSyncAt:     syncedAt,
-		LastSuccessAt:  syncedAt,
-		LocalChanged:   result.LocalChanged,
-		RemoteChanged:  result.RemoteChanged,
-		AppliedToLocal: result.AppliedToLocal,
-		Published:      result.Published,
-	}
-	s.storeStatus(status)
-	return s.GetStatus(), nil
+	return s.app.Sync(context.Background(), models.SyncRunTriggerManual)
 }
 
-// TestConnection validates the selected target configuration immediately.
-func (s *SyncService) TestConnection() (*SyncConnectionResult, error) {
-	if err := s.ensureApp(); err != nil {
-		return nil, err
+// ListSyncRunLogs returns paginated sync execution records.
+func (s *SyncService) ListSyncRunLogs(page int, pageSize int) ([]models.SyncRunRecord, error) {
+	if s.dbService == nil || s.dbService.Client == nil {
+		return []models.SyncRunRecord{}, fmt.Errorf("sync database client is not ready")
+	}
+	if page < 1 {
+		page = 1
+	}
+	if pageSize <= 0 {
+		pageSize = 20
 	}
 
-	target, err := s.selectedTargetConfig()
+	items, err := s.dbService.Client.SyncRunLog.Query().
+		Order(ent.Desc(syncrunlog.FieldStartedAt)).
+		Offset((page - 1) * pageSize).
+		Limit(pageSize).
+		All(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	resolvedBranch, err := s.app.TestTarget(context.Background(), target)
-	if err != nil {
-		return nil, err
+	records := make([]models.SyncRunRecord, 0, len(items))
+	for _, item := range items {
+		records = append(records, models.SyncRunRecord{
+			ID:          item.ID,
+			TargetType:  models.SyncTarget(item.TargetType),
+			TargetPath:  item.TargetPath,
+			Branch:      item.Branch,
+			TriggerType: models.SyncRunTriggerType(item.TriggerType),
+			Status:      models.SyncRunStatus(item.Status),
+			StartedAt:   item.StartedAt,
+			FinishedAt:  item.FinishedAt,
+			Details:     item.Details,
+		})
 	}
 
-	return &SyncConnectionResult{
-		TargetID:       target.Kind,
-		ResolvedBranch: resolvedBranch,
-	}, nil
-}
-
-// GetStatus returns the latest manual sync status.
-func (s *SyncService) GetStatus() *SyncStatus {
-	status := s.statusSnapshot()
-	return &status
+	return records, nil
 }
 
 // ServiceShutdown stops observers and sync schedulers.
@@ -236,107 +197,22 @@ func (s *SyncService) ensureApp() error {
 	return nil
 }
 
-// buildConfig maps app config into sync-core config.
-func (s *SyncService) buildConfig() (syncer.Config, error) {
-	target, err := s.selectedTargetConfig()
-	if err != nil {
-		return syncer.Config{}, err
-	}
-
-	return syncer.Config{
-		Targets: []syncer.TargetConfig{target},
-	}, nil
-}
-
-// selectedTargetConfig builds the config for the selected sync target.
-func (s *SyncService) selectedTargetConfig() (syncer.TargetConfig, error) {
+func (s *SyncService) currentSyncConfig() (models.SyncConfig, string, error) {
 	appConfig, err := s.configService.GetConfig()
 	if err != nil {
-		return syncer.TargetConfig{}, err
+		return models.SyncConfig{}, "", err
 	}
 
-	switch appConfig.Sync.Target {
-	case models.SyncTargetGit:
-		return s.buildGitTargetConfig(appConfig.General.DataPath, appConfig.Sync.Git), nil
-	case models.SyncTargetLocalFS:
-		return s.buildLocalFSTargetConfig(appConfig.Sync.LocalFS), nil
-	default:
-		return syncer.TargetConfig{}, fmt.Errorf("unsupported sync target: %s", appConfig.Sync.Target)
+	cfg := appConfig.Sync
+	if cfg.Target == "" {
+		cfg.Target = models.SyncTargetGit
 	}
-}
-
-// selectedTargetID returns the selected target identifier.
-func (s *SyncService) selectedTargetID() (string, error) {
-	appConfig, err := s.configService.GetConfig()
-	if err != nil {
-		return "", err
+	if cfg.SyncInterval <= 0 {
+		cfg.SyncInterval = 60
+	}
+	if strings.TrimSpace(cfg.Git.Branch) == "" {
+		cfg.Git.Branch = models.DefaultGitSyncBranch
 	}
 
-	switch appConfig.Sync.Target {
-	case models.SyncTargetGit:
-		return string(models.SyncTargetGit), nil
-	case models.SyncTargetLocalFS:
-		return string(models.SyncTargetLocalFS), nil
-	default:
-		return "", fmt.Errorf("unsupported sync target: %s", appConfig.Sync.Target)
-	}
-}
-
-// buildGitTargetConfig converts Git config into sync-core target config.
-func (s *SyncService) buildGitTargetConfig(dataPath string, config models.GitSyncConfig) syncer.TargetConfig {
-	return syncer.TargetConfig{
-		Kind:    syncer.TargetKindGit,
-		Enabled: config.Enabled,
-		Schedule: syncer.ScheduleConfig{
-			AutoSync: config.AutoSync,
-			Interval: time.Duration(config.SyncInterval) * time.Minute,
-		},
-		Git: &syncer.GitTargetConfig{
-			RepoPath:    filepath.Join(dataPath, syncDir),
-			RepoURL:     config.RepoURL,
-			Branch:      "",
-			RemoteName:  syncer.DefaultRemoteName,
-			AuthorName:  "voidraft",
-			AuthorEmail: "sync@voidraft.app",
-			Auth: syncer.GitAuthConfig{
-				Method:         string(config.AuthMethod),
-				Username:       config.Username,
-				Password:       config.Password,
-				Token:          config.Token,
-				SSHKeyPath:     config.SSHKeyPath,
-				SSHKeyPassword: config.SSHKeyPass,
-			},
-		},
-	}
-}
-
-// buildLocalFSTargetConfig converts localfs config into sync-core target config.
-func (s *SyncService) buildLocalFSTargetConfig(config models.LocalFSSyncConfig) syncer.TargetConfig {
-	return syncer.TargetConfig{
-		Kind:    syncer.TargetKindLocalFS,
-		Enabled: config.Enabled,
-		Schedule: syncer.ScheduleConfig{
-			AutoSync: config.AutoSync,
-			Interval: time.Duration(config.SyncInterval) * time.Minute,
-		},
-		LocalFS: &syncer.LocalFSTargetConfig{
-			Namespace: string(models.SyncTargetLocalFS),
-			HeadKey:   localFSHeadKey,
-			RootPath:  config.RootPath,
-		},
-	}
-}
-
-// statusSnapshot returns a copy of the current sync status.
-func (s *SyncService) statusSnapshot() SyncStatus {
-	s.statusMu.RLock()
-	defer s.statusMu.RUnlock()
-	return s.status
-}
-
-// storeStatus updates the current sync status.
-func (s *SyncService) storeStatus(status SyncStatus) {
-	s.statusMu.Lock()
-	s.status = status
-	s.statusMu.Unlock()
+	return cfg, appConfig.General.DataPath, nil
 }

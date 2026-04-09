@@ -55,19 +55,8 @@ export function ServiceStartup(options: application$0.ServiceOptions): Promise<v
     return $resultPromise;
 }
 
-export function SyncService(): Promise<$models.MediaSyncService | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2238680370) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType5($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
 // Private type creation functions
 const $$createType0 = $models.ImageDeleteResult.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $models.ImageAsset.createFrom;
 const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.MediaSyncService.createFrom;
-const $$createType5 = $Create.Nullable($$createType4);

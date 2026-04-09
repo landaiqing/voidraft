@@ -529,14 +529,8 @@ export class GeneralConfig {
  * GitSyncConfig 描述 Git 同步配置。
  */
 export class GitSyncConfig {
-    "enabled": boolean;
-    "auto_sync": boolean;
-
-    /**
-     * 分钟
-     */
-    "sync_interval": number;
     "repo_url": string;
+    "branch": string;
     "auth_method": AuthMethod;
     "username"?: string;
     "password"?: string;
@@ -546,17 +540,11 @@ export class GitSyncConfig {
 
     /** Creates a new GitSyncConfig instance. */
     constructor($$source: Partial<GitSyncConfig> = {}) {
-        if (!("enabled" in $$source)) {
-            this["enabled"] = false;
-        }
-        if (!("auto_sync" in $$source)) {
-            this["auto_sync"] = false;
-        }
-        if (!("sync_interval" in $$source)) {
-            this["sync_interval"] = 0;
-        }
         if (!("repo_url" in $$source)) {
             this["repo_url"] = "";
+        }
+        if (!("branch" in $$source)) {
+            this["branch"] = "";
         }
         if (!("auth_method" in $$source)) {
             this["auth_method"] = ("" as AuthMethod);
@@ -1198,26 +1186,10 @@ export enum LanguageType {
  * LocalFSSyncConfig 描述本地文件系统同步配置。
  */
 export class LocalFSSyncConfig {
-    "enabled": boolean;
-    "auto_sync": boolean;
-
-    /**
-     * 分钟
-     */
-    "sync_interval": number;
     "root_path": string;
 
     /** Creates a new LocalFSSyncConfig instance. */
     constructor($$source: Partial<LocalFSSyncConfig> = {}) {
-        if (!("enabled" in $$source)) {
-            this["enabled"] = false;
-        }
-        if (!("auto_sync" in $$source)) {
-            this["auto_sync"] = false;
-        }
-        if (!("sync_interval" in $$source)) {
-            this["sync_interval"] = 0;
-        }
         if (!("root_path" in $$source)) {
             this["root_path"] = "";
         }
@@ -1239,6 +1211,13 @@ export class LocalFSSyncConfig {
  */
 export class SyncConfig {
     "target": SyncTarget;
+    "enabled": boolean;
+    "auto_sync": boolean;
+
+    /**
+     * 分钟
+     */
+    "sync_interval": number;
     "git": GitSyncConfig;
     "localfs": LocalFSSyncConfig;
 
@@ -1246,6 +1225,15 @@ export class SyncConfig {
     constructor($$source: Partial<SyncConfig> = {}) {
         if (!("target" in $$source)) {
             this["target"] = ("" as SyncTarget);
+        }
+        if (!("enabled" in $$source)) {
+            this["enabled"] = false;
+        }
+        if (!("auto_sync" in $$source)) {
+            this["auto_sync"] = false;
+        }
+        if (!("sync_interval" in $$source)) {
+            this["sync_interval"] = 0;
         }
         if (!("git" in $$source)) {
             this["git"] = (new GitSyncConfig());
@@ -1261,18 +1249,289 @@ export class SyncConfig {
      * Creates a new SyncConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): SyncConfig {
-        const $$createField1_0 = $$createType9;
-        const $$createField2_0 = $$createType10;
+        const $$createField4_0 = $$createType9;
+        const $$createField5_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("git" in $$parsedSource) {
-            $$parsedSource["git"] = $$createField1_0($$parsedSource["git"]);
+            $$parsedSource["git"] = $$createField4_0($$parsedSource["git"]);
         }
         if ("localfs" in $$parsedSource) {
-            $$parsedSource["localfs"] = $$createField2_0($$parsedSource["localfs"]);
+            $$parsedSource["localfs"] = $$createField5_0($$parsedSource["localfs"]);
         }
         return new SyncConfig($$parsedSource as Partial<SyncConfig>);
     }
 }
+
+/**
+ * SyncRunChanges 描述一次同步的合并变更统计。
+ */
+export class SyncRunChanges {
+    "added": number;
+    "updated": number;
+    "deleted": number;
+
+    /** Creates a new SyncRunChanges instance. */
+    constructor($$source: Partial<SyncRunChanges> = {}) {
+        if (!("added" in $$source)) {
+            this["added"] = 0;
+        }
+        if (!("updated" in $$source)) {
+            this["updated"] = 0;
+        }
+        if (!("deleted" in $$source)) {
+            this["deleted"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncRunChanges instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncRunChanges {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncRunChanges($$parsedSource as Partial<SyncRunChanges>);
+    }
+}
+
+/**
+ * SyncRunDetails 描述一次同步的详细信息。
+ */
+export class SyncRunDetails {
+    "attempt": number;
+    "max_attempts": number;
+    "changes": SyncRunChanges;
+    "flow": SyncRunFlow;
+    "error"?: SyncRunErrorDetail | null;
+    "paths": SyncRunPaths;
+
+    /** Creates a new SyncRunDetails instance. */
+    constructor($$source: Partial<SyncRunDetails> = {}) {
+        if (!("attempt" in $$source)) {
+            this["attempt"] = 0;
+        }
+        if (!("max_attempts" in $$source)) {
+            this["max_attempts"] = 0;
+        }
+        if (!("changes" in $$source)) {
+            this["changes"] = (new SyncRunChanges());
+        }
+        if (!("flow" in $$source)) {
+            this["flow"] = (new SyncRunFlow());
+        }
+        if (!("paths" in $$source)) {
+            this["paths"] = (new SyncRunPaths());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncRunDetails instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncRunDetails {
+        const $$createField2_0 = $$createType11;
+        const $$createField3_0 = $$createType12;
+        const $$createField4_0 = $$createType14;
+        const $$createField5_0 = $$createType15;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("changes" in $$parsedSource) {
+            $$parsedSource["changes"] = $$createField2_0($$parsedSource["changes"]);
+        }
+        if ("flow" in $$parsedSource) {
+            $$parsedSource["flow"] = $$createField3_0($$parsedSource["flow"]);
+        }
+        if ("error" in $$parsedSource) {
+            $$parsedSource["error"] = $$createField4_0($$parsedSource["error"]);
+        }
+        if ("paths" in $$parsedSource) {
+            $$parsedSource["paths"] = $$createField5_0($$parsedSource["paths"]);
+        }
+        return new SyncRunDetails($$parsedSource as Partial<SyncRunDetails>);
+    }
+}
+
+/**
+ * SyncRunErrorDetail 描述失败详情。
+ */
+export class SyncRunErrorDetail {
+    "stage": string;
+    "message": string;
+    "retryable": boolean;
+
+    /** Creates a new SyncRunErrorDetail instance. */
+    constructor($$source: Partial<SyncRunErrorDetail> = {}) {
+        if (!("stage" in $$source)) {
+            this["stage"] = "";
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+        if (!("retryable" in $$source)) {
+            this["retryable"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncRunErrorDetail instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncRunErrorDetail {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncRunErrorDetail($$parsedSource as Partial<SyncRunErrorDetail>);
+    }
+}
+
+/**
+ * SyncRunFlow 描述一次同步的数据流向。
+ */
+export class SyncRunFlow {
+    "pulled": boolean;
+    "pushed": boolean;
+
+    /** Creates a new SyncRunFlow instance. */
+    constructor($$source: Partial<SyncRunFlow> = {}) {
+        if (!("pulled" in $$source)) {
+            this["pulled"] = false;
+        }
+        if (!("pushed" in $$source)) {
+            this["pushed"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncRunFlow instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncRunFlow {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncRunFlow($$parsedSource as Partial<SyncRunFlow>);
+    }
+}
+
+/**
+ * SyncRunPaths 描述排障相关路径信息。
+ */
+export class SyncRunPaths {
+    "data_path"?: string;
+    "repo_path"?: string;
+
+    /** Creates a new SyncRunPaths instance. */
+    constructor($$source: Partial<SyncRunPaths> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncRunPaths instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncRunPaths {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SyncRunPaths($$parsedSource as Partial<SyncRunPaths>);
+    }
+}
+
+/**
+ * SyncRunRecord 描述前端展示所需的一条同步记录。
+ */
+export class SyncRunRecord {
+    "id": number;
+    "target_type": SyncTarget;
+    "target_path": string;
+    "branch": string;
+    "trigger_type": SyncRunTriggerType;
+    "status": SyncRunStatus;
+    "started_at": string;
+    "finished_at": string;
+    "details": SyncRunDetails;
+
+    /** Creates a new SyncRunRecord instance. */
+    constructor($$source: Partial<SyncRunRecord> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = 0;
+        }
+        if (!("target_type" in $$source)) {
+            this["target_type"] = ("" as SyncTarget);
+        }
+        if (!("target_path" in $$source)) {
+            this["target_path"] = "";
+        }
+        if (!("branch" in $$source)) {
+            this["branch"] = "";
+        }
+        if (!("trigger_type" in $$source)) {
+            this["trigger_type"] = ("" as SyncRunTriggerType);
+        }
+        if (!("status" in $$source)) {
+            this["status"] = ("" as SyncRunStatus);
+        }
+        if (!("started_at" in $$source)) {
+            this["started_at"] = "";
+        }
+        if (!("finished_at" in $$source)) {
+            this["finished_at"] = "";
+        }
+        if (!("details" in $$source)) {
+            this["details"] = (new SyncRunDetails());
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SyncRunRecord instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SyncRunRecord {
+        const $$createField8_0 = $$createType16;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("details" in $$parsedSource) {
+            $$parsedSource["details"] = $$createField8_0($$parsedSource["details"]);
+        }
+        return new SyncRunRecord($$parsedSource as Partial<SyncRunRecord>);
+    }
+}
+
+/**
+ * SyncRunStatus 描述同步执行结果。
+ */
+export enum SyncRunStatus {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * SyncRunStatusSuccess 表示同步成功。
+     */
+    SyncRunStatusSuccess = "success",
+
+    /**
+     * SyncRunStatusFailed 表示同步失败。
+     */
+    SyncRunStatusFailed = "failed",
+};
+
+/**
+ * SyncRunTriggerType 描述同步触发来源。
+ */
+export enum SyncRunTriggerType {
+    /**
+     * The Go zero value for the underlying type of the enum.
+     */
+    $zero = "",
+
+    /**
+     * SyncRunTriggerManual 表示手动触发。
+     */
+    SyncRunTriggerManual = "manual",
+
+    /**
+     * SyncRunTriggerAuto 表示自动同步触发。
+     */
+    SyncRunTriggerAuto = "auto",
+};
 
 /**
  * SyncTarget 定义当前可选择的同步目标。
@@ -1393,7 +1652,7 @@ export class UpdatesConfig {
      * Creates a new UpdatesConfig instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdatesConfig {
-        const $$createField4_0 = $$createType11;
+        const $$createField4_0 = $$createType17;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("github" in $$parsedSource) {
             $$parsedSource["github"] = $$createField4_0($$parsedSource["github"]);
@@ -1419,4 +1678,10 @@ const $$createType7 = $Create.Map($Create.Any, $Create.Any);
 const $$createType8 = HotkeyCombo.createFrom;
 const $$createType9 = GitSyncConfig.createFrom;
 const $$createType10 = LocalFSSyncConfig.createFrom;
-const $$createType11 = GithubConfig.createFrom;
+const $$createType11 = SyncRunChanges.createFrom;
+const $$createType12 = SyncRunFlow.createFrom;
+const $$createType13 = SyncRunErrorDetail.createFrom;
+const $$createType14 = $Create.Nullable($$createType13);
+const $$createType15 = SyncRunPaths.createFrom;
+const $$createType16 = SyncRunDetails.createFrom;
+const $$createType17 = GithubConfig.createFrom;

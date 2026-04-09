@@ -7,7 +7,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 	"voidraft/internal/common/syncer/backend"
@@ -21,8 +20,7 @@ import (
 const defaultGitIgnore = "*.tmp\n*.log\n"
 
 const (
-	fallbackMainBranch   = "main"
-	fallbackMasterBranch = "master"
+	fallbackMainBranch = "main"
 )
 
 // Config describes the Git backend configuration.
@@ -40,7 +38,6 @@ type Config struct {
 type Backend struct {
 	config     Config
 	repository *git.Repository
-	resolved   string
 }
 
 // New creates a new Git backend.
@@ -52,22 +49,14 @@ func New(config Config) (*Backend, error) {
 	return &Backend{config: normalized}, nil
 }
 
-// Verify validates repository access and resolves the effective branch.
+// Verify validates repository access for the configured branch.
 func (b *Backend) Verify(ctx context.Context) error {
 	if err := b.ensureRepository(); err != nil {
 		return err
 	}
 
-	_, err := b.resolveBranch(ctx)
+	_, err := b.fetchRemoteState(ctx)
 	return err
-}
-
-// ResolvedBranch returns the effective branch used by the backend.
-func (b *Backend) ResolvedBranch() string {
-	if b.resolved != "" {
-		return b.resolved
-	}
-	return strings.TrimSpace(b.config.Branch)
 }
 
 // DownloadLatest downloads the latest snapshot and expands it to dst.
@@ -101,11 +90,6 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 		return backend.RemoteState{}, err
 	}
 
-	branch, err := b.resolveBranch(ctx)
-	if err != nil {
-		return backend.RemoteState{}, err
-	}
-
 	remoteState, err := b.fetchRemoteState(ctx)
 	if err != nil {
 		return backend.RemoteState{}, err
@@ -114,7 +98,7 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 		return backend.RemoteState{}, backend.ErrRevisionConflict
 	}
 
-	if err := b.prepareBranch(branch, remoteState); err != nil {
+	if err := b.prepareBranch(b.config.Branch, remoteState); err != nil {
 		return backend.RemoteState{}, err
 	}
 	if err := syncDir(src, b.config.RepoPath); err != nil {
@@ -149,13 +133,12 @@ func (b *Backend) Upload(ctx context.Context, src string, options backend.Publis
 		return backend.RemoteState{}, err
 	}
 
-	branchRef := plumbing.NewBranchReferenceName(branch)
-	remoteRef := plumbing.NewRemoteReferenceName(b.config.RemoteName, branch)
+	branchRef := plumbing.NewBranchReferenceName(b.config.Branch)
 	err = b.repository.Push(&git.PushOptions{
 		RemoteName: b.config.RemoteName,
 		Auth:       auth,
 		RefSpecs: []gitconfig.RefSpec{
-			gitconfig.RefSpec(fmt.Sprintf("%s:%s", branchRef, remoteRef)),
+			gitconfig.RefSpec(fmt.Sprintf("%s:%s", branchRef, branchRef)),
 		},
 	})
 	if err != nil && !errors.Is(err, git.NoErrAlreadyUpToDate) {
@@ -178,6 +161,9 @@ func normalizeConfig(config Config) (Config, error) {
 	normalized := config
 	if strings.TrimSpace(normalized.RepoPath) == "" {
 		return Config{}, errors.New("git repo path is required")
+	}
+	if strings.TrimSpace(normalized.Branch) == "" {
+		normalized.Branch = fallbackMainBranch
 	}
 	if strings.TrimSpace(normalized.RemoteName) == "" {
 		normalized.RemoteName = "origin"
@@ -261,11 +247,6 @@ func (b *Backend) ensureRemote() error {
 
 // fetchRemoteState fetches the latest state for the effective branch.
 func (b *Backend) fetchRemoteState(ctx context.Context) (backend.RemoteState, error) {
-	branch, err := b.resolveBranch(ctx)
-	if err != nil {
-		return backend.RemoteState{}, err
-	}
-
 	auth, err := authMethod(b.config.Auth)
 	if err != nil {
 		return backend.RemoteState{}, err
@@ -283,7 +264,7 @@ func (b *Backend) fetchRemoteState(ctx context.Context) (backend.RemoteState, er
 		return backend.RemoteState{}, err
 	}
 
-	ref, err := b.repository.Reference(plumbing.NewRemoteReferenceName(b.config.RemoteName, branch), true)
+	ref, err := b.repository.Reference(plumbing.NewRemoteReferenceName(b.config.RemoteName, b.config.Branch), true)
 	if err != nil {
 		if errors.Is(err, plumbing.ErrReferenceNotFound) {
 			return backend.RemoteState{}, nil
@@ -371,109 +352,6 @@ func (b *Backend) currentLocalState() (backend.RemoteState, error) {
 		Exists:   true,
 		Revision: head.Hash().String(),
 	}, nil
-}
-
-// resolveBranch picks the effective branch for the current sync session.
-func (b *Backend) resolveBranch(ctx context.Context) (string, error) {
-	if branch := strings.TrimSpace(b.config.Branch); branch != "" {
-		b.resolved = branch
-		return branch, nil
-	}
-	if b.resolved != "" {
-		return b.resolved, nil
-	}
-
-	auth, err := authMethod(b.config.Auth)
-	if err != nil {
-		return "", err
-	}
-
-	remote, err := b.repository.Remote(b.config.RemoteName)
-	if err != nil {
-		return "", err
-	}
-
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	refs, err := remote.ListContext(ctx, &git.ListOptions{Auth: auth})
-	if err != nil {
-		if isEmptyRemoteError(err) {
-			b.resolved = fallbackMainBranch
-			return b.resolved, nil
-		}
-		return "", err
-	}
-
-	b.resolved = resolveBranchName(refs)
-	return b.resolved, nil
-}
-
-// resolveBranchName infers the best branch from remote refs.
-func resolveBranchName(refs []*plumbing.Reference) string {
-	branches := make(map[string]*plumbing.Reference)
-	var headHash plumbing.Hash
-	var hasHeadHash bool
-
-	for _, ref := range refs {
-		if ref == nil {
-			continue
-		}
-
-		switch {
-		case ref.Name() == plumbing.HEAD:
-			if ref.Type() == plumbing.SymbolicReference && ref.Target().IsBranch() {
-				return ref.Target().Short()
-			}
-			if ref.Type() == plumbing.HashReference {
-				headHash = ref.Hash()
-				hasHeadHash = true
-			}
-		case ref.Name().IsBranch():
-			branches[ref.Name().Short()] = ref
-		}
-	}
-
-	if hasHeadHash {
-		matches := make([]string, 0, len(branches))
-		for name, ref := range branches {
-			if ref.Hash() == headHash {
-				matches = append(matches, name)
-			}
-		}
-		sort.Strings(matches)
-		if len(matches) == 1 {
-			return matches[0]
-		}
-		for _, candidate := range []string{fallbackMainBranch, fallbackMasterBranch} {
-			for _, match := range matches {
-				if match == candidate {
-					return candidate
-				}
-			}
-		}
-		if len(matches) > 0 {
-			return matches[0]
-		}
-	}
-
-	for _, candidate := range []string{fallbackMainBranch, fallbackMasterBranch} {
-		if _, ok := branches[candidate]; ok {
-			return candidate
-		}
-	}
-
-	names := make([]string, 0, len(branches))
-	for name := range branches {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	if len(names) > 0 {
-		return names[0]
-	}
-
-	return fallbackMainBranch
 }
 
 // ensureGitIgnore makes sure the repository contains the default .gitignore.

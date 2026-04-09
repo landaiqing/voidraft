@@ -1,46 +1,96 @@
 package git
 
 import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
+	"voidraft/internal/common/syncer/backend"
 
+	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
 
-// TestResolveBranchNamePrefersRemoteHead verifies symbolic HEAD wins first.
-func TestResolveBranchNamePrefersRemoteHead(t *testing.T) {
-	refs := []*plumbing.Reference{
-		plumbing.NewSymbolicReference(plumbing.HEAD, plumbing.NewBranchReferenceName("main")),
-		plumbing.NewHashReference(plumbing.NewBranchReferenceName("main"), plumbing.NewHash("1111111111111111111111111111111111111111")),
-		plumbing.NewHashReference(plumbing.NewBranchReferenceName("master"), plumbing.NewHash("2222222222222222222222222222222222222222")),
+// TestVerifyAllowsMissingConfiguredBranch verifies empty remotes do not fail verification.
+func TestVerifyAllowsMissingConfiguredBranch(t *testing.T) {
+	rootDir := t.TempDir()
+	remotePath := filepath.Join(rootDir, "remote.git")
+	repoPath := filepath.Join(rootDir, "repo")
+
+	if _, err := gogit.PlainInit(remotePath, true); err != nil {
+		t.Fatalf("init remote repo: %v", err)
 	}
 
-	if got := resolveBranchName(refs); got != "main" {
-		t.Fatalf("expected main, got %s", got)
+	backendInstance, err := New(Config{
+		RepoPath:    repoPath,
+		RepoURL:     remotePath,
+		Branch:      "develop",
+		RemoteName:  "origin",
+		AuthorName:  "voidraft",
+		AuthorEmail: "sync@voidraft.app",
+	})
+	if err != nil {
+		t.Fatalf("new backend: %v", err)
+	}
+
+	if err := backendInstance.Verify(context.Background()); err != nil {
+		t.Fatalf("verify: %v", err)
 	}
 }
 
-// TestResolveBranchNameFallsBackToMain verifies main beats master when HEAD is unavailable.
-func TestResolveBranchNameFallsBackToMain(t *testing.T) {
-	refs := []*plumbing.Reference{
-		plumbing.NewHashReference(plumbing.NewBranchReferenceName("master"), plumbing.NewHash("1111111111111111111111111111111111111111")),
-		plumbing.NewHashReference(plumbing.NewBranchReferenceName("main"), plumbing.NewHash("2222222222222222222222222222222222222222")),
+// TestUploadPushesToConfiguredBranch verifies sync publishes to the configured refs/heads/<branch>.
+func TestUploadPushesToConfiguredBranch(t *testing.T) {
+	rootDir := t.TempDir()
+	remotePath := filepath.Join(rootDir, "remote.git")
+	repoPath := filepath.Join(rootDir, "repo")
+	stagePath := filepath.Join(rootDir, "stage")
+	const branch = "develop"
+
+	if _, err := gogit.PlainInit(remotePath, true); err != nil {
+		t.Fatalf("init remote repo: %v", err)
+	}
+	if err := os.MkdirAll(stagePath, 0755); err != nil {
+		t.Fatalf("create stage dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(stagePath, "manifest.json"), []byte("{\"version\":1}\n"), 0644); err != nil {
+		t.Fatalf("write stage manifest: %v", err)
 	}
 
-	if got := resolveBranchName(refs); got != "main" {
-		t.Fatalf("expected main, got %s", got)
-	}
-}
-
-// TestResolveBranchNameUsesHeadHash verifies HEAD hash matching can recover the default branch.
-func TestResolveBranchNameUsesHeadHash(t *testing.T) {
-	headHash := plumbing.NewHash("3333333333333333333333333333333333333333")
-	refs := []*plumbing.Reference{
-		plumbing.NewHashReference(plumbing.HEAD, headHash),
-		plumbing.NewHashReference(plumbing.NewBranchReferenceName("develop"), headHash),
-		plumbing.NewHashReference(plumbing.NewBranchReferenceName("main"), plumbing.NewHash("4444444444444444444444444444444444444444")),
+	backendInstance, err := New(Config{
+		RepoPath:    repoPath,
+		RepoURL:     remotePath,
+		Branch:      branch,
+		RemoteName:  "origin",
+		AuthorName:  "voidraft",
+		AuthorEmail: "sync@voidraft.app",
+	})
+	if err != nil {
+		t.Fatalf("new backend: %v", err)
 	}
 
-	if got := resolveBranchName(refs); got != "develop" {
-		t.Fatalf("expected develop, got %s", got)
+	if _, err := backendInstance.Upload(context.Background(), stagePath, backend.PublishOptions{
+		Message: "initial sync",
+	}); err != nil {
+		t.Fatalf("upload: %v", err)
+	}
+
+	remoteRepo, err := gogit.PlainOpen(remotePath)
+	if err != nil {
+		t.Fatalf("open remote repo: %v", err)
+	}
+
+	ref, err := remoteRepo.Reference(plumbing.NewBranchReferenceName(branch), true)
+	if err != nil {
+		t.Fatalf("read remote branch ref: %v", err)
+	}
+	if ref.Hash().IsZero() {
+		t.Fatal("remote branch ref hash is zero")
+	}
+
+	if _, err := remoteRepo.Reference(plumbing.NewRemoteReferenceName("origin", branch), true); err == nil {
+		t.Fatal("unexpected remote-tracking ref created on remote repository")
+	} else if !errors.Is(err, plumbing.ErrReferenceNotFound) {
+		t.Fatalf("read remote-tracking ref: %v", err)
 	}
 }

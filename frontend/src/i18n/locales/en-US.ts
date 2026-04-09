@@ -278,6 +278,8 @@ export default {
         storageConfig: 'Storage Configuration',
         repoUrl: 'Repository URL',
         repoUrlPlaceholder: 'Enter Git repository URL',
+        branch: 'Branch',
+        branchPlaceholder: 'Enter branch name, default is main',
         localfsRootPath: 'Local Storage Directory',
         localfsRootPathPlaceholder: 'Select local sync directory',
       authConfig: 'Authentication Configuration',
@@ -298,17 +300,47 @@ export default {
       sshKeyPassphrase: 'SSH Key Passphrase',
       sshKeyPassphrasePlaceholder: 'Enter SSH key passphrase',
         syncOperations: 'Sync Operations',
+      syncHistory: 'Sync History',
       syncToTarget: 'Sync to Target',
-      testingConnection: 'Testing...',
       syncing: 'Syncing...',
       syncSuccess: 'Sync completed',
-      testConnectionSuccess: 'Connection test passed',
-      testConnectionSuccessWithBranch: 'Connection test passed, branch: {branch}',
-      lastSync: 'Last Sync',
-      lastSuccess: 'Last Success',
-      lastError: 'Last Error',
+      historyLoading: 'Loading sync history...',
+      historyEmpty: 'No sync history yet',
+      historyDetails: 'View details',
+      historyStatus: {
+        success: 'Success',
+        failed: 'Failed'
+      },
+      historyTrigger: {
+        manual: 'Manual',
+        auto: 'Auto'
+      },
+      historyFlow: {
+        pulled: 'Pulled',
+        pushed: 'Pushed',
+        pulledAndPushed: 'Pulled and pushed',
+        noChanges: 'No changes'
+      },
+      historyBoolean: {
+        yes: 'Yes',
+        no: 'No'
+      },
+      historyFields: {
+        attempt: 'Attempts',
+        pulled: 'Pulled to local',
+        pushed: 'Pushed to remote',
+        changes: 'Changes',
+        errorStage: 'Failure stage',
+        errorMessage: 'Error message',
+        dataPath: 'Data path',
+        repoPath: 'Local sync repo path'
+      },
+      pagination: {
+        prev: 'Previous',
+        next: 'Next',
+        page: 'Page {page}'
+      },
       actions: {
-        testConnection: 'Test Connection',
         sync: 'Sync',
       }
     },

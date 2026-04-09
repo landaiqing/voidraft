@@ -17,22 +17,6 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 // @ts-ignore: Unused imports
 import * as models$0 from "../models/models.js";
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as $models from "./models.js";
-
-/**
- * GetStatus returns the latest manual sync status.
- */
-export function GetStatus(): Promise<$models.SyncStatus | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(2881223453) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
 /**
  * HandleConfigChange re-applies sync config changes.
  */
@@ -47,6 +31,18 @@ export function HandleConfigChange(config: models$0.SyncConfig | null): Promise<
 export function Initialize(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(1986210239) as any;
     return $resultPromise;
+}
+
+/**
+ * ListSyncRunLogs returns paginated sync execution records.
+ */
+export function ListSyncRunLogs(page: number, pageSize: number): Promise<models$0.SyncRunRecord[]> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(990538328, page, pageSize) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType1($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
@@ -90,31 +86,13 @@ export function StopAutoSync(): Promise<void> & { cancel(): void } {
 }
 
 /**
- * Sync runs one manual sync and returns the latest status.
+ * Sync runs one manual sync.
  */
-export function Sync(): Promise<$models.SyncStatus | null> & { cancel(): void } {
+export function Sync(): Promise<void> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3361086502) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType1($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
-}
-
-/**
- * TestConnection validates the selected target configuration immediately.
- */
-export function TestConnection(): Promise<$models.SyncConnectionResult | null> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(389881917) as any;
-    let $typingPromise = $resultPromise.then(($result: any) => {
-        return $$createType3($result);
-    }) as any;
-    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
-    return $typingPromise;
+    return $resultPromise;
 }
 
 // Private type creation functions
-const $$createType0 = $models.SyncStatus.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.SyncConnectionResult.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
+const $$createType0 = models$0.SyncRunRecord.createFrom;
+const $$createType1 = $Create.Array($$createType0);

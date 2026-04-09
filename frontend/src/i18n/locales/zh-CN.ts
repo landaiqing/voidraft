@@ -280,6 +280,8 @@ export default {
             storageConfig: '存储配置',
             repoUrl: '仓库地址',
             repoUrlPlaceholder: '请输入Git仓库地址',
+            branch: '分支',
+            branchPlaceholder: '请输入分支名，默认 main',
             localfsRootPath: '本地存储目录',
             localfsRootPathPlaceholder: '请选择本地同步目录',
             authConfig: '认证配置',
@@ -301,16 +303,46 @@ export default {
             sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
             syncOperations: '同步操作',
             syncToTarget: '同步到目标',
-            testingConnection: '测试中...',
+            syncHistory: '同步记录',
             syncing: '同步中...',
             syncSuccess: '同步成功',
-            testConnectionSuccess: '连接测试成功',
-            testConnectionSuccessWithBranch: '连接测试成功，分支：{branch}',
-            lastSync: '最近同步',
-            lastSuccess: '最近成功',
-            lastError: '最近错误',
+            historyLoading: '正在加载同步记录...',
+            historyEmpty: '暂无同步记录',
+            historyDetails: '查看详细信息',
+            historyStatus: {
+                success: '成功',
+                failed: '失败'
+            },
+            historyTrigger: {
+                manual: '手动',
+                auto: '自动'
+            },
+            historyFlow: {
+                pulled: '已拉取',
+                pushed: '已推送',
+                pulledAndPushed: '已拉取并推送',
+                noChanges: '无变更'
+            },
+            historyBoolean: {
+                yes: '是',
+                no: '否'
+            },
+            historyFields: {
+                attempt: '尝试次数',
+                pulled: '拉取到本地',
+                pushed: '推送到远端',
+                changes: '变更统计',
+                errorStage: '失败阶段',
+                errorMessage: '错误信息',
+                dataPath: '数据目录',
+                repoPath: '本地同步仓库路径'
+            },
+            pagination: {
+                prev: '上一页',
+                next: '下一页',
+                page: '第 {page} 页'
+            },
             actions: {
-                testConnection: '立即测试连接',
                 sync: '同步',
             }
         },

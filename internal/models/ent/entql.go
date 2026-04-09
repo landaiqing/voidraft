@@ -7,6 +7,7 @@ import (
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
 	"voidraft/internal/models/ent/mediaasset"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 
 	"entgo.io/ent/dialect/sql"
@@ -17,7 +18,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 5)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 6)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   document.Table,
@@ -109,6 +110,27 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 	}
 	graph.Nodes[4] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
+			Table:   syncrunlog.Table,
+			Columns: syncrunlog.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeInt,
+				Column: syncrunlog.FieldID,
+			},
+		},
+		Type: "SyncRunLog",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			syncrunlog.FieldTargetType:  {Type: field.TypeEnum, Column: syncrunlog.FieldTargetType},
+			syncrunlog.FieldTargetPath:  {Type: field.TypeString, Column: syncrunlog.FieldTargetPath},
+			syncrunlog.FieldBranch:      {Type: field.TypeString, Column: syncrunlog.FieldBranch},
+			syncrunlog.FieldTriggerType: {Type: field.TypeEnum, Column: syncrunlog.FieldTriggerType},
+			syncrunlog.FieldStatus:      {Type: field.TypeEnum, Column: syncrunlog.FieldStatus},
+			syncrunlog.FieldStartedAt:   {Type: field.TypeString, Column: syncrunlog.FieldStartedAt},
+			syncrunlog.FieldFinishedAt:  {Type: field.TypeString, Column: syncrunlog.FieldFinishedAt},
+			syncrunlog.FieldDetails:     {Type: field.TypeJSON, Column: syncrunlog.FieldDetails},
+		},
+	}
+	graph.Nodes[5] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   theme.Table,
 			Columns: theme.Columns,
@@ -488,6 +510,86 @@ func (f *MediaAssetFilter) WhereHeight(p entql.IntP) {
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *SyncRunLogQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the SyncRunLogQuery builder.
+func (_q *SyncRunLogQuery) Filter() *SyncRunLogFilter {
+	return &SyncRunLogFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *SyncRunLogMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the SyncRunLogMutation builder.
+func (m *SyncRunLogMutation) Filter() *SyncRunLogFilter {
+	return &SyncRunLogFilter{config: m.config, predicateAdder: m}
+}
+
+// SyncRunLogFilter provides a generic filtering capability at runtime for SyncRunLogQuery.
+type SyncRunLogFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *SyncRunLogFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[4].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql int predicate on the id field.
+func (f *SyncRunLogFilter) WhereID(p entql.IntP) {
+	f.Where(p.Field(syncrunlog.FieldID))
+}
+
+// WhereTargetType applies the entql string predicate on the target_type field.
+func (f *SyncRunLogFilter) WhereTargetType(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldTargetType))
+}
+
+// WhereTargetPath applies the entql string predicate on the target_path field.
+func (f *SyncRunLogFilter) WhereTargetPath(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldTargetPath))
+}
+
+// WhereBranch applies the entql string predicate on the branch field.
+func (f *SyncRunLogFilter) WhereBranch(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldBranch))
+}
+
+// WhereTriggerType applies the entql string predicate on the trigger_type field.
+func (f *SyncRunLogFilter) WhereTriggerType(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldTriggerType))
+}
+
+// WhereStatus applies the entql string predicate on the status field.
+func (f *SyncRunLogFilter) WhereStatus(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldStatus))
+}
+
+// WhereStartedAt applies the entql string predicate on the started_at field.
+func (f *SyncRunLogFilter) WhereStartedAt(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldStartedAt))
+}
+
+// WhereFinishedAt applies the entql string predicate on the finished_at field.
+func (f *SyncRunLogFilter) WhereFinishedAt(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldFinishedAt))
+}
+
+// WhereDetails applies the entql json.RawMessage predicate on the details field.
+func (f *SyncRunLogFilter) WhereDetails(p entql.BytesP) {
+	f.Where(p.Field(syncrunlog.FieldDetails))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *ThemeQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -516,7 +618,7 @@ type ThemeFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ThemeFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[4].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[5].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

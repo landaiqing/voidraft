@@ -133,33 +133,36 @@ const (
 	SyncTargetLocalFS SyncTarget = "localfs"
 )
 
+const (
+	// DefaultGitSyncBranch 是 Git 同步默认分支。
+	DefaultGitSyncBranch = "main"
+)
+
 // GitSyncConfig 描述 Git 同步配置。
 type GitSyncConfig struct {
-	Enabled      bool       `json:"enabled"`
-	AutoSync     bool       `json:"auto_sync"`
-	SyncInterval int        `json:"sync_interval"` // 分钟
-	RepoURL      string     `json:"repo_url"`
-	AuthMethod   AuthMethod `json:"auth_method"`
-	Username     string     `json:"username,omitempty"`
-	Password     string     `json:"password,omitempty"`
-	Token        string     `json:"token,omitempty"`
-	SSHKeyPath   string     `json:"ssh_key_path,omitempty"`
-	SSHKeyPass   string     `json:"ssh_key_passphrase,omitempty"`
+	RepoURL    string     `json:"repo_url"`
+	Branch     string     `json:"branch"`
+	AuthMethod AuthMethod `json:"auth_method"`
+	Username   string     `json:"username,omitempty"`
+	Password   string     `json:"password,omitempty"`
+	Token      string     `json:"token,omitempty"`
+	SSHKeyPath string     `json:"ssh_key_path,omitempty"`
+	SSHKeyPass string     `json:"ssh_key_passphrase,omitempty"`
 }
 
 // LocalFSSyncConfig 描述本地文件系统同步配置。
 type LocalFSSyncConfig struct {
-	Enabled      bool   `json:"enabled"`
-	AutoSync     bool   `json:"auto_sync"`
-	SyncInterval int    `json:"sync_interval"` // 分钟
-	RootPath     string `json:"root_path"`
+	RootPath string `json:"root_path"`
 }
 
 // SyncConfig 描述同步模块配置。
 type SyncConfig struct {
-	Target  SyncTarget        `json:"target"`
-	Git     GitSyncConfig     `json:"git"`
-	LocalFS LocalFSSyncConfig `json:"localfs"`
+	Target       SyncTarget        `json:"target"`
+	Enabled      bool              `json:"enabled"`
+	AutoSync     bool              `json:"auto_sync"`
+	SyncInterval int               `json:"sync_interval"` // 分钟
+	Git          GitSyncConfig     `json:"git"`
+	LocalFS      LocalFSSyncConfig `json:"localfs"`
 }
 
 // AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -234,24 +237,22 @@ func NewDefaultAppConfig() *AppConfig {
 			},
 		},
 		Sync: SyncConfig{
-			Target: SyncTargetGit,
+			Target:       SyncTargetGit,
+			Enabled:      false,
+			AutoSync:     false,
+			SyncInterval: 60,
 			Git: GitSyncConfig{
-				Enabled:      false,
-				AutoSync:     false,
-				SyncInterval: 60,
-				RepoURL:      "",
-				AuthMethod:   UserPass,
-				Username:     "",
-				Password:     "",
-				Token:        "",
-				SSHKeyPath:   "",
-				SSHKeyPass:   "",
+				RepoURL:    "",
+				Branch:     DefaultGitSyncBranch,
+				AuthMethod: UserPass,
+				Username:   "",
+				Password:   "",
+				Token:      "",
+				SSHKeyPath: "",
+				SSHKeyPass: "",
 			},
 			LocalFS: LocalFSSyncConfig{
-				Enabled:      false,
-				AutoSync:     false,
-				SyncInterval: 60,
-				RootPath:     "",
+				RootPath: "",
 			},
 		},
 		Metadata: ConfigMetadata{
