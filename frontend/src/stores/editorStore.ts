@@ -10,7 +10,7 @@ import {createThemeExtension, updateEditorTheme} from '@/views/editor/basic/them
 import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtension';
 import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/basic/fontExtension';
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
-import {createContentChangePlugin} from '@/views/editor/basic/contentChangeExtension';
+import {createContentChangePlugin, externalDocumentUpdateAnnotation} from '@/views/editor/basic/contentChangeExtension';
 import {createWheelZoomExtension} from '@/views/editor/basic/wheelZoomExtension';
 import {createCursorPositionExtension, scrollToCursor} from '@/views/editor/basic/cursorPositionExtension';
 import {createFoldStateExtension, restoreFoldState} from '@/views/editor/basic/foldStateExtension';
@@ -30,10 +30,9 @@ import {DocumentSaveResult} from '@/../bindings/voidraft/internal/services/model
 interface EditorInstance {
     view: EditorView;
     documentId: number;
-    contentTimestamp: string;  // 文档时间戳
+    baseUpdatedAt: string;
     contentLength: number;     // 内容长度
     isDirty: boolean;
-    lastModified: number;
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -49,7 +48,7 @@ export const useEditorStore = defineStore('editor', () => {
 
     // 验证缓存是否有效
     const isCacheValid = (cached: EditorInstance, doc: Document): boolean => {
-        return cached.contentTimestamp === doc.updated_at 
+        return cached.baseUpdatedAt === doc.updated_at
             && cached.contentLength === (doc.content || '').length;
     };
 
@@ -169,10 +168,9 @@ export const useEditorStore = defineStore('editor', () => {
         return {
             view,
             documentId: docId,
-            contentTimestamp: doc.updated_at || '',
+            baseUpdatedAt: doc.updated_at || '',
             contentLength: content.length,
-            isDirty: false,
-            lastModified: Date.now()
+            isDirty: false
         };
     };
 
@@ -194,7 +192,7 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 如果内容相同，只更新元数据
         if (currentContent === newContent) {
-            instance.contentTimestamp = doc.updated_at || '';
+            instance.baseUpdatedAt = doc.updated_at || '';
             instance.contentLength = newContent.length;
             return;
         }
@@ -208,7 +206,8 @@ export const useEditorStore = defineStore('editor', () => {
                 from: 0,
                 to: instance.view.state.doc.length,
                 insert: newContent
-            }
+            },
+            annotations: externalDocumentUpdateAnnotation.of(true)
         });
 
         // 智能恢复光标位置
@@ -222,7 +221,7 @@ export const useEditorStore = defineStore('editor', () => {
         }
 
         // 同步元数据
-        instance.contentTimestamp = doc.updated_at || '';
+        instance.baseUpdatedAt = doc.updated_at || '';
         instance.contentLength = newContent.length;
         instance.isDirty = false;
     };
@@ -269,27 +268,90 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 标记为脏数据
         instance.isDirty = true;
-        instance.lastModified = Date.now();
 
         // 调度自动保存
         const autoSaveDelay = configStore.config.editing.autoSaveDelay;
         documentStore.scheduleAutoSave(
             docId,
             async () => {
-                const content = instance.view.state.doc.toString();
-                const savedDoc = await documentStore.saveDocument(docId, content);
-                
-                // 同步版本信息
-                if (savedDoc) {
-                    instance.contentTimestamp = savedDoc.updated_at || '';
-                    instance.contentLength = savedDoc.content_length || content.length;
-                    instance.isDirty = false;
-                }
+                await saveEditorInstance(instance);
             },
             autoSaveDelay
         );
     };
 
+    const saveDirtyEditor = async (docId: number): Promise<DocumentSaveResult | null> => {
+        const instance = editorCache.get(docId);
+        if (!instance) {
+            return null;
+        }
+        return await saveEditorInstance(instance);
+    };
+
+    const saveAllDirtyEditors = async (): Promise<void> => {
+        const dirtyEditors = editorCache.values().filter(instance => instance.isDirty);
+        for (const instance of dirtyEditors) {
+            await saveEditorInstance(instance);
+        }
+    };
+
+    const renderEditor = async (docId: number, doc: Document) => {
+        const cached = editorCache.get(docId);
+
+        if (cached) {
+            // 场景1：缓存有效
+            if (isCacheValid(cached, doc)) {
+                showEditor(cached);
+                return;
+            }
+
+            // 场景2：有未保存修改
+            if (cached.isDirty) {
+                // 检查内容是否真的不同
+                if (!hasContentChanged(cached, doc)) {
+                    // 内容实际相同，只是元数据变了，同步元数据
+                    cached.baseUpdatedAt = doc.updated_at || '';
+                    cached.contentLength = (doc.content || '').length;
+                    cached.isDirty = false;
+                }
+                // 内容不同，保留用户编辑
+                showEditor(cached);
+                return;
+            }
+
+            // 场景3：缓存失效且无脏数据，更新内容
+            updateEditorContent(cached, doc);
+            showEditor(cached);
+            return;
+        }
+
+        // 场景4：创建新编辑器
+        const editor = await createEditorInstance(docId, doc);
+
+        // 添加到缓存
+        editorCache.set(docId, editor, (_evictedKey, evictedInstance) => {
+            disposeEditorInstance(evictedInstance);
+        });
+
+        showEditor(editor);
+    };
+
+    const loadEditor = async (doc: Document) => {
+        if (doc.id === undefined) {
+            return;
+        }
+        isLoading.value = true;
+
+        try {
+            await renderEditor(doc.id, doc);
+        } catch (error) {
+            console.error('Failed to load editor:', error);
+        } finally {
+            setTimeout(() => {
+                isLoading.value = false;
+            }, EDITOR_CONFIG.LOADING_DELAY);
+        }
+    };
 
     // 切换到指定编辑器
     const switchToEditor = async (docId: number) => {
@@ -302,56 +364,7 @@ export const useEditorStore = defineStore('editor', () => {
                 throw new Error(`Failed to load document ${docId}`);
             }
 
-            const cached = editorCache.get(docId);
-
-            if (cached) {
-                // 场景1：缓存有效
-                if (isCacheValid(cached, doc)) {
-                    showEditor(cached);
-                    return;
-                }
-
-                // 场景2：有未保存修改
-                if (cached.isDirty) {
-                    // 检查内容是否真的不同
-                    if (!hasContentChanged(cached, doc)) {
-                        // 内容实际相同，只是元数据变了，同步元数据
-                        cached.contentTimestamp = doc.updated_at || '';
-                        cached.contentLength = (doc.content || '').length;
-                        cached.isDirty = false;
-                    }
-                    // 内容不同，保留用户编辑
-                    showEditor(cached);
-                    return;
-                }
-
-                // 场景3：缓存失效且无脏数据，更新内容
-                updateEditorContent(cached, doc);
-                showEditor(cached);
-            } else {
-                // 场景4：创建新编辑器
-                const editor = await createEditorInstance(docId, doc);
-                
-                // 添加到缓存
-                editorCache.set(docId, editor, (_evictedKey, evictedInstance) => {
-                    // 保存光标位置
-                    const cursorPos = evictedInstance.view.state.selection.main.head;
-                    editorStateStore.saveCursorPosition(evictedInstance.documentId, cursorPos);
-                    
-                    // 从扩展管理器移除
-                    removeExtensionManagerView(evictedInstance.documentId);
-                    
-                    // 移除 DOM
-                    if (evictedInstance.view.dom.parentElement) {
-                        evictedInstance.view.dom.remove();
-                    }
-                    
-                    // 销毁编辑器
-                    evictedInstance.view.destroy();
-                });
-
-                showEditor(editor);
-            }
+            await renderEditor(docId, doc);
         } catch (error) {
             console.error('Failed to switch editor:', error);
         } finally {
@@ -381,36 +394,13 @@ export const useEditorStore = defineStore('editor', () => {
         return instance?.isDirty || false;
     };
 
-    // 同步保存后的版本信息
-    const syncAfterSave = (docId: number, saveResult?: DocumentSaveResult | null) => {
-        const instance = editorCache.get(docId);
-        if (!instance || !saveResult) return;
-
-        instance.contentTimestamp = saveResult.updated_at || '';
-        instance.contentLength = saveResult.content_length || instance.view.state.doc.length;
-        instance.isDirty = false;
-    };
-
     // 销毁编辑器
     const destroyEditor = async (docId: number) => {
         const instance = editorCache.get(docId);
         if (!instance) return;
 
         try {
-            // 保存光标位置
-            const cursorPos = instance.view.state.selection.main.head;
-            editorStateStore.saveCursorPosition(docId, cursorPos);
-
-            // 从扩展管理器移除
-            removeExtensionManagerView(docId);
-
-            // 移除 DOM
-            if (instance.view.dom && instance.view.dom.parentElement) {
-                instance.view.dom.remove();
-            }
-
-            // 销毁编辑器
-            instance.view.destroy();
+            disposeEditorInstance(instance);
 
             // 从缓存删除
             editorCache.delete(docId);
@@ -425,22 +415,9 @@ export const useEditorStore = defineStore('editor', () => {
     };
 
     // 清空所有编辑器
-    const destroyAllEditors = () => {
+    const clearEditorCache = () => {
         editorCache.clear((_documentId, instance) => {
-            // 保存光标位置
-            const cursorPos = instance.view.state.selection.main.head;
-            editorStateStore.saveCursorPosition(instance.documentId, cursorPos);
-            
-            // 从扩展管理器移除
-            removeExtensionManagerView(instance.documentId);
-            
-            // 移除 DOM
-            if (instance.view.dom.parentElement) {
-                instance.view.dom.remove();
-            }
-            
-            // 销毁编辑器
-            instance.view.destroy();
+            disposeEditorInstance(instance);
         });
 
         currentEditorId.value = null;
@@ -506,15 +483,17 @@ export const useEditorStore = defineStore('editor', () => {
 
         // 编辑器管理
         setEditorContainer,
+        loadEditor,
         switchToEditor,
         destroyEditor,
-        destroyAllEditors,
+        clearEditorCache,
 
         // 查询方法
         getCurrentContent,
         getCurrentCursorPosition,
         hasUnsavedChanges,
-        syncAfterSave,
+        saveDirtyEditor,
+        saveAllDirtyEditors,
 
         // 配置应用
         applyFontSettings,
@@ -522,4 +501,36 @@ export const useEditorStore = defineStore('editor', () => {
         applyTabSettings,
         applyKeymapSettings,
     };
+
+    async function saveEditorInstance(instance: EditorInstance): Promise<DocumentSaveResult | null> {
+        if (editorCache.get(instance.documentId) !== instance || !instance.isDirty) {
+            return null;
+        }
+
+        const content = instance.view.state.doc.toString();
+        const savedDoc = await documentStore.saveDocument(instance.documentId, content, instance.baseUpdatedAt);
+
+        instance.baseUpdatedAt = savedDoc.updated_at || '';
+        instance.contentLength = savedDoc.content_length ?? content.length;
+
+        if (instance.view.state.doc.toString() === content) {
+            instance.isDirty = false;
+            documentStore.cancelAutoSave(instance.documentId);
+        }
+
+        return savedDoc;
+    }
+
+    function disposeEditorInstance(instance: EditorInstance) {
+        const cursorPos = instance.view.state.selection.main.head;
+        editorStateStore.saveCursorPosition(instance.documentId, cursorPos);
+        documentStore.cancelAutoSave(instance.documentId);
+        removeExtensionManagerView(instance.documentId);
+
+        if (instance.view.dom.parentElement) {
+            instance.view.dom.remove();
+        }
+
+        instance.view.destroy();
+    }
 });

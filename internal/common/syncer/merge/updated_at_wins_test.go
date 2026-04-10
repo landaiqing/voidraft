@@ -133,3 +133,43 @@ func TestUpdatedAtWinsMergerDeleteUsesLatestEvent(t *testing.T) {
 		t.Fatalf("expected remote tombstone to win")
 	}
 }
+
+// TestUpdatedAtWinsMergerLocalDeleteUsesLatestEvent verifies newer local tombstones win over older remote records.
+func TestUpdatedAtWinsMergerLocalDeleteUsesLatestEvent(t *testing.T) {
+	localRecord, err := snapshot.NewRecord("documents", "doc-1", map[string]interface{}{
+		"uuid":       "doc-1",
+		"updated_at": time.Date(2026, 3, 29, 10, 0, 0, 0, time.UTC).Format(time.RFC3339),
+		"deleted_at": time.Date(2026, 3, 29, 11, 0, 0, 0, time.UTC).Format(time.RFC3339),
+		"title":      "local",
+	}, nil)
+	if err != nil {
+		t.Fatalf("build local record: %v", err)
+	}
+
+	remoteRecord, err := snapshot.NewRecord("documents", "doc-1", map[string]interface{}{
+		"uuid":       "doc-1",
+		"updated_at": time.Date(2026, 3, 29, 9, 0, 0, 0, time.UTC).Format(time.RFC3339),
+		"title":      "remote",
+	}, map[string][]byte{"content.md": []byte("remote")})
+	if err != nil {
+		t.Fatalf("build remote record: %v", err)
+	}
+
+	localSnapshot := snapshot.New()
+	localSnapshot.Resources["documents"] = []snapshot.Record{localRecord}
+
+	remoteSnapshot := snapshot.New()
+	remoteSnapshot.Resources["documents"] = []snapshot.Record{remoteRecord}
+
+	merged, report, err := NewUpdatedAtWinsMerger().Merge(context.Background(), localSnapshot, remoteSnapshot)
+	if err != nil {
+		t.Fatalf("merge snapshot: %v", err)
+	}
+
+	if report.Deleted != 1 {
+		t.Fatalf("expected one delete to be reported, got %d", report.Deleted)
+	}
+	if merged.Resources["documents"][0].DeletedAt == nil {
+		t.Fatalf("expected local tombstone to win")
+	}
+}

@@ -5,6 +5,8 @@ import {AuthMethod, SyncRunRecord, SyncRunStatus, SyncRunTriggerType, SyncTarget
 import {DialogService} from '@/../bindings/voidraft/internal/services';
 import toast from '@/components/toast';
 import {useConfigStore} from '@/stores/configStore';
+import {useDocumentStore} from '@/stores/documentStore';
+import {useEditorStore} from '@/stores/editorStore';
 import {useSyncStore} from '@/stores/syncStore';
 import SettingItem from '../components/SettingItem.vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -12,6 +14,8 @@ import ToggleSwitch from '../components/ToggleSwitch.vue';
 
 const {t} = useI18n();
 const configStore = useConfigStore();
+const documentStore = useDocumentStore();
+const editorStore = useEditorStore();
 const syncStore = useSyncStore();
 
 const syncConfig = computed(() => configStore.config.sync);
@@ -142,7 +146,15 @@ const handleNextPage = async () => {
 /** Runs one manual sync. */
 const handleSync = async () => {
   try {
+    await editorStore.saveAllDirtyEditors();
     await syncStore.sync();
+    editorStore.clearEditorCache();
+
+    const currentDocument = await documentStore.reloadCurrentDocument();
+    if (currentDocument) {
+      await editorStore.loadEditor(currentDocument);
+    }
+
     toast.success(t('settings.sync.syncSuccess'));
   } catch (error) {
     toast.error(error instanceof Error ? error.message : String(error));

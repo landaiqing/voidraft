@@ -18,6 +18,7 @@ import {
     AUTO_DETECT_SUFFIX,
     DELIMITER_PREFIX,
     DELIMITER_REGEX,
+    DELIMITER_START,
     DELIMITER_SUFFIX,
     READONLY_SUFFIX,
     WRITABLE_SUFFIX,
@@ -114,10 +115,9 @@ export function getBlocksFromString(state: EditorState): Block[] {
     }
 
     const content = doc.sliceString(0, doc.length);
-    const delimiter = DELIMITER_PREFIX;
     const suffixLength = DELIMITER_SUFFIX.length;
 
-    let pos = content.indexOf(delimiter);
+    let pos = findDelimiter(content, 0);
 
     if (pos === -1) {
         firstBlockDelimiterSize = 0;
@@ -130,7 +130,7 @@ export function getBlocksFromString(state: EditorState): Block[] {
 
     while (pos !== -1 && pos < doc.length) {
         const blockStart = pos;
-        const langStart = blockStart + delimiter.length;
+        const langStart = blockStart + delimiterPrefixLength(content, blockStart);
         const delimiterEnd = content.indexOf(DELIMITER_SUFFIX, langStart);
         if (delimiterEnd === -1) {
             break;
@@ -143,7 +143,7 @@ export function getBlocksFromString(state: EditorState): Block[] {
         }
 
         const contentStart = delimiterEnd + suffixLength;
-        const nextDelimiter = content.indexOf(delimiter, contentStart);
+        const nextDelimiter = findDelimiter(content, contentStart);
         const contentEnd = nextDelimiter === -1 ? doc.length : nextDelimiter;
 
         blocks.push({
@@ -318,4 +318,18 @@ function createPlainTextBlock(from: number, to: number): Block {
         delimiter: { from: 0, to: 0 },
         range: { from, to },
     };
+}
+
+function findDelimiter(content: string, from: number): number {
+    if (from <= 0 && content.startsWith(DELIMITER_START)) {
+        return 0;
+    }
+    return content.indexOf(DELIMITER_PREFIX, Math.max(from, 0));
+}
+
+function delimiterPrefixLength(content: string, from: number): number {
+    if (content.startsWith(DELIMITER_PREFIX, from)) {
+        return DELIMITER_PREFIX.length;
+    }
+    return DELIMITER_START.length;
 }

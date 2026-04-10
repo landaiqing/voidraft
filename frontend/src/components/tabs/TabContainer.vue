@@ -68,9 +68,7 @@ const switchToTab = async (documentId: number) => {
   // 如果旧文档有未保存修改，保存它
   if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
     try {
-      const content = editorStore.getCurrentContent();
-      const saveResult = await documentStore.saveDocument(oldDocId, content);
-      editorStore.syncAfterSave(oldDocId, saveResult);
+      await editorStore.saveDirtyEditor(oldDocId);
     } catch (error) {
       console.error('save document error:', error);
     }

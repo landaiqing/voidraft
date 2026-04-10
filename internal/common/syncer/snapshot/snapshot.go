@@ -20,7 +20,8 @@ import (
 
 const (
 	// CurrentVersion 是当前快照格式版本。
-	CurrentVersion = 1
+	CurrentVersion  = 1
+	timestampFormat = time.RFC3339Nano
 )
 
 // Snapshot 描述一次完整的数据快照。
@@ -188,14 +189,14 @@ func RecordDigest(record Record) (string, error) {
 
 	var deletedAt *string
 	if record.DeletedAt != nil {
-		value := record.DeletedAt.Format(time.RFC3339)
+		value := record.DeletedAt.Format(timestampFormat)
 		deletedAt = &value
 	}
 
 	payload, err := json.Marshal(digestRecord{
 		Kind:      record.Kind,
 		ID:        record.ID,
-		UpdatedAt: record.UpdatedAt.Format(time.RFC3339),
+		UpdatedAt: record.UpdatedAt.Format(timestampFormat),
 		DeletedAt: deletedAt,
 		Values:    cloneValues(record.Values),
 	})
@@ -314,7 +315,7 @@ func parseRequiredTime(value interface{}) (time.Time, error) {
 	if text == "" {
 		return time.Time{}, errors.New("time value is required")
 	}
-	return time.Parse(time.RFC3339, text)
+	return time.Parse(timestampFormat, text)
 }
 
 // parseOptionalTime 解析可选时间字段。
@@ -323,7 +324,7 @@ func parseOptionalTime(value interface{}) (*time.Time, error) {
 	if text == "" {
 		return nil, nil
 	}
-	parsed, err := time.Parse(time.RFC3339, text)
+	parsed, err := time.Parse(timestampFormat, text)
 	if err != nil {
 		return nil, err
 	}

@@ -87,7 +87,7 @@ export const useDocumentStore = defineStore('document', () => {
     }
   };
 
-  const saveDocument = async (docId: number, content: string): Promise<DocumentSaveResult> => {
+  const saveDocument = async (docId: number, content: string, baseUpdatedAt?: string): Promise<DocumentSaveResult> => {
     const localHash = generateContentHash(content);
     const cachedResult = getCachedSaveResult(docId, content, localHash);
 
@@ -95,9 +95,9 @@ export const useDocumentStore = defineStore('document', () => {
       return cachedResult;
     }
 
-    return saveQueue.enqueue(docId, {
+    return await saveQueue.enqueue(docId, {
       content,
-      baseUpdatedAt: resolveBaseUpdatedAt(docId),
+      baseUpdatedAt: resolveBaseUpdatedAt(docId, baseUpdatedAt),
       localHash
     });
   };
@@ -137,6 +137,21 @@ export const useDocumentStore = defineStore('document', () => {
       console.error('Failed to open document:', error);
       return false;
     }
+  };
+
+  const reloadCurrentDocument = async (): Promise<Document | null> => {
+    if (!currentDocumentId.value) {
+      return null;
+    }
+
+    const doc = await getDocument(currentDocumentId.value);
+    if (!doc) {
+      return null;
+    }
+
+    currentDocument.value = doc;
+    syncSaveQueueFromDocument(currentDocumentId.value, doc);
+    return doc;
   };
 
   const updateDocumentTitle = async (docId: number, title: string): Promise<boolean> => {
@@ -241,6 +256,7 @@ export const useDocumentStore = defineStore('document', () => {
     updateDocumentTitle,
     deleteDocument,
     openDocument,
+    reloadCurrentDocument,
     openDocumentInNewWindow,
     scheduleAutoSave,
     cancelAutoSave,
@@ -263,7 +279,10 @@ export const useDocumentStore = defineStore('document', () => {
     return meta.lastResult;
   }
 
-  function resolveBaseUpdatedAt(docId: number): string {
+  function resolveBaseUpdatedAt(docId: number, fallback?: string): string {
+    if (fallback) {
+      return fallback;
+    }
     const meta = saveQueue.getMeta(docId);
     if (meta?.lastResult?.updated_at) {
       return meta.lastResult.updated_at;

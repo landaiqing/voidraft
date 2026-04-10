@@ -103,9 +103,10 @@ export interface EditorOptions {
 }
 
 export const DELIMITER_PREFIX = '\n∞∞∞';
+export const DELIMITER_START = '∞∞∞';
 export const DELIMITER_SUFFIX = '\n';
 export const AUTO_DETECT_SUFFIX = '-a';
 export const READONLY_SUFFIX = '-r';
 export const WRITABLE_SUFFIX = '-w';
 
-export const DELIMITER_REGEX = /^\n∞∞∞([a-zA-Z0-9_]+)((?:-(?:a|r|w))*)\n$/m;
+export const DELIMITER_REGEX = /^(?:\n)?∞∞∞([a-zA-Z0-9_]+)((?:-(?:a|r|w))*)\n$/m;

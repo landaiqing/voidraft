@@ -164,7 +164,7 @@ func (s *FileStore) readManifest(root string, snap *Snapshot) error {
 
 	snap.Version = current.Version
 	if current.CreatedAt != "" {
-		createdAt, err := time.Parse(time.RFC3339, current.CreatedAt)
+		createdAt, err := time.Parse(timestampFormat, current.CreatedAt)
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func (s *FileStore) readManifest(root string, snap *Snapshot) error {
 func (s *FileStore) writeManifest(root string, snap *Snapshot) error {
 	payload := manifest{
 		Version:   snap.Version,
-		CreatedAt: snap.CreatedAt.Format(time.RFC3339),
+		CreatedAt: snap.CreatedAt.Format(timestampFormat),
 	}
 	return writeJSON(filepath.Join(root, manifestFileName), payload)
 }

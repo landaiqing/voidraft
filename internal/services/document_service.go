@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"voidraft/internal/models"
 	"voidraft/internal/models/ent/document"
 	"voidraft/internal/models/schema/mixin"
 
@@ -16,7 +17,6 @@ import (
 )
 
 const defaultDocumentTitle = "default"
-const defaultDocumentContent = "\n∞∞∞text-a-w\n"
 
 var ErrDocumentRevisionConflict = errors.New("document revision conflict")
 
@@ -47,11 +47,11 @@ func NewDocumentService(db *DatabaseService, logger *log.LogService, mediaSync *
 
 // ServiceStartup 服务启动
 func (s *DocumentService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	exists, err := s.db.Client.Document.Query().Exist(ctx)
+	count, err := s.db.Client.Document.Query().Count(ctx)
 	if err != nil {
-		return fmt.Errorf("check document exists error: %w", err)
+		return fmt.Errorf("count visible documents error: %w", err)
 	}
-	if !exists {
+	if count == 0 {
 		_, err = s.CreateDocument(ctx, defaultDocumentTitle)
 	}
 	return err
@@ -66,6 +66,7 @@ func (s *DocumentService) GetDocumentByID(ctx context.Context, id int) (*ent.Doc
 		}
 		return nil, fmt.Errorf("get document by id error: %w", err)
 	}
+	doc.Content = models.NormalizeDocumentContent(doc.Content)
 	return doc, nil
 }
 
@@ -73,7 +74,7 @@ func (s *DocumentService) GetDocumentByID(ctx context.Context, id int) (*ent.Doc
 func (s *DocumentService) CreateDocument(ctx context.Context, title string) (*ent.Document, error) {
 	doc, err := s.db.Client.Document.Create().
 		SetTitle(title).
-		SetContent(defaultDocumentContent).
+		SetContent(models.DefaultDocumentContent).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create document error: %w", err)
@@ -83,16 +84,17 @@ func (s *DocumentService) CreateDocument(ctx context.Context, title string) (*en
 
 // UpdateDocumentContent 更新文档内容
 func (s *DocumentService) UpdateDocumentContent(ctx context.Context, id int, content string, baseUpdatedAt string) (*DocumentSaveResult, error) {
-	doc, err := s.GetDocumentByID(ctx, id)
+	doc, err := s.db.Client.Document.Get(ctx, id)
 	if err != nil {
-		return nil, err
-	}
-	if doc == nil {
-		return nil, fmt.Errorf("document not found: %d", id)
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("document not found: %d", id)
+		}
+		return nil, fmt.Errorf("get document by id error: %w", err)
 	}
 	if baseUpdatedAt != "" && doc.UpdatedAt != baseUpdatedAt {
 		return nil, fmt.Errorf("%w: document %d has changed since %s", ErrDocumentRevisionConflict, id, baseUpdatedAt)
 	}
+	content = models.NormalizeDocumentContent(content)
 	if doc.Content == content {
 		return buildDocumentSaveResult(doc, mixin.NowString(), false), nil
 	}

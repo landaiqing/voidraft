@@ -31,7 +31,7 @@ func recordDeletedAtString(record snapshot.Record) *string {
 	if record.DeletedAt == nil {
 		return nil
 	}
-	value := record.DeletedAt.Format(time.RFC3339)
+	value := record.DeletedAt.Format(time.RFC3339Nano)
 	return &value
 }
 
@@ -40,7 +40,7 @@ func shouldApplyRecord(localUpdatedAt string, record snapshot.Record) bool {
 	if localUpdatedAt == "" {
 		return true
 	}
-	localTime, err := time.Parse(time.RFC3339, localUpdatedAt)
+	localTime, err := time.Parse(time.RFC3339Nano, localUpdatedAt)
 	if err != nil {
 		return true
 	}

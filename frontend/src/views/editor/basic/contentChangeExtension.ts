@@ -1,5 +1,7 @@
 import {EditorView, ViewPlugin, ViewUpdate} from '@codemirror/view';
-import type {Text} from '@codemirror/state';
+import {Annotation, type Text} from '@codemirror/state';
+
+export const externalDocumentUpdateAnnotation = Annotation.define<boolean>();
 
 /**
  * 内容变化监听扩展
@@ -18,6 +20,11 @@ export function createContentChangePlugin(onContentChange: () => void) {
 
       update(update: ViewUpdate) {
         if (!update.docChanged || update.state.doc === this.lastDoc) {
+          return;
+        }
+
+        if (update.transactions.some(transaction => transaction.annotation(externalDocumentUpdateAnnotation))) {
+          this.lastDoc = update.state.doc;
           return;
         }
 

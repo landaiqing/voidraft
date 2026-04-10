@@ -52,23 +52,15 @@ export const useSyncStore = defineStore('sync', () => {
       return;
     }
 
-    let syncError: unknown = null;
-
     isSyncing.value = true;
     try {
       await SyncService.Sync();
-    } catch (error) {
-      syncError = error;
     } finally {
       isSyncing.value = false;
       try {
         await loadRuns(1);
       } catch {
       }
-    }
-
-    if (syncError) {
-      throw syncError;
     }
   };
 

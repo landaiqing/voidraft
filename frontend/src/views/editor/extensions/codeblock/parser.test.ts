@@ -19,6 +19,21 @@ describe('codeblock delimiter access', () => {
     });
   });
 
+  it('parses a first delimiter without the leading newline', () => {
+    expect(parseDelimiter('∞∞∞text-a-w\n')).toEqual({
+      language: 'text',
+      auto: true,
+      access: 'write',
+    });
+
+    const state = EditorState.create({ doc: '∞∞∞text-a-w\nhello' });
+    const blocks = getBlocksFromString(state);
+
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0]?.delimiter).toEqual({ from: 0, to: '∞∞∞text-a-w\n'.length });
+    expect(blocks[0]?.content).toEqual({ from: '∞∞∞text-a-w\n'.length, to: '∞∞∞text-a-w\nhello'.length });
+  });
+
   it('builds block access from string parsing', () => {
     const document = [
       createDelimiter('ts', false, 'read'),

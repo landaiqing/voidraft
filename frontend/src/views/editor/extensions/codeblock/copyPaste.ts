@@ -20,7 +20,7 @@ import * as runtime from "@wailsio/runtime";
  * 构建块分隔符正则表达式
  */
 const languageTokensMatcher = LANGUAGES.map(lang => lang.token).join("|");
-const blockSeparatorRegex = new RegExp(`\\n∞∞∞(?:${languageTokensMatcher})(?:-(?:a|r|w))*\\n`, "g");
+const blockSeparatorRegex = new RegExp(`(?:^|\\n)∞∞∞(?:${languageTokensMatcher})(?:-(?:a|r|w))*\\n`, "g");
 
 /**
  * 获取被复制的范围和内容

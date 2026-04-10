@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"voidraft/internal/common/syncer/snapshot"
+	"voidraft/internal/models"
 	"voidraft/internal/models/ent"
 	"voidraft/internal/models/ent/document"
 )
@@ -46,7 +47,7 @@ func (a *DocumentAdapter) Export(ctx context.Context) ([]snapshot.Record, error)
 		}
 
 		record, err := snapshot.NewRecord(a.Kind(), item.UUID, values, map[string][]byte{
-			documentContentBlob: []byte(item.Content),
+			documentContentBlob: []byte(models.NormalizeDocumentContent(item.Content)),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("build document record %s: %w", item.UUID, err)
@@ -88,6 +89,7 @@ func (a *DocumentAdapter) create(ctx context.Context, record snapshot.Record) er
 	if err != nil {
 		return err
 	}
+	content = models.NormalizeDocumentContent(content)
 
 	builder := a.client.Document.Create().
 		SetUUID(record.ID).
@@ -110,6 +112,7 @@ func (a *DocumentAdapter) update(ctx context.Context, id int, record snapshot.Re
 	if err != nil {
 		return err
 	}
+	content = models.NormalizeDocumentContent(content)
 
 	builder := a.client.Document.UpdateOneID(id).
 		SetTitle(stringValue(record, document.FieldTitle)).

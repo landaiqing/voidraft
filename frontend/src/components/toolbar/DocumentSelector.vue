@@ -119,11 +119,11 @@ const selectDoc = async (doc: DocumentItem) => {
 
   // 如果旧文档有未保存修改,保存它
   if (oldDocId && editorStore.hasUnsavedChanges(oldDocId)) {
-
-    const content = editorStore.getCurrentContent();
-    const saveResult = await documentStore.saveDocument(oldDocId, content);
-    editorStore.syncAfterSave(oldDocId, saveResult);
-
+    try {
+      await editorStore.saveDirtyEditor(oldDocId);
+    } catch (error) {
+      console.error('save document error:', error);
+    }
   }
 
   // 打开新文档
