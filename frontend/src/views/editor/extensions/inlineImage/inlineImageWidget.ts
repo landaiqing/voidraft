@@ -135,6 +135,10 @@ export class InlineImageWidget extends WidgetType {
       deleteButton.addEventListener('mousedown', event => {
         event.preventDefault();
       });
+
+      requestAnimationFrame(() => {
+        this.syncControlScale(wrap, this.getNumericWidth(), buttonsContainer);
+      });
     }
 
     const image = document.createElement('img');
@@ -196,7 +200,6 @@ export class InlineImageWidget extends WidgetType {
     dom.dataset.id = this.id;
     dom.dataset.idealWidth = String(this.idealWidth);
     dom.dataset.idealHeight = String(this.idealHeight);
-
     const image = dom.querySelector('img');
     if (!(image instanceof HTMLImageElement)) {
       return false;
@@ -205,6 +208,7 @@ export class InlineImageWidget extends WidgetType {
     image.src = this.path;
     image.style.width = this.getWidth();
     image.style.height = this.getHeight();
+    this.syncControlScale(dom, this.getNumericWidth(), dom.querySelector('.buttons-container'));
     return true;
   }
 
@@ -225,6 +229,12 @@ export class InlineImageWidget extends WidgetType {
   }
 
   private getWidth(): string {
+    const width = this.getNumericWidth();
+
+    return width ? `${width}px` : '';
+  }
+
+  private getNumericWidth(): number | undefined {
     let width: number | undefined;
 
     if (this.isFolded) {
@@ -235,7 +245,7 @@ export class InlineImageWidget extends WidgetType {
       width = this.idealWidth;
     }
 
-    return width ? `${width}px` : '';
+    return width;
   }
 
   private getHeight(): string {
@@ -323,7 +333,6 @@ export class InlineImageWidget extends WidgetType {
       const snapTolerance = 10;
       if (shouldSnap) {
         if (Math.abs(width - idealWidth) <= snapTolerance || Math.abs(height - idealHeight) <= snapTolerance) {
-          height = idealHeight;
           width = idealWidth;
           wrap.classList.add('snapped');
         } else {
@@ -342,6 +351,7 @@ export class InlineImageWidget extends WidgetType {
 
       image.style.width = `${width}px`;
       image.style.height = `${height}px`;
+      this.syncControlScale(wrap, width, wrap.querySelector('.buttons-container'));
     };
 
     const endResize = () => {
@@ -380,5 +390,42 @@ export class InlineImageWidget extends WidgetType {
         ])],
       });
     });
+  }
+
+  private syncControlScale(dom: HTMLElement, width?: number, buttonsContainer?: Element | null): void {
+    if (!width || this.isFolded || !(buttonsContainer instanceof HTMLElement)) {
+      dom.style.removeProperty('--button-scale');
+      return;
+    }
+
+    const buttonsWidth = this.measureButtonsIntrinsicWidth(buttonsContainer);
+    if (!buttonsWidth) {
+      dom.style.removeProperty('--button-scale');
+      return;
+    }
+
+    const scale = Math.min(1, width / buttonsWidth);
+    dom.style.setProperty('--button-scale', scale.toFixed(3));
+  }
+
+  private measureButtonsIntrinsicWidth(buttonsContainer: HTMLElement): number {
+    const cached = Number(buttonsContainer.dataset.intrinsicWidth || '0');
+    const previousWidth = buttonsContainer.style.width;
+    const previousMaxWidth = buttonsContainer.style.maxWidth;
+
+    buttonsContainer.style.width = 'max-content';
+    buttonsContainer.style.maxWidth = 'none';
+
+    const measured = buttonsContainer.scrollWidth;
+
+    buttonsContainer.style.width = previousWidth;
+    buttonsContainer.style.maxWidth = previousMaxWidth;
+
+    if (measured > 0) {
+      buttonsContainer.dataset.intrinsicWidth = String(measured);
+      return measured;
+    }
+
+    return cached;
   }
 }

@@ -5,6 +5,7 @@ import copyDarkIconUrl from '@/assets/icons/copy-dark.svg';
 import pencilWhiteIconUrl from '@/assets/icons/pencil-white.svg';
 import resizeHandleDarkUrl from '@/assets/icons/resize-handle-se-dark.png';
 import resizeHandleLightUrl from '@/assets/icons/resize-handle-se-light.png';
+import trashWhiteIconUrl from '@/assets/icons/trash-white.svg';
 import {parseInlineImages} from './inlineImageParsing';
 import {InlineImageWidget} from './inlineImageWidget';
 import type {ParsedInlineImage} from './types';
@@ -116,32 +117,42 @@ function createInlineImageTheme(): Extension {
       padding: '7px',
       alignItems: 'flex-start',
       justifyContent: 'left',
+      boxSizing: 'border-box',
+      gap: '4px',
       opacity: '0',
       overflow: 'hidden',
       containerType: 'inline-size',
       pointerEvents: 'none',
     },
     '.inline-image .buttons-container button': {
-      height: '24px',
-      fontSize: '12px',
+      height: 'calc(24px * var(--button-scale, 1))',
+      fontSize: 'calc(12px * var(--button-scale, 1))',
       backgroundColor: '#646e71',
       color: '#fff',
       opacity: '1',
       transition: 'background-color 200ms',
       backgroundImage: `url("${copyDarkIconUrl}")`,
-      backgroundSize: '13px',
-      backgroundPosition: '6px center',
+      backgroundSize: 'calc(13px * var(--button-scale, 1))',
+      backgroundPosition: 'calc(6px * var(--button-scale, 1)) center',
       backgroundRepeat: 'no-repeat',
-      padding: '3px 7px 3px 22px',
+      padding: 'calc(3px * var(--button-scale, 1)) calc(7px * var(--button-scale, 1)) calc(3px * var(--button-scale, 1)) calc(22px * var(--button-scale, 1))',
       border: 'none',
-      borderRadius: '3px',
+      borderRadius: 'calc(3px * var(--button-scale, 1))',
       cursor: 'pointer',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
       minWidth: '0',
-      whiteSpace: 'nowrap',
       overflow: 'hidden',
-      marginRight: '4px',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      flex: '0 1 auto',
+      maxWidth: '100%',
       pointerEvents: 'auto',
+    },
+    '.inline-image .buttons-container button span': {
+      display: 'block',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
     },
     '.inline-image .buttons-container button:hover': {
       backgroundColor: '#51595c',
@@ -151,8 +162,8 @@ function createInlineImageTheme(): Extension {
       backgroundImage: `url("${pencilWhiteIconUrl}")`,
     },
     '.inline-image .buttons-container button.delete': {
-      backgroundImage: 'none',
-      padding: '3px 8px',
+      backgroundImage: `url("${trashWhiteIconUrl}")`,
+      padding: 'calc(3px * var(--button-scale, 1)) calc(8px * var(--button-scale, 1)) calc(3px * var(--button-scale, 1)) calc(22px * var(--button-scale, 1))',
       backgroundColor: '#8f3d3d',
     },
     '.inline-image .buttons-container button.delete:hover': {
