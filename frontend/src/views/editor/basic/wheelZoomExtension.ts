@@ -1,25 +1,22 @@
-import {EditorView} from '@codemirror/view';
 import type {Extension} from '@codemirror/state';
+import {EditorView, ViewPlugin} from '@codemirror/view';
 import {createDebounce} from '@/common/utils/debounce';
 
 type FontAdjuster = () => void;
+type FontDeltaAdjuster = (delta: number) => void;
 type SaveCallback = () => Promise<void> | void;
 
 export interface WheelZoomOptions {
-  /** 增加字体大小的回调（立即执行） */
-  increaseFontSize: FontAdjuster;
-  /** 减少字体大小的回调（立即执行） */
-  decreaseFontSize: FontAdjuster;
-  /** 保存回调（防抖执行），在滚动结束后调用 */
+  increaseFontSize?: FontAdjuster;
+  decreaseFontSize?: FontAdjuster;
+  adjustFontSize?: FontDeltaAdjuster;
   onSave?: SaveCallback;
-  /** 保存防抖延迟（毫秒），默认 300ms */
   saveDelay?: number;
 }
 
 export const createWheelZoomExtension = (options: WheelZoomOptions): Extension => {
-  const {increaseFontSize, decreaseFontSize, onSave, saveDelay = 300} = options;
+  const {increaseFontSize, decreaseFontSize, adjustFontSize, onSave, saveDelay = 300} = options;
 
-  // 如果有 onSave 回调，创建防抖版本
   const {debouncedFn: debouncedSave} = onSave
     ? createDebounce(() => {
         try {
@@ -35,27 +32,72 @@ export const createWheelZoomExtension = (options: WheelZoomOptions): Extension =
       }, {delay: saveDelay})
     : {debouncedFn: null};
 
-  return EditorView.domEventHandlers({
-    wheel(event) {
+  return ViewPlugin.fromClass(class {
+    private pendingDelta = 0;
+    private frameId: number | null = null;
+    private readonly domWindow: Window;
+    private readonly onWheel = (event: WheelEvent) => {
       if (!event.ctrlKey) {
-        return false;
+        return;
       }
 
       event.preventDefault();
+      event.stopPropagation();
 
-      // 立即更新字体大小
       if (event.deltaY < 0) {
-        increaseFontSize();
+        this.pendingDelta += 1;
       } else if (event.deltaY > 0) {
-        decreaseFontSize();
+        this.pendingDelta -= 1;
       }
 
-      // 防抖保存
+      if (this.pendingDelta !== 0 && this.frameId === null) {
+        this.frameId = this.domWindow.requestAnimationFrame(this.flushPendingDelta);
+      }
+
       if (debouncedSave) {
         debouncedSave();
       }
+    };
 
-      return true;
+    constructor(private readonly view: EditorView) {
+      this.domWindow = this.view.dom.ownerDocument.defaultView ?? window;
+      this.view.dom.addEventListener('wheel', this.onWheel, {
+        capture: true,
+        passive: false,
+      });
     }
+
+    destroy() {
+      this.view.dom.removeEventListener('wheel', this.onWheel, true);
+
+      if (this.frameId !== null) {
+        this.domWindow.cancelAnimationFrame(this.frameId);
+      }
+    }
+
+    private readonly flushPendingDelta = () => {
+      this.frameId = null;
+
+      if (this.pendingDelta === 0) {
+        return;
+      }
+
+      const delta = this.pendingDelta;
+      this.pendingDelta = 0;
+
+      if (adjustFontSize) {
+        adjustFontSize(delta);
+        return;
+      }
+
+      const applyStep = delta > 0 ? increaseFontSize : decreaseFontSize;
+      if (!applyStep) {
+        return;
+      }
+
+      for (let index = 0; index < Math.abs(delta); index++) {
+        applyStep();
+      }
+    };
   });
 };

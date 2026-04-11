@@ -5,18 +5,36 @@
 import { EditorState } from '@codemirror/state';
 import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
 import type { Tree } from '@lezer/common';
-import { Block as BlockNode, BlockDelimiter, BlockContent, BlockLanguage } from './lang-parser/parser.terms.js';
 import {
-    SupportedLanguage,
-    DELIMITER_REGEX,
-    DELIMITER_PREFIX,
-    DELIMITER_SUFFIX,
+    Block as BlockNode,
+    BlockDelimiter,
+    BlockContent,
+} from './lang-parser/parser.terms.js';
+import {
+    type Block,
+    type BlockAccess,
+    type BlockDelimiterInfo,
+    type SupportedLanguage,
     AUTO_DETECT_SUFFIX,
-    Block
+    DELIMITER_PREFIX,
+    DELIMITER_REGEX,
+    DELIMITER_START,
+    DELIMITER_SUFFIX,
+    READONLY_SUFFIX,
+    WRITABLE_SUFFIX,
 } from './types';
 import { LANGUAGES } from './lang-parser/languages';
 
-const DEFAULT_LANGUAGE = (LANGUAGES[0]?.token || 'text') as string;
+const DEFAULT_LANGUAGE = (LANGUAGES[0]?.token || 'text') as SupportedLanguage;
+const DEFAULT_ACCESS: BlockAccess = 'write';
+
+function getDefaultDelimiterInfo(): BlockDelimiterInfo {
+    return {
+        language: DEFAULT_LANGUAGE,
+        auto: false,
+        access: DEFAULT_ACCESS,
+    };
+}
 
 /**
  * 从语法树解析代码块
@@ -35,52 +53,42 @@ function collectBlocksFromTree(tree: Tree, state: EditorState): Block[] | null {
 
     tree.iterate({
         enter(node) {
-            if (node.type.id === BlockNode) {
-                let delimiter: { from: number; to: number } | null = null;
-                let content: { from: number; to: number } | null = null;
-                let language: string = DEFAULT_LANGUAGE;
-                let auto = false;
-
-                const blockNode = node.node;
-                blockNode.firstChild?.cursor().iterate(child => {
-                    if (child.type.id === BlockDelimiter) {
-                        delimiter = { from: child.from, to: child.to };
-                        const delimiterText = doc.sliceString(child.from, child.to);
-                        const match = delimiterText.match(/∞∞∞([a-zA-Z0-9_-]+)(-a)?\n/);
-                        if (match) {
-                            language = match[1] || DEFAULT_LANGUAGE;
-                            auto = match[2] === '-a';
-                        } else {
-                            child.node.firstChild?.cursor().iterate(langChild => {
-                                if (langChild.type.id === BlockLanguage) {
-                                    const langText = doc.sliceString(langChild.from, langChild.to);
-                                    language = langText || DEFAULT_LANGUAGE;
-                                }
-                                if (doc.sliceString(langChild.from, langChild.to) === AUTO_DETECT_SUFFIX) {
-                                    auto = true;
-                                }
-                            });
-                        }
-                    } else if (child.type.id === BlockContent) {
-                        content = { from: child.from, to: child.to };
-                    }
-                });
-
-                if (delimiter && content) {
-                    blocks.push({
-                        language: {
-                            name: language as SupportedLanguage,
-                            auto: auto,
-                        },
-                        content: content,
-                        delimiter: delimiter,
-                        range: {
-                            from: node.from,
-                            to: node.to,
-                        },
-                    });
-                }
+            if (node.type.id !== BlockNode) {
+                return;
             }
+
+            let delimiter: { from: number; to: number } | null = null;
+            let content: { from: number; to: number } | null = null;
+            let delimiterInfo = getDefaultDelimiterInfo();
+
+            const blockNode = node.node;
+            blockNode.firstChild?.cursor().iterate(child => {
+                if (child.type.id === BlockDelimiter) {
+                    delimiter = { from: child.from, to: child.to };
+                    const delimiterText = doc.sliceString(child.from, child.to);
+                    delimiterInfo = parseDelimiter(delimiterText) ?? getDefaultDelimiterInfo();
+                } else if (child.type.id === BlockContent) {
+                    content = { from: child.from, to: child.to };
+                }
+            });
+
+            if (!delimiter || !content) {
+                return;
+            }
+
+            blocks.push({
+                language: {
+                    name: delimiterInfo.language,
+                    auto: delimiterInfo.auto,
+                },
+                access: delimiterInfo.access,
+                content,
+                delimiter,
+                range: {
+                    from: node.from,
+                    to: node.to,
+                },
+            });
         }
     });
 
@@ -99,60 +107,67 @@ export let firstBlockDelimiterSize: number | undefined;
  * 从文档字符串内容解析块，使用 String.indexOf()
  */
 export function getBlocksFromString(state: EditorState): Block[] {
-  const blocks: Block[] = [];
-  const doc = state.doc;
+    const blocks: Block[] = [];
+    const doc = state.doc;
 
-  if (doc.length === 0) {
-    return [createPlainTextBlock(0, 0)];
-  }
+    if (doc.length === 0) {
+        return [createPlainTextBlock(0, 0)];
+    }
 
-  const content = doc.sliceString(0, doc.length);
-  const delimiter = DELIMITER_PREFIX;
-  const suffixLength = DELIMITER_SUFFIX.length;
+    const content = doc.sliceString(0, doc.length);
+    const suffixLength = DELIMITER_SUFFIX.length;
 
-  let pos = content.indexOf(delimiter);
+    let pos = findDelimiter(content, 0);
 
-  if (pos === -1) {
-    firstBlockDelimiterSize = 0;
-    return [createPlainTextBlock(0, doc.length)];
-  }
+    if (pos === -1) {
+        firstBlockDelimiterSize = 0;
+        return [createPlainTextBlock(0, doc.length)];
+    }
 
-  if (pos > 0) {
-    blocks.push(createPlainTextBlock(0, pos));
-  }
+    if (pos > 0) {
+        blocks.push(createPlainTextBlock(0, pos));
+    }
 
-  while (pos !== -1 && pos < doc.length) {
-    const blockStart = pos;
-    const langStart = blockStart + delimiter.length;
-    const delimiterEnd = content.indexOf(DELIMITER_SUFFIX, langStart);
-    if (delimiterEnd === -1) break;
+    while (pos !== -1 && pos < doc.length) {
+        const blockStart = pos;
+        const langStart = blockStart + delimiterPrefixLength(content, blockStart);
+        const delimiterEnd = content.indexOf(DELIMITER_SUFFIX, langStart);
+        if (delimiterEnd === -1) {
+            break;
+        }
 
-    const delimiterText = content.slice(blockStart, delimiterEnd + suffixLength);
-    const delimiterInfo = parseDelimiter(delimiterText);
-    if (!delimiterInfo) break;
+        const delimiterText = content.slice(blockStart, delimiterEnd + suffixLength);
+        const delimiterInfo = parseDelimiter(delimiterText);
+        if (!delimiterInfo) {
+            break;
+        }
 
-    const contentStart = delimiterEnd + suffixLength;
-    const nextDelimiter = content.indexOf(delimiter, contentStart);
-    const contentEnd = nextDelimiter === -1 ? doc.length : nextDelimiter;
+        const contentStart = delimiterEnd + suffixLength;
+        const nextDelimiter = findDelimiter(content, contentStart);
+        const contentEnd = nextDelimiter === -1 ? doc.length : nextDelimiter;
 
-    blocks.push({
-      language: { name: delimiterInfo.language, auto: delimiterInfo.auto },
-      content: { from: contentStart, to: contentEnd },
-      delimiter: { from: blockStart, to: delimiterEnd + suffixLength },
-      range: { from: blockStart, to: contentEnd },
-    });
+        blocks.push({
+            language: {
+                name: delimiterInfo.language,
+                auto: delimiterInfo.auto,
+            },
+            access: delimiterInfo.access,
+            content: { from: contentStart, to: contentEnd },
+            delimiter: { from: blockStart, to: delimiterEnd + suffixLength },
+            range: { from: blockStart, to: contentEnd },
+        });
 
-    pos = nextDelimiter;
-  }
+        pos = nextDelimiter;
+    }
 
-  if (blocks.length === 0) {
-    blocks.push(createPlainTextBlock(0, doc.length));
-    firstBlockDelimiterSize = 0;
-  } else {
-    firstBlockDelimiterSize = blocks[0].delimiter.to;
-  }
+    if (blocks.length === 0) {
+        blocks.push(createPlainTextBlock(0, doc.length));
+        firstBlockDelimiterSize = 0;
+    } else {
+        firstBlockDelimiterSize = blocks[0].delimiter.to;
+    }
 
-  return blocks;
+    return blocks;
 }
 
 /**
@@ -171,7 +186,7 @@ export function getBlocks(state: EditorState): Block[] {
             return blocks;
         }
     }
-    
+
     return getBlocksFromString(state);
 }
 
@@ -181,7 +196,7 @@ export function getBlocks(state: EditorState): Block[] {
 export function getActiveBlock(state: EditorState): Block | undefined {
     const range = state.selection.asSingle().ranges[0];
     const blocks = getBlocks(state);
-    return blocks.find(block => 
+    return blocks.find(block =>
         block.range.from <= range.head && block.range.to >= range.head
     );
 }
@@ -207,10 +222,10 @@ export function getLastBlock(state: EditorState): Block | undefined {
  */
 export function getBlockFromPos(state: EditorState, pos: number): Block | undefined {
     const blocks = getBlocks(state);
-    return blocks.find(block => 
+    return blocks.find(block =>
         block.range.from <= pos && block.range.to >= pos
     );
-    }
+}
 
 /**
  * 获取块的行信息
@@ -218,7 +233,7 @@ export function getBlockFromPos(state: EditorState, pos: number): Block | undefi
 export function getBlockLineFromPos(state: EditorState, pos: number) {
     const line = state.doc.lineAt(pos);
     const block = getBlockFromPos(state, pos);
-    
+
     if (block) {
         const firstBlockLine = state.doc.lineAt(block.content.from).number;
         return {
@@ -227,7 +242,7 @@ export function getBlockLineFromPos(state: EditorState, pos: number) {
             length: line.length,
         };
     }
-    
+
     return {
         line: line.number,
         col: pos - line.from,
@@ -238,50 +253,83 @@ export function getBlockLineFromPos(state: EditorState, pos: number) {
 /**
  * 创建新的分隔符文本
  */
-export function createDelimiter(language: SupportedLanguage, autoDetect = false): string {
-    const suffix = autoDetect ? AUTO_DETECT_SUFFIX : '';
-    return `${DELIMITER_PREFIX}${language}${suffix}${DELIMITER_SUFFIX}`;
+export function createDelimiter(
+    language: SupportedLanguage,
+    autoDetect = false,
+    access: BlockAccess = DEFAULT_ACCESS,
+): string {
+    const suffixes: string[] = [];
+    if (autoDetect) {
+        suffixes.push(AUTO_DETECT_SUFFIX);
+    }
+    suffixes.push(access === 'read' ? READONLY_SUFFIX : WRITABLE_SUFFIX);
+    return `${DELIMITER_PREFIX}${language}${suffixes.join('')}${DELIMITER_SUFFIX}`;
 }
 
 /**
  * 验证分隔符格式
  */
 export function isValidDelimiter(text: string): boolean {
-    DELIMITER_REGEX.lastIndex = 0;
-    return DELIMITER_REGEX.test(text);
+    return parseDelimiter(text) !== null;
 }
 
 /**
  * 解析分隔符信息
  */
-export function parseDelimiter(delimiterText: string): { language: SupportedLanguage; auto: boolean } | null {
-    DELIMITER_REGEX.lastIndex = 0;
-    const match = DELIMITER_REGEX.exec(delimiterText);
-
+export function parseDelimiter(delimiterText: string): BlockDelimiterInfo | null {
+    const match = delimiterText.match(DELIMITER_REGEX);
     if (!match) {
         return null;
     }
 
-    const languageName = match[1];
-    const isAuto = match[2] === AUTO_DETECT_SUFFIX;
-
+    const [, languageName, rawFlags = ''] = match;
     const validLanguage = LANGUAGES.some(lang => lang.token === languageName)
         ? languageName as SupportedLanguage
-        : DEFAULT_LANGUAGE as SupportedLanguage;
+        : DEFAULT_LANGUAGE;
+
+    const flags = rawFlags.match(/-(?:a|r|w)/g) ?? [];
+    let auto = false;
+    let access: BlockAccess = DEFAULT_ACCESS;
+
+    for (const flag of flags) {
+        if (flag === AUTO_DETECT_SUFFIX) {
+            auto = true;
+        } else if (flag === READONLY_SUFFIX) {
+            access = 'read';
+        } else if (flag === WRITABLE_SUFFIX) {
+            access = 'write';
+        } else {
+            return null;
+        }
+    }
 
     return {
         language: validLanguage,
-        auto: isAuto
+        auto,
+        access,
     };
 }
 
 function createPlainTextBlock(from: number, to: number): Block {
-  return {
-    language: { name: DEFAULT_LANGUAGE, auto: false },
-    content: { from, to },
-    delimiter: { from: 0, to: 0 },
-    range: { from, to },
-  };
+    return {
+        language: { name: DEFAULT_LANGUAGE, auto: false },
+        access: DEFAULT_ACCESS,
+        content: { from, to },
+        delimiter: { from: 0, to: 0 },
+        range: { from, to },
+    };
 }
 
+function findDelimiter(content: string, from: number): number {
+    if (from <= 0 && content.startsWith(DELIMITER_START)) {
+        return 0;
+    }
+    return content.indexOf(DELIMITER_PREFIX, Math.max(from, 0));
+}
 
+function delimiterPrefixLength(content: string, from: number): number {
+    if (content.startsWith(DELIMITER_PREFIX, from)) {
+        return DELIMITER_PREFIX.length;
+    }
+    return DELIMITER_START.length;
+}

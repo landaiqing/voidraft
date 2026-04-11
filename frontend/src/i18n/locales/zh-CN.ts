@@ -1,369 +1,453 @@
 export default {
-  locale: 'zh-CN',
-  common: {
-    ok: '确定',
-    cancel: '取消',
-    edit: '编辑',
-    delete: '删除',
-    confirm: '确认',
-    save: '保存',
-    reset: '重置'
-  },
-  titlebar: {
-    minimize: '最小化',
-    maximize: '最大化',
-    restore: '向下还原',
-    close: '关闭'
-  },
-  toolbar: {
-    editor: {
-      lines: 'Ln',
-      characters: 'Ch',
-      selected: 'Sel'
+    locale: 'zh-CN',
+    common: {
+        ok: '确定',
+        cancel: '取消',
+        edit: '编辑',
+        delete: '删除',
+        confirm: '确认',
+        save: '保存',
+        reset: '重置'
     },
-    fontSizeTooltip: '字体大小 (Ctrl+滚轮调整)',
-    settings: '设置',
-    alwaysOnTop: '窗口置顶',
-    blockLanguage: '块语言',
-    searchLanguage: '搜索语言...',
-    noLanguageFound: '未找到匹配的语言',
-    formatHint: '点击格式化区块（Ctrl+Shift+F）',
-    previewMarkdown: '预览 Markdown',
-    closePreview: '关闭预览',
-    // 文档选择器
-    selectDocument: '选择文档',
-    searchOrCreateDocument: '搜索或输入新文档名...',
-    createDocument: '创建',
-    noDocumentFound: '没有找到文档',
-    loading: '加载中...',
-    rename: '重命名',
-    delete: '删除',
-    confirm: '确认',
-    confirmDelete: '再次点击确认删除',
-    openInNewWindow: '在新窗口中打开',
-    alreadyOpenInNewWindow: '已在新窗口中打开',
-  },
-  languages: {
-    'zh-CN': '简体中文',
-    'en-US': 'English'
-  },
-  systemTheme: {
-    dark: '深色',
-    light: '浅色',
-    auto: '跟随系统'
-  },
-  keybindings: {
-    keymapMode: '快捷键模式',
-    modes: {
-      standard: '标准模式',
-      emacs: 'Emacs 模式'
+    titlebar: {
+        minimize: '最小化',
+        maximize: '最大化',
+        restore: '向下还原',
+        close: '关闭'
     },
-    headers: {
-      shortcut: '快捷键',
-      extension: '扩展',
-      description: '描述'
+    toolbar: {
+        editor: {
+            lines: 'Ln',
+            characters: 'Ch',
+            selected: 'Sel'
+        },
+        fontSizeTooltip: '字体大小 (Ctrl+滚轮调整)',
+        settings: '设置',
+        alwaysOnTop: '窗口置顶',
+        blockLanguage: '块语言',
+        searchLanguage: '搜索语言...',
+        noLanguageFound: '未找到匹配的语言',
+        formatHint: '点击格式化区块（Ctrl+Shift+F）',
+        previewMarkdown: '预览 Markdown',
+        closePreview: '关闭预览',
+        // 文档选择器
+        selectDocument: '选择文档',
+        searchOrCreateDocument: '搜索或输入新文档名...',
+        createDocument: '创建',
+        noDocumentFound: '没有找到文档',
+        loading: '加载中...',
+        rename: '重命名',
+        delete: '删除',
+        confirm: '确认',
+        confirmDelete: '再次点击确认删除',
+        openInNewWindow: '在新窗口中打开',
+        alreadyOpenInNewWindow: '已在新窗口中打开',
     },
-    resetToDefault: '重置为默认',
-    confirmReset: '确认重置？',
-    noKeybinding: '未设置',
-    waitingForKey: '等待输入...',
-    clickToSet: '点击设置快捷键',
-    editKeybinding: '编辑快捷键',
-    config: {
-      enabled: '启用',
-      preventDefault: '阻止默认',
-      keybinding: '快捷键'
+    languages: {
+        'zh-CN': '简体中文',
+        'en-US': 'English'
     },
-    keyPlaceholder: '输入键名, 回车添加',
-    invalidFormat: '格式错误',
-    conflict: '冲突: {command}',
-    maxKeysReached: '最多只能添加4个键',
-    commands: {
-      showSearch: '显示搜索面板',
-      hideSearch: '隐藏搜索面板',
-      searchToggleCase: '切换大小写敏感匹配',
-      searchToggleWord: '切换整词匹配',
-      searchToggleRegex: '切换正则表达式匹配',
-      searchShowReplace: '显示替换功能',
-      searchReplaceAll: '替换全部匹配项',
-      blockSelectAll: '块内选择全部',
-      blockAddAfterCurrent: '在当前块后添加新块',
-      blockAddAfterLast: '在最后添加新块',
-      blockAddBeforeCurrent: '在当前块前添加新块',
-      blockGotoPrevious: '跳转到上一个块',
-      blockGotoNext: '跳转到下一个块',
-      blockSelectPrevious: '选择上一个块',
-      blockSelectNext: '选择下一个块',
-      blockDelete: '删除当前块',
-      blockMoveUp: '向上移动当前块',
-      blockMoveDown: '向下移动当前块',
-      blockDeleteLine: '删除行',
-      blockMoveLineUp: '向上移动行',
-      blockMoveLineDown: '向下移动行',
-      blockTransposeChars: '字符转置',
-      blockFormat: '格式化代码块',
-      blockCopy: '复制',
-      blockCut: '剪切',
-      blockPaste: '粘贴',
-      copyBlockImage: '复制块图片',
-      historyUndo: '撤销',
-      historyRedo: '重做',
-      historyUndoSelection: '撤销选择',
-      historyRedoSelection: '重做选择',
-      foldCode: '折叠代码',
-      unfoldCode: '展开代码',
-      foldAll: '折叠全部',
-      unfoldAll: '展开全部',
-      cursorSyntaxLeft: '光标按语法左移',
-      cursorSyntaxRight: '光标按语法右移',
-      selectSyntaxLeft: '按语法选择左侧',
-      selectSyntaxRight: '按语法选择右侧',
-      copyLineUp: '向上复制行',
-      copyLineDown: '向下复制行',
-      insertBlankLine: '插入空行',
-      selectLine: '选择行',
-      selectParentSyntax: '选择父级语法',
-      simplifySelection: '简化选择',
-      addCursorAbove: '在上方添加光标',
-      addCursorBelow: '在下方添加光标',
-      cursorGroupLeft: '光标按单词左移',
-      cursorGroupRight: '光标按单词右移',
-      selectGroupLeft: '按单词选择左侧',
-      selectGroupRight: '按单词选择右侧',
-      deleteToLineEnd: '删除到行尾',
-      deleteToLineStart: '删除到行首',
-      cursorLineStart: '移动到行首',
-      cursorLineEnd: '移动到行尾',
-      selectLineStart: '选择到行首',
-      selectLineEnd: '选择到行尾',
-      cursorDocStart: '跳转到文档开头',
-      cursorDocEnd: '跳转到文档结尾',
-      selectDocStart: '选择到文档开头',
-      selectDocEnd: '选择到文档结尾',
-      selectMatchingBracket: '选择到匹配括号',
-      splitLine: '分割行',
-      indentLess: '减少缩进',
-      indentMore: '增加缩进',
-      indentSelection: '缩进选择',
-      cursorMatchingBracket: '光标到匹配括号',
-      toggleComment: '切换注释',
-      toggleBlockComment: '切换块注释',
-      insertNewlineAndIndent: '插入新行并缩进',
-      deleteCharBackward: '向后删除字符',
-      deleteCharForward: '向前删除字符',
-      deleteGroupBackward: '向后删除组',
-      deleteGroupForward: '向前删除组',
+    systemTheme: {
+        dark: '深色',
+        light: '浅色',
+        auto: '跟随系统'
+    },
+    keybindings: {
+        keymapMode: '快捷键模式',
+        modes: {
+            standard: '标准模式',
+            emacs: 'Emacs 模式'
+        },
+        headers: {
+            shortcut: '快捷键',
+            extension: '扩展',
+            description: '描述'
+        },
+        resetToDefault: '重置为默认',
+        confirmReset: '确认重置？',
+        noKeybinding: '未设置',
+        waitingForKey: '等待输入...',
+        clickToSet: '点击设置快捷键',
+        editKeybinding: '编辑快捷键',
+        config: {
+            enabled: '启用',
+            preventDefault: '阻止默认',
+            keybinding: '快捷键'
+        },
+        keyPlaceholder: '输入键名, 回车添加',
+        invalidFormat: '格式错误',
+        conflict: '冲突: {command}',
+        maxKeysReached: '最多只能添加4个键',
+        commands: {
+            showSearch: '显示搜索面板',
+            hideSearch: '隐藏搜索面板',
+            searchToggleCase: '切换大小写敏感匹配',
+            searchToggleWord: '切换整词匹配',
+            searchToggleRegex: '切换正则表达式匹配',
+            searchShowReplace: '显示替换功能',
+            searchReplaceAll: '替换全部匹配项',
+            blockSelectAll: '块内选择全部',
+            blockAddAfterCurrent: '在当前块后添加新块',
+            blockAddAfterLast: '在最后添加新块',
+            blockAddBeforeCurrent: '在当前块前添加新块',
+            blockGotoPrevious: '跳转到上一个块',
+            blockGotoNext: '跳转到下一个块',
+            blockSelectPrevious: '选择上一个块',
+            blockSelectNext: '选择下一个块',
+            blockDelete: '删除当前块',
+            blockMoveUp: '向上移动当前块',
+            blockMoveDown: '向下移动当前块',
+            blockDeleteLine: '删除行',
+            blockMoveLineUp: '向上移动行',
+            blockMoveLineDown: '向下移动行',
+            blockTransposeChars: '字符转置',
+            blockFormat: '格式化代码块',
+            blockCopy: '复制',
+            blockCut: '剪切',
+            blockPaste: '粘贴',
+            copyBlockImage: '复制块图片',
+            historyUndo: '撤销',
+            historyRedo: '重做',
+            historyUndoSelection: '撤销选择',
+            historyRedoSelection: '重做选择',
+            foldCode: '折叠代码',
+            unfoldCode: '展开代码',
+            foldAll: '折叠全部',
+            unfoldAll: '展开全部',
+            cursorSyntaxLeft: '光标按语法左移',
+            cursorSyntaxRight: '光标按语法右移',
+            selectSyntaxLeft: '按语法选择左侧',
+            selectSyntaxRight: '按语法选择右侧',
+            copyLineUp: '向上复制行',
+            copyLineDown: '向下复制行',
+            insertBlankLine: '插入空行',
+            selectLine: '选择行',
+            selectParentSyntax: '选择父级语法',
+            simplifySelection: '简化选择',
+            addCursorAbove: '在上方添加光标',
+            addCursorBelow: '在下方添加光标',
+            cursorGroupLeft: '光标按单词左移',
+            cursorGroupRight: '光标按单词右移',
+            selectGroupLeft: '按单词选择左侧',
+            selectGroupRight: '按单词选择右侧',
+            deleteToLineEnd: '删除到行尾',
+            deleteToLineStart: '删除到行首',
+            cursorLineStart: '移动到行首',
+            cursorLineEnd: '移动到行尾',
+            selectLineStart: '选择到行首',
+            selectLineEnd: '选择到行尾',
+            cursorDocStart: '跳转到文档开头',
+            cursorDocEnd: '跳转到文档结尾',
+            selectDocStart: '选择到文档开头',
+            selectDocEnd: '选择到文档结尾',
+            selectMatchingBracket: '选择到匹配括号',
+            splitLine: '分割行',
+            indentLess: '减少缩进',
+            indentMore: '增加缩进',
+            indentSelection: '缩进选择',
+            cursorMatchingBracket: '光标到匹配括号',
+            toggleComment: '切换注释',
+            toggleBlockComment: '切换块注释',
+            insertNewlineAndIndent: '插入新行并缩进',
+            deleteCharBackward: '向后删除字符',
+            deleteCharForward: '向前删除字符',
+            deleteGroupBackward: '向后删除组',
+            deleteGroupForward: '向前删除组',
 
-      // Emacs 模式额外的基础导航命令
-      cursorCharLeft: '光标左移一个字符',
-      cursorCharRight: '光标右移一个字符',
-      cursorLineUp: '光标上移一行',
-      cursorLineDown: '光标下移一行',
-      cursorPageUp: '向上翻页',
-      cursorPageDown: '向下翻页',
-      selectCharLeft: '选择左移一个字符',
-      selectCharRight: '选择右移一个字符',
-      selectLineUp: '选择上移一行',
-      selectLineDown: '选择下移一行',
-    }
-  },
-  tabs: {
-    contextMenu: {
-      closeTab: '关闭标签',
-      closeOthers: '关闭其他',
-      closeLeft: '关闭左侧',
-      closeRight: '关闭右侧'
-    }
-  },
-  settings: {
-    title: '设置',
-    backToEditor: '返回编辑器',
-    systemInfo: '系统信息',
-    general: '常规',
-    editing: '编辑器',
-    appearance: '外观',
-    backupPage: '备份',
-    extensions: '扩展',
-    keyBindings: '快捷键',
-    updates: '更新',
-    reset: '重置',
-    apply: '应用',
-    cancel: '取消',
-    dangerZone: '危险操作',
-    resetAllSettings: '重置所有设置',
-    confirmReset: '确认重置?',
-    globalHotkey: '全局键盘快捷键',
-    enableGlobalHotkey: '启用全局热键',
-    window: '窗口/应用程序',
-    showInSystemTray: '在系统托盘中显示',
-    enableSystemTray: '启用系统托盘',
-    alwaysOnTop: '窗口始终置顶',
-    enableWindowSnap: '启用窗口吸附',
-    enableLoadingAnimation: '启用加载动画',
-    enableTabs: '启用标签页',
-    enableMemoryMonitor: '启用内存监视器',
-    startup: '启动设置',
-    startAtLogin: '开机自启动',
-    dataStorage: '数据存储',
-    dataPath: '数据存储路径',
-    clickToSelectPath: '点击选择路径',
-    resetDefault: '恢复默认',
-    resetToDefaultPath: '恢复为默认路径',
-    fontSize: '字体大小',
-    fontSettings: '字体设置',
-    fontFamily: '字体',
-    fontWeight: '字体粗细',
-    lineHeight: '行高',
-    tabSettings: 'Tab 设置',
-    tabSize: 'Tab 大小',
-    tabType: 'Tab 类型',
-    spaces: '空格',
-    tabs: '制表符',
-    enableTabIndent: '启用 Tab 缩进',
-    language: '界面语言',
-    systemTheme: '系统主题',
-    presetTheme: '预设主题',
-    saveOptions: '保存选项',
-    autoSaveDelay: '自动保存延迟(毫秒)',
-    updateSettings: '更新设置',
-    autoCheckUpdates: '自动检查更新',
-    autoCheckUpdatesDescription: '应用启动时自动检查更新',
-    manualCheck: '手动更新',
-    currentVersion: '当前版本',
-    checkForUpdates: '检查更新',
-    checking: '正在检查...',
-    checkFailed: '检查失败',
-    newVersionAvailable: '发现新版本',
-    upToDate: '已是最新版本',
-    viewUpdate: '查看更新',
-    releaseNotes: '更新日志',
-    networkError: '网络连接错误，请检查网络设置',
-    updateNow: '立即更新',
-    updating: '正在更新...',
-    updateSuccess: '更新成功',
-    updateSuccessRestartRequired: '更新已成功应用，请重启应用以生效',
-    updateSuccessNoRestart: '更新已完成，无需重启',
-    restartNow: '立即重启',
-    extensionsPage: {
-      loading: '加载中',
-      categoryEditing: '编辑增强',
-      categoryUI: '界面增强',
-      categoryTools: '工具扩展',
-      enabled: '启用',
-      configuration: '配置',
-      resetToDefault: '重置为默认配置',
+            // Emacs 模式额外的基础导航命令
+            cursorCharLeft: '光标左移一个字符',
+            cursorCharRight: '光标右移一个字符',
+            cursorLineUp: '光标上移一行',
+            cursorLineDown: '光标下移一行',
+            cursorPageUp: '向上翻页',
+            cursorPageDown: '向下翻页',
+            selectCharLeft: '选择左移一个字符',
+            selectCharRight: '选择右移一个字符',
+            selectLineUp: '选择上移一行',
+            selectLineDown: '选择下移一行',
+        }
     },
+    tabs: {
+        contextMenu: {
+            closeTab: '关闭标签',
+            closeOthers: '关闭其他',
+            closeLeft: '关闭左侧',
+            closeRight: '关闭右侧'
+        }
+    },
+    settings: {
+        title: '设置',
+        backToEditor: '返回编辑器',
+        systemInfo: '系统信息',
+        general: '常规',
+        editing: '编辑器',
+        appearance: '外观',
+        syncPage: '同步',
+        extensions: '扩展',
+        keyBindings: '快捷键',
+        updates: '更新',
+        reset: '重置',
+        apply: '应用',
+        cancel: '取消',
+        dangerZone: '危险操作',
+        resetAllSettings: '重置所有设置',
+        confirmReset: '确认重置?',
+        globalHotkey: '全局键盘快捷键',
+        enableGlobalHotkey: '启用全局热键',
+        window: '窗口/应用程序',
+        showInSystemTray: '在系统托盘中显示',
+        enableSystemTray: '启用系统托盘',
+        alwaysOnTop: '窗口始终置顶',
+        enableWindowSnap: '启用窗口吸附',
+        enableLoadingAnimation: '启用加载动画',
+        enableTabs: '启用标签页',
+        enableMemoryMonitor: '启用内存监视器',
+        startup: '启动设置',
+        startAtLogin: '开机自启动',
+        dataStorage: '数据存储',
+        dataPath: '数据存储路径',
+        clickToSelectPath: '点击选择路径',
+        resetDefault: '恢复默认',
+        resetToDefaultPath: '恢复为默认路径',
+        fontSize: '字体大小',
+        fontSettings: '字体设置',
+        fontFamily: '字体',
+        fontWeight: '字体粗细',
+        lineHeight: '行高',
+        tabSettings: 'Tab 设置',
+        tabSize: 'Tab 大小',
+        tabType: 'Tab 类型',
+        spaces: '空格',
+        tabs: '制表符',
+        enableTabIndent: '启用 Tab 缩进',
+        language: '界面语言',
+        systemTheme: '系统主题',
+        presetTheme: '预设主题',
+        saveOptions: '保存选项',
+        autoSaveDelay: '自动保存延迟(毫秒)',
+        updateSettings: '更新设置',
+        autoCheckUpdates: '自动检查更新',
+        autoCheckUpdatesDescription: '应用启动时自动检查更新',
+        manualCheck: '手动更新',
+        currentVersion: '当前版本',
+        checkForUpdates: '检查更新',
+        checking: '正在检查...',
+        checkFailed: '检查失败',
+        newVersionAvailable: '发现新版本',
+        upToDate: '已是最新版本',
+        viewUpdate: '查看更新',
+        releaseNotes: '更新日志',
+        networkError: '网络连接错误，请检查网络设置',
+        updateNow: '立即更新',
+        updating: '正在更新...',
+        updateSuccess: '更新成功',
+        updateSuccessRestartRequired: '更新已成功应用，请重启应用以生效',
+        updateSuccessNoRestart: '更新已完成，无需重启',
+        restartNow: '立即重启',
+        extensionsPage: {
+            loading: '加载中',
+            categoryEditing: '编辑增强',
+            categoryUI: '界面增强',
+            categoryTools: '工具扩展',
+            enabled: '启用',
+            configuration: '配置',
+            resetToDefault: '重置为默认配置',
+        },
 
-    customThemeColors: '自定义主题颜色',
-    resetToDefault: '重置为默认',
-    colorValue: '颜色值',
-    hotkeyPreview: '预览：',
-    none: '无',
-    backup: {
-      basicSettings: '基本设置',
-      enableBackup: '启用备份',
-      autoBackup: '自动备份',
-      backupInterval: '备份间隔',
-      intervals: {
-        '5min': '5分钟',
-        '10min': '10分钟',
-        '15min': '15分钟',
-        '30min': '30分钟',
-        '1hour': '1小时'
-      },
-      repositoryConfig: '仓库配置',
-      repoUrl: '仓库地址',
-      repoUrlPlaceholder: '请输入Git仓库地址',
-      authConfig: '认证配置',
-      authMethod: '认证方式',
-      authMethods: {
-        token: '访问令牌',
-        sshKey: 'SSH密钥',
-        userPass: '用户名密码'
-      },
-      username: '用户名',
-      usernamePlaceholder: '请输入用户名',
-      password: '密码',
-      passwordPlaceholder: '请输入密码',
-      token: '访问令牌',
-      tokenPlaceholder: '请输入访问令牌',
-      sshKeyPath: 'SSH密钥路径',
-      sshKeyPathPlaceholder: '请选择SSH密钥文件',
-      sshKeyPassphrase: 'SSH密钥密码',
-      sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
-      backupOperations: '备份操作',
-      syncToRemote: '同步到远程',
-      syncing: '同步中...',
-      actions: {
-        sync: '同步',
-      }
+        customThemeColors: '自定义主题颜色',
+        resetToDefault: '重置为默认',
+        colorValue: '颜色值',
+        hotkeyPreview: '预览：',
+        none: '无',
+        sync: {
+            basicSettings: '基本设置',
+            enableSync: '启用同步',
+            targetType: '同步方式',
+            targetTypes: {
+                git: 'Git',
+                localfs: '本地文件系统'
+            },
+            autoSync: '自动同步',
+            syncInterval: '同步间隔',
+            intervals: {
+                '5min': '5分钟',
+                '10min': '10分钟',
+                '15min': '15分钟',
+                '30min': '30分钟',
+                '1hour': '1小时'
+            },
+            repositoryConfig: '仓库配置',
+            storageConfig: '存储配置',
+            repoUrl: '仓库地址',
+            repoUrlPlaceholder: '请输入Git仓库地址',
+            branch: '分支',
+            branchPlaceholder: '请输入分支名，默认 main',
+            localfsRootPath: '本地存储目录',
+            localfsRootPathPlaceholder: '请选择本地同步目录',
+            authConfig: '认证配置',
+            authMethod: '认证方式',
+            authMethods: {
+                token: '访问令牌',
+                sshKey: 'SSH密钥',
+                userPass: '用户名密码'
+            },
+            username: '用户名',
+            usernamePlaceholder: '请输入用户名',
+            password: '密码',
+            passwordPlaceholder: '请输入密码',
+            token: '访问令牌',
+            tokenPlaceholder: '请输入访问令牌',
+            sshKeyPath: 'SSH密钥路径',
+            sshKeyPathPlaceholder: '请选择SSH密钥文件',
+            sshKeyPassphrase: 'SSH密钥密码',
+            sshKeyPassphrasePlaceholder: '请输入SSH密钥密码',
+            syncOperations: '同步操作',
+            syncToTarget: '同步到目标',
+            syncHistory: '同步记录',
+            syncing: '同步中...',
+            syncSuccess: '同步成功',
+            historyLoading: '正在加载同步记录...',
+            historyEmpty: '暂无同步记录',
+            historyDetails: '查看详细信息',
+            historyStatus: {
+                success: '成功',
+                failed: '失败'
+            },
+            historyTrigger: {
+                manual: '手动',
+                auto: '自动'
+            },
+            historyFlow: {
+                pulled: '已拉取',
+                pushed: '已推送',
+                pulledAndPushed: '已拉取并推送',
+                noChanges: '无变更'
+            },
+            historyBoolean: {
+                yes: '是',
+                no: '否'
+            },
+            historyFields: {
+                attempt: '尝试次数',
+                pulled: '拉取到本地',
+                pushed: '推送到远端',
+                changes: '变更统计',
+                errorStage: '失败阶段',
+                errorMessage: '错误信息',
+                dataPath: '数据目录',
+                repoPath: '本地同步仓库路径'
+            },
+            pagination: {
+                prev: '上一页',
+                next: '下一页',
+                page: '第 {page} 页'
+            },
+            actions: {
+                sync: '同步',
+            }
+        },
     },
-  },
-  extensions: {
-    rainbowBrackets: {
-      name: '彩虹括号',
-      description: '用不同颜色显示嵌套括号'
+    extensions: {
+        rainbowBrackets: {
+            name: '彩虹括号',
+            description: '用不同颜色显示嵌套括号'
+        },
+        hyperlink: {
+            name: '超链接',
+            description: '识别并可点击超链接'
+        },
+        colorSelector: {
+            name: '颜色选择器',
+            description: 'CSS代码块颜色值的可视化和选择'
+        },
+        translator: {
+            name: '划词翻译',
+            description: '选择文本后显示翻译按钮，支持多种翻译服务'
+        },
+        minimap: {
+            name: '小地图',
+            description: '显示小地图视图'
+        },
+        search: {
+            name: '搜索功能',
+            description: '文本搜索和替换功能'
+        },
+        fold: {
+            name: '代码折叠',
+            description: '折叠和展开代码段以提高代码可读性'
+        },
+        markdown: {
+            name: 'Markdown 渲染',
+            description: '渲染 Markdown 元素，“所见即所得”'
+        },
+        codeblock: {
+            name: '代码块',
+            description: '代码块相关功能'
+        },
+        lineNumbers: {
+            name: '行号显示',
+            description: '在编辑器左侧显示行号，并高亮当前行'
+        },
+        contextMenu: {
+            name: '上下文菜单',
+            description: '在编辑器中右键点击时显示上下文菜单'
+        },
+        highlightWhitespace: {
+            name: '显示空白字符',
+            description: '在编辑器中显示空格和制表符等空白字符'
+        },
+        highlightTrailingWhitespace: {
+            name: '高亮行尾空白',
+            description: '高亮显示行尾的多余空白字符'
+        },
+        httpClient: {
+            name: 'HTTP 客户端',
+            description: '在编辑器中直接发送 HTTP 请求并查看响应'
+        },
+        inlineImage: {
+            name: '内联图片',
+            description: '支持将剪贴板图片粘贴进编辑器，并以内联图片组件渲染'
+        },
+        blockImage: {
+            name: '代码块导出图片',
+            description: '将当前代码块渲染为图片并复制到剪贴板',
+            copyMenu: '复制块为图片'
+        },
+        blockReadonly: {
+            name: '代码块局部只读',
+            description: '为只读代码块范围提供写保护，并支持在右键菜单中切换块状态',
+            markReadonly: '设为只读块',
+            markWritable: '设为可写块'
+        },
     },
-    hyperlink: {
-      name: '超链接',
-      description: '识别并可点击超链接'
+    monitor: {
+        memory: '内存',
+        clickToClean: '点击清理内存'
     },
-    colorSelector: {
-      name: '颜色选择器',
-      description: 'CSS代码块颜色值的可视化和选择'
-    },
-    translator: {
-      name: '划词翻译',
-      description: '选择文本后显示翻译按钮，支持多种翻译服务'
-    },
-    minimap: {
-      name: '小地图',
-      description: '显示小地图视图'
-    },
-    search: {
-      name: '搜索功能',
-      description: '文本搜索和替换功能'
-    },
-    fold: {
-      name: '代码折叠',
-      description: '折叠和展开代码段以提高代码可读性'
-    },
-    markdown: {
-      name: 'Markdown 渲染',
-      description: '渲染 Markdown 元素，“所见即所得”'
-    },
-    codeblock: {
-      name: '代码块',
-      description: '代码块相关功能'
-    },
-    lineNumbers: {
-      name: '行号显示',
-      description: '在编辑器左侧显示行号，并高亮当前行'
-    },
-    contextMenu: {
-      name: '上下文菜单',
-      description: '在编辑器中右键点击时显示上下文菜单'
-    },
-    highlightWhitespace: {
-      name: '显示空白字符',
-      description: '在编辑器中显示空格和制表符等空白字符'
-    },
-    highlightTrailingWhitespace: {
-      name: '高亮行尾空白',
-      description: '高亮显示行尾的多余空白字符'
-    },
-    httpClient: {
-      name: 'HTTP 客户端',
-      description: '在编辑器中直接发送 HTTP 请求并查看响应'
-    },
-    blockImage: {
-      name: '代码块导出图片',
-      description: '将当前代码块渲染为图片并复制到剪贴板',
-      copyMenu: '复制块为图片'
+    inlineImage: {
+        copy: '复制',
+        copied: '已复制',
+        draw: '绘制',
+        delete: '删除',
+        drawDialog: {
+            title: '图片标注',
+            select: '选择',
+            pan: '拖动',
+            pen: '画笔',
+            color: '颜色',
+            strokeWidth: '线宽',
+            undo: '撤销',
+            redo: '重做',
+            zoomIn: '放大',
+            zoomOut: '缩小',
+            resetZoom: '重置缩放',
+            loading: '正在加载图片...',
+            zoom: '缩放',
+            cancel: '取消',
+            save: '保存',
+            saving: '保存中...',
+            loadFailed: '图片加载失败',
+            saveFailed: '图片保存失败'
+        }
     }
-  },
-  monitor: {
-    memory: '内存',
-    clickToClean: '点击清理内存'
-  }
 };

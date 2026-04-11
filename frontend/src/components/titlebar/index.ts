@@ -4,6 +4,8 @@ import * as runtime from '@wailsio/runtime';
  * Titlebar utility functions
  */
 
+export const APP_ICON_URL = `${import.meta.env.BASE_URL}appicon.png`;
+
 // Window control functions
 export const minimizeWindow = async () => {
   try {

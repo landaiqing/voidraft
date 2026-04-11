@@ -6,6 +6,8 @@ import (
 	"voidraft/internal/models/ent/document"
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
+	"voidraft/internal/models/ent/mediaasset"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 
 	"entgo.io/ent/dialect/sql"
@@ -16,7 +18,7 @@ import (
 
 // schemaGraph holds a representation of ent/schema at runtime.
 var schemaGraph = func() *sqlgraph.Schema {
-	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 4)}
+	graph := &sqlgraph.Schema{Nodes: make([]*sqlgraph.Node, 6)}
 	graph.Nodes[0] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   document.Table,
@@ -85,6 +87,50 @@ var schemaGraph = func() *sqlgraph.Schema {
 		},
 	}
 	graph.Nodes[3] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
+			Table:   mediaasset.Table,
+			Columns: mediaasset.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeInt,
+				Column: mediaasset.FieldID,
+			},
+		},
+		Type: "MediaAsset",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			mediaasset.FieldCreatedAt: {Type: field.TypeString, Column: mediaasset.FieldCreatedAt},
+			mediaasset.FieldUpdatedAt: {Type: field.TypeString, Column: mediaasset.FieldUpdatedAt},
+			mediaasset.FieldUUID:      {Type: field.TypeString, Column: mediaasset.FieldUUID},
+			mediaasset.FieldAssetID:   {Type: field.TypeString, Column: mediaasset.FieldAssetID},
+			mediaasset.FieldFilename:  {Type: field.TypeString, Column: mediaasset.FieldFilename},
+			mediaasset.FieldPath:      {Type: field.TypeString, Column: mediaasset.FieldPath},
+			mediaasset.FieldMimeType:  {Type: field.TypeString, Column: mediaasset.FieldMimeType},
+			mediaasset.FieldSize:      {Type: field.TypeInt64, Column: mediaasset.FieldSize},
+			mediaasset.FieldWidth:     {Type: field.TypeInt, Column: mediaasset.FieldWidth},
+			mediaasset.FieldHeight:    {Type: field.TypeInt, Column: mediaasset.FieldHeight},
+		},
+	}
+	graph.Nodes[4] = &sqlgraph.Node{
+		NodeSpec: sqlgraph.NodeSpec{
+			Table:   syncrunlog.Table,
+			Columns: syncrunlog.Columns,
+			ID: &sqlgraph.FieldSpec{
+				Type:   field.TypeInt,
+				Column: syncrunlog.FieldID,
+			},
+		},
+		Type: "SyncRunLog",
+		Fields: map[string]*sqlgraph.FieldSpec{
+			syncrunlog.FieldTargetType:  {Type: field.TypeEnum, Column: syncrunlog.FieldTargetType},
+			syncrunlog.FieldTargetPath:  {Type: field.TypeString, Column: syncrunlog.FieldTargetPath},
+			syncrunlog.FieldBranch:      {Type: field.TypeString, Column: syncrunlog.FieldBranch},
+			syncrunlog.FieldTriggerType: {Type: field.TypeEnum, Column: syncrunlog.FieldTriggerType},
+			syncrunlog.FieldStatus:      {Type: field.TypeEnum, Column: syncrunlog.FieldStatus},
+			syncrunlog.FieldStartedAt:   {Type: field.TypeString, Column: syncrunlog.FieldStartedAt},
+			syncrunlog.FieldFinishedAt:  {Type: field.TypeString, Column: syncrunlog.FieldFinishedAt},
+			syncrunlog.FieldDetails:     {Type: field.TypeJSON, Column: syncrunlog.FieldDetails},
+		},
+	}
+	graph.Nodes[5] = &sqlgraph.Node{
 		NodeSpec: sqlgraph.NodeSpec{
 			Table:   theme.Table,
 			Columns: theme.Columns,
@@ -374,6 +420,176 @@ func (f *KeyBindingFilter) WhereScope(p entql.StringP) {
 }
 
 // addPredicate implements the predicateAdder interface.
+func (_q *MediaAssetQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the MediaAssetQuery builder.
+func (_q *MediaAssetQuery) Filter() *MediaAssetFilter {
+	return &MediaAssetFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *MediaAssetMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the MediaAssetMutation builder.
+func (m *MediaAssetMutation) Filter() *MediaAssetFilter {
+	return &MediaAssetFilter{config: m.config, predicateAdder: m}
+}
+
+// MediaAssetFilter provides a generic filtering capability at runtime for MediaAssetQuery.
+type MediaAssetFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *MediaAssetFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[3].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql int predicate on the id field.
+func (f *MediaAssetFilter) WhereID(p entql.IntP) {
+	f.Where(p.Field(mediaasset.FieldID))
+}
+
+// WhereCreatedAt applies the entql string predicate on the created_at field.
+func (f *MediaAssetFilter) WhereCreatedAt(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldCreatedAt))
+}
+
+// WhereUpdatedAt applies the entql string predicate on the updated_at field.
+func (f *MediaAssetFilter) WhereUpdatedAt(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldUpdatedAt))
+}
+
+// WhereUUID applies the entql string predicate on the uuid field.
+func (f *MediaAssetFilter) WhereUUID(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldUUID))
+}
+
+// WhereAssetID applies the entql string predicate on the asset_id field.
+func (f *MediaAssetFilter) WhereAssetID(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldAssetID))
+}
+
+// WhereFilename applies the entql string predicate on the filename field.
+func (f *MediaAssetFilter) WhereFilename(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldFilename))
+}
+
+// WherePath applies the entql string predicate on the path field.
+func (f *MediaAssetFilter) WherePath(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldPath))
+}
+
+// WhereMimeType applies the entql string predicate on the mime_type field.
+func (f *MediaAssetFilter) WhereMimeType(p entql.StringP) {
+	f.Where(p.Field(mediaasset.FieldMimeType))
+}
+
+// WhereSize applies the entql int64 predicate on the size field.
+func (f *MediaAssetFilter) WhereSize(p entql.Int64P) {
+	f.Where(p.Field(mediaasset.FieldSize))
+}
+
+// WhereWidth applies the entql int predicate on the width field.
+func (f *MediaAssetFilter) WhereWidth(p entql.IntP) {
+	f.Where(p.Field(mediaasset.FieldWidth))
+}
+
+// WhereHeight applies the entql int predicate on the height field.
+func (f *MediaAssetFilter) WhereHeight(p entql.IntP) {
+	f.Where(p.Field(mediaasset.FieldHeight))
+}
+
+// addPredicate implements the predicateAdder interface.
+func (_q *SyncRunLogQuery) addPredicate(pred func(s *sql.Selector)) {
+	_q.predicates = append(_q.predicates, pred)
+}
+
+// Filter returns a Filter implementation to apply filters on the SyncRunLogQuery builder.
+func (_q *SyncRunLogQuery) Filter() *SyncRunLogFilter {
+	return &SyncRunLogFilter{config: _q.config, predicateAdder: _q}
+}
+
+// addPredicate implements the predicateAdder interface.
+func (m *SyncRunLogMutation) addPredicate(pred func(s *sql.Selector)) {
+	m.predicates = append(m.predicates, pred)
+}
+
+// Filter returns an entql.Where implementation to apply filters on the SyncRunLogMutation builder.
+func (m *SyncRunLogMutation) Filter() *SyncRunLogFilter {
+	return &SyncRunLogFilter{config: m.config, predicateAdder: m}
+}
+
+// SyncRunLogFilter provides a generic filtering capability at runtime for SyncRunLogQuery.
+type SyncRunLogFilter struct {
+	predicateAdder
+	config
+}
+
+// Where applies the entql predicate on the query filter.
+func (f *SyncRunLogFilter) Where(p entql.P) {
+	f.addPredicate(func(s *sql.Selector) {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[4].Type, p, s); err != nil {
+			s.AddError(err)
+		}
+	})
+}
+
+// WhereID applies the entql int predicate on the id field.
+func (f *SyncRunLogFilter) WhereID(p entql.IntP) {
+	f.Where(p.Field(syncrunlog.FieldID))
+}
+
+// WhereTargetType applies the entql string predicate on the target_type field.
+func (f *SyncRunLogFilter) WhereTargetType(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldTargetType))
+}
+
+// WhereTargetPath applies the entql string predicate on the target_path field.
+func (f *SyncRunLogFilter) WhereTargetPath(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldTargetPath))
+}
+
+// WhereBranch applies the entql string predicate on the branch field.
+func (f *SyncRunLogFilter) WhereBranch(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldBranch))
+}
+
+// WhereTriggerType applies the entql string predicate on the trigger_type field.
+func (f *SyncRunLogFilter) WhereTriggerType(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldTriggerType))
+}
+
+// WhereStatus applies the entql string predicate on the status field.
+func (f *SyncRunLogFilter) WhereStatus(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldStatus))
+}
+
+// WhereStartedAt applies the entql string predicate on the started_at field.
+func (f *SyncRunLogFilter) WhereStartedAt(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldStartedAt))
+}
+
+// WhereFinishedAt applies the entql string predicate on the finished_at field.
+func (f *SyncRunLogFilter) WhereFinishedAt(p entql.StringP) {
+	f.Where(p.Field(syncrunlog.FieldFinishedAt))
+}
+
+// WhereDetails applies the entql json.RawMessage predicate on the details field.
+func (f *SyncRunLogFilter) WhereDetails(p entql.BytesP) {
+	f.Where(p.Field(syncrunlog.FieldDetails))
+}
+
+// addPredicate implements the predicateAdder interface.
 func (_q *ThemeQuery) addPredicate(pred func(s *sql.Selector)) {
 	_q.predicates = append(_q.predicates, pred)
 }
@@ -402,7 +618,7 @@ type ThemeFilter struct {
 // Where applies the entql predicate on the query filter.
 func (f *ThemeFilter) Where(p entql.P) {
 	f.addPredicate(func(s *sql.Selector) {
-		if err := schemaGraph.EvalP(schemaGraph.Nodes[3].Type, p, s); err != nil {
+		if err := schemaGraph.EvalP(schemaGraph.Nodes[5].Type, p, s); err != nil {
 			s.AddError(err)
 		}
 	})

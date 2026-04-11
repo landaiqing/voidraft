@@ -10,6 +10,7 @@ import {showContextMenu} from './manager';
 import type {MenuSchemaNode} from './menuSchema';
 import {buildRegisteredMenu, createMenuContext, registerMenuNodes} from './menuSchema';
 import {blockImageMenuNodes} from '../blockImage/contextMenu';
+import {blockReadonlyMenuNodes} from '../blockReadonly/contextMenu';
 
 
 function t(key: string): string {
@@ -106,7 +107,11 @@ let builtinMenuRegistered = false;
 
 function ensureBuiltinMenuRegistered(): void {
     if (builtinMenuRegistered) return;
-    registerMenuNodes([...builtinMenuNodes(), ...blockImageMenuNodes]);
+    registerMenuNodes([
+        ...builtinMenuNodes(),
+        ...blockReadonlyMenuNodes,
+        ...blockImageMenuNodes,
+    ]);
     builtinMenuRegistered = true;
 }
 

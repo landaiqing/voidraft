@@ -182,7 +182,7 @@ export default {
     general: 'General',
     editing: 'Editor',
     appearance: 'Appearance',
-    backupPage: 'Backup',
+    syncPage: 'Sync',
     keyBindings: 'Key Bindings',
     updates: 'Updates',
     reset: 'Reset',
@@ -257,11 +257,16 @@ export default {
     restartNow: 'Restart Now',
     hotkeyPreview: 'Preview:',
     none: 'None',
-    backup: {
-      basicSettings: 'Basic Settings',
-      enableBackup: 'Enable Git Backup',
-      autoBackup: 'Auto Backup',
-      backupInterval: 'Backup Interval',
+    sync: {
+        basicSettings: 'Basic Settings',
+      enableSync: 'Enable Sync',
+        targetType: 'Sync Type',
+        targetTypes: {
+          git: 'Git',
+          localfs: 'Local File System'
+        },
+      autoSync: 'Auto Sync',
+        syncInterval: 'Sync Interval',
       intervals: {
         '5min': '5 minutes',
         '10min': '10 minutes',
@@ -270,8 +275,13 @@ export default {
         '1hour': '1 hour'
       },
       repositoryConfig: 'Repository Configuration',
-      repoUrl: 'Repository URL',
-      repoUrlPlaceholder: 'Enter Git repository URL',
+        storageConfig: 'Storage Configuration',
+        repoUrl: 'Repository URL',
+        repoUrlPlaceholder: 'Enter Git repository URL',
+        branch: 'Branch',
+        branchPlaceholder: 'Enter branch name, default is main',
+        localfsRootPath: 'Local Storage Directory',
+        localfsRootPathPlaceholder: 'Select local sync directory',
       authConfig: 'Authentication Configuration',
       authMethod: 'Authentication Method',
       authMethods: {
@@ -289,9 +299,47 @@ export default {
       sshKeyPathPlaceholder: 'Select SSH key file',
       sshKeyPassphrase: 'SSH Key Passphrase',
       sshKeyPassphrasePlaceholder: 'Enter SSH key passphrase',
-      backupOperations: 'Backup Operations',
-      syncToRemote: 'Sync to Remote',
+        syncOperations: 'Sync Operations',
+      syncHistory: 'Sync History',
+      syncToTarget: 'Sync to Target',
       syncing: 'Syncing...',
+      syncSuccess: 'Sync completed',
+      historyLoading: 'Loading sync history...',
+      historyEmpty: 'No sync history yet',
+      historyDetails: 'View details',
+      historyStatus: {
+        success: 'Success',
+        failed: 'Failed'
+      },
+      historyTrigger: {
+        manual: 'Manual',
+        auto: 'Auto'
+      },
+      historyFlow: {
+        pulled: 'Pulled',
+        pushed: 'Pushed',
+        pulledAndPushed: 'Pulled and pushed',
+        noChanges: 'No changes'
+      },
+      historyBoolean: {
+        yes: 'Yes',
+        no: 'No'
+      },
+      historyFields: {
+        attempt: 'Attempts',
+        pulled: 'Pulled to local',
+        pushed: 'Pushed to remote',
+        changes: 'Changes',
+        errorStage: 'Failure stage',
+        errorMessage: 'Error message',
+        dataPath: 'Data path',
+        repoPath: 'Local sync repo path'
+      },
+      pagination: {
+        prev: 'Previous',
+        next: 'Next',
+        page: 'Page {page}'
+      },
       actions: {
         sync: 'Sync',
       }
@@ -354,14 +402,50 @@ export default {
       name: 'HTTP Client',
       description: 'Send HTTP requests directly in the editor and view responses'
     },
+    inlineImage: {
+      name: 'Inline Images',
+      description: 'Paste clipboard images into the editor and render them as inline image widgets'
+    },
     blockImage: {
       name: 'Block Image Export',
       description: 'Render the current code block to an image and copy it to the clipboard',
       copyMenu: 'Copy block as image'
+    },
+    blockReadonly: {
+      name: 'Block Readonly',
+      description: 'Protect readonly code block ranges and allow toggling block access from the context menu',
+      markReadonly: 'Set block readonly',
+      markWritable: 'Set block writable'
     }
   },
   monitor: {
     memory: 'Memory',
     clickToClean: 'Click to clean memory'
+  },
+  inlineImage: {
+    copy: 'Copy',
+    copied: 'Copied!',
+    draw: 'Draw',
+    delete: 'Delete',
+    drawDialog: {
+      title: 'Image Annotation',
+      select: 'Select',
+      pan: 'Pan',
+      pen: 'Brush',
+      color: 'Color',
+      strokeWidth: 'Stroke Width',
+      undo: 'Undo',
+      redo: 'Redo',
+      zoomIn: 'Zoom In',
+      zoomOut: 'Zoom Out',
+      resetZoom: 'Reset Zoom',
+      loading: 'Loading image...',
+      zoom: 'Zoom',
+      cancel: 'Cancel',
+      save: 'Save',
+      saving: 'Saving...',
+      loadFailed: 'Failed to load image',
+      saveFailed: 'Failed to save image'
+    }
   }
 };

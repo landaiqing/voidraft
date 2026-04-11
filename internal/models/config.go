@@ -110,7 +110,7 @@ type UpdatesConfig struct {
 	Github             GithubConfig `json:"github"`             // GitHub配置
 }
 
-// Git备份相关类型定义
+// Git同步相关类型定义
 type (
 	// AuthMethod 定义Git认证方式
 	AuthMethod string
@@ -123,18 +123,46 @@ const (
 	UserPass AuthMethod = "user_pass"
 )
 
-// GitBackupConfig Git备份配置
-type GitBackupConfig struct {
-	Enabled        bool       `json:"enabled"`
-	RepoURL        string     `json:"repo_url"`
-	AuthMethod     AuthMethod `json:"auth_method"`
-	Username       string     `json:"username,omitempty"`
-	Password       string     `json:"password,omitempty"`
-	Token          string     `json:"token,omitempty"`
-	SSHKeyPath     string     `json:"ssh_key_path,omitempty"`
-	SSHKeyPass     string     `json:"ssh_key_passphrase,omitempty"`
-	BackupInterval int        `json:"backup_interval"` // 分钟
-	AutoBackup     bool       `json:"auto_backup"`
+// SyncTarget 定义当前可选择的同步目标。
+type SyncTarget string
+
+const (
+	// SyncTargetGit 表示 Git 同步。
+	SyncTargetGit SyncTarget = "git"
+	// SyncTargetLocalFS 表示本地文件系统同步。
+	SyncTargetLocalFS SyncTarget = "localfs"
+)
+
+const (
+	// DefaultGitSyncBranch 是 Git 同步默认分支。
+	DefaultGitSyncBranch = "main"
+)
+
+// GitSyncConfig 描述 Git 同步配置。
+type GitSyncConfig struct {
+	RepoURL    string     `json:"repo_url"`
+	Branch     string     `json:"branch"`
+	AuthMethod AuthMethod `json:"auth_method"`
+	Username   string     `json:"username,omitempty"`
+	Password   string     `json:"password,omitempty"`
+	Token      string     `json:"token,omitempty"`
+	SSHKeyPath string     `json:"ssh_key_path,omitempty"`
+	SSHKeyPass string     `json:"ssh_key_passphrase,omitempty"`
+}
+
+// LocalFSSyncConfig 描述本地文件系统同步配置。
+type LocalFSSyncConfig struct {
+	RootPath string `json:"root_path"`
+}
+
+// SyncConfig 描述同步模块配置。
+type SyncConfig struct {
+	Target       SyncTarget        `json:"target"`
+	Enabled      bool              `json:"enabled"`
+	AutoSync     bool              `json:"auto_sync"`
+	SyncInterval int               `json:"sync_interval"` // 分钟
+	Git          GitSyncConfig     `json:"git"`
+	LocalFS      LocalFSSyncConfig `json:"localfs"`
 }
 
 // AppConfig 应用配置 - 按照前端设置页面分类组织
@@ -143,7 +171,7 @@ type AppConfig struct {
 	Editing    EditingConfig    `json:"editing"`    // 编辑设置
 	Appearance AppearanceConfig `json:"appearance"` // 外观设置
 	Updates    UpdatesConfig    `json:"updates"`    // 更新设置
-	Backup     GitBackupConfig  `json:"backup"`     // Git备份设置
+	Sync       SyncConfig       `json:"sync"`       // 同步设置
 	Metadata   ConfigMetadata   `json:"metadata"`   // 配置元数据
 }
 
@@ -208,16 +236,24 @@ func NewDefaultAppConfig() *AppConfig {
 				Repo:  "voidraft",
 			},
 		},
-		Backup: GitBackupConfig{
-			Enabled:        false,
-			RepoURL:        "",
-			AuthMethod:     UserPass,
-			Username:       "",
-			Password:       "",
-			Token:          "",
-			SSHKeyPath:     "",
-			BackupInterval: 60,
-			AutoBackup:     false,
+		Sync: SyncConfig{
+			Target:       SyncTargetGit,
+			Enabled:      false,
+			AutoSync:     false,
+			SyncInterval: 60,
+			Git: GitSyncConfig{
+				RepoURL:    "",
+				Branch:     DefaultGitSyncBranch,
+				AuthMethod: UserPass,
+				Username:   "",
+				Password:   "",
+				Token:      "",
+				SSHKeyPath: "",
+				SSHKeyPass: "",
+			},
+			LocalFS: LocalFSSyncConfig{
+				RootPath: "",
+			},
 		},
 		Metadata: ConfigMetadata{
 			LastUpdated: time.Now().Format(time.RFC3339),

@@ -7,10 +7,13 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"voidraft/internal/models"
 	"voidraft/internal/models/ent/document"
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
+	"voidraft/internal/models/ent/mediaasset"
 	"voidraft/internal/models/ent/predicate"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 
 	"entgo.io/ent"
@@ -29,6 +32,8 @@ const (
 	TypeDocument   = "Document"
 	TypeExtension  = "Extension"
 	TypeKeyBinding = "KeyBinding"
+	TypeMediaAsset = "MediaAsset"
+	TypeSyncRunLog = "SyncRunLog"
 	TypeTheme      = "Theme"
 )
 
@@ -2538,6 +2543,1646 @@ func (m *KeyBindingMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *KeyBindingMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown KeyBinding edge %s", name)
+}
+
+// MediaAssetMutation represents an operation that mutates the MediaAsset nodes in the graph.
+type MediaAssetMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	created_at    *string
+	updated_at    *string
+	uuid          *string
+	asset_id      *string
+	filename      *string
+	_path         *string
+	mime_type     *string
+	size          *int64
+	addsize       *int64
+	width         *int
+	addwidth      *int
+	height        *int
+	addheight     *int
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*MediaAsset, error)
+	predicates    []predicate.MediaAsset
+}
+
+var _ ent.Mutation = (*MediaAssetMutation)(nil)
+
+// mediaassetOption allows management of the mutation configuration using functional options.
+type mediaassetOption func(*MediaAssetMutation)
+
+// newMediaAssetMutation creates new mutation for the MediaAsset entity.
+func newMediaAssetMutation(c config, op Op, opts ...mediaassetOption) *MediaAssetMutation {
+	m := &MediaAssetMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeMediaAsset,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withMediaAssetID sets the ID field of the mutation.
+func withMediaAssetID(id int) mediaassetOption {
+	return func(m *MediaAssetMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *MediaAsset
+		)
+		m.oldValue = func(ctx context.Context) (*MediaAsset, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().MediaAsset.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withMediaAsset sets the old MediaAsset of the mutation.
+func withMediaAsset(node *MediaAsset) mediaassetOption {
+	return func(m *MediaAssetMutation) {
+		m.oldValue = func(context.Context) (*MediaAsset, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m MediaAssetMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m MediaAssetMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *MediaAssetMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *MediaAssetMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().MediaAsset.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (m *MediaAssetMutation) SetCreatedAt(s string) {
+	m.created_at = &s
+}
+
+// CreatedAt returns the value of the "created_at" field in the mutation.
+func (m *MediaAssetMutation) CreatedAt() (r string, exists bool) {
+	v := m.created_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCreatedAt returns the old "created_at" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldCreatedAt(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCreatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCreatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCreatedAt: %w", err)
+	}
+	return oldValue.CreatedAt, nil
+}
+
+// ResetCreatedAt resets all changes to the "created_at" field.
+func (m *MediaAssetMutation) ResetCreatedAt() {
+	m.created_at = nil
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (m *MediaAssetMutation) SetUpdatedAt(s string) {
+	m.updated_at = &s
+}
+
+// UpdatedAt returns the value of the "updated_at" field in the mutation.
+func (m *MediaAssetMutation) UpdatedAt() (r string, exists bool) {
+	v := m.updated_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUpdatedAt returns the old "updated_at" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldUpdatedAt(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUpdatedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUpdatedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUpdatedAt: %w", err)
+	}
+	return oldValue.UpdatedAt, nil
+}
+
+// ResetUpdatedAt resets all changes to the "updated_at" field.
+func (m *MediaAssetMutation) ResetUpdatedAt() {
+	m.updated_at = nil
+}
+
+// SetUUID sets the "uuid" field.
+func (m *MediaAssetMutation) SetUUID(s string) {
+	m.uuid = &s
+}
+
+// UUID returns the value of the "uuid" field in the mutation.
+func (m *MediaAssetMutation) UUID() (r string, exists bool) {
+	v := m.uuid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldUUID returns the old "uuid" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldUUID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldUUID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldUUID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldUUID: %w", err)
+	}
+	return oldValue.UUID, nil
+}
+
+// ResetUUID resets all changes to the "uuid" field.
+func (m *MediaAssetMutation) ResetUUID() {
+	m.uuid = nil
+}
+
+// SetAssetID sets the "asset_id" field.
+func (m *MediaAssetMutation) SetAssetID(s string) {
+	m.asset_id = &s
+}
+
+// AssetID returns the value of the "asset_id" field in the mutation.
+func (m *MediaAssetMutation) AssetID() (r string, exists bool) {
+	v := m.asset_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAssetID returns the old "asset_id" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldAssetID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAssetID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAssetID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAssetID: %w", err)
+	}
+	return oldValue.AssetID, nil
+}
+
+// ResetAssetID resets all changes to the "asset_id" field.
+func (m *MediaAssetMutation) ResetAssetID() {
+	m.asset_id = nil
+}
+
+// SetFilename sets the "filename" field.
+func (m *MediaAssetMutation) SetFilename(s string) {
+	m.filename = &s
+}
+
+// Filename returns the value of the "filename" field in the mutation.
+func (m *MediaAssetMutation) Filename() (r string, exists bool) {
+	v := m.filename
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFilename returns the old "filename" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldFilename(ctx context.Context) (v *string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFilename is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFilename requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFilename: %w", err)
+	}
+	return oldValue.Filename, nil
+}
+
+// ClearFilename clears the value of the "filename" field.
+func (m *MediaAssetMutation) ClearFilename() {
+	m.filename = nil
+	m.clearedFields[mediaasset.FieldFilename] = struct{}{}
+}
+
+// FilenameCleared returns if the "filename" field was cleared in this mutation.
+func (m *MediaAssetMutation) FilenameCleared() bool {
+	_, ok := m.clearedFields[mediaasset.FieldFilename]
+	return ok
+}
+
+// ResetFilename resets all changes to the "filename" field.
+func (m *MediaAssetMutation) ResetFilename() {
+	m.filename = nil
+	delete(m.clearedFields, mediaasset.FieldFilename)
+}
+
+// SetPath sets the "path" field.
+func (m *MediaAssetMutation) SetPath(s string) {
+	m._path = &s
+}
+
+// Path returns the value of the "path" field in the mutation.
+func (m *MediaAssetMutation) Path() (r string, exists bool) {
+	v := m._path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPath returns the old "path" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldPath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPath: %w", err)
+	}
+	return oldValue.Path, nil
+}
+
+// ResetPath resets all changes to the "path" field.
+func (m *MediaAssetMutation) ResetPath() {
+	m._path = nil
+}
+
+// SetMimeType sets the "mime_type" field.
+func (m *MediaAssetMutation) SetMimeType(s string) {
+	m.mime_type = &s
+}
+
+// MimeType returns the value of the "mime_type" field in the mutation.
+func (m *MediaAssetMutation) MimeType() (r string, exists bool) {
+	v := m.mime_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMimeType returns the old "mime_type" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldMimeType(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMimeType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMimeType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMimeType: %w", err)
+	}
+	return oldValue.MimeType, nil
+}
+
+// ResetMimeType resets all changes to the "mime_type" field.
+func (m *MediaAssetMutation) ResetMimeType() {
+	m.mime_type = nil
+}
+
+// SetSize sets the "size" field.
+func (m *MediaAssetMutation) SetSize(i int64) {
+	m.size = &i
+	m.addsize = nil
+}
+
+// Size returns the value of the "size" field in the mutation.
+func (m *MediaAssetMutation) Size() (r int64, exists bool) {
+	v := m.size
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSize returns the old "size" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldSize(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSize is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSize requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSize: %w", err)
+	}
+	return oldValue.Size, nil
+}
+
+// AddSize adds i to the "size" field.
+func (m *MediaAssetMutation) AddSize(i int64) {
+	if m.addsize != nil {
+		*m.addsize += i
+	} else {
+		m.addsize = &i
+	}
+}
+
+// AddedSize returns the value that was added to the "size" field in this mutation.
+func (m *MediaAssetMutation) AddedSize() (r int64, exists bool) {
+	v := m.addsize
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetSize resets all changes to the "size" field.
+func (m *MediaAssetMutation) ResetSize() {
+	m.size = nil
+	m.addsize = nil
+}
+
+// SetWidth sets the "width" field.
+func (m *MediaAssetMutation) SetWidth(i int) {
+	m.width = &i
+	m.addwidth = nil
+}
+
+// Width returns the value of the "width" field in the mutation.
+func (m *MediaAssetMutation) Width() (r int, exists bool) {
+	v := m.width
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWidth returns the old "width" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldWidth(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWidth is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWidth requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWidth: %w", err)
+	}
+	return oldValue.Width, nil
+}
+
+// AddWidth adds i to the "width" field.
+func (m *MediaAssetMutation) AddWidth(i int) {
+	if m.addwidth != nil {
+		*m.addwidth += i
+	} else {
+		m.addwidth = &i
+	}
+}
+
+// AddedWidth returns the value that was added to the "width" field in this mutation.
+func (m *MediaAssetMutation) AddedWidth() (r int, exists bool) {
+	v := m.addwidth
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetWidth resets all changes to the "width" field.
+func (m *MediaAssetMutation) ResetWidth() {
+	m.width = nil
+	m.addwidth = nil
+}
+
+// SetHeight sets the "height" field.
+func (m *MediaAssetMutation) SetHeight(i int) {
+	m.height = &i
+	m.addheight = nil
+}
+
+// Height returns the value of the "height" field in the mutation.
+func (m *MediaAssetMutation) Height() (r int, exists bool) {
+	v := m.height
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHeight returns the old "height" field's value of the MediaAsset entity.
+// If the MediaAsset object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MediaAssetMutation) OldHeight(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHeight is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHeight requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHeight: %w", err)
+	}
+	return oldValue.Height, nil
+}
+
+// AddHeight adds i to the "height" field.
+func (m *MediaAssetMutation) AddHeight(i int) {
+	if m.addheight != nil {
+		*m.addheight += i
+	} else {
+		m.addheight = &i
+	}
+}
+
+// AddedHeight returns the value that was added to the "height" field in this mutation.
+func (m *MediaAssetMutation) AddedHeight() (r int, exists bool) {
+	v := m.addheight
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetHeight resets all changes to the "height" field.
+func (m *MediaAssetMutation) ResetHeight() {
+	m.height = nil
+	m.addheight = nil
+}
+
+// Where appends a list predicates to the MediaAssetMutation builder.
+func (m *MediaAssetMutation) Where(ps ...predicate.MediaAsset) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the MediaAssetMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *MediaAssetMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.MediaAsset, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *MediaAssetMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *MediaAssetMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (MediaAsset).
+func (m *MediaAssetMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *MediaAssetMutation) Fields() []string {
+	fields := make([]string, 0, 10)
+	if m.created_at != nil {
+		fields = append(fields, mediaasset.FieldCreatedAt)
+	}
+	if m.updated_at != nil {
+		fields = append(fields, mediaasset.FieldUpdatedAt)
+	}
+	if m.uuid != nil {
+		fields = append(fields, mediaasset.FieldUUID)
+	}
+	if m.asset_id != nil {
+		fields = append(fields, mediaasset.FieldAssetID)
+	}
+	if m.filename != nil {
+		fields = append(fields, mediaasset.FieldFilename)
+	}
+	if m._path != nil {
+		fields = append(fields, mediaasset.FieldPath)
+	}
+	if m.mime_type != nil {
+		fields = append(fields, mediaasset.FieldMimeType)
+	}
+	if m.size != nil {
+		fields = append(fields, mediaasset.FieldSize)
+	}
+	if m.width != nil {
+		fields = append(fields, mediaasset.FieldWidth)
+	}
+	if m.height != nil {
+		fields = append(fields, mediaasset.FieldHeight)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *MediaAssetMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case mediaasset.FieldCreatedAt:
+		return m.CreatedAt()
+	case mediaasset.FieldUpdatedAt:
+		return m.UpdatedAt()
+	case mediaasset.FieldUUID:
+		return m.UUID()
+	case mediaasset.FieldAssetID:
+		return m.AssetID()
+	case mediaasset.FieldFilename:
+		return m.Filename()
+	case mediaasset.FieldPath:
+		return m.Path()
+	case mediaasset.FieldMimeType:
+		return m.MimeType()
+	case mediaasset.FieldSize:
+		return m.Size()
+	case mediaasset.FieldWidth:
+		return m.Width()
+	case mediaasset.FieldHeight:
+		return m.Height()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *MediaAssetMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case mediaasset.FieldCreatedAt:
+		return m.OldCreatedAt(ctx)
+	case mediaasset.FieldUpdatedAt:
+		return m.OldUpdatedAt(ctx)
+	case mediaasset.FieldUUID:
+		return m.OldUUID(ctx)
+	case mediaasset.FieldAssetID:
+		return m.OldAssetID(ctx)
+	case mediaasset.FieldFilename:
+		return m.OldFilename(ctx)
+	case mediaasset.FieldPath:
+		return m.OldPath(ctx)
+	case mediaasset.FieldMimeType:
+		return m.OldMimeType(ctx)
+	case mediaasset.FieldSize:
+		return m.OldSize(ctx)
+	case mediaasset.FieldWidth:
+		return m.OldWidth(ctx)
+	case mediaasset.FieldHeight:
+		return m.OldHeight(ctx)
+	}
+	return nil, fmt.Errorf("unknown MediaAsset field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MediaAssetMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case mediaasset.FieldCreatedAt:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCreatedAt(v)
+		return nil
+	case mediaasset.FieldUpdatedAt:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUpdatedAt(v)
+		return nil
+	case mediaasset.FieldUUID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetUUID(v)
+		return nil
+	case mediaasset.FieldAssetID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAssetID(v)
+		return nil
+	case mediaasset.FieldFilename:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFilename(v)
+		return nil
+	case mediaasset.FieldPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPath(v)
+		return nil
+	case mediaasset.FieldMimeType:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMimeType(v)
+		return nil
+	case mediaasset.FieldSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSize(v)
+		return nil
+	case mediaasset.FieldWidth:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWidth(v)
+		return nil
+	case mediaasset.FieldHeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHeight(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MediaAsset field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *MediaAssetMutation) AddedFields() []string {
+	var fields []string
+	if m.addsize != nil {
+		fields = append(fields, mediaasset.FieldSize)
+	}
+	if m.addwidth != nil {
+		fields = append(fields, mediaasset.FieldWidth)
+	}
+	if m.addheight != nil {
+		fields = append(fields, mediaasset.FieldHeight)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *MediaAssetMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case mediaasset.FieldSize:
+		return m.AddedSize()
+	case mediaasset.FieldWidth:
+		return m.AddedWidth()
+	case mediaasset.FieldHeight:
+		return m.AddedHeight()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MediaAssetMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case mediaasset.FieldSize:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddSize(v)
+		return nil
+	case mediaasset.FieldWidth:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWidth(v)
+		return nil
+	case mediaasset.FieldHeight:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHeight(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MediaAsset numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *MediaAssetMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(mediaasset.FieldFilename) {
+		fields = append(fields, mediaasset.FieldFilename)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *MediaAssetMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *MediaAssetMutation) ClearField(name string) error {
+	switch name {
+	case mediaasset.FieldFilename:
+		m.ClearFilename()
+		return nil
+	}
+	return fmt.Errorf("unknown MediaAsset nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *MediaAssetMutation) ResetField(name string) error {
+	switch name {
+	case mediaasset.FieldCreatedAt:
+		m.ResetCreatedAt()
+		return nil
+	case mediaasset.FieldUpdatedAt:
+		m.ResetUpdatedAt()
+		return nil
+	case mediaasset.FieldUUID:
+		m.ResetUUID()
+		return nil
+	case mediaasset.FieldAssetID:
+		m.ResetAssetID()
+		return nil
+	case mediaasset.FieldFilename:
+		m.ResetFilename()
+		return nil
+	case mediaasset.FieldPath:
+		m.ResetPath()
+		return nil
+	case mediaasset.FieldMimeType:
+		m.ResetMimeType()
+		return nil
+	case mediaasset.FieldSize:
+		m.ResetSize()
+		return nil
+	case mediaasset.FieldWidth:
+		m.ResetWidth()
+		return nil
+	case mediaasset.FieldHeight:
+		m.ResetHeight()
+		return nil
+	}
+	return fmt.Errorf("unknown MediaAsset field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *MediaAssetMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *MediaAssetMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *MediaAssetMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *MediaAssetMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *MediaAssetMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *MediaAssetMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *MediaAssetMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown MediaAsset unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *MediaAssetMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown MediaAsset edge %s", name)
+}
+
+// SyncRunLogMutation represents an operation that mutates the SyncRunLog nodes in the graph.
+type SyncRunLogMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int
+	target_type   *syncrunlog.TargetType
+	target_path   *string
+	branch        *string
+	trigger_type  *syncrunlog.TriggerType
+	status        *syncrunlog.Status
+	started_at    *string
+	finished_at   *string
+	details       *models.SyncRunDetails
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*SyncRunLog, error)
+	predicates    []predicate.SyncRunLog
+}
+
+var _ ent.Mutation = (*SyncRunLogMutation)(nil)
+
+// syncrunlogOption allows management of the mutation configuration using functional options.
+type syncrunlogOption func(*SyncRunLogMutation)
+
+// newSyncRunLogMutation creates new mutation for the SyncRunLog entity.
+func newSyncRunLogMutation(c config, op Op, opts ...syncrunlogOption) *SyncRunLogMutation {
+	m := &SyncRunLogMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeSyncRunLog,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withSyncRunLogID sets the ID field of the mutation.
+func withSyncRunLogID(id int) syncrunlogOption {
+	return func(m *SyncRunLogMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *SyncRunLog
+		)
+		m.oldValue = func(ctx context.Context) (*SyncRunLog, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().SyncRunLog.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withSyncRunLog sets the old SyncRunLog of the mutation.
+func withSyncRunLog(node *SyncRunLog) syncrunlogOption {
+	return func(m *SyncRunLogMutation) {
+		m.oldValue = func(context.Context) (*SyncRunLog, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m SyncRunLogMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m SyncRunLogMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *SyncRunLogMutation) ID() (id int, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *SyncRunLogMutation) IDs(ctx context.Context) ([]int, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().SyncRunLog.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetTargetType sets the "target_type" field.
+func (m *SyncRunLogMutation) SetTargetType(st syncrunlog.TargetType) {
+	m.target_type = &st
+}
+
+// TargetType returns the value of the "target_type" field in the mutation.
+func (m *SyncRunLogMutation) TargetType() (r syncrunlog.TargetType, exists bool) {
+	v := m.target_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTargetType returns the old "target_type" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldTargetType(ctx context.Context) (v syncrunlog.TargetType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTargetType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTargetType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTargetType: %w", err)
+	}
+	return oldValue.TargetType, nil
+}
+
+// ResetTargetType resets all changes to the "target_type" field.
+func (m *SyncRunLogMutation) ResetTargetType() {
+	m.target_type = nil
+}
+
+// SetTargetPath sets the "target_path" field.
+func (m *SyncRunLogMutation) SetTargetPath(s string) {
+	m.target_path = &s
+}
+
+// TargetPath returns the value of the "target_path" field in the mutation.
+func (m *SyncRunLogMutation) TargetPath() (r string, exists bool) {
+	v := m.target_path
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTargetPath returns the old "target_path" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldTargetPath(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTargetPath is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTargetPath requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTargetPath: %w", err)
+	}
+	return oldValue.TargetPath, nil
+}
+
+// ResetTargetPath resets all changes to the "target_path" field.
+func (m *SyncRunLogMutation) ResetTargetPath() {
+	m.target_path = nil
+}
+
+// SetBranch sets the "branch" field.
+func (m *SyncRunLogMutation) SetBranch(s string) {
+	m.branch = &s
+}
+
+// Branch returns the value of the "branch" field in the mutation.
+func (m *SyncRunLogMutation) Branch() (r string, exists bool) {
+	v := m.branch
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBranch returns the old "branch" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldBranch(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBranch is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBranch requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBranch: %w", err)
+	}
+	return oldValue.Branch, nil
+}
+
+// ResetBranch resets all changes to the "branch" field.
+func (m *SyncRunLogMutation) ResetBranch() {
+	m.branch = nil
+}
+
+// SetTriggerType sets the "trigger_type" field.
+func (m *SyncRunLogMutation) SetTriggerType(st syncrunlog.TriggerType) {
+	m.trigger_type = &st
+}
+
+// TriggerType returns the value of the "trigger_type" field in the mutation.
+func (m *SyncRunLogMutation) TriggerType() (r syncrunlog.TriggerType, exists bool) {
+	v := m.trigger_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTriggerType returns the old "trigger_type" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldTriggerType(ctx context.Context) (v syncrunlog.TriggerType, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTriggerType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTriggerType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTriggerType: %w", err)
+	}
+	return oldValue.TriggerType, nil
+}
+
+// ResetTriggerType resets all changes to the "trigger_type" field.
+func (m *SyncRunLogMutation) ResetTriggerType() {
+	m.trigger_type = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *SyncRunLogMutation) SetStatus(s syncrunlog.Status) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *SyncRunLogMutation) Status() (r syncrunlog.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldStatus(ctx context.Context) (v syncrunlog.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *SyncRunLogMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetStartedAt sets the "started_at" field.
+func (m *SyncRunLogMutation) SetStartedAt(s string) {
+	m.started_at = &s
+}
+
+// StartedAt returns the value of the "started_at" field in the mutation.
+func (m *SyncRunLogMutation) StartedAt() (r string, exists bool) {
+	v := m.started_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartedAt returns the old "started_at" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldStartedAt(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartedAt: %w", err)
+	}
+	return oldValue.StartedAt, nil
+}
+
+// ResetStartedAt resets all changes to the "started_at" field.
+func (m *SyncRunLogMutation) ResetStartedAt() {
+	m.started_at = nil
+}
+
+// SetFinishedAt sets the "finished_at" field.
+func (m *SyncRunLogMutation) SetFinishedAt(s string) {
+	m.finished_at = &s
+}
+
+// FinishedAt returns the value of the "finished_at" field in the mutation.
+func (m *SyncRunLogMutation) FinishedAt() (r string, exists bool) {
+	v := m.finished_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFinishedAt returns the old "finished_at" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldFinishedAt(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFinishedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFinishedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFinishedAt: %w", err)
+	}
+	return oldValue.FinishedAt, nil
+}
+
+// ResetFinishedAt resets all changes to the "finished_at" field.
+func (m *SyncRunLogMutation) ResetFinishedAt() {
+	m.finished_at = nil
+}
+
+// SetDetails sets the "details" field.
+func (m *SyncRunLogMutation) SetDetails(mrd models.SyncRunDetails) {
+	m.details = &mrd
+}
+
+// Details returns the value of the "details" field in the mutation.
+func (m *SyncRunLogMutation) Details() (r models.SyncRunDetails, exists bool) {
+	v := m.details
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldDetails returns the old "details" field's value of the SyncRunLog entity.
+// If the SyncRunLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SyncRunLogMutation) OldDetails(ctx context.Context) (v models.SyncRunDetails, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldDetails is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldDetails requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldDetails: %w", err)
+	}
+	return oldValue.Details, nil
+}
+
+// ResetDetails resets all changes to the "details" field.
+func (m *SyncRunLogMutation) ResetDetails() {
+	m.details = nil
+}
+
+// Where appends a list predicates to the SyncRunLogMutation builder.
+func (m *SyncRunLogMutation) Where(ps ...predicate.SyncRunLog) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the SyncRunLogMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *SyncRunLogMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.SyncRunLog, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *SyncRunLogMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *SyncRunLogMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (SyncRunLog).
+func (m *SyncRunLogMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *SyncRunLogMutation) Fields() []string {
+	fields := make([]string, 0, 8)
+	if m.target_type != nil {
+		fields = append(fields, syncrunlog.FieldTargetType)
+	}
+	if m.target_path != nil {
+		fields = append(fields, syncrunlog.FieldTargetPath)
+	}
+	if m.branch != nil {
+		fields = append(fields, syncrunlog.FieldBranch)
+	}
+	if m.trigger_type != nil {
+		fields = append(fields, syncrunlog.FieldTriggerType)
+	}
+	if m.status != nil {
+		fields = append(fields, syncrunlog.FieldStatus)
+	}
+	if m.started_at != nil {
+		fields = append(fields, syncrunlog.FieldStartedAt)
+	}
+	if m.finished_at != nil {
+		fields = append(fields, syncrunlog.FieldFinishedAt)
+	}
+	if m.details != nil {
+		fields = append(fields, syncrunlog.FieldDetails)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *SyncRunLogMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case syncrunlog.FieldTargetType:
+		return m.TargetType()
+	case syncrunlog.FieldTargetPath:
+		return m.TargetPath()
+	case syncrunlog.FieldBranch:
+		return m.Branch()
+	case syncrunlog.FieldTriggerType:
+		return m.TriggerType()
+	case syncrunlog.FieldStatus:
+		return m.Status()
+	case syncrunlog.FieldStartedAt:
+		return m.StartedAt()
+	case syncrunlog.FieldFinishedAt:
+		return m.FinishedAt()
+	case syncrunlog.FieldDetails:
+		return m.Details()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *SyncRunLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case syncrunlog.FieldTargetType:
+		return m.OldTargetType(ctx)
+	case syncrunlog.FieldTargetPath:
+		return m.OldTargetPath(ctx)
+	case syncrunlog.FieldBranch:
+		return m.OldBranch(ctx)
+	case syncrunlog.FieldTriggerType:
+		return m.OldTriggerType(ctx)
+	case syncrunlog.FieldStatus:
+		return m.OldStatus(ctx)
+	case syncrunlog.FieldStartedAt:
+		return m.OldStartedAt(ctx)
+	case syncrunlog.FieldFinishedAt:
+		return m.OldFinishedAt(ctx)
+	case syncrunlog.FieldDetails:
+		return m.OldDetails(ctx)
+	}
+	return nil, fmt.Errorf("unknown SyncRunLog field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SyncRunLogMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case syncrunlog.FieldTargetType:
+		v, ok := value.(syncrunlog.TargetType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTargetType(v)
+		return nil
+	case syncrunlog.FieldTargetPath:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTargetPath(v)
+		return nil
+	case syncrunlog.FieldBranch:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBranch(v)
+		return nil
+	case syncrunlog.FieldTriggerType:
+		v, ok := value.(syncrunlog.TriggerType)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTriggerType(v)
+		return nil
+	case syncrunlog.FieldStatus:
+		v, ok := value.(syncrunlog.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case syncrunlog.FieldStartedAt:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartedAt(v)
+		return nil
+	case syncrunlog.FieldFinishedAt:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFinishedAt(v)
+		return nil
+	case syncrunlog.FieldDetails:
+		v, ok := value.(models.SyncRunDetails)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetDetails(v)
+		return nil
+	}
+	return fmt.Errorf("unknown SyncRunLog field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *SyncRunLogMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *SyncRunLogMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *SyncRunLogMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown SyncRunLog numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *SyncRunLogMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *SyncRunLogMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *SyncRunLogMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown SyncRunLog nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *SyncRunLogMutation) ResetField(name string) error {
+	switch name {
+	case syncrunlog.FieldTargetType:
+		m.ResetTargetType()
+		return nil
+	case syncrunlog.FieldTargetPath:
+		m.ResetTargetPath()
+		return nil
+	case syncrunlog.FieldBranch:
+		m.ResetBranch()
+		return nil
+	case syncrunlog.FieldTriggerType:
+		m.ResetTriggerType()
+		return nil
+	case syncrunlog.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case syncrunlog.FieldStartedAt:
+		m.ResetStartedAt()
+		return nil
+	case syncrunlog.FieldFinishedAt:
+		m.ResetFinishedAt()
+		return nil
+	case syncrunlog.FieldDetails:
+		m.ResetDetails()
+		return nil
+	}
+	return fmt.Errorf("unknown SyncRunLog field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *SyncRunLogMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *SyncRunLogMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *SyncRunLogMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *SyncRunLogMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *SyncRunLogMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *SyncRunLogMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *SyncRunLogMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown SyncRunLog unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *SyncRunLogMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown SyncRunLog edge %s", name)
 }
 
 // ThemeMutation represents an operation that mutates the Theme nodes in the graph.

@@ -183,6 +183,54 @@ func (f KeyBindingMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Muta
 	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.KeyBindingMutation", m)
 }
 
+// The MediaAssetQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type MediaAssetQueryRuleFunc func(context.Context, *ent.MediaAssetQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f MediaAssetQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.MediaAssetQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.MediaAssetQuery", q)
+}
+
+// The MediaAssetMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type MediaAssetMutationRuleFunc func(context.Context, *ent.MediaAssetMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f MediaAssetMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.MediaAssetMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.MediaAssetMutation", m)
+}
+
+// The SyncRunLogQueryRuleFunc type is an adapter to allow the use of ordinary
+// functions as a query rule.
+type SyncRunLogQueryRuleFunc func(context.Context, *ent.SyncRunLogQuery) error
+
+// EvalQuery return f(ctx, q).
+func (f SyncRunLogQueryRuleFunc) EvalQuery(ctx context.Context, q ent.Query) error {
+	if q, ok := q.(*ent.SyncRunLogQuery); ok {
+		return f(ctx, q)
+	}
+	return Denyf("ent/privacy: unexpected query type %T, expect *ent.SyncRunLogQuery", q)
+}
+
+// The SyncRunLogMutationRuleFunc type is an adapter to allow the use of ordinary
+// functions as a mutation rule.
+type SyncRunLogMutationRuleFunc func(context.Context, *ent.SyncRunLogMutation) error
+
+// EvalMutation calls f(ctx, m).
+func (f SyncRunLogMutationRuleFunc) EvalMutation(ctx context.Context, m ent.Mutation) error {
+	if m, ok := m.(*ent.SyncRunLogMutation); ok {
+		return f(ctx, m)
+	}
+	return Denyf("ent/privacy: unexpected mutation type %T, expect *ent.SyncRunLogMutation", m)
+}
+
 // The ThemeQueryRuleFunc type is an adapter to allow the use of ordinary
 // functions as a query rule.
 type ThemeQueryRuleFunc func(context.Context, *ent.ThemeQuery) error
@@ -248,6 +296,10 @@ func queryFilter(q ent.Query) (Filter, error) {
 		return q.Filter(), nil
 	case *ent.KeyBindingQuery:
 		return q.Filter(), nil
+	case *ent.MediaAssetQuery:
+		return q.Filter(), nil
+	case *ent.SyncRunLogQuery:
+		return q.Filter(), nil
 	case *ent.ThemeQuery:
 		return q.Filter(), nil
 	default:
@@ -262,6 +314,10 @@ func mutationFilter(m ent.Mutation) (Filter, error) {
 	case *ent.ExtensionMutation:
 		return m.Filter(), nil
 	case *ent.KeyBindingMutation:
+		return m.Filter(), nil
+	case *ent.MediaAssetMutation:
+		return m.Filter(), nil
+	case *ent.SyncRunLogMutation:
 		return m.Filter(), nil
 	case *ent.ThemeMutation:
 		return m.Filter(), nil

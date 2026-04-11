@@ -6,6 +6,18 @@ import type {ThemeColors} from './types';
 
 const MONO_FONT_FALLBACK = 'var(--voidraft-font-mono, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace)';
 
+function getReadonlyBlockBackground(isDark: boolean, isEvenBlock: boolean): string {
+    if (isDark) {
+        return isEvenBlock
+            ? 'repeating-linear-gradient(-45deg, rgba(245, 247, 250, 0.022) 0px, rgba(245, 247, 250, 0.022) 8px, rgba(162, 169, 180, 0.060) 8px, rgba(162, 169, 180, 0.060) 16px), rgba(84, 89, 101, 0.080)'
+            : 'repeating-linear-gradient(-45deg, rgba(245, 247, 250, 0.026) 0px, rgba(245, 247, 250, 0.026) 8px, rgba(154, 161, 172, 0.068) 8px, rgba(154, 161, 172, 0.068) 16px), rgba(77, 82, 94, 0.104)';
+    }
+
+    return isEvenBlock
+        ? 'repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.22) 0px, rgba(255, 255, 255, 0.22) 8px, rgba(222, 226, 232, 0.27) 8px, rgba(222, 226, 232, 0.27) 16px), rgba(244, 246, 248, 0.42)'
+        : 'repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.19) 0px, rgba(255, 255, 255, 0.19) 8px, rgba(214, 219, 226, 0.30) 8px, rgba(214, 219, 226, 0.30) 16px), rgba(239, 242, 246, 0.47)';
+}
+
 /**
  * 创建通用主题
  * @param colors 主题颜色配置
@@ -91,6 +103,12 @@ export function createBaseTheme(colors: ThemeColors): Extension {
         '.code-blocks-layer .block-odd': {
             background: colors.backgroundSecondary,
             borderTop: `1px solid ${colors.borderColor}`,
+        },
+        '.code-blocks-layer .block-even.block-readonly': {
+            background: getReadonlyBlockBackground(colors.dark, true),
+        },
+        '.code-blocks-layer .block-odd.block-readonly': {
+            background: getReadonlyBlockBackground(colors.dark, false),
         },
         '.code-block-empty-selected': {
             backgroundColor: colors.selection,

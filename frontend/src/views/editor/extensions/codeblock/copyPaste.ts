@@ -1,193 +1,262 @@
 /**
  * 代码块复制粘贴扩展
- * 防止复制分隔符标记，自动替换为换行符
+ * 防止复制分隔符标记，并接入 inlineImage 的图片复制/粘贴能力。
  */
 
-import { EditorState, EditorSelection } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
-import { Command } from "@codemirror/view";
-import { LANGUAGES } from "./lang-parser/languages";
-import { USER_EVENTS, codeBlockEvent, CONTENT_EDIT } from "./annotation";
+import {EditorSelection, EditorState} from "@codemirror/state";
+import {Command, EditorView} from "@codemirror/view";
+import {LANGUAGES} from "./lang-parser/languages";
+import {codeBlockEvent, CONTENT_EDIT, USER_EVENTS} from "./annotation";
+import {inlineImageEnabledFacet, inlineImageOptionsFacet} from "../inlineImage";
+import {
+    copySelectedInlineImageIfNeeded,
+    pasteInlineImagesFromClipboardEvent,
+    pasteInlineImagesFromSystemClipboard
+} from "../inlineImage/clipboardIntegration";
+import {WIDGET_TAG_REGEX} from "../inlineImage/inlineImageParsing";
+import * as runtime from "@wailsio/runtime";
 
 /**
  * 构建块分隔符正则表达式
  */
 const languageTokensMatcher = LANGUAGES.map(lang => lang.token).join("|");
-const blockSeparatorRegex = new RegExp(`\\n∞∞∞(${languageTokensMatcher})(-a)?\\n`, "g");
+const blockSeparatorRegex = new RegExp(`(?:^|\\n)∞∞∞(?:${languageTokensMatcher})(?:-(?:a|r|w))*\\n`, "g");
 
 /**
  * 获取被复制的范围和内容
  */
-function copiedRange(state: EditorState, forCut: boolean = false) {
-  const content: string[] = [];
-  const ranges: any[] = [];
-  
-  for (const range of state.selection.ranges) {
-    if (!range.empty) {
-      content.push(state.sliceDoc(range.from, range.to));
-      ranges.push(range);
-    }
-  }
-  
-  if (ranges.length === 0) {
-    // 如果所有范围都是空的，我们想要复制每个选择的整行（唯一的）
-    const copiedLines: number[] = [];
+function copiedRange(state: EditorState, forCut = false) {
+    const content: string[] = [];
+    const ranges: any[] = [];
+
     for (const range of state.selection.ranges) {
-      if (range.empty) {
-        const line = state.doc.lineAt(range.head);
-        const lineContent = state.sliceDoc(line.from, line.to);
-        if (!copiedLines.includes(line.from)) {
-          content.push(lineContent);
-          // 对于剪切操作，需要包含整行范围（包括换行符）
-          if (forCut) {
-            const lineEnd = line.to < state.doc.length ? line.to + 1 : line.to;
-            ranges.push({ from: line.from, to: lineEnd });
-          } else {
+        if (!range.empty) {
+            content.push(state.sliceDoc(range.from, range.to));
             ranges.push(range);
-          }
-          copiedLines.push(line.from);
         }
-      }
     }
-  }
-  
-  return { 
-    text: content.join(state.lineBreak), 
-    ranges 
-  };
+
+    if (ranges.length === 0) {
+        const copiedLines: number[] = [];
+        for (const range of state.selection.ranges) {
+            if (!range.empty) {
+                continue;
+            }
+
+            const line = state.doc.lineAt(range.head);
+            const lineContent = state.sliceDoc(line.from, line.to);
+            if (copiedLines.includes(line.from)) {
+                continue;
+            }
+
+            content.push(lineContent);
+            if (forCut) {
+                const lineEnd = line.to < state.doc.length ? line.to + 1 : line.to;
+                ranges.push({from: line.from, to: lineEnd});
+            } else {
+                ranges.push(range);
+            }
+            copiedLines.push(line.from);
+        }
+    }
+
+    return {
+        text: content.join(state.lineBreak),
+        ranges,
+    };
+}
+
+function normalizeCopiedText(text: string): string {
+    return text
+        .replaceAll(blockSeparatorRegex, "\n\n")
+        .replaceAll(WIDGET_TAG_REGEX, "");
+}
+
+async function writeTextToClipboard(text: string, event?: ClipboardEvent): Promise<void> {
+    try {
+        await runtime.Clipboard.SetText(text);
+        return;
+    } catch (error) {
+        console.error('[Clipboard] Failed to write to system clipboard:', error);
+    }
+
+    const data = event?.clipboardData;
+    if (data) {
+        data.clearData();
+        data.setData("text/plain", text);
+        return;
+    }
+
+    if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+    }
+}
+
+async function handleCopyCut(view: EditorView, cut: boolean, event?: ClipboardEvent): Promise<boolean> {
+    if (!cut && view.state.facet(inlineImageEnabledFacet)) {
+        try {
+            if (await copySelectedInlineImageIfNeeded(view)) {
+                return true;
+            }
+        } catch (error) {
+            console.error('[Clipboard] Failed to copy selected image:', error);
+        }
+    }
+
+    let {text} = copiedRange(view.state, cut);
+    const {ranges} = copiedRange(view.state, cut);
+    text = normalizeCopiedText(text);
+
+    await writeTextToClipboard(text, event);
+
+    if (cut && !view.state.readOnly) {
+        view.dispatch({
+            changes: ranges,
+            scrollIntoView: true,
+            userEvent: USER_EVENTS.DELETE_CUT,
+            annotations: [codeBlockEvent.of(CONTENT_EDIT)],
+        });
+    }
+
+    return true;
 }
 
 /**
  * 设置浏览器复制和剪切事件处理器，将块分隔符替换为换行符
  */
 export const codeBlockCopyCut = EditorView.domEventHandlers({
-  copy(event, view) {
-    let { text } = copiedRange(view.state);
-    // 将块分隔符替换为双换行符
-    text = text.replaceAll(blockSeparatorRegex, "\n\n");
-    
-    const data = event.clipboardData;
-    if (data) {
-      event.preventDefault();
-      data.clearData();
-      data.setData("text/plain", text);
+    copy(event, view) {
+        event.preventDefault();
+        void handleCopyCut(view, false, event as ClipboardEvent);
+    },
+
+    cut(event, view) {
+        event.preventDefault();
+        void handleCopyCut(view, true, event as ClipboardEvent);
+    },
+
+    paste(event, view) {
+        if (view.state.readOnly) {
+            return false;
+        }
+
+        event.preventDefault();
+        void pasteClipboard(view, event as ClipboardEvent);
+
+        return true;
     }
-  },
-  
-  cut(event, view) {
-    let { text, ranges } = copiedRange(view.state, true);
-    // 将块分隔符替换为双换行符
-    text = text.replaceAll(blockSeparatorRegex, "\n\n");
-    
-    const data = event.clipboardData;
-    if (data) {
-      event.preventDefault();
-      data.clearData();
-      data.setData("text/plain", text);
-    }
-    
-    if (!view.state.readOnly) {
-      view.dispatch({
-        changes: ranges,
-        scrollIntoView: true,
-        userEvent: USER_EVENTS.DELETE_CUT,
-        annotations: [codeBlockEvent.of(CONTENT_EDIT)],
-      });
-    }
-  }
 });
-
-/**
- * 复制和剪切的通用函数
- */
-const copyCut = (view: EditorView, cut: boolean): boolean => {
-  let { text, ranges } = copiedRange(view.state, cut);
-  // 将块分隔符替换为双换行符
-  text = text.replaceAll(blockSeparatorRegex, "\n\n");
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text);
-  }
-
-  if (cut && !view.state.readOnly) {
-    view.dispatch({
-      changes: ranges,
-      scrollIntoView: true,
-      userEvent: USER_EVENTS.DELETE_CUT,
-      annotations: [codeBlockEvent.of(CONTENT_EDIT)],
-    });
-  }
-
-  return true;
-};
 
 /**
  * 粘贴函数
  */
 function doPaste(view: EditorView, input: string) {
-  const { state } = view;
-  const text = state.toText(input);
-  const byLine = text.lines === state.selection.ranges.length;
-  
-  let changes: any;
-  
-  if (byLine) {
-    let i = 1;
-    changes = state.changeByRange(range => {
-      const line = text.line(i++);
-      return {
-        changes: { from: range.from, to: range.to, insert: line.text },
-        range: EditorSelection.cursor(range.from + line.length)
-      };
+    const {state} = view;
+    const text = state.toText(input);
+    const byLine = text.lines === state.selection.ranges.length;
+
+    let changes: any;
+
+    if (byLine) {
+        let i = 1;
+        changes = state.changeByRange(range => {
+            const line = text.line(i++);
+            return {
+                changes: {from: range.from, to: range.to, insert: line.text},
+                range: EditorSelection.cursor(range.from + line.length)
+            };
+        });
+    } else {
+        changes = state.replaceSelection(text);
+    }
+
+    view.dispatch(changes, {
+        userEvent: USER_EVENTS.INPUT_PASTE,
+        scrollIntoView: true,
+        annotations: [codeBlockEvent.of(CONTENT_EDIT)],
     });
-  } else {
-    changes = state.replaceSelection(text);
-  }
-  
-  view.dispatch(changes, {
-    userEvent: USER_EVENTS.INPUT_PASTE,
-    scrollIntoView: true,
-    annotations: [codeBlockEvent.of(CONTENT_EDIT)],
-  });
+}
+
+async function readClipboardText(event?: ClipboardEvent): Promise<string> {
+    try {
+        const text = await runtime.Clipboard.Text();
+        if (text) {
+            return text;
+        }
+    } catch (error) {
+        console.error('[Clipboard] Failed to read from system clipboard:', error);
+    }
+
+    const eventText = event?.clipboardData?.getData("text/plain");
+    if (eventText) {
+        return eventText;
+    }
+
+    if (navigator.clipboard?.readText) {
+        try {
+            return await navigator.clipboard.readText();
+        } catch (fallbackErr) {
+            console.error('[Clipboard] Fallback also failed:', fallbackErr);
+        }
+    }
+
+    return "";
+}
+
+async function pasteText(view: EditorView, event?: ClipboardEvent): Promise<boolean> {
+    const text = await readClipboardText(event);
+    if (!text) {
+        return false;
+    }
+
+    doPaste(view, text);
+    return true;
+}
+
+async function pasteClipboard(view: EditorView, event?: ClipboardEvent): Promise<boolean> {
+    if (view.state.facet(inlineImageEnabledFacet)) {
+        const options = view.state.facet(inlineImageOptionsFacet);
+        const pasted = event
+            ? await pasteInlineImagesFromClipboardEvent(view, event, options.maxDisplayHeight)
+            : await pasteInlineImagesFromSystemClipboard(view, options.maxDisplayHeight);
+
+        if (pasted) {
+            return true;
+        }
+    }
+
+    return pasteText(view, event);
 }
 
 /**
  * 复制命令
  */
-export const copyCommand: Command = (view) => {
-  return copyCut(view, false);
+export const copyCommand: Command = view => {
+    void handleCopyCut(view, false);
+    return true;
 };
 
 /**
  * 剪切命令
  */
-export const cutCommand: Command = (view) => {
-  return copyCut(view, true);
+export const cutCommand: Command = view => {
+    void handleCopyCut(view, true);
+    return true;
 };
 
 /**
  * 粘贴命令
  */
-export const pasteCommand: Command = (view) => {
-  if (navigator.clipboard && navigator.clipboard.readText) {
-    navigator.clipboard.readText()
-      .then(text => {
-        doPaste(view, text);
-      })
-      .catch(err => {
-        console.error('Failed to read from clipboard:', err);
-      });
-  } else {
-    console.warn('The clipboard API is not available, please use your browser\'s native paste feature');
-  }
-  return true;
+export const pasteCommand: Command = view => {
+    void pasteClipboard(view);
+    return true;
 };
 
 /**
  * 获取复制粘贴扩展
  */
 export function getCopyPasteExtensions() {
-  return [
-    codeBlockCopyCut,
-  ];
+    return [
+        codeBlockCopyCut,
+    ];
 }

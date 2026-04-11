@@ -6,6 +6,8 @@ import (
 	"voidraft/internal/models/ent/document"
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
+	"voidraft/internal/models/ent/mediaasset"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 	"voidraft/internal/models/schema"
 )
@@ -209,6 +211,115 @@ func init() {
 	keybinding.DefaultScope = keybindingDescScope.Default.(string)
 	// keybinding.ScopeValidator is a validator for the "scope" field. It is called by the builders before save.
 	keybinding.ScopeValidator = keybindingDescScope.Validators[0].(func(string) error)
+	mediaassetMixin := schema.MediaAsset{}.Mixin()
+	mediaassetMixinHooks0 := mediaassetMixin[0].Hooks()
+	mediaasset.Hooks[0] = mediaassetMixinHooks0[0]
+	mediaassetMixinFields0 := mediaassetMixin[0].Fields()
+	_ = mediaassetMixinFields0
+	mediaassetMixinFields1 := mediaassetMixin[1].Fields()
+	_ = mediaassetMixinFields1
+	mediaassetFields := schema.MediaAsset{}.Fields()
+	_ = mediaassetFields
+	// mediaassetDescCreatedAt is the schema descriptor for created_at field.
+	mediaassetDescCreatedAt := mediaassetMixinFields0[0].Descriptor()
+	// mediaasset.DefaultCreatedAt holds the default value on creation for the created_at field.
+	mediaasset.DefaultCreatedAt = mediaassetDescCreatedAt.Default.(func() string)
+	// mediaassetDescUpdatedAt is the schema descriptor for updated_at field.
+	mediaassetDescUpdatedAt := mediaassetMixinFields0[1].Descriptor()
+	// mediaasset.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	mediaasset.DefaultUpdatedAt = mediaassetDescUpdatedAt.Default.(func() string)
+	// mediaassetDescUUID is the schema descriptor for uuid field.
+	mediaassetDescUUID := mediaassetMixinFields1[0].Descriptor()
+	// mediaasset.DefaultUUID holds the default value on creation for the uuid field.
+	mediaasset.DefaultUUID = mediaassetDescUUID.Default.(func() string)
+	// mediaassetDescAssetID is the schema descriptor for asset_id field.
+	mediaassetDescAssetID := mediaassetFields[0].Descriptor()
+	// mediaasset.AssetIDValidator is a validator for the "asset_id" field. It is called by the builders before save.
+	mediaasset.AssetIDValidator = func() func(string) error {
+		validators := mediaassetDescAssetID.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(asset_id string) error {
+			for _, fn := range fns {
+				if err := fn(asset_id); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// mediaassetDescFilename is the schema descriptor for filename field.
+	mediaassetDescFilename := mediaassetFields[1].Descriptor()
+	// mediaasset.FilenameValidator is a validator for the "filename" field. It is called by the builders before save.
+	mediaasset.FilenameValidator = mediaassetDescFilename.Validators[0].(func(string) error)
+	// mediaassetDescPath is the schema descriptor for path field.
+	mediaassetDescPath := mediaassetFields[2].Descriptor()
+	// mediaasset.PathValidator is a validator for the "path" field. It is called by the builders before save.
+	mediaasset.PathValidator = func() func(string) error {
+		validators := mediaassetDescPath.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(_path string) error {
+			for _, fn := range fns {
+				if err := fn(_path); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// mediaassetDescMimeType is the schema descriptor for mime_type field.
+	mediaassetDescMimeType := mediaassetFields[3].Descriptor()
+	// mediaasset.MimeTypeValidator is a validator for the "mime_type" field. It is called by the builders before save.
+	mediaasset.MimeTypeValidator = func() func(string) error {
+		validators := mediaassetDescMimeType.Validators
+		fns := [...]func(string) error{
+			validators[0].(func(string) error),
+			validators[1].(func(string) error),
+		}
+		return func(mime_type string) error {
+			for _, fn := range fns {
+				if err := fn(mime_type); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+	}()
+	// mediaassetDescSize is the schema descriptor for size field.
+	mediaassetDescSize := mediaassetFields[4].Descriptor()
+	// mediaasset.SizeValidator is a validator for the "size" field. It is called by the builders before save.
+	mediaasset.SizeValidator = mediaassetDescSize.Validators[0].(func(int64) error)
+	// mediaassetDescWidth is the schema descriptor for width field.
+	mediaassetDescWidth := mediaassetFields[5].Descriptor()
+	// mediaasset.WidthValidator is a validator for the "width" field. It is called by the builders before save.
+	mediaasset.WidthValidator = mediaassetDescWidth.Validators[0].(func(int) error)
+	// mediaassetDescHeight is the schema descriptor for height field.
+	mediaassetDescHeight := mediaassetFields[6].Descriptor()
+	// mediaasset.HeightValidator is a validator for the "height" field. It is called by the builders before save.
+	mediaasset.HeightValidator = mediaassetDescHeight.Validators[0].(func(int) error)
+	syncrunlogFields := schema.SyncRunLog{}.Fields()
+	_ = syncrunlogFields
+	// syncrunlogDescTargetPath is the schema descriptor for target_path field.
+	syncrunlogDescTargetPath := syncrunlogFields[1].Descriptor()
+	// syncrunlog.DefaultTargetPath holds the default value on creation for the target_path field.
+	syncrunlog.DefaultTargetPath = syncrunlogDescTargetPath.Default.(string)
+	// syncrunlogDescBranch is the schema descriptor for branch field.
+	syncrunlogDescBranch := syncrunlogFields[2].Descriptor()
+	// syncrunlog.DefaultBranch holds the default value on creation for the branch field.
+	syncrunlog.DefaultBranch = syncrunlogDescBranch.Default.(string)
+	// syncrunlogDescStartedAt is the schema descriptor for started_at field.
+	syncrunlogDescStartedAt := syncrunlogFields[5].Descriptor()
+	// syncrunlog.DefaultStartedAt holds the default value on creation for the started_at field.
+	syncrunlog.DefaultStartedAt = syncrunlogDescStartedAt.Default.(func() string)
+	// syncrunlogDescFinishedAt is the schema descriptor for finished_at field.
+	syncrunlogDescFinishedAt := syncrunlogFields[6].Descriptor()
+	// syncrunlog.DefaultFinishedAt holds the default value on creation for the finished_at field.
+	syncrunlog.DefaultFinishedAt = syncrunlogDescFinishedAt.Default.(func() string)
 	themeMixin := schema.Theme{}.Mixin()
 	themeMixinHooks1 := themeMixin[1].Hooks()
 	themeMixinHooks2 := themeMixin[2].Hooks()
@@ -255,6 +366,6 @@ func init() {
 }
 
 const (
-	Version = "v0.14.5"                                         // Version of ent codegen.
-	Sum     = "h1:Rj2WOYJtCkWyFo6a+5wB3EfBRP0rnx1fMk6gGA0UUe4=" // Sum of ent codegen.
+	Version = "v0.14.6"                                         // Version of ent codegen.
+	Sum     = "h1:/f2696BpwuWAEEG6PVGWflg6+Inrpq4pRWuNlWz/Skk=" // Sum of ent codegen.
 )

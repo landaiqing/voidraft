@@ -20,6 +20,10 @@ type Tx struct {
 	Extension *ExtensionClient
 	// KeyBinding is the client for interacting with the KeyBinding builders.
 	KeyBinding *KeyBindingClient
+	// MediaAsset is the client for interacting with the MediaAsset builders.
+	MediaAsset *MediaAssetClient
+	// SyncRunLog is the client for interacting with the SyncRunLog builders.
+	SyncRunLog *SyncRunLogClient
 	// Theme is the client for interacting with the Theme builders.
 	Theme *ThemeClient
 
@@ -156,6 +160,8 @@ func (tx *Tx) init() {
 	tx.Document = NewDocumentClient(tx.config)
 	tx.Extension = NewExtensionClient(tx.config)
 	tx.KeyBinding = NewKeyBindingClient(tx.config)
+	tx.MediaAsset = NewMediaAssetClient(tx.config)
+	tx.SyncRunLog = NewSyncRunLogClient(tx.config)
 	tx.Theme = NewThemeClient(tx.config)
 }
 

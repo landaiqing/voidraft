@@ -62,11 +62,15 @@ export const useThemeStore = defineStore('theme', () => {
     // 从服务器获取主题颜色
     const fetchThemeColors = async (themeName: string): Promise<ThemeColors> => {
         const safeName = resolveThemeName(themeName);
-        const theme = await ThemeService.GetThemeByName(safeName);
-        if (theme?.colors) {
-            const colors = cloneThemeColors(theme.colors as ThemeColors);
-            colors.themeName = safeName;
-            return colors;
+        try {
+            const theme = await ThemeService.GetThemeByName(safeName);
+            if (theme?.colors) {
+                const colors = cloneThemeColors(theme.colors as ThemeColors);
+                colors.themeName = safeName;
+                return colors;
+            }
+        } catch (error) {
+            console.warn('Failed to load custom theme, using preset:', safeName, error);
         }
         return getPresetColors(safeName);
     };

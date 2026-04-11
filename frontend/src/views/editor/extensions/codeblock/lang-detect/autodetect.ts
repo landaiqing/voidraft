@@ -68,11 +68,18 @@ function createDetectionMap(): Map<string, SupportedLanguage> {
     LANGUAGES.forEach(lang => {
         if (lang.detectIds) {
             lang.detectIds.forEach(detectId => {
-                map.set(detectId, lang.token);
+                // 保留首个映射，避免重复 detectId 覆盖更基础的语言，例如 js -> ts。
+                if (!map.has(detectId)) {
+                    map.set(detectId, lang.token);
+                }
             });
         }
     });
     return map;
+}
+
+function createWorkerUrl(): URL {
+    return new URL(`${import.meta.env.BASE_URL}langdetect-worker.js`, window.location.href);
 }
 
 /**
@@ -131,7 +138,7 @@ class LanguageDetectionWorker {
      */
     private initWorker(): void {
         try {
-            this.worker = new Worker('/langdetect-worker.js');
+            this.worker = new Worker(createWorkerUrl());
             this.worker.onmessage = (event) => {
                 const response: WorkerResponse = event.data;
                 const request = this.pendingRequests.get(response.idx);

@@ -1,113 +1,110 @@
 import {defineStore} from 'pinia';
 import {computed, reactive} from 'vue';
 import {ConfigService, StartupService} from '@/../bindings/voidraft/internal/services';
-import {AppConfig, AuthMethod, LanguageType, SystemThemeType, TabType} from '@/../bindings/voidraft/internal/models/models';
+import {
+    AppConfig,
+    AuthMethod,
+    SyncTarget,
+    LanguageType,
+    SystemThemeType,
+} from '@/../bindings/voidraft/internal/models/models';
 import {useI18n} from 'vue-i18n';
 import {ConfigUtils} from '@/common/utils/configUtils';
 import {FONT_OPTIONS} from '@/common/constant/fonts';
-import {
-    CONFIG_KEY_MAP,
-    CONFIG_LIMITS,
-    ConfigKey,
-    ConfigSection,
-    DEFAULT_CONFIG,
-    NumberConfigKey
-} from '@/common/constant/config';
+import {CONFIG_KEY_MAP, CONFIG_LIMITS, ConfigKey, DEFAULT_CONFIG, NumberConfigKey} from '@/common/constant/config';
 import * as runtime from '@wailsio/runtime';
 
 export const useConfigStore = defineStore('config', () => {
     const {locale} = useI18n();
 
-    // 响应式状态
     const state = reactive({
-        config: {...DEFAULT_CONFIG} as AppConfig,
+        config: structuredClone(DEFAULT_CONFIG) as AppConfig,
         isLoading: false,
         configLoaded: false
     });
 
-    // Font options (no longer localized)
     const fontOptions = computed(() => FONT_OPTIONS);
 
-    // 统一配置更新方法
-    const updateConfig = async <K extends ConfigKey>(key: K, value: any): Promise<void> => {
+    const applyConfig = (appConfig?: AppConfig | null): void => {
+        const nextConfig = structuredClone(DEFAULT_CONFIG) as AppConfig;
+
+        if (appConfig?.general) Object.assign(nextConfig.general, appConfig.general);
+        if (appConfig?.editing) Object.assign(nextConfig.editing, appConfig.editing);
+        if (appConfig?.appearance) Object.assign(nextConfig.appearance, appConfig.appearance);
+        if (appConfig?.updates) Object.assign(nextConfig.updates, appConfig.updates);
+        if (appConfig?.sync) Object.assign(nextConfig.sync, appConfig.sync);
+        if (appConfig?.metadata) Object.assign(nextConfig.metadata, appConfig.metadata);
+
+        state.config = nextConfig;
+    };
+
+    const ensureConfigLoaded = async (): Promise<void> => {
         if (!state.configLoaded && !state.isLoading) {
             await initConfig();
         }
+    };
 
-        const backendKey = CONFIG_KEY_MAP[key];
-        if (!backendKey) {
-            throw new Error(`No backend key mapping found for ${String(key)}`);
+    const setValueByPath = (target: Record<string, any>, path: string, value: unknown): void => {
+        const segments = path.split('.');
+        const lastIndex = segments.length - 1;
+
+        let current: Record<string, any> = target;
+        for (let index = 0; index < lastIndex; index++) {
+            current = current[segments[index]];
         }
-
-        // 从 backendKey 提取 section（例如 'general.alwaysOnTop' -> 'general'）
-        const section = backendKey.split('.')[0] as ConfigSection;
-
-        await ConfigService.Set(backendKey, value);
-        (state.config[section] as any)[key] = value;
+        current[segments[lastIndex]] = value;
     };
 
-    // 只更新本地状态，不保存到后端
-    const updateConfigLocal = <K extends ConfigKey>(key: K, value: any): void => {
-        const backendKey = CONFIG_KEY_MAP[key];
-        const section = backendKey.split('.')[0] as ConfigSection;
-        (state.config[section] as any)[key] = value;
+    const getValueByPath = (target: Record<string, any>, path: string): unknown => {
+        return path.split('.').reduce<unknown>((current, segment) => (current as Record<string, any>)[segment], target);
     };
 
-    // 保存指定配置到后端
+    const updateConfig = async <K extends ConfigKey>(key: K, value: unknown): Promise<void> => {
+        await ensureConfigLoaded();
+        const path = CONFIG_KEY_MAP[key];
+        await ConfigService.Set(path, value);
+        setValueByPath(state.config as Record<string, any>, path, value);
+    };
+
+    const updateConfigLocal = <K extends ConfigKey>(key: K, value: unknown): void => {
+        setValueByPath(state.config as Record<string, any>, CONFIG_KEY_MAP[key], value);
+    };
+
     const saveConfig = async <K extends ConfigKey>(key: K): Promise<void> => {
-        const backendKey = CONFIG_KEY_MAP[key];
-        const section = backendKey.split('.')[0] as ConfigSection;
-        await ConfigService.Set(backendKey, (state.config[section] as any)[key]);
+        const path = CONFIG_KEY_MAP[key];
+        await ConfigService.Set(path, getValueByPath(state.config as Record<string, any>, path));
     };
 
-    // 加载配置
     const initConfig = async (): Promise<void> => {
         if (state.isLoading) return;
 
         state.isLoading = true;
         try {
-            const appConfig = await ConfigService.GetConfig();
-
-            if (appConfig) {
-                // 合并配置
-                if (appConfig.general) Object.assign(state.config.general, appConfig.general);
-                if (appConfig.editing) Object.assign(state.config.editing, appConfig.editing);
-                if (appConfig.appearance) Object.assign(state.config.appearance, appConfig.appearance);
-                if (appConfig.updates) Object.assign(state.config.updates, appConfig.updates);
-                if (appConfig.backup) Object.assign(state.config.backup, appConfig.backup);
-                if (appConfig.metadata) Object.assign(state.config.metadata, appConfig.metadata);
-            }
-
+            applyConfig(await ConfigService.GetConfig());
             state.configLoaded = true;
-
         } finally {
             state.isLoading = false;
         }
     };
 
-    // 重置配置
     const resetConfig = async (): Promise<void> => {
         if (state.isLoading) return;
 
         state.isLoading = true;
         try {
             await ConfigService.ResetConfig();
-            const appConfig = await ConfigService.GetConfig();
-            if (appConfig) {
-                state.config = JSON.parse(JSON.stringify(appConfig)) as AppConfig;
-            }
+            applyConfig(await ConfigService.GetConfig());
+            state.configLoaded = true;
         } finally {
             state.isLoading = false;
         }
     };
 
-    // 辅助函数：限制数值范围
     const clampValue = (value: number, key: NumberConfigKey): number => {
         const limit = CONFIG_LIMITS[key];
         return ConfigUtils.clamp(value, limit.min, limit.max);
     };
 
-    // 计算属性
     const fontConfig = computed(() => ({
         fontSize: state.config.editing.fontSize,
         fontFamily: state.config.editing.fontFamily,
@@ -122,7 +119,6 @@ export const useConfigStore = defineStore('config', () => {
     }));
 
     return {
-        // 状态
         config: computed(() => state.config),
         configLoaded: computed(() => state.configLoaded),
         isLoading: computed(() => state.isLoading),
@@ -130,31 +126,25 @@ export const useConfigStore = defineStore('config', () => {
         fontConfig,
         tabConfig,
 
-        // 核心方法
         initConfig,
         resetConfig,
 
-        // 语言相关方法
-        setLanguage: (value: LanguageType) => {
-            updateConfig('language', value);
+        setLanguage: async (value: LanguageType) => {
+            await updateConfig('language', value);
             locale.value = value as any;
         },
 
-        // 主题相关方法
         setSystemTheme: (value: SystemThemeType) => updateConfig('systemTheme', value),
         setCurrentTheme: (value: string) => updateConfig('currentTheme', value),
 
-        // 字体大小操作
         setFontSize: async (value: number) => {
             await updateConfig('fontSize', clampValue(value, 'fontSize'));
         },
         increaseFontSize: async () => {
-            const newValue = state.config.editing.fontSize + 1;
-            await updateConfig('fontSize', clampValue(newValue, 'fontSize'));
+            await updateConfig('fontSize', clampValue(state.config.editing.fontSize + 1, 'fontSize'));
         },
         decreaseFontSize: async () => {
-            const newValue = state.config.editing.fontSize - 1;
-            await updateConfig('fontSize', clampValue(newValue, 'fontSize'));
+            await updateConfig('fontSize', clampValue(state.config.editing.fontSize - 1, 'fontSize'));
         },
         resetFontSize: async () => {
             await updateConfig('fontSize', CONFIG_LIMITS.fontSize.default);
@@ -165,93 +155,78 @@ export const useConfigStore = defineStore('config', () => {
         decreaseFontSizeLocal: () => {
             updateConfigLocal('fontSize', clampValue(state.config.editing.fontSize - 1, 'fontSize'));
         },
+        adjustFontSizeLocal: (delta: number): boolean => {
+            if (!Number.isFinite(delta) || delta === 0) {
+                return false;
+            }
+
+            const nextSize = clampValue(state.config.editing.fontSize + delta, 'fontSize');
+            if (nextSize === state.config.editing.fontSize) {
+                return false;
+            }
+
+            updateConfigLocal('fontSize', nextSize);
+            return true;
+        },
         saveFontSize: async () => {
             await saveConfig('fontSize');
         },
 
-        // 字体操作
         setFontFamily: (value: string) => updateConfig('fontFamily', value),
         setFontWeight: (value: string) => updateConfig('fontWeight', value),
-
-        // 行高操作
         setLineHeight: async (value: number) => {
             await updateConfig('lineHeight', clampValue(value, 'lineHeight'));
         },
 
-        // Tab操作
         setEnableTabIndent: (value: boolean) => updateConfig('enableTabIndent', value),
         setTabSize: async (value: number) => {
             await updateConfig('tabSize', clampValue(value, 'tabSize'));
         },
         increaseTabSize: async () => {
-            const newValue = state.config.editing.tabSize + 1;
-            await updateConfig('tabSize', clampValue(newValue, 'tabSize'));
+            await updateConfig('tabSize', clampValue(state.config.editing.tabSize + 1, 'tabSize'));
         },
         decreaseTabSize: async () => {
-            const newValue = state.config.editing.tabSize - 1;
-            await updateConfig('tabSize', clampValue(newValue, 'tabSize'));
+            await updateConfig('tabSize', clampValue(state.config.editing.tabSize - 1, 'tabSize'));
         },
         toggleTabType: async () => {
             const values = CONFIG_LIMITS.tabType.values;
             const currentIndex = values.indexOf(state.config.editing.tabType as typeof values[number]);
-            const nextIndex = (currentIndex + 1) % values.length;
-            await updateConfig('tabType', values[nextIndex]);
+            await updateConfig('tabType', values[(currentIndex + 1) % values.length]);
         },
 
-        // 窗口操作
         toggleAlwaysOnTop: async () => {
             await updateConfig('alwaysOnTop', !state.config.general.alwaysOnTop);
             await runtime.Window.SetAlwaysOnTop(state.config.general.alwaysOnTop);
         },
         setAlwaysOnTop: (value: boolean) => updateConfig('alwaysOnTop', value),
-
-        // 路径操作
         setDataPath: (value: string) => updateConfigLocal('dataPath', value),
-
-        // 保存配置相关方法
         setAutoSaveDelay: (value: number) => updateConfig('autoSaveDelay', value),
-
-        // 热键配置相关方法
         setEnableGlobalHotkey: (value: boolean) => updateConfig('enableGlobalHotkey', value),
         setGlobalHotkey: (hotkey: any) => updateConfig('globalHotkey', hotkey),
-
-        // 系统托盘配置相关方法
         setEnableSystemTray: (value: boolean) => updateConfig('enableSystemTray', value),
-
-        // 开机启动配置相关方法
         setStartAtLogin: async (value: boolean) => {
             await updateConfig('startAtLogin', value);
             await StartupService.SetEnabled(value);
         },
-
-        // 窗口吸附配置相关方法
         setEnableWindowSnap: (value: boolean) => updateConfig('enableWindowSnap', value),
-
-        // 加载动画配置相关方法
         setEnableLoadingAnimation: (value: boolean) => updateConfig('enableLoadingAnimation', value),
-
-        // 标签页配置相关方法
         setEnableTabs: (value: boolean) => updateConfig('enableTabs', value),
-
-        // 内存监视器配置相关方法
         setEnableMemoryMonitor: (value: boolean) => updateConfig('enableMemoryMonitor', value),
-
-        // 快捷键模式配置相关方法
         setKeymapMode: (value: any) => updateConfig('keymapMode', value),
-
-        // 更新配置相关方法
         setAutoUpdate: (value: boolean) => updateConfig('autoUpdate', value),
 
-        // 备份配置相关方法
-        setEnableBackup: (value: boolean) => updateConfig('enabled', value),
-        setAutoBackup: (value: boolean) => updateConfig('auto_backup', value),
-        setRepoUrl: (value: string) => updateConfig('repo_url', value),
-        setAuthMethod: (value: AuthMethod) => updateConfig('auth_method', value),
-        setUsername: (value: string) => updateConfig('username', value),
-        setPassword: (value: string) => updateConfig('password', value),
-        setToken: (value: string) => updateConfig('token', value),
-        setSshKeyPath: (value: string) => updateConfig('ssh_key_path', value),
-        setSshKeyPassphrase: (value: string) => updateConfig('ssh_key_passphrase', value),
-        setBackupInterval: (value: number) => updateConfig('backup_interval', value),
+        setSyncTarget: (value: SyncTarget) => updateConfig('sync_target', value),
+        setEnableSync: (value: boolean) => updateConfig('sync_enabled', value),
+        setAutoSync: (value: boolean) => updateConfig('sync_auto_sync', value),
+        setSyncInterval: (value: number) => updateConfig('sync_sync_interval', Math.max(1, value)),
+        setRepoUrl: (value: string) => updateConfig('git_repo_url', value),
+        setGitBranch: (value: string) => updateConfig('git_branch', value.trim() || 'main'),
+        setAuthMethod: (value: AuthMethod) => updateConfig('git_auth_method', value),
+        setUsername: (value: string) => updateConfig('git_username', value),
+        setPassword: (value: string) => updateConfig('git_password', value),
+        setToken: (value: string) => updateConfig('git_token', value),
+        setSshKeyPath: (value: string) => updateConfig('git_ssh_key_path', value),
+        setSshKeyPassphrase: (value: string) => updateConfig('git_ssh_key_passphrase', value),
+        setLocalFSRootPath: (value: string) => updateConfig('localfs_root_path', value),
     };
 });

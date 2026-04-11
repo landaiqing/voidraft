@@ -17,6 +17,10 @@ import * as application$0 from "../../../github.com/wailsapp/wails/v3/pkg/applic
 // @ts-ignore: Unused imports
 import * as ent$0 from "../models/ent/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * CreateDocument 创建文档
  */
@@ -50,7 +54,7 @@ export function GetDocumentByID(id: number): Promise<ent$0.Document | null> & { 
 }
 
 /**
- * ListAllDocumentsMeta 列出所有文档
+ * ListAllDocumentsMeta lists document metadata.
  */
 export function ListAllDocumentsMeta(): Promise<(ent$0.Document | null)[]> & { cancel(): void } {
     let $resultPromise = $Call.ByID(3073950297) as any;
@@ -88,9 +92,13 @@ export function UnlockDocument(id: number): Promise<void> & { cancel(): void } {
 /**
  * UpdateDocumentContent 更新文档内容
  */
-export function UpdateDocumentContent(id: number, content: string): Promise<void> & { cancel(): void } {
-    let $resultPromise = $Call.ByID(3251897116, id, content) as any;
-    return $resultPromise;
+export function UpdateDocumentContent(id: number, content: string, baseUpdatedAt: string): Promise<$models.DocumentSaveResult | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(3251897116, id, content, baseUpdatedAt) as any;
+    let $typingPromise = $resultPromise.then(($result: any) => {
+        return $$createType4($result);
+    }) as any;
+    $typingPromise.cancel = $resultPromise.cancel.bind($resultPromise);
+    return $typingPromise;
 }
 
 /**
@@ -105,3 +113,5 @@ export function UpdateDocumentTitle(id: number, title: string): Promise<void> & 
 const $$createType0 = ent$0.Document.createFrom;
 const $$createType1 = $Create.Nullable($$createType0);
 const $$createType2 = $Create.Array($$createType1);
+const $$createType3 = $models.DocumentSaveResult.createFrom;
+const $$createType4 = $Create.Nullable($$createType3);

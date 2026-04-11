@@ -19,6 +19,14 @@ import * as application$0 from "../../application/models.js";
 import * as $models from "./models.js";
 
 /**
+ * GetBadge returns the badge label on the application icon.
+ */
+export function GetBadge(): Promise<string | null> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(1150236961) as any;
+    return $resultPromise;
+}
+
+/**
  * HideAppIcon hides the app icon in the dock/taskbar.
  */
 export function HideAppIcon(): Promise<void> & { cancel(): void } {

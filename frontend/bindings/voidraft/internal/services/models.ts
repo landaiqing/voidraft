@@ -13,6 +13,50 @@ import * as http$0 from "../../../net/http/models.js";
 import * as time$0 from "../../../time/models.js";
 
 /**
+ * DocumentSaveResult describes the outcome of a document save request.
+ */
+export class DocumentSaveResult {
+    "document_id": number;
+    "updated_at": string;
+    "content_length": number;
+    "content_hash": string;
+    "saved_at": string;
+    "changed": boolean;
+
+    /** Creates a new DocumentSaveResult instance. */
+    constructor($$source: Partial<DocumentSaveResult> = {}) {
+        if (!("document_id" in $$source)) {
+            this["document_id"] = 0;
+        }
+        if (!("updated_at" in $$source)) {
+            this["updated_at"] = "";
+        }
+        if (!("content_length" in $$source)) {
+            this["content_length"] = 0;
+        }
+        if (!("content_hash" in $$source)) {
+            this["content_hash"] = "";
+        }
+        if (!("saved_at" in $$source)) {
+            this["saved_at"] = "";
+        }
+        if (!("changed" in $$source)) {
+            this["changed"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new DocumentSaveResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): DocumentSaveResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new DocumentSaveResult($$parsedSource as Partial<DocumentSaveResult>);
+    }
+}
+
+/**
  * HttpRequest HTTP请求结构
  */
 export class HttpRequest {
@@ -111,6 +155,123 @@ export class HttpResponse {
             $$parsedSource["headers"] = $$createField4_0($$parsedSource["headers"]);
         }
         return new HttpResponse($$parsedSource as Partial<HttpResponse>);
+    }
+}
+
+/**
+ * ImageAsset describes one imported image asset.
+ */
+export class ImageAsset {
+    "id": string;
+    "filename"?: string;
+    "path": string;
+    "url": string;
+    "mime_type": string;
+    "size": number;
+    "width": number;
+    "height": number;
+    "sha256": string;
+    "created_at": string;
+    "updated_at": string;
+
+    /** Creates a new ImageAsset instance. */
+    constructor($$source: Partial<ImageAsset> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("mime_type" in $$source)) {
+            this["mime_type"] = "";
+        }
+        if (!("size" in $$source)) {
+            this["size"] = 0;
+        }
+        if (!("width" in $$source)) {
+            this["width"] = 0;
+        }
+        if (!("height" in $$source)) {
+            this["height"] = 0;
+        }
+        if (!("sha256" in $$source)) {
+            this["sha256"] = "";
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = "";
+        }
+        if (!("updated_at" in $$source)) {
+            this["updated_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageAsset instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageAsset {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ImageAsset($$parsedSource as Partial<ImageAsset>);
+    }
+}
+
+/**
+ * ImageDeleteResult describes the outcome of a delete operation.
+ */
+export class ImageDeleteResult {
+    "path": string;
+    "deleted": boolean;
+
+    /** Creates a new ImageDeleteResult instance. */
+    constructor($$source: Partial<ImageDeleteResult> = {}) {
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("deleted" in $$source)) {
+            this["deleted"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageDeleteResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageDeleteResult {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ImageDeleteResult($$parsedSource as Partial<ImageDeleteResult>);
+    }
+}
+
+/**
+ * ImageImportRequest describes an image import payload.
+ */
+export class ImageImportRequest {
+    "filename"?: string;
+    "mime_type"?: string;
+    "data"?: string;
+    "data_base64"?: string;
+
+    /** Creates a new ImageImportRequest instance. */
+    constructor($$source: Partial<ImageImportRequest> = {}) {
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ImageImportRequest instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ImageImportRequest {
+        const $$createField2_0 = $Create.ByteSlice;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("data" in $$parsedSource) {
+            $$parsedSource["data"] = $$createField2_0($$parsedSource["data"]);
+        }
+        return new ImageImportRequest($$parsedSource as Partial<ImageImportRequest>);
     }
 }
 

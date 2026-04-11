@@ -5,4 +5,7 @@ export const
   Block = 3,
   BlockDelimiter = 4,
   BlockLanguage = 5,
-  Auto = 6
+  BlockFlag = 6,
+  Auto = 7,
+  ReadOnly = 8,
+  Writable = 9

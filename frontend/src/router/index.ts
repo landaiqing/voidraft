@@ -7,7 +7,7 @@ import AppearancePage from '@/views/settings/pages/AppearancePage.vue';
 import KeyBindingsPage from '@/views/settings/pages/KeyBindingsPage.vue';
 import UpdatesPage from '@/views/settings/pages/UpdatesPage.vue';
 import ExtensionsPage from '@/views/settings/pages/ExtensionsPage.vue';
-import BackupPage from '@/views/settings/pages/BackupPage.vue';
+import SyncPage from '@/views/settings/pages/SyncPage.vue';
 // 测试页面
 import TestPage from '@/views/settings/pages/TestPage.vue';
 
@@ -44,9 +44,9 @@ const settingsChildren: RouteRecordRaw[] = [
     component: UpdatesPage
   },
   {
-    path: 'backup',
-    name: 'SettingsBackup',
-    component: BackupPage
+    path: 'sync',
+    name: 'SettingsSync',
+    component: SyncPage
   }
 ];
 

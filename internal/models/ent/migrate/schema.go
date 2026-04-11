@@ -17,7 +17,7 @@ var (
 		{Name: "updated_at", Type: field.TypeString},
 		{Name: "deleted_at", Type: field.TypeString, Nullable: true},
 		{Name: "title", Type: field.TypeString, Size: 255},
-		{Name: "content", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: "\n∞∞∞text-a\n"},
+		{Name: "content", Type: field.TypeString, Nullable: true, Size: 2147483647, Default: "\n∞∞∞text-a-w\n"},
 		{Name: "locked", Type: field.TypeBool, Default: false},
 	}
 	// DocumentsTable holds the schema information for the "documents" table.
@@ -148,6 +148,93 @@ var (
 			},
 		},
 	}
+	// MediaAssetsColumns holds the columns for the "media_assets" table.
+	MediaAssetsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "created_at", Type: field.TypeString},
+		{Name: "updated_at", Type: field.TypeString},
+		{Name: "uuid", Type: field.TypeString, Unique: true},
+		{Name: "asset_id", Type: field.TypeString, Unique: true, Size: 64},
+		{Name: "filename", Type: field.TypeString, Nullable: true, Size: 255},
+		{Name: "path", Type: field.TypeString, Unique: true, Size: 1024},
+		{Name: "mime_type", Type: field.TypeString, Size: 128},
+		{Name: "size", Type: field.TypeInt64},
+		{Name: "width", Type: field.TypeInt},
+		{Name: "height", Type: field.TypeInt},
+	}
+	// MediaAssetsTable holds the schema information for the "media_assets" table.
+	MediaAssetsTable = &schema.Table{
+		Name:       "media_assets",
+		Columns:    MediaAssetsColumns,
+		PrimaryKey: []*schema.Column{MediaAssetsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "mediaasset_uuid",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[3]},
+			},
+			{
+				Name:    "mediaasset_asset_id",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[4]},
+			},
+			{
+				Name:    "mediaasset_path",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[6]},
+			},
+			{
+				Name:    "mediaasset_created_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[1]},
+			},
+			{
+				Name:    "mediaasset_updated_at",
+				Unique:  false,
+				Columns: []*schema.Column{MediaAssetsColumns[2]},
+			},
+		},
+	}
+	// SyncRunLogsColumns holds the columns for the "sync_run_logs" table.
+	SyncRunLogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "target_type", Type: field.TypeEnum, Enums: []string{"git", "localfs"}},
+		{Name: "target_path", Type: field.TypeString, Default: ""},
+		{Name: "branch", Type: field.TypeString, Default: ""},
+		{Name: "trigger_type", Type: field.TypeEnum, Enums: []string{"manual", "auto"}},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"success", "failed"}},
+		{Name: "started_at", Type: field.TypeString},
+		{Name: "finished_at", Type: field.TypeString},
+		{Name: "details", Type: field.TypeJSON},
+	}
+	// SyncRunLogsTable holds the schema information for the "sync_run_logs" table.
+	SyncRunLogsTable = &schema.Table{
+		Name:       "sync_run_logs",
+		Columns:    SyncRunLogsColumns,
+		PrimaryKey: []*schema.Column{SyncRunLogsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "syncrunlog_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[6]},
+			},
+			{
+				Name:    "syncrunlog_status_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[5], SyncRunLogsColumns[6]},
+			},
+			{
+				Name:    "syncrunlog_target_type_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[1], SyncRunLogsColumns[6]},
+			},
+			{
+				Name:    "syncrunlog_trigger_type_started_at",
+				Unique:  false,
+				Columns: []*schema.Column{SyncRunLogsColumns[4], SyncRunLogsColumns[6]},
+			},
+		},
+	}
 	// ThemesColumns holds the columns for the "themes" table.
 	ThemesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -182,6 +269,8 @@ var (
 		DocumentsTable,
 		ExtensionsTable,
 		KeyBindingsTable,
+		MediaAssetsTable,
+		SyncRunLogsTable,
 		ThemesTable,
 	}
 )
@@ -195,6 +284,12 @@ func init() {
 	}
 	KeyBindingsTable.Annotation = &entsql.Annotation{
 		Table: "key_bindings",
+	}
+	MediaAssetsTable.Annotation = &entsql.Annotation{
+		Table: "media_assets",
+	}
+	SyncRunLogsTable.Annotation = &entsql.Annotation{
+		Table: "sync_run_logs",
 	}
 	ThemesTable.Annotation = &entsql.Annotation{
 		Table: "themes",

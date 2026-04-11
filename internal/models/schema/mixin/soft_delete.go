@@ -3,6 +3,8 @@ package mixin
 import (
 	"context"
 	"fmt"
+	entmodel "voidraft/internal/models/ent"
+	entintercept "voidraft/internal/models/ent/intercept"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -51,18 +53,14 @@ func SkipSoftDelete(parent context.Context) context.Context {
 // Interceptors of the SoftDeleteMixin.
 func (d SoftDeleteMixin) Interceptors() []ent.Interceptor {
 	return []ent.Interceptor{
-		ent.InterceptFunc(func(next ent.Querier) ent.Querier {
-			return ent.QuerierFunc(func(ctx context.Context, q ent.Query) (ent.Value, error) {
-				// 如果 context 中设置了跳过软删除标志，则不过滤
-				if skip, _ := ctx.Value(softDeleteKey{}).(bool); skip {
-					return next.Query(ctx, q)
-				}
-				// 添加 WHERE deleted_at IS NULL 条件
-				if w, ok := q.(interface{ WhereP(...func(*sql.Selector)) }); ok {
-					d.P(w)
-				}
-				return next.Query(ctx, q)
-			})
+		entintercept.Func(func(ctx context.Context, q entintercept.Query) error {
+			// 如果 context 中设置了跳过软删除标志，则不过滤
+			if skip, _ := ctx.Value(softDeleteKey{}).(bool); skip {
+				return nil
+			}
+			// 添加 WHERE deleted_at IS NULL 条件
+			d.P(q)
+			return nil
 		}),
 	}
 }
@@ -72,8 +70,10 @@ func (d SoftDeleteMixin) Hooks() []ent.Hook {
 	return []ent.Hook{
 		func(next ent.Mutator) ent.Mutator {
 			return ent.MutateFunc(func(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+				originalOp := m.Op()
+
 				// 只处理删除操作
-				if m.Op() != ent.OpDeleteOne && m.Op() != ent.OpDelete {
+				if originalOp != ent.OpDeleteOne && originalOp != ent.OpDelete {
 					return next.Mutate(ctx, m)
 				}
 
@@ -87,6 +87,7 @@ func (d SoftDeleteMixin) Hooks() []ent.Hook {
 					SetOp(ent.Op)
 					SetDeletedAt(string)
 					WhereP(...func(*sql.Selector))
+					Client() *entmodel.Client
 				})
 				if !ok {
 					return nil, fmt.Errorf("SoftDeleteMixin: unexpected mutation type %T", m)
@@ -96,11 +97,24 @@ func (d SoftDeleteMixin) Hooks() []ent.Hook {
 				d.P(mx)
 
 				// 将删除操作转换为更新操作
-				mx.SetOp(ent.OpUpdate)
+				if originalOp == ent.OpDeleteOne {
+					mx.SetOp(ent.OpUpdateOne)
+				} else {
+					mx.SetOp(ent.OpUpdate)
+				}
 				mx.SetDeletedAt(NowString())
 
-				// 执行更新操作
-				return next.Mutate(ctx, m)
+				// 使用客户端重新分发 mutation，让 ent 按 Update/UpdateOne 执行。
+				// 不能继续调用 next.Mutate，因为当前 builder 仍然是 Delete builder，
+				// 最终会落到物理删除 SQL。
+				value, err := mx.Client().Mutate(ctx, m)
+				if err != nil {
+					return nil, err
+				}
+				if originalOp == ent.OpDeleteOne {
+					return 1, nil
+				}
+				return value, nil
 			})
 		},
 	}

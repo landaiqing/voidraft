@@ -10,7 +10,7 @@ import (
 )
 
 // TimeFormat ISO 8601 时间格式
-const TimeFormat = time.RFC3339
+const TimeFormat = time.RFC3339Nano
 
 // NowString 返回当前时间的 ISO 8601 格式字符串
 func NowString() string {

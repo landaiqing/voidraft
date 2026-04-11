@@ -2,39 +2,56 @@ package services
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"voidraft/internal/models"
 	"voidraft/internal/models/ent/document"
+	"voidraft/internal/models/schema/mixin"
+
+	"voidraft/internal/models/ent"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/services/log"
-	"voidraft/internal/models/ent"
 )
 
 const defaultDocumentTitle = "default"
-const defaultDocumentContent = "\n∞∞∞text-a\n"
+
+var ErrDocumentRevisionConflict = errors.New("document revision conflict")
+
+// DocumentSaveResult describes the outcome of a document save request.
+type DocumentSaveResult struct {
+	DocumentID    int    `json:"document_id"`
+	UpdatedAt     string `json:"updated_at"`
+	ContentLength int    `json:"content_length"`
+	ContentHash   string `json:"content_hash"`
+	SavedAt       string `json:"saved_at"`
+	Changed       bool   `json:"changed"`
+}
 
 // DocumentService 文档服务
 type DocumentService struct {
-	db     *DatabaseService
-	logger *log.LogService
+	db        *DatabaseService
+	logger    *log.LogService
+	mediaSync *MediaSyncService
 }
 
 // NewDocumentService 创建文档服务
-func NewDocumentService(db *DatabaseService, logger *log.LogService) *DocumentService {
+func NewDocumentService(db *DatabaseService, logger *log.LogService, mediaSync *MediaSyncService) *DocumentService {
 	if logger == nil {
 		logger = log.New()
 	}
-	return &DocumentService{db: db, logger: logger}
+	return &DocumentService{db: db, logger: logger, mediaSync: mediaSync}
 }
 
 // ServiceStartup 服务启动
 func (s *DocumentService) ServiceStartup(ctx context.Context, options application.ServiceOptions) error {
-	exists, err := s.db.Client.Document.Query().Exist(ctx)
+	count, err := s.db.Client.Document.Query().Count(ctx)
 	if err != nil {
-		return fmt.Errorf("check document exists error: %w", err)
+		return fmt.Errorf("count visible documents error: %w", err)
 	}
-	if !exists {
+	if count == 0 {
 		_, err = s.CreateDocument(ctx, defaultDocumentTitle)
 	}
 	return err
@@ -49,6 +66,7 @@ func (s *DocumentService) GetDocumentByID(ctx context.Context, id int) (*ent.Doc
 		}
 		return nil, fmt.Errorf("get document by id error: %w", err)
 	}
+	doc.Content = models.NormalizeDocumentContent(doc.Content)
 	return doc, nil
 }
 
@@ -56,7 +74,7 @@ func (s *DocumentService) GetDocumentByID(ctx context.Context, id int) (*ent.Doc
 func (s *DocumentService) CreateDocument(ctx context.Context, title string) (*ent.Document, error) {
 	doc, err := s.db.Client.Document.Create().
 		SetTitle(title).
-		SetContent(defaultDocumentContent).
+		SetContent(models.DefaultDocumentContent).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create document error: %w", err)
@@ -65,10 +83,30 @@ func (s *DocumentService) CreateDocument(ctx context.Context, title string) (*en
 }
 
 // UpdateDocumentContent 更新文档内容
-func (s *DocumentService) UpdateDocumentContent(ctx context.Context, id int, content string) error {
-	return s.db.Client.Document.UpdateOneID(id).
+func (s *DocumentService) UpdateDocumentContent(ctx context.Context, id int, content string, baseUpdatedAt string) (*DocumentSaveResult, error) {
+	doc, err := s.db.Client.Document.Get(ctx, id)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, fmt.Errorf("document not found: %d", id)
+		}
+		return nil, fmt.Errorf("get document by id error: %w", err)
+	}
+	if baseUpdatedAt != "" && doc.UpdatedAt != baseUpdatedAt {
+		return nil, fmt.Errorf("%w: document %d has changed since %s", ErrDocumentRevisionConflict, id, baseUpdatedAt)
+	}
+	content = models.NormalizeDocumentContent(content)
+	if doc.Content == content {
+		return buildDocumentSaveResult(doc, mixin.NowString(), false), nil
+	}
+
+	updatedDoc, err := s.db.Client.Document.UpdateOneID(id).
 		SetContent(content).
-		Exec(ctx)
+		Save(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("update document content error: %w", err)
+	}
+
+	return buildDocumentSaveResult(updatedDoc, mixin.NowString(), true), nil
 }
 
 // UpdateDocumentTitle 更新文档标题
@@ -131,12 +169,34 @@ func (s *DocumentService) DeleteDocument(ctx context.Context, id int) error {
 	if count <= 1 {
 		return errors.New("cannot delete the last document")
 	}
-	return s.db.Client.Document.DeleteOneID(id).Exec(ctx)
+	if err := s.db.Client.Document.DeleteOneID(id).Exec(ctx); err != nil {
+		return err
+	}
+	if s.mediaSync != nil {
+		s.mediaSync.scheduleOrphanCleanupForDeletedContent(doc.Content)
+	}
+	return nil
 }
 
-// ListAllDocumentsMeta 列出所有文档
+// ListAllDocumentsMeta lists document metadata.
 func (s *DocumentService) ListAllDocumentsMeta(ctx context.Context) ([]*ent.Document, error) {
 	return s.db.Client.Document.Query().Select(document.FieldID, document.FieldTitle, document.FieldUpdatedAt, document.FieldLocked, document.FieldCreatedAt).
 		Order(ent.Desc(document.FieldUpdatedAt)).
 		All(ctx)
+}
+
+func buildDocumentSaveResult(doc *ent.Document, savedAt string, changed bool) *DocumentSaveResult {
+	return &DocumentSaveResult{
+		DocumentID:    doc.ID,
+		UpdatedAt:     doc.UpdatedAt,
+		ContentLength: len(doc.Content),
+		ContentHash:   generateDocumentContentHash(doc.Content),
+		SavedAt:       savedAt,
+		Changed:       changed,
+	}
+}
+
+func generateDocumentContentHash(content string) string {
+	sum := sha256.Sum256([]byte(content))
+	return hex.EncodeToString(sum[:])
 }

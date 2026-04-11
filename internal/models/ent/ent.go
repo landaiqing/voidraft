@@ -11,6 +11,8 @@ import (
 	"voidraft/internal/models/ent/document"
 	"voidraft/internal/models/ent/extension"
 	"voidraft/internal/models/ent/keybinding"
+	"voidraft/internal/models/ent/mediaasset"
+	"voidraft/internal/models/ent/syncrunlog"
 	"voidraft/internal/models/ent/theme"
 
 	"entgo.io/ent"
@@ -79,6 +81,8 @@ func checkColumn(t, c string) error {
 			document.Table:   document.ValidColumn,
 			extension.Table:  extension.ValidColumn,
 			keybinding.Table: keybinding.ValidColumn,
+			mediaasset.Table: mediaasset.ValidColumn,
+			syncrunlog.Table: syncrunlog.ValidColumn,
 			theme.Table:      theme.ValidColumn,
 		})
 	})
