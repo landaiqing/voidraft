@@ -115,6 +115,11 @@ export class AppearanceConfig {
      */
     "currentTheme": string;
 
+    /**
+     * 光标闪烁周期（毫秒）
+     */
+    "cursorBlinkRate": number;
+
     /** Creates a new AppearanceConfig instance. */
     constructor($$source: Partial<AppearanceConfig> = {}) {
         if (!("language" in $$source)) {
@@ -125,6 +130,9 @@ export class AppearanceConfig {
         }
         if (!("currentTheme" in $$source)) {
             this["currentTheme"] = "";
+        }
+        if (!("cursorBlinkRate" in $$source)) {
+            this["cursorBlinkRate"] = 0;
         }
 
         Object.assign(this, $$source);
@@ -246,6 +254,22 @@ export class EditingConfig {
      */
     "autoSaveDelay": number;
 
+    /**
+     * 默认块设置
+     * 默认新块语言
+     */
+    "defaultBlockLanguage": string;
+
+    /**
+     * 默认新块自动识别
+     */
+    "defaultBlockAutoDetect": boolean;
+
+    /**
+     * 块分隔符高度（像素）
+     */
+    "blockSeparatorHeight": number;
+
     /** Creates a new EditingConfig instance. */
     constructor($$source: Partial<EditingConfig> = {}) {
         if (!("fontSize" in $$source)) {
@@ -274,6 +298,15 @@ export class EditingConfig {
         }
         if (!("autoSaveDelay" in $$source)) {
             this["autoSaveDelay"] = 0;
+        }
+        if (!("defaultBlockLanguage" in $$source)) {
+            this["defaultBlockLanguage"] = "";
+        }
+        if (!("defaultBlockAutoDetect" in $$source)) {
+            this["defaultBlockAutoDetect"] = false;
+        }
+        if (!("blockSeparatorHeight" in $$source)) {
+            this["blockSeparatorHeight"] = 0;
         }
 
         Object.assign(this, $$source);
@@ -760,6 +793,11 @@ export enum KeyBindingName {
     HideSearch = "hideSearch",
 
     /**
+     * 打开命令面板
+     */
+    OpenCommandPalette = "openCommandPalette",
+
+    /**
      * 块内选择全部
      */
     BlockSelectAll = "blockSelectAll",
@@ -773,6 +811,11 @@ export enum KeyBindingName {
      * 在最后添加新块
      */
     BlockAddAfterLast = "blockAddAfterLast",
+
+    /**
+     * 在最后添加新块并滚动到底部
+     */
+    BlockAddAfterLastAndScrollDown = "blockAddAfterLastAndScrollDown",
 
     /**
      * 在当前块前添加新块

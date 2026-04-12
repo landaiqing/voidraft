@@ -8,4 +8,6 @@ export const
   BlockFlag = 6,
   Auto = 7,
   ReadOnly = 8,
-  Writable = 9
+  Writable = 9,
+  BlockMetadata = 10,
+  CreatedMetadata = 11

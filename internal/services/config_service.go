@@ -80,6 +80,13 @@ func (cs *ConfigService) initConfig() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	if cs.configMigrator != nil {
+		defaultConfig := models.NewDefaultAppConfig()
+		if _, err := cs.configMigrator.AutoMigrate(defaultConfig, cs.koanf); err != nil {
+			return fmt.Errorf("failed to migrate config: %w", err)
+		}
+	}
+
 	return nil
 }
 

@@ -1,7 +1,6 @@
 import {Extension} from '@codemirror/state';
 import {
     crosshairCursor,
-    drawSelection,
     dropCursor,
     EditorView,
     highlightActiveLine,
@@ -27,7 +26,6 @@ export const createBasicSetup = (): Extension[] => {
         history(),
 
         // 选择与高亮
-        drawSelection(),
         highlightActiveLine(),
         highlightSelectionMatches(),
         rectangularSelection(),

@@ -8,6 +8,7 @@ import { blockState, getActiveNoteBlock, getFirstNoteBlock, getLastNoteBlock, ge
 import type { Block, BlockAccess, EditorOptions, SupportedLanguage } from "./types";
 import { formatBlockContent } from "./formatCode";
 import { createDelimiter } from "./parser";
+import { createBlockCreatedAt } from "./timestamp";
 import { codeBlockEvent, LANGUAGE_CHANGE, ADD_NEW_BLOCK, MOVE_BLOCK, DELETE_BLOCK, CURRENCIES_LOADED, USER_EVENTS } from "./annotation";
 
 /**
@@ -17,8 +18,9 @@ export function getBlockDelimiter(
     defaultToken: string,
     autoDetect: boolean,
     access: BlockAccess = 'write',
+    createdAt?: string,
 ): string {
-    return createDelimiter(defaultToken as SupportedLanguage, autoDetect, access);
+    return createDelimiter(defaultToken as SupportedLanguage, autoDetect, access, createdAt);
 }
 
 function getDefaultAccess(options: EditorOptions): BlockAccess {
@@ -37,7 +39,7 @@ function replaceBlockDelimiter(
         return false;
     }
 
-    const newDelimiter = createDelimiter(language as SupportedLanguage, auto, access);
+    const newDelimiter = createDelimiter(language as SupportedLanguage, auto, access, block.createdAt);
 
     dispatch({
         changes: {
@@ -49,6 +51,57 @@ function replaceBlockDelimiter(
     });
 
     return true;
+}
+
+export function computeDeleteBlockChange(
+    state: any,
+    block: Block,
+    options: EditorOptions,
+) {
+    const blocks = state.field(blockState);
+
+    if (blocks.length <= 1) {
+        const replacement = getBlockDelimiter(
+            options.defaultBlockToken,
+            options.defaultBlockAutoDetect,
+            getDefaultAccess(options),
+            createBlockCreatedAt(),
+        );
+
+        return {
+            changes: {
+                from: block.range.from,
+                to: block.range.to,
+                insert: replacement,
+            },
+            selection: replacement.length,
+        };
+    }
+
+    const blockIndex = blocks.indexOf(block);
+    if (blockIndex === blocks.length - 1) {
+        const previousBlock = blocks[blockIndex - 1];
+        return {
+            changes: {
+                from: block.range.from,
+                to: block.range.to,
+                insert: "",
+            },
+            selection: previousBlock.content.to,
+        };
+    }
+
+    const nextBlock = blocks[blockIndex + 1];
+    const removedLength = block.range.to - block.range.from;
+
+    return {
+        changes: {
+            from: block.range.from,
+            to: block.range.to,
+            insert: "",
+        },
+        selection: Math.max(0, nextBlock.content.from - removedLength),
+    };
 }
 
 /**
@@ -63,11 +116,13 @@ export const insertNewBlockAtCursor = (options: EditorOptions): Command => ({ st
             currentBlock.language.name as SupportedLanguage,
             currentBlock.language.auto,
             currentBlock.access,
+            createBlockCreatedAt(),
         )
         : getBlockDelimiter(
             options.defaultBlockToken,
             options.defaultBlockAutoDetect,
             getDefaultAccess(options),
+            createBlockCreatedAt(),
         );
 
     dispatch(state.replaceSelection(delimText), {
@@ -91,6 +146,7 @@ export const addNewBlockBeforeCurrent = (options: EditorOptions): Command => ({ 
         options.defaultBlockToken,
         options.defaultBlockAutoDetect,
         getDefaultAccess(options),
+        createBlockCreatedAt(),
     );
 
     dispatch(state.update({
@@ -121,6 +177,7 @@ export const addNewBlockAfterCurrent = (options: EditorOptions): Command => ({ s
         options.defaultBlockToken,
         options.defaultBlockAutoDetect,
         getDefaultAccess(options),
+        createBlockCreatedAt(),
     );
 
     dispatch(state.update({
@@ -151,6 +208,7 @@ export const addNewBlockBeforeFirst = (options: EditorOptions): Command => ({ st
         options.defaultBlockToken,
         options.defaultBlockAutoDetect,
         getDefaultAccess(options),
+        createBlockCreatedAt(),
     );
 
     dispatch(state.update({
@@ -181,6 +239,7 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
         options.defaultBlockToken,
         options.defaultBlockAutoDetect,
         getDefaultAccess(options),
+        createBlockCreatedAt(),
     );
 
     dispatch(state.update({
@@ -194,6 +253,28 @@ export const addNewBlockAfterLast = (options: EditorOptions): Command => ({ stat
         scrollIntoView: true,
         userEvent: USER_EVENTS.INPUT,
     }));
+
+    return true;
+};
+
+/**
+ * 在最后一个块之后添加新块，并滚动到底部聚焦新块
+ */
+export const addNewBlockAfterLastAndScrollDown = (options: EditorOptions): Command => (view) => {
+    const inserted = addNewBlockAfterLast(options)(view);
+    if (!inserted) {
+        return false;
+    }
+
+    const scrollToBottom = () => {
+        const scroller = view.scrollDOM;
+        scroller.scrollTop = scroller.scrollHeight;
+        view.focus();
+    };
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(scrollToBottom);
+    });
 
     return true;
 };
@@ -348,31 +429,11 @@ export const deleteBlock = (_options: EditorOptions): Command => ({ state, dispa
     const block = getActiveNoteBlock(state);
     if (!block) return false;
 
-    const blocks = state.field(blockState);
-    if (blocks.length <= 1) return false;
-
-    const blockIndex = blocks.indexOf(block);
-    let newCursorPos: number;
-
-    if (blockIndex === blocks.length - 1) {
-        const prevBlock = blocks[blockIndex - 1];
-        newCursorPos = prevBlock.content.to;
-    } else {
-        const nextBlock = blocks[blockIndex + 1];
-        const blockLength = block.range.to - block.range.from;
-        newCursorPos = nextBlock.content.from - blockLength;
-    }
-
-    const docLengthAfterDelete = state.doc.length - (block.range.to - block.range.from);
-    newCursorPos = Math.max(0, Math.min(newCursorPos, docLengthAfterDelete));
+    const transactionSpec = computeDeleteBlockChange(state, block, _options);
 
     dispatch(state.update({
-        changes: {
-            from: block.range.from,
-            to: block.range.to,
-            insert: ""
-        },
-        selection: EditorSelection.cursor(newCursorPos),
+        changes: transactionSpec.changes,
+        selection: EditorSelection.cursor(transactionSpec.selection),
         annotations: [codeBlockEvent.of(DELETE_BLOCK)]
     }, {
         scrollIntoView: true,

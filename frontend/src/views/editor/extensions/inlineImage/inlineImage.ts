@@ -5,7 +5,6 @@ import copyDarkIconUrl from '@/assets/icons/copy-dark.svg';
 import pencilWhiteIconUrl from '@/assets/icons/pencil-white.svg';
 import resizeHandleDarkUrl from '@/assets/icons/resize-handle-se-dark.png';
 import resizeHandleLightUrl from '@/assets/icons/resize-handle-se-light.png';
-import trashWhiteIconUrl from '@/assets/icons/trash-white.svg';
 import {parseInlineImages} from './inlineImageParsing';
 import {InlineImageWidget} from './inlineImageWidget';
 import type {ParsedInlineImage} from './types';
@@ -62,6 +61,9 @@ function createInlineImageTheme(): Extension {
       '--snapped-outline-color': '#39a363',
       '--handle-color': '#ccc',
       '--image-border-color': '#c9c9c9',
+      '--image-missing-bg-color': '#f5f7fa',
+      '--image-missing-border-color': '#d6dce5',
+      '--image-missing-text-color': '#667085',
       padding: '6px 2px',
       display: 'inline-block',
       position: 'relative',
@@ -72,6 +74,9 @@ function createInlineImageTheme(): Extension {
       '--snapped-outline-color': '#39a363',
       '--handle-color': '#192736',
       '--image-border-color': '#252525',
+      '--image-missing-bg-color': '#161d27',
+      '--image-missing-border-color': '#303946',
+      '--image-missing-text-color': '#9aa7b6',
     },
     '.inline-image.folded': {
       padding: '0',
@@ -109,6 +114,7 @@ function createInlineImageTheme(): Extension {
       border: '3px solid var(--outline-color)',
       boxSizing: 'border-box',
       pointerEvents: 'none',
+      zIndex: '3',
     },
     '.inline-image .buttons-container': {
       position: 'absolute',
@@ -123,6 +129,7 @@ function createInlineImageTheme(): Extension {
       overflow: 'hidden',
       containerType: 'inline-size',
       pointerEvents: 'none',
+      zIndex: '2',
     },
     '.inline-image .buttons-container button': {
       height: 'calc(24px * var(--button-scale, 1))',
@@ -160,14 +167,6 @@ function createInlineImageTheme(): Extension {
     },
     '.inline-image .buttons-container button.draw': {
       backgroundImage: `url("${pencilWhiteIconUrl}")`,
-    },
-    '.inline-image .buttons-container button.delete': {
-      backgroundImage: `url("${trashWhiteIconUrl}")`,
-      padding: 'calc(3px * var(--button-scale, 1)) calc(8px * var(--button-scale, 1)) calc(3px * var(--button-scale, 1)) calc(22px * var(--button-scale, 1))',
-      backgroundColor: '#8f3d3d',
-    },
-    '.inline-image .buttons-container button.delete:hover': {
-      backgroundColor: '#7c3131',
     },
     '.inline-image.selected': {
       '--handle-color': 'var(--outline-color)',
@@ -223,6 +222,82 @@ function createInlineImageTheme(): Extension {
     },
     '.inline-image.resizing.snapped': {
       '--outline-color': 'var(--snapped-outline-color)',
+    },
+    '.inline-image.image-missing img': {
+      opacity: '0',
+    },
+    '.inline-image .missing-placeholder': {
+      display: 'none',
+      position: 'absolute',
+      inset: '0',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      gap: '6px',
+      padding: '10px',
+      boxSizing: 'border-box',
+      backgroundColor: 'var(--image-missing-bg-color)',
+      color: 'var(--image-missing-text-color)',
+      border: '1px dashed var(--image-missing-border-color)',
+      textAlign: 'center',
+      fontSize: '12px',
+      lineHeight: '1.4',
+      pointerEvents: 'none',
+      zIndex: '1',
+    },
+    '.inline-image.image-missing .missing-placeholder': {
+      display: 'block',
+    },
+    '.inline-image.image-missing .buttons-container': {
+      display: 'none',
+    },
+    '.inline-image.image-missing .resize-handle': {
+      display: 'none',
+    },
+    '.inline-image .missing-placeholder .missing-content': {
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexDirection: 'column',
+      gap: '6px',
+      width: 'calc(100% - 20px)',
+      maxWidth: '100%',
+      transform: 'translate(-50%, -50%)',
+    },
+    '.inline-image .missing-placeholder .missing-icon': {
+      display: 'block',
+      width: '32px',
+      height: '32px',
+      color: 'var(--image-missing-text-color)',
+      opacity: '0.75',
+    },
+    '.inline-image .missing-placeholder .missing-icon svg': {
+      display: 'block',
+      width: '100%',
+      height: '100%',
+    },
+    '.inline-image .missing-placeholder .missing-text': {
+      maxWidth: '100%',
+      textAlign: 'center',
+      wordBreak: 'break-word',
+    },
+    '.inline-image.folded .missing-placeholder': {
+      padding: '0',
+      gap: '0',
+    },
+    '.inline-image.folded .missing-placeholder .missing-content': {
+      width: '100%',
+      gap: '0',
+    },
+    '.inline-image.folded .missing-placeholder .missing-icon': {
+      width: '14px',
+      height: '14px',
+    },
+    '.inline-image.folded .missing-placeholder .missing-text': {
+      display: 'none',
     },
   });
 }

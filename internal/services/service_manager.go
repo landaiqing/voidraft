@@ -29,6 +29,7 @@ type ServiceManager struct {
 	selfUpdateService   *SelfUpdateService
 	translationService  *TranslationService
 	themeService        *ThemeService
+	currencyService     *CurrencyService
 	badgeService        *dock.DockService
 	notificationService *notifications.NotificationService
 	testService         *TestService
@@ -50,7 +51,7 @@ func NewServiceManager() *ServiceManager {
 	migrationService := NewMigrationService(databaseService, configService, logger)
 	mediaSyncService := NewMediaSyncService(configService, logger, databaseService)
 	mediaHTTPService := NewMediaHTTPService(configService, logger, databaseService, mediaSyncService)
-	documentService := NewDocumentService(databaseService, logger, mediaSyncService)
+	documentService := NewDocumentService(databaseService, logger, mediaSyncService, configService)
 	windowSnapService := NewWindowSnapService(logger, configService)
 	windowService := NewWindowService(logger, documentService, windowSnapService)
 	systemService := NewSystemService(logger)
@@ -63,6 +64,7 @@ func NewServiceManager() *ServiceManager {
 	selfUpdateService := NewSelfUpdateService(configService, badgeService, notificationService, logger)
 	translationService := NewTranslationService(logger)
 	themeService := NewThemeService(databaseService, logger)
+	currencyService := NewCurrencyService(configService, logger)
 	syncService := NewSyncService(configService, databaseService, logger)
 	httpClientService := NewHttpClientService(logger)
 	testService := NewTestService(badgeService, notificationService, logger)
@@ -86,6 +88,7 @@ func NewServiceManager() *ServiceManager {
 		selfUpdateService:   selfUpdateService,
 		translationService:  translationService,
 		themeService:        themeService,
+		currencyService:     currencyService,
 		badgeService:        badgeService,
 		notificationService: notificationService,
 		testService:         testService,
@@ -116,6 +119,7 @@ func (sm *ServiceManager) GetServices() []application.Service {
 		application.NewService(sm.selfUpdateService),
 		application.NewService(sm.translationService),
 		application.NewService(sm.themeService),
+		application.NewService(sm.currencyService),
 		application.NewService(sm.badgeService),
 		application.NewService(sm.notificationService),
 		application.NewService(sm.testService),

@@ -5,6 +5,7 @@ import {useSystemStore} from '@/stores/systemStore';
 import {useKeybindingStore} from '@/stores/keybindingStore';
 import {useThemeStore} from '@/stores/themeStore';
 import {useUpdateStore} from '@/stores/updateStore';
+import {useCurrencyStore} from '@/stores/currencyStore';
 import WindowTitleBar from '@/components/titlebar/WindowTitleBar.vue';
 import ToastContainer from '@/components/toast/ToastContainer.vue';
 import {useTranslationStore} from "@/stores/translationStore";
@@ -17,6 +18,7 @@ const keybindingStore = useKeybindingStore();
 const themeStore = useThemeStore();
 const updateStore = useUpdateStore();
 const translationStore = useTranslationStore();
+const currencyStore = useCurrencyStore();
 const {locale} = useI18n();
 
 onBeforeMount(async () => {
@@ -33,6 +35,8 @@ onBeforeMount(async () => {
 
   // 启动时检查更新
   await updateStore.checkOnStartup();
+
+  await currencyStore.initCurrencySync();
 });
 </script>
 

@@ -2,8 +2,10 @@ package snapshot
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,6 +14,7 @@ import (
 )
 
 const manifestFileName = "manifest.json"
+const encodedRecordIDPrefix = "__id__"
 
 // Store 描述快照落盘与读取能力。
 type Store interface {
@@ -106,14 +109,15 @@ func (s *FileStore) Write(ctx context.Context, root string, snap *Snapshot) erro
 		})
 
 		for _, record := range records {
+			recordFileName := encodeRecordID(record.ID)
 			if !record.HasBlobs() {
-				if err := writeJSON(filepath.Join(kindDir, record.ID+".json"), record.Values); err != nil {
+				if err := writeJSON(filepath.Join(kindDir, recordFileName+".json"), record.Values); err != nil {
 					return err
 				}
 				continue
 			}
 
-			recordDir := filepath.Join(kindDir, record.ID)
+			recordDir := filepath.Join(kindDir, recordFileName)
 			if err := os.MkdirAll(recordDir, 0755); err != nil {
 				return err
 			}
@@ -217,7 +221,7 @@ func (s *FileStore) readFlatRecord(path string, kind string) (Record, error) {
 	}
 
 	id := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	return NewRecord(kind, id, values, nil)
+	return NewRecord(kind, decodeRecordID(id), values, nil)
 }
 
 // readBlobRecord 读取目录型记录。
@@ -240,7 +244,26 @@ func (s *FileStore) readBlobRecord(root string, kind string) (Record, error) {
 		blobFiles[entry.Name()] = filepath.Join(root, entry.Name())
 	}
 
-	return NewRecordWithBlobFiles(kind, filepath.Base(root), values, blobFiles)
+	return NewRecordWithBlobFiles(kind, decodeRecordID(filepath.Base(root)), values, blobFiles)
+}
+
+func encodeRecordID(id string) string {
+	return encodedRecordIDPrefix + base64.RawURLEncoding.EncodeToString([]byte(id))
+}
+
+func decodeRecordID(name string) string {
+	if strings.HasPrefix(name, encodedRecordIDPrefix) {
+		decoded, err := base64.RawURLEncoding.DecodeString(strings.TrimPrefix(name, encodedRecordIDPrefix))
+		if err == nil {
+			return string(decoded)
+		}
+	}
+
+	id, err := url.PathUnescape(name)
+	if err != nil {
+		return name
+	}
+	return id
 }
 
 // readValues 读取 JSON 字段集合。

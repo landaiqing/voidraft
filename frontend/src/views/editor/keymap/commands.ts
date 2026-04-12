@@ -2,6 +2,7 @@ import {closeSearchPanel, openSearchPanel,} from '@codemirror/search';
 import {
     addNewBlockAfterCurrent,
     addNewBlockAfterLast,
+    addNewBlockAfterLastAndScrollDown,
     addNewBlockBeforeCurrent,
     deleteBlock,
     formatCurrentBlock,
@@ -12,6 +13,7 @@ import {
     selectNextBlock,
     selectPreviousBlock
 } from '../extensions/codeblock/commands';
+import { openCommandPaletteCommand } from '../extensions/commandPalette';
 import {selectAll} from '../extensions/codeblock/selectAll';
 import {deleteLineCommand} from '../extensions/codeblock/deleteLine';
 import {moveLineDown, moveLineUp} from '../extensions/codeblock/moveLines';
@@ -76,17 +78,34 @@ import {foldAll, foldCode, unfoldAll, unfoldCode} from '@codemirror/language';
 import i18n from '@/i18n';
 import {KeyBindingName} from '@/../bindings/voidraft/internal/models/models';
 import {copyBlockImageCommand} from '../extensions/blockImage';
+import {useConfigStore} from '@/stores/configStore';
+import type {Command} from '@codemirror/view';
+import type {EditorOptions} from '../extensions/codeblock/types';
 
-const defaultBlockExtensionOptions = {
-    defaultBlockToken: 'text',
-    defaultBlockAutoDetect: true,
-};
+function getDefaultBlockExtensionOptions(): EditorOptions {
+    const configStore = useConfigStore();
+    return {
+        defaultBlockToken: configStore.config.editing.defaultBlockLanguage || 'text',
+        defaultBlockAutoDetect: configStore.config.editing.defaultBlockAutoDetect !== false,
+    };
+}
+
+function createConfiguredBlockCommand(factory: (options: EditorOptions) => Command): Command {
+    return (view) => {
+        return factory(getDefaultBlockExtensionOptions())(view);
+    };
+}
 
 /**
  * 前端命令注册表
  * 将后端定义的key字段映射到具体的前端方法和翻译键
  */
-export const commands: Record<string, { handler: any; descriptionKey: string }> = {
+export interface RegisteredCommandDefinition {
+    handler: any;
+    descriptionKey: string;
+}
+
+export const commands: Record<string, RegisteredCommandDefinition> = {
     [KeyBindingName.ShowSearch]: {
         handler: openSearchPanel,
         descriptionKey: 'keybindings.commands.showSearch'
@@ -95,20 +114,28 @@ export const commands: Record<string, { handler: any; descriptionKey: string }> 
         handler: closeSearchPanel,
         descriptionKey: 'keybindings.commands.hideSearch'
     },
+    [KeyBindingName.OpenCommandPalette]: {
+        handler: openCommandPaletteCommand,
+        descriptionKey: 'keybindings.commands.openCommandPalette'
+    },
     [KeyBindingName.BlockSelectAll]: {
         handler: selectAll,
         descriptionKey: 'keybindings.commands.blockSelectAll'
     },
     [KeyBindingName.BlockAddAfterCurrent]: {
-        handler: addNewBlockAfterCurrent(defaultBlockExtensionOptions),
+        handler: createConfiguredBlockCommand(addNewBlockAfterCurrent),
         descriptionKey: 'keybindings.commands.blockAddAfterCurrent'
     },
     [KeyBindingName.BlockAddAfterLast]: {
-        handler: addNewBlockAfterLast(defaultBlockExtensionOptions),
+        handler: createConfiguredBlockCommand(addNewBlockAfterLast),
         descriptionKey: 'keybindings.commands.blockAddAfterLast'
     },
+    [KeyBindingName.BlockAddAfterLastAndScrollDown]: {
+        handler: createConfiguredBlockCommand(addNewBlockAfterLastAndScrollDown),
+        descriptionKey: 'keybindings.commands.blockAddAfterLastAndScrollDown'
+    },
     [KeyBindingName.BlockAddBeforeCurrent]: {
-        handler: addNewBlockBeforeCurrent(defaultBlockExtensionOptions),
+        handler: createConfiguredBlockCommand(addNewBlockBeforeCurrent),
         descriptionKey: 'keybindings.commands.blockAddBeforeCurrent'
     },
     [KeyBindingName.BlockGotoPrevious]: {
@@ -128,7 +155,7 @@ export const commands: Record<string, { handler: any; descriptionKey: string }> 
         descriptionKey: 'keybindings.commands.blockSelectNext'
     },
     [KeyBindingName.BlockDelete]: {
-        handler: deleteBlock(defaultBlockExtensionOptions),
+        handler: createConfiguredBlockCommand(deleteBlock),
         descriptionKey: 'keybindings.commands.blockDelete'
     },
     [KeyBindingName.BlockMoveUp]: {
@@ -441,4 +468,8 @@ export const isCommandRegistered = (key: string): boolean => {
  */
 export const getRegisteredCommands = (): string[] => {
     return Object.keys(commands);
+};
+
+export const getRegisteredCommandEntries = (): [string, RegisteredCommandDefinition][] => {
+    return Object.entries(commands);
 };

@@ -45,6 +45,7 @@ import {toml} from "@codemirror/legacy-modes/mode/toml";
 import {elixir} from "codemirror-lang-elixir";
 import {dockerFile} from "@codemirror/legacy-modes/mode/dockerfile";
 import {lua} from "@codemirror/legacy-modes/mode/lua";
+import {mathjsLanguage} from "@/views/editor/language/mathjs";
 import {SupportedLanguage} from '../types';
 
 import typescriptPlugin from "prettier/plugins/typescript";
@@ -221,7 +222,7 @@ export const LANGUAGES: LanguageInfo[] = [
         parser: "lua",
         plugins: [luaPrettierPlugin]
     }),
-    new LanguageInfo("math", "Math", null, ["math"]),
+    new LanguageInfo("math", "Math", mathjsLanguage.parser, ["math"]),
     new LanguageInfo("lezer", "Lezer", lezerLanguage.parser, ["lezer"]),
     new LanguageInfo("liquid", "Liquid", liquidLanguage.parser, ["liquid"]),
     new LanguageInfo("wast", "WebAssembly", wastLanguage.parser, ["wast"]),

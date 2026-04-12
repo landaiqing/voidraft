@@ -3,7 +3,7 @@
  */
 
 import { EditorState } from '@codemirror/state';
-import { syntaxTree, ensureSyntaxTree } from '@codemirror/language';
+import { syntaxTree, syntaxTreeAvailable } from '@codemirror/language';
 import type { Tree } from '@lezer/common';
 import {
     Block as BlockNode,
@@ -16,6 +16,7 @@ import {
     type BlockDelimiterInfo,
     type SupportedLanguage,
     AUTO_DETECT_SUFFIX,
+    BLOCK_CREATED_AT_PREFIX,
     DELIMITER_PREFIX,
     DELIMITER_REGEX,
     DELIMITER_START,
@@ -33,6 +34,7 @@ function getDefaultDelimiterInfo(): BlockDelimiterInfo {
         language: DEFAULT_LANGUAGE,
         auto: false,
         access: DEFAULT_ACCESS,
+        createdAt: undefined,
     };
 }
 
@@ -81,6 +83,7 @@ function collectBlocksFromTree(tree: Tree, state: EditorState): Block[] | null {
                     name: delimiterInfo.language,
                     auto: delimiterInfo.auto,
                 },
+                createdAt: delimiterInfo.createdAt,
                 access: delimiterInfo.access,
                 content,
                 delimiter,
@@ -151,6 +154,7 @@ export function getBlocksFromString(state: EditorState): Block[] {
                 name: delimiterInfo.language,
                 auto: delimiterInfo.auto,
             },
+            createdAt: delimiterInfo.createdAt,
             access: delimiterInfo.access,
             content: { from: contentStart, to: contentEnd },
             delimiter: { from: blockStart, to: delimiterEnd + suffixLength },
@@ -174,14 +178,8 @@ export function getBlocksFromString(state: EditorState): Block[] {
  * 获取文档中的所有块
  */
 export function getBlocks(state: EditorState): Block[] {
-    let blocks = getBlocksFromSyntaxTree(state);
-    if (blocks) {
-        return blocks;
-    }
-
-    const ensuredTree = ensureSyntaxTree(state, state.doc.length, 200);
-    if (ensuredTree) {
-        blocks = collectBlocksFromTree(ensuredTree, state);
+    if (syntaxTreeAvailable(state, state.doc.length)) {
+        const blocks = getBlocksFromSyntaxTree(state);
         if (blocks) {
             return blocks;
         }
@@ -257,13 +255,15 @@ export function createDelimiter(
     language: SupportedLanguage,
     autoDetect = false,
     access: BlockAccess = DEFAULT_ACCESS,
+    createdAt?: string,
 ): string {
     const suffixes: string[] = [];
     if (autoDetect) {
         suffixes.push(AUTO_DETECT_SUFFIX);
     }
     suffixes.push(access === 'read' ? READONLY_SUFFIX : WRITABLE_SUFFIX);
-    return `${DELIMITER_PREFIX}${language}${suffixes.join('')}${DELIMITER_SUFFIX}`;
+    const metadata = createdAt ? `${BLOCK_CREATED_AT_PREFIX}${createdAt}` : '';
+    return `${DELIMITER_PREFIX}${language}${suffixes.join('')}${metadata}${DELIMITER_SUFFIX}`;
 }
 
 /**
@@ -282,7 +282,7 @@ export function parseDelimiter(delimiterText: string): BlockDelimiterInfo | null
         return null;
     }
 
-    const [, languageName, rawFlags = ''] = match;
+    const [, languageName, rawFlags = '', createdAt] = match;
     const validLanguage = LANGUAGES.some(lang => lang.token === languageName)
         ? languageName as SupportedLanguage
         : DEFAULT_LANGUAGE;
@@ -307,6 +307,7 @@ export function parseDelimiter(delimiterText: string): BlockDelimiterInfo | null
         language: validLanguage,
         auto,
         access,
+        createdAt: createdAt || undefined,
     };
 }
 

@@ -13,6 +13,10 @@ import TranslatorDialog from './extensions/translator/TranslatorDialog.vue';
 import {translatorManager} from './extensions/translator/manager';
 import DrawImageDialog from '@/components/inlineImage/DrawImageDialog.vue';
 import {inlineImageDrawManager} from './extensions/inlineImage/manager';
+import MoveBlockDialog from './extensions/blockMove/MoveBlockDialog.vue';
+import {moveBlockManager} from './extensions/blockMove/manager';
+import CommandPaletteDialog from './extensions/commandPalette/CommandPaletteDialog.vue';
+import {commandPaletteManager} from './extensions/commandPalette/manager';
 
 
 const editorStore = useEditorStore();
@@ -47,6 +51,8 @@ onBeforeUnmount(() => {
   contextMenuManager.destroy();
   translatorManager.destroy();
   inlineImageDrawManager.destroy();
+  moveBlockManager.destroy();
+  commandPaletteManager.destroy();
 });
 </script>
 
@@ -67,6 +73,10 @@ onBeforeUnmount(() => {
     <TranslatorDialog :portal-target="editorElement"/>
     <!-- 图片绘图弹窗 -->
     <DrawImageDialog :portal-target="editorContainerElement"/>
+    <!-- 移动块弹窗 -->
+    <MoveBlockDialog :portal-target="editorContainerElement"/>
+    <!-- 命令面板 -->
+    <CommandPaletteDialog :portal-target="editorContainerElement"/>
   </div>
 </template>
 

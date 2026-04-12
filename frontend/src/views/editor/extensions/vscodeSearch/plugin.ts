@@ -1,5 +1,5 @@
 import { search } from "@codemirror/search";
-import { EditorView, Panel } from "@codemirror/view";
+import { EditorView, Panel, type ViewUpdate } from "@codemirror/view";
 import { StateEffect } from "@codemirror/state";
 import { createApp, App } from "vue";
 import SearchPanel from "./SearchPanel.vue";
@@ -13,6 +13,8 @@ function createSearchPanel(view: EditorView): Panel {
     dom.className = "vscode-search-container";
     
     let app: App | null = null;
+    let vm: { onViewUpdate?: (update: ViewUpdate) => void } | null = null;
+    let mounted = false;
     
     return {
         dom,
@@ -20,12 +22,20 @@ function createSearchPanel(view: EditorView): Panel {
         mount() {
             // Mount Vue component after panel is added to DOM
             app = createApp(SearchPanel, { view });
-            app.mount(dom);
+            vm = app.mount(dom) as { onViewUpdate?: (update: ViewUpdate) => void };
+            mounted = true;
+        },
+        update(update) {
+            vm?.onViewUpdate?.(update);
         },
         destroy() {
             // Cleanup Vue component
-            app?.unmount();
+            if (mounted) {
+                app?.unmount();
+            }
             app = null;
+            vm = null;
+            mounted = false;
         }
     };
 }

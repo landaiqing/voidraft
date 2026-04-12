@@ -9,6 +9,7 @@ import {useWindowStore} from '@/stores/windowStore';
 import {useSystemStore} from '@/stores/systemStore';
 import {useRouter} from 'vue-router';
 import BlockLanguageSelector from './BlockLanguageSelector.vue';
+import BlockMetaTools from './BlockMetaTools.vue';
 import DocumentSelector from './DocumentSelector.vue';
 import {getActiveNoteBlock} from '@/views/editor/extensions/codeblock/state';
 import {getLanguage} from '@/views/editor/extensions/codeblock/lang-parser/languages';
@@ -230,11 +231,7 @@ const statsData = computed(() => {
         {{ config.editing.fontSize }}px
       </span>
 
-      <!-- 文档选择器 -->
-      <DocumentSelector v-if="windowStore.isMainWindow"/>
-
-      <!-- 块语言选择器 -->
-      <BlockLanguageSelector/>
+      <BlockMetaTools/>
 
       <!-- 格式化按钮 - 支持点击操作 -->
       <div
@@ -253,6 +250,14 @@ const statsData = computed(() => {
           <path d="M17 19h4"/>
         </svg>
       </div>
+
+      <!-- 文档选择器 -->
+      <DocumentSelector v-if="windowStore.isMainWindow"/>
+
+      <!-- 块语言选择器 -->
+      <BlockLanguageSelector/>
+
+
 
       <!-- 更新按钮 - 根据状态显示不同图标 -->
       <div

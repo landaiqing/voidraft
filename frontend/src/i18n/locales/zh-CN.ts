@@ -43,6 +43,33 @@ export default {
         openInNewWindow: '在新窗口中打开',
         alreadyOpenInNewWindow: '已在新窗口中打开',
     },
+    blockTools: {
+        moveBlock: '移动当前块',
+        foldBlock: '折叠当前块',
+        unfoldBlock: '展开当前块',
+        blockInfo: '当前块信息',
+        language: '语言',
+        access: '权限',
+        autoDetect: '自动识别',
+        readonly: '只读',
+        writable: '可写',
+        enabled: '开启',
+        disabled: '关闭',
+        createdAt: '创建时间'
+    },
+    blockMove: {
+        openDialog: '移动当前块到其他文档',
+        dialogTitle: '移动当前块',
+        searchPlaceholder: '搜索目标文档，或输入新文档名...',
+        createAndMove: '创建并移动到 “{title}”',
+        noDocumentFound: '没有可移动到的文档',
+        moveSuccess: '块已移动',
+        moveFailed: '移动块失败'
+    },
+    commandPalette: {
+        placeholder: '输入命令或快捷键...',
+        noResult: '没有匹配的命令'
+    },
     languages: {
         'zh-CN': '简体中文',
         'en-US': 'English'
@@ -81,6 +108,7 @@ export default {
         commands: {
             showSearch: '显示搜索面板',
             hideSearch: '隐藏搜索面板',
+            openCommandPalette: '打开命令面板',
             searchToggleCase: '切换大小写敏感匹配',
             searchToggleWord: '切换整词匹配',
             searchToggleRegex: '切换正则表达式匹配',
@@ -89,6 +117,7 @@ export default {
             blockSelectAll: '块内选择全部',
             blockAddAfterCurrent: '在当前块后添加新块',
             blockAddAfterLast: '在最后添加新块',
+            blockAddAfterLastAndScrollDown: '在最后添加新块并滚动到底部',
             blockAddBeforeCurrent: '在当前块前添加新块',
             blockGotoPrevious: '跳转到上一个块',
             blockGotoNext: '跳转到下一个块',
@@ -225,6 +254,12 @@ export default {
         presetTheme: '预设主题',
         saveOptions: '保存选项',
         autoSaveDelay: '自动保存延迟(毫秒)',
+        defaultBlockSettings: '默认块设置',
+        defaultBlockLanguage: '默认块语言',
+        defaultBlockAutoDetect: '默认块自动识别',
+        blockSeparatorHeight: '块分隔符高度',
+        cursorBlinkRate: '光标闪烁频率',
+        cursorBlinkOff: '关闭',
         updateSettings: '更新设置',
         autoCheckUpdates: '自动检查更新',
         autoCheckUpdatesDescription: '应用启动时自动检查更新',
@@ -429,6 +464,8 @@ export default {
         copied: '已复制',
         draw: '绘制',
         delete: '删除',
+        missing: '图片资源不存在',
+        imageAlt: '内联图片',
         drawDialog: {
             title: '图片标注',
             select: '选择',

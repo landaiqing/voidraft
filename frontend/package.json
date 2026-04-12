@@ -19,7 +19,8 @@
     "app:dev": "cd .. &&wails3 dev",
     "app:build": "cd .. && wails3 task build",
     "app:package": "cd .. && wails3 package",
-    "app:generate": "cd .. && wails3 generate bindings -ts"
+    "app:generate": "cd .. && wails3 generate bindings -ts",
+    "build:mathjs-parser": "node src/views/editor/language/mathjs/build-parser.js"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.1",

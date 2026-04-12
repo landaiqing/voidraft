@@ -2,7 +2,7 @@
  * Block 状态管理
  */
 
-import { StateField, EditorState } from '@codemirror/state';
+import { StateField, EditorState, type SelectionRange } from '@codemirror/state';
 import { Block } from './types';
 import { getBlocks } from './parser';
 
@@ -70,4 +70,38 @@ export function getNoteBlockFromPos(state: EditorState, pos: number): Block | un
   return state.field(blockState).find(block => 
     block.range.from <= pos && block.range.to >= pos
   );
-} 
+}
+
+/**
+ * 获取指定范围内的所有块
+ */
+export function getNoteBlocksBetween(state: EditorState, from: number, to: number): Block[] {
+  if (!state.field(blockState, false)) {
+    return [];
+  }
+
+  return state.field(blockState).filter(block =>
+    block.range.from < to && block.range.to >= from
+  );
+}
+
+/**
+ * 根据选择范围集获取涉及的所有块
+ */
+export function getNoteBlocksFromRangeSet(state: EditorState, ranges: readonly SelectionRange[]): Block[] {
+  const blocks: Block[] = [];
+  const seenBlockStarts = new Set<number>();
+
+  for (const range of ranges) {
+    for (const block of getNoteBlocksBetween(state, range.from, range.to)) {
+      if (seenBlockStarts.has(block.range.from)) {
+        continue;
+      }
+
+      seenBlockStarts.add(block.range.from);
+      blocks.push(block);
+    }
+  }
+
+  return blocks;
+}

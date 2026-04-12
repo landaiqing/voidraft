@@ -32,17 +32,23 @@ type DocumentSaveResult struct {
 
 // DocumentService 文档服务
 type DocumentService struct {
-	db        *DatabaseService
-	logger    *log.LogService
-	mediaSync *MediaSyncService
+	db            *DatabaseService
+	logger        *log.LogService
+	mediaSync     *MediaSyncService
+	configService *ConfigService
 }
 
 // NewDocumentService 创建文档服务
-func NewDocumentService(db *DatabaseService, logger *log.LogService, mediaSync *MediaSyncService) *DocumentService {
+func NewDocumentService(db *DatabaseService, logger *log.LogService, mediaSync *MediaSyncService, configService *ConfigService) *DocumentService {
 	if logger == nil {
 		logger = log.New()
 	}
-	return &DocumentService{db: db, logger: logger, mediaSync: mediaSync}
+	return &DocumentService{
+		db:            db,
+		logger:        logger,
+		mediaSync:     mediaSync,
+		configService: configService,
+	}
 }
 
 // ServiceStartup 服务启动
@@ -74,12 +80,26 @@ func (s *DocumentService) GetDocumentByID(ctx context.Context, id int) (*ent.Doc
 func (s *DocumentService) CreateDocument(ctx context.Context, title string) (*ent.Document, error) {
 	doc, err := s.db.Client.Document.Create().
 		SetTitle(title).
-		SetContent(models.DefaultDocumentContent).
+		SetContent(s.getDefaultDocumentContent()).
 		Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("create document error: %w", err)
 	}
 	return doc, nil
+}
+
+func (s *DocumentService) getDefaultDocumentContent() string {
+	if s.configService == nil {
+		return models.DefaultDocumentContent
+	}
+
+	defaultLanguage, _ := s.configService.Get("editing.defaultBlockLanguage").(string)
+	defaultAutoDetect, ok := s.configService.Get("editing.defaultBlockAutoDetect").(bool)
+	if !ok {
+		defaultAutoDetect = true
+	}
+
+	return models.BuildDefaultDocumentContent(defaultLanguage, defaultAutoDetect)
 }
 
 // UpdateDocumentContent 更新文档内容

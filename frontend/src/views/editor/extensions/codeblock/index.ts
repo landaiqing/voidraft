@@ -26,6 +26,7 @@ import {createLanguageDetection} from './lang-detect';
 import {SupportedLanguage} from './types';
 import {getMathBlockExtensions} from './mathBlock';
 import {createCursorProtection} from './cursorProtection';
+import {createBlockFoldExtension} from './fold';
 
 /**
  * 代码块扩展配置选项
@@ -89,6 +90,7 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
         showBackground = true,
         enableAutoDetection = true,
         defaultLanguage = 'text',
+        separatorHeight = 12,
     } = options;
 
     return [
@@ -107,7 +109,8 @@ export function createCodeBlockExtension(options: CodeBlockOptions = {}): Extens
 
         // 视觉装饰系统
         ...getBlockDecorationExtensions({
-            showBackground
+            showBackground,
+            separatorHeight,
         }),
 
         // 光标保护（防止方向键移动到分隔符上）
@@ -213,11 +216,26 @@ export {
 
 // 行号相关
 export {getBlockLineFromPos, blockLineNumbers};
+export {
+    applyBlockSeparatorHeightStyle,
+    updateBlockSeparatorHeight,
+} from './decorations';
 
 // 数学块功能
 export {
     getMathBlockExtensions
 } from './mathBlock';
+
+export {
+    canFoldBlock,
+    createBlockFoldExtension,
+    foldBlockCommand,
+    getFoldBlockRange,
+    isBlockFolded,
+    toggleActiveBlockFold,
+    toggleFoldBlockCommand,
+    unfoldBlockCommand,
+} from './fold';
 
 // 光标保护功能
 export {

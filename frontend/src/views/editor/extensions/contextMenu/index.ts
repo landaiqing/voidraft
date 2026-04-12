@@ -11,6 +11,7 @@ import type {MenuSchemaNode} from './menuSchema';
 import {buildRegisteredMenu, createMenuContext, registerMenuNodes} from './menuSchema';
 import {blockImageMenuNodes} from '../blockImage/contextMenu';
 import {blockReadonlyMenuNodes} from '../blockReadonly/contextMenu';
+import {codeBlockMenuNodes} from '../codeblock/contextMenu';
 
 
 function t(key: string): string {
@@ -109,6 +110,7 @@ function ensureBuiltinMenuRegistered(): void {
     if (builtinMenuRegistered) return;
     registerMenuNodes([
         ...builtinMenuNodes(),
+        ...codeBlockMenuNodes,
         ...blockReadonlyMenuNodes,
         ...blockImageMenuNodes,
     ]);

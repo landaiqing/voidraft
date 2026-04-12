@@ -14,6 +14,7 @@ declare module 'vue' {
     AccordionContainer: typeof import('./src/components/accordion/AccordionContainer.vue')['default']
     AccordionItem: typeof import('./src/components/accordion/AccordionItem.vue')['default']
     BlockLanguageSelector: typeof import('./src/components/toolbar/BlockLanguageSelector.vue')['default']
+    BlockMetaTools: typeof import('./src/components/toolbar/BlockMetaTools.vue')['default']
     DocumentSelector: typeof import('./src/components/toolbar/DocumentSelector.vue')['default']
     DrawImageDialog: typeof import('./src/components/inlineImage/DrawImageDialog.vue')['default']
     DrawImageFooter: typeof import('./src/components/inlineImage/draw/DrawImageFooter.vue')['default']

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import type { ViewUpdate } from '@codemirror/view';
 import { EditorView } from '@codemirror/view';
 import {
     getSearchQuery,
@@ -10,11 +11,12 @@ import {
     replaceNext,
     replaceAll,
     closeSearchPanel,
-    SearchCursor,
-    RegExpCursor
 } from '@codemirror/search';
+import { countQueryMatches, createSearchScopeTest, type SearchScope } from './searchScope';
 
 const props = defineProps<{ view: EditorView }>();
+
+let lastSearchScope: SearchScope = 'all';
 
 // State - options will be initialized from getSearchQuery (uses config defaults)
 const replaceVisible = ref(false);
@@ -23,6 +25,7 @@ const replaceText = ref('');
 const matchCase = ref(false);  // Will be set from query in onMounted
 const matchWord = ref(false);  // Will be set from query in onMounted
 const useRegex = ref(false);   // Will be set from query in onMounted
+const searchScope = ref<SearchScope>(lastSearchScope);
 const hasError = ref(false);
 const totalMatches = ref(0);
 const currentMatchIndex = ref(0);
@@ -34,11 +37,12 @@ const containerRef = ref<HTMLDivElement | null>(null);
 const matchCountText = computed(() => {
     if (hasError.value) return 'Invalid regex';
     if (!searchText.value || totalMatches.value === 0) return 'No results';
-    return `${currentMatchIndex.value} of ${totalMatches.value}`;
+    return `${currentMatchIndex.value} / ${totalMatches.value}`;
 });
 
 const hasMatches = computed(() => totalMatches.value > 0);
 const canReplace = computed(() => searchText.value.length > 0 && hasMatches.value);
+const isCurrentBlockScope = computed(() => searchScope.value === 'currentBlock');
 
 // Core functions
 function commit() {
@@ -49,6 +53,7 @@ function commit() {
             caseSensitive: matchCase.value,
             regexp: useRegex.value,
             wholeWord: matchWord.value,
+            test: createSearchScopeTest(searchScope.value),
         });
         props.view.dispatch({ effects: setSearchQuery.of(query) });
         hasError.value = false;
@@ -67,25 +72,9 @@ function updateMatchCount() {
     }
 
     try {
-        const cursorPos = props.view.state.selection.main.from;
-        let total = 0, current = 0, foundCurrent = false;
-
-        const cursor = query.regexp
-            ? new RegExpCursor(props.view.state.doc, query.search, { ignoreCase: !query.caseSensitive })
-            : new SearchCursor(props.view.state.doc, query.search, 0, props.view.state.doc.length, 
-                query.caseSensitive ? undefined : (s: string) => s.toLowerCase());
-
-        while (!cursor.next().done) {
-            total++;
-            if (!foundCurrent && cursor.value.from >= cursorPos) {
-                current = total;
-                foundCurrent = true;
-            }
-            if (total >= 9999) break;
-        }
-
+        const { total, current } = countQueryMatches(props.view.state, query);
         totalMatches.value = total;
-        currentMatchIndex.value = foundCurrent ? current : Math.min(1, total);
+        currentMatchIndex.value = current;
     } catch {
         totalMatches.value = currentMatchIndex.value = 0;
     }
@@ -100,6 +89,12 @@ const doReplaceAll = () => { if (canReplace.value) { replaceAll(props.view); upd
 const toggleOption = (opt: 'case' | 'word' | 'regex') => {
     const map = { case: matchCase, word: matchWord, regex: useRegex };
     map[opt].value = !map[opt].value;
+    commit();
+};
+
+const toggleScope = () => {
+    searchScope.value = searchScope.value === 'all' ? 'currentBlock' : 'all';
+    lastSearchScope = searchScope.value;
     commit();
 };
 
@@ -132,6 +127,21 @@ const startResize = (e: MouseEvent) => {
 // Watch for input changes
 watch([searchText, replaceText], commit);
 
+function onViewUpdate(update: ViewUpdate) {
+    if (searchScope.value === 'currentBlock' && searchText.value && update.selectionSet) {
+        commit();
+        return;
+    }
+
+    if (update.docChanged || update.selectionSet) {
+        updateMatchCount();
+    }
+}
+
+defineExpose({
+    onViewUpdate,
+});
+
 // Init - read options from query (defaults from search config), pre-populate search text
 onMounted(() => {
     // Always read options from query - this uses defaults from search() config
@@ -139,6 +149,7 @@ onMounted(() => {
     matchCase.value = query.caseSensitive;
     matchWord.value = query.wholeWord;
     useRegex.value = query.regexp;
+    searchScope.value = lastSearchScope;
     
     // Pre-populate search/replace text
     if (query?.search) {
@@ -179,6 +190,16 @@ onMounted(() => {
             <div class="search-bar">
                 <input ref="searchInput" v-model="searchText" type="text" class="find-input" :class="{ error: hasError }" placeholder="Find" @keydown="onSearchKeydown" />
                 <div class="search-controls">
+                    <div class="control-btn scope-btn" :class="{ active: isCurrentBlockScope }" :title="isCurrentBlockScope ? 'Search Current Block' : 'Search All Blocks'" @click="toggleScope">
+                        <svg v-if="isCurrentBlockScope" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M3 3.5 4.5 2h7L13 3.5v9L11.5 14h-7L3 12.5v-9Zm1 0v9l.5.5h7l.5-.5v-9l-.5-.5h-7l-.5.5Z"/>
+                            <path d="M5 5h6v1H5V5Zm0 2.5h6v1H5v-1Zm0 2.5h4v1H5v-1Z"/>
+                        </svg>
+                        <svg v-else width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" clip-rule="evenodd" d="M2 2.5 3.5 1h6L11 2.5V4h1.5L14 5.5v8L12.5 15h-6L5 13.5V12H3.5L2 10.5v-8Zm1 0v8l.5.5H5V5.5L6.5 4H10V2.5L9.5 2h-6l-.5.5Zm3 3v8l.5.5h6l.5-.5v-8l-.5-.5h-6l-.5.5Z"/>
+                            <path d="M7 7h5v1H7V7Zm0 2h5v1H7V9Zm0 2h3v1H7v-1Z"/>
+                        </svg>
+                    </div>
                     <div class="control-btn" :class="{ active: matchCase }" title="Match Case (Alt+C)" @click="toggleOption('case')">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8.85352 11.7021H7.85449L7.03809 9.54297H3.77246L3.00439 11.7021H2L4.9541 4H5.88867L8.85352 11.7021ZM6.74268 8.73193L5.53418 5.4502C5.49479 5.34277 5.4554 5.1709 5.41602 4.93457H5.39453C5.35872 5.15299 5.31755 5.32487 5.271 5.4502L4.07324 8.73193H6.74268Z"/><path d="M13.756 11.7021H12.8752V10.8428H12.8537C12.4706 11.5016 11.9066 11.8311 11.1618 11.8311C10.6139 11.8311 10.1843 11.686 9.87273 11.396C9.56479 11.106 9.41082 10.721 9.41082 10.2412C9.41082 9.21354 10.016 8.61556 11.2262 8.44727L12.8752 8.21631C12.8752 7.28174 12.4974 6.81445 11.7419 6.81445C11.0794 6.81445 10.4815 7.04004 9.94793 7.49121V6.58887C10.4886 6.24512 11.1117 6.07324 11.8171 6.07324C13.1097 6.07324 13.756 6.75716 13.756 8.125V11.7021ZM12.8752 8.91992L11.5485 9.10254C11.1403 9.15983 10.8324 9.26188 10.6247 9.40869C10.417 9.55192 10.3132 9.80794 10.3132 10.1768C10.3132 10.4453 10.4081 10.6655 10.5978 10.8374C10.7912 11.0057 11.0472 11.0898 11.3659 11.0898C11.8027 11.0898 12.1626 10.9377 12.4455 10.6333C12.7319 10.3254 12.8752 9.93685 12.8752 9.46777V8.91992Z"/></svg>
                     </div>
@@ -283,7 +304,7 @@ onMounted(() => {
 .find-input, .replace-input {
     width: 100%;
     height: 24px;
-    padding: 3px 70px 3px 6px;
+    padding: 3px 100px 3px 6px;
     border-radius: 2px;
     outline: none;
     font-size: 13px;
@@ -333,6 +354,10 @@ onMounted(() => {
         border-color: var(--search-focus-border);
         svg { fill: var(--search-btn-active-text); }
     }
+}
+
+.scope-btn {
+    width: 20px;
 }
 
 .actions-section {
