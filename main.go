@@ -93,9 +93,7 @@ func main() {
 	})
 	mainWindow.Center()
 	window = mainWindow
-	trayService := serviceManager.GetTrayService()
-	// 设置系统托盘
-	systray.SetupSystemTray(mainWindow, assets, trayService)
+	systray.SetupSystemTrayOnAppStarted(app, mainWindow, assets, serviceManager.GetTrayService())
 
 	// Run the application. This blocks until the application has been exited.
 	err := app.Run()

@@ -8,9 +8,15 @@ import (
 	"voidraft/internal/version"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
-	wailsevents "github.com/wailsapp/wails/v3/pkg/events"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/icons"
 )
+
+func SetupSystemTrayOnAppStarted(app *application.App, mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(_ *application.ApplicationEvent) {
+		SetupSystemTray(mainWindow, assets, trayService)
+	})
+}
 
 func SetupSystemTray(mainWindow *application.WebviewWindow, assets embed.FS, trayService *services.TrayService) {
 	app := application.Get()
@@ -40,7 +46,7 @@ func SetupSystemTray(mainWindow *application.WebviewWindow, assets embed.FS, tra
 		trayService.AutoShowHide()
 	})
 
-	mainWindow.RegisterHook(wailsevents.Common.WindowClosing, func(event *application.WindowEvent) {
+	mainWindow.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		event.Cancel()
 		trayService.HandleWindowClose()
 	})
