@@ -9,7 +9,7 @@ Block {
 }
 
 BlockDelimiter {
-  "\n∞∞∞" BlockLanguage BlockFlag* "\n"
+  "\n∞∞∞" BlockLanguage BlockFlag* BlockMetadata* "\n"
 }
 
 BlockLanguage {
@@ -25,8 +25,13 @@ BlockFlag {
   Auto | ReadOnly | Writable
 }
 
+BlockMetadata {
+  CreatedMetadata
+}
+
 @tokens {
   Auto { "-a" }
   ReadOnly { "-r" }
   Writable { "-w" }
+  CreatedMetadata { ";created=" $[0-9a-zA-Z:._+-]+ }
 }

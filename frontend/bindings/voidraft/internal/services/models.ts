@@ -12,6 +12,36 @@ import * as http$0 from "../../../net/http/models.js";
 // @ts-ignore: Unused imports
 import * as time$0 from "../../../time/models.js";
 
+export class CurrencyData {
+    "base": string;
+    "rates": { [_: string]: number };
+    "timestamp"?: number;
+
+    /** Creates a new CurrencyData instance. */
+    constructor($$source: Partial<CurrencyData> = {}) {
+        if (!("base" in $$source)) {
+            this["base"] = "";
+        }
+        if (!("rates" in $$source)) {
+            this["rates"] = {};
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CurrencyData instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CurrencyData {
+        const $$createField1_0 = $$createType0;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("rates" in $$parsedSource) {
+            $$parsedSource["rates"] = $$createField1_0($$parsedSource["rates"]);
+        }
+        return new CurrencyData($$parsedSource as Partial<CurrencyData>);
+    }
+}
+
 /**
  * DocumentSaveResult describes the outcome of a document save request.
  */
@@ -89,7 +119,7 @@ export class HttpRequest {
      * Creates a new HttpRequest instance from a string or object.
      */
     static createFrom($$source: any = {}): HttpRequest {
-        const $$createField2_0 = $$createType0;
+        const $$createField2_0 = $$createType1;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("headers" in $$parsedSource) {
             $$parsedSource["headers"] = $$createField2_0($$parsedSource["headers"]);
@@ -149,7 +179,7 @@ export class HttpResponse {
      * Creates a new HttpResponse instance from a string or object.
      */
     static createFrom($$source: any = {}): HttpResponse {
-        const $$createField4_0 = $$createType1;
+        const $$createField4_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("headers" in $$parsedSource) {
             $$parsedSource["headers"] = $$createField4_0($$parsedSource["headers"]);
@@ -524,8 +554,8 @@ export class SystemInfo {
      * Creates a new SystemInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): SystemInfo {
-        const $$createField3_0 = $$createType5;
-        const $$createField4_0 = $$createType6;
+        const $$createField3_0 = $$createType6;
+        const $$createField4_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("osInfo" in $$parsedSource) {
             $$parsedSource["osInfo"] = $$createField3_0($$parsedSource["osInfo"]);
@@ -539,14 +569,15 @@ export class SystemInfo {
 
 // Private type creation functions
 const $$createType0 = $Create.Map($Create.Any, $Create.Any);
-var $$createType1 = (function $$initCreateType1(...args): any {
-    if ($$createType1 === $$initCreateType1) {
-        $$createType1 = $$createType3;
+const $$createType1 = $Create.Map($Create.Any, $Create.Any);
+var $$createType2 = (function $$initCreateType2(...args): any {
+    if ($$createType2 === $$initCreateType2) {
+        $$createType2 = $$createType4;
     }
-    return $$createType1(...args);
+    return $$createType2(...args);
 });
-const $$createType2 = $Create.Array($Create.Any);
-const $$createType3 = $Create.Map($Create.Any, $$createType2);
-const $$createType4 = OSInfo.createFrom;
-const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = $Create.Array($Create.Any);
+const $$createType4 = $Create.Map($Create.Any, $$createType3);
+const $$createType5 = OSInfo.createFrom;
+const $$createType6 = $Create.Nullable($$createType5);
+const $$createType7 = $Create.Map($Create.Any, $Create.Any);

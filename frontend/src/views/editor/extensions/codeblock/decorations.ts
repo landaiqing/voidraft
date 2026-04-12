@@ -3,12 +3,50 @@
  */
 
 import { ViewPlugin, EditorView, Decoration, WidgetType, layer, RectangleMarker } from "@codemirror/view";
-import { StateField, RangeSetBuilder, EditorState, Transaction } from "@codemirror/state";
+import { StateField, StateEffect, RangeSetBuilder, EditorState, Transaction } from "@codemirror/state";
+import { externalDocumentUpdateAnnotation } from "@/views/editor/basic/contentChangeExtension";
 import { blockState } from "./state";
 import { codeBlockEvent, USER_EVENTS } from "./annotation";
 
 // IME 输入状态
 let isComposing = false;
+
+const DEFAULT_BLOCK_SEPARATOR_HEIGHT = 12;
+const MIN_BLOCK_SEPARATOR_HEIGHT = 4;
+const MAX_BLOCK_SEPARATOR_HEIGHT = 24;
+const FIRST_BLOCK_TOP_PADDING = 7;
+
+export const blockSeparatorHeightEffect = StateEffect.define<number>();
+
+function normalizeBlockSeparatorHeight(height?: number): number {
+  if (!Number.isFinite(height)) {
+    return DEFAULT_BLOCK_SEPARATOR_HEIGHT;
+  }
+
+  return Math.max(
+    MIN_BLOCK_SEPARATOR_HEIGHT,
+    Math.min(MAX_BLOCK_SEPARATOR_HEIGHT, Math.round(height as number)),
+  );
+}
+
+function createBlockSeparatorHeightField(initialHeight?: number) {
+  const defaultHeight = normalizeBlockSeparatorHeight(initialHeight);
+
+  return StateField.define<number>({
+    create() {
+      return defaultHeight;
+    },
+    update(value, transaction) {
+      for (const effect of transaction.effects) {
+        if (effect.is(blockSeparatorHeightEffect)) {
+          return normalizeBlockSeparatorHeight(effect.value);
+        }
+      }
+
+      return value;
+    },
+  });
+}
 
 /**
  * 块开始装饰组件
@@ -123,12 +161,14 @@ const atomicNoteBlock = ViewPlugin.fromClass(
  * 这样即使某些字符被隐藏（如 heading 的 # 标记 fontSize: 0），
  * 行的坐标也不会受影响，边界线位置正确。
  */
-const blockLayer = layer({
+function createBlockLayer(separatorHeightField: StateField<number>) {
+  return layer({
   above: false,
 
   markers(view: EditorView) {
     const markers: RectangleMarker[] = [];
     let idx = 0;
+    const separatorHeight = view.state.field(separatorHeightField);
     
     function rangesOverlaps(range1: any, range2: any) {
       return range1.from <= range2.to && range2.from <= range1.to;
@@ -175,12 +215,17 @@ const blockLayer = layer({
         isEvenBlock ? "block-even" : "block-odd",
         block.access === "read" ? "block-readonly" : "",
       ].filter(Boolean).join(" ");
+      const topPadding = block.delimiter.from === 0
+        ? FIRST_BLOCK_TOP_PADDING
+        : Math.round(separatorHeight / 2) + 1;
+      const bottomPadding = separatorHeight + 3;
+
       markers.push(new RectangleMarker(
         blockClass,
         0,
-        fromCoordsTop - (view.documentTop - view.documentPadding.top) - 1 - 6,
+        fromCoordsTop - (view.documentTop - view.documentPadding.top) - topPadding,
         null, // 宽度在 CSS 中设置为 100%
-        (toCoordsBottom - fromCoordsTop) + 15,
+        (toCoordsBottom - fromCoordsTop) + bottomPadding,
       ));
     });
     
@@ -188,11 +233,16 @@ const blockLayer = layer({
   },
 
   update(update: any, _dom: any) {
-    return update.docChanged || update.viewportChanged;
+    return update.docChanged
+      || update.viewportChanged
+      || update.transactions.some((transaction: Transaction) =>
+        transaction.effects.some(effect => effect.is(blockSeparatorHeightEffect))
+      );
   },
 
   class: "code-blocks-layer"
-});
+  });
+}
 
 /**
  * 防止第一个块被删除
@@ -201,10 +251,11 @@ const blockLayer = layer({
 const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) => {
   const protect: number[] = [];
   const internalEvent = tr.annotation(codeBlockEvent);
+  const externalUpdate = tr.annotation(externalDocumentUpdateAnnotation);
   
   // 获取块状态并获取第一个块的分隔符大小
   const blocks = tr.startState.field(blockState);
-  if (!internalEvent && blocks && blocks.length > 0) {
+  if (!internalEvent && !externalUpdate && blocks && blocks.length > 0) {
     const firstBlock = blocks[0];
     const firstBlockDelimiterSize = firstBlock.delimiter.to;
     
@@ -234,7 +285,7 @@ const preventFirstBlockFromBeingDeleted = EditorState.changeFilter.of((tr: any) 
 const preventSelectionBeforeFirstBlock = EditorState.transactionFilter.of((tr: any) => {
   if (isComposing) return tr;
   
-  if (tr.annotation(codeBlockEvent)) {
+  if (tr.annotation(codeBlockEvent) || tr.annotation(externalDocumentUpdateAnnotation)) {
     return tr;
   }
   // 获取块状态并获取第一个块的分隔符大小
@@ -288,12 +339,16 @@ const imeStateSynchronizer = ViewPlugin.fromClass(
  */
 export function getBlockDecorationExtensions(options: {
   showBackground?: boolean;
+  separatorHeight?: number;
 } = {}) {
   const {
     showBackground = true,
+    separatorHeight = DEFAULT_BLOCK_SEPARATOR_HEIGHT,
   } = options;
+  const separatorHeightField = createBlockSeparatorHeightField(separatorHeight);
 
   const extensions: any[] = [
+    separatorHeightField,
     noteBlockWidget(),
     atomicNoteBlock,
     preventFirstBlockFromBeingDeleted,
@@ -302,8 +357,23 @@ export function getBlockDecorationExtensions(options: {
   ];
 
   if (showBackground) {
-    extensions.push(blockLayer);
+    extensions.push(createBlockLayer(separatorHeightField));
   }
 
   return extensions;
+}
+
+export function applyBlockSeparatorHeightStyle(view: EditorView, height?: number): number {
+  const normalizedHeight = normalizeBlockSeparatorHeight(height);
+  view.dom.style.setProperty('--cm-block-separator-height', `${normalizedHeight}px`);
+  return normalizedHeight;
+}
+
+export function updateBlockSeparatorHeight(view: EditorView, height?: number): void {
+  const normalizedHeight = applyBlockSeparatorHeightStyle(view, height);
+
+  view.dispatch({
+    effects: blockSeparatorHeightEffect.of(normalizedHeight),
+    annotations: [Transaction.addToHistory.of(false)],
+  });
 }

@@ -1,5 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { EditorState } from '@codemirror/state';
+
+vi.mock('./lang-parser/languages', () => ({
+  LANGUAGES: [
+    { token: 'text' },
+    { token: 'ts' },
+    { token: 'json' },
+    { token: 'math' },
+    { token: 'go' },
+  ],
+}));
+
 import { createDelimiter, getBlocksFromString, parseDelimiter } from './parser';
 
 describe('codeblock delimiter access', () => {
@@ -50,5 +61,31 @@ describe('codeblock delimiter access', () => {
     expect(blocks[0]?.language).toEqual({ name: 'ts', auto: false });
     expect(blocks[1]?.access).toBe('write');
     expect(blocks[1]?.language).toEqual({ name: 'json', auto: true });
+  });
+
+  it('parses createdAt metadata from delimiters', () => {
+    const createdAt = '2026-04-12T08:30:00.000Z';
+    const delimiter = createDelimiter('math', false, 'write', createdAt);
+
+    expect(parseDelimiter(delimiter)).toEqual({
+      language: 'math',
+      auto: false,
+      access: 'write',
+      createdAt,
+    });
+  });
+
+  it('keeps createdAt metadata when reading blocks from string', () => {
+    const createdAt = '2026-04-12T08:30:00.000Z';
+    const document = [
+      createDelimiter('math', false, 'write', createdAt),
+      '1 + 1\n',
+    ].join('');
+
+    const state = EditorState.create({ doc: document });
+    const [block] = getBlocksFromString(state);
+
+    expect(block?.createdAt).toBe(createdAt);
+    expect(block?.language).toEqual({ name: 'math', auto: false });
   });
 });

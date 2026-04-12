@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useConfigStore } from '@/stores/configStore';
 import { useThemeStore } from '@/stores/themeStore';
+import { useEditorStore } from '@/stores/editorStore';
 import { useI18n } from 'vue-i18n';
 import { computed, watch, onMounted, ref, nextTick } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
@@ -14,6 +15,7 @@ import type { ThemeColors } from '@/views/editor/theme/types';
 const { t } = useI18n();
 const configStore = useConfigStore();
 const themeStore = useThemeStore();
+const editorStore = useEditorStore();
 
 // 创建防抖函数实例
 const { debouncedFn: debouncedUpdateColor } = createDebounce(
@@ -169,6 +171,17 @@ const systemThemeOptions = [
   { value: SystemThemeType.SystemThemeAuto, label: t('systemTheme.auto') },
 ];
 
+const cursorBlinkRateOptions = [
+  { value: 0, label: t('settings.cursorBlinkOff') },
+  { value: 250, label: '250 ms' },
+  { value: 500, label: '500 ms' },
+  { value: 750, label: '750 ms' },
+  { value: 1000, label: '1000 ms' },
+  { value: 1250, label: '1250 ms' },
+  { value: 1500, label: '1500 ms' },
+  { value: 2000, label: '2000 ms' },
+];
+
 // 更新语言设置
 const updateLanguage = async (event: Event) => {
   const select = event.target as HTMLSelectElement;
@@ -194,6 +207,17 @@ const updateSystemTheme = async (event: Event) => {
     syncTempColors();
     hasUnsavedChanges.value = false;
   }
+};
+
+const updateCursorBlinkRate = async (event: Event) => {
+  const select = event.target as HTMLSelectElement;
+  const nextRate = Number.parseInt(select.value, 10);
+  if (Number.isNaN(nextRate)) {
+    return;
+  }
+
+  await configStore.setCursorBlinkRate(nextRate);
+  editorStore.applyCursorBlinkSettings();
 };
 
 // 控制颜色选择器显示状态
@@ -236,6 +260,18 @@ const handlePickerClose = () => {
         <select class="select-input" v-model="currentThemeName" :disabled="hasUnsavedChanges">
           <option v-for="theme in themeStore.availableThemes" :key="theme.name" :value="theme.name">
             {{ theme.name }}
+          </option>
+        </select>
+      </SettingItem>
+
+      <SettingItem :title="t('settings.cursorBlinkRate')">
+        <select
+          class="select-input"
+          :value="configStore.config.appearance.cursorBlinkRate"
+          @change="updateCursorBlinkRate"
+        >
+          <option v-for="option in cursorBlinkRateOptions" :key="option.value" :value="option.value">
+            {{ option.label }}
           </option>
         </select>
       </SettingItem>

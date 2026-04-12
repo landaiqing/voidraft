@@ -7,6 +7,7 @@ import {EditorSelection, EditorState} from "@codemirror/state";
 import {Command, EditorView} from "@codemirror/view";
 import {LANGUAGES} from "./lang-parser/languages";
 import {codeBlockEvent, CONTENT_EDIT, USER_EVENTS} from "./annotation";
+import {blockState, getNoteBlockFromPos} from "./state";
 import {inlineImageEnabledFacet, inlineImageOptionsFacet} from "../inlineImage";
 import {
     copySelectedInlineImageIfNeeded,
@@ -21,6 +22,12 @@ import * as runtime from "@wailsio/runtime";
  */
 const languageTokensMatcher = LANGUAGES.map(lang => lang.token).join("|");
 const blockSeparatorRegex = new RegExp(`(?:^|\\n)∞∞∞(?:${languageTokensMatcher})(?:-(?:a|r|w))*\\n`, "g");
+
+interface CutLineSpec {
+    text: string;
+    changes: { from: number; to: number };
+    selection: EditorSelection;
+}
 
 /**
  * 获取被复制的范围和内容
@@ -66,6 +73,39 @@ function copiedRange(state: EditorState, forCut = false) {
     };
 }
 
+function getSingleCursorCutLineSpec(state: EditorState): CutLineSpec | null {
+    if (state.selection.ranges.length !== 1 || !state.selection.main.empty) {
+        return null;
+    }
+
+    const cursor = state.selection.main;
+    const line = state.doc.lineAt(cursor.head);
+    const block = getNoteBlockFromPos(state, cursor.head);
+    const blocks = state.field(blockState, false) ?? [];
+    const blockIndex = block ? blocks.indexOf(block) : -1;
+    const hasNextBlock = blockIndex >= 0 && blockIndex < blocks.length - 1;
+    const endsAtBlockBoundary = Boolean(block && hasNextBlock && line.to === block.content.to);
+
+    let from = line.from;
+    let to = line.to < state.doc.length ? line.to + 1 : line.to;
+
+    if (endsAtBlockBoundary) {
+        if (block && line.from > block.content.from) {
+            from = line.from - 1;
+            to = line.to;
+        } else {
+            from = line.from;
+            to = line.to;
+        }
+    }
+
+    return {
+        text: state.sliceDoc(line.from, line.to),
+        changes: { from, to },
+        selection: EditorSelection.create([EditorSelection.cursor(from)]),
+    };
+}
+
 function normalizeCopiedText(text: string): string {
     return text
         .replaceAll(blockSeparatorRegex, "\n\n")
@@ -103,19 +143,31 @@ async function handleCopyCut(view: EditorView, cut: boolean, event?: ClipboardEv
         }
     }
 
-    let {text} = copiedRange(view.state, cut);
-    const {ranges} = copiedRange(view.state, cut);
+    const lineCutSpec = cut ? getSingleCursorCutLineSpec(view.state) : null;
+    const copied = copiedRange(view.state, cut);
+    let text = lineCutSpec?.text ?? copied.text;
+    const {ranges} = copied;
     text = normalizeCopiedText(text);
 
     await writeTextToClipboard(text, event);
 
     if (cut && !view.state.readOnly) {
-        view.dispatch({
-            changes: ranges,
-            scrollIntoView: true,
-            userEvent: USER_EVENTS.DELETE_CUT,
-            annotations: [codeBlockEvent.of(CONTENT_EDIT)],
-        });
+        if (lineCutSpec) {
+            view.dispatch({
+                changes: lineCutSpec.changes,
+                selection: lineCutSpec.selection,
+                scrollIntoView: true,
+                userEvent: USER_EVENTS.DELETE_CUT,
+                annotations: [codeBlockEvent.of(CONTENT_EDIT)],
+            });
+        } else {
+            view.dispatch({
+                changes: ranges,
+                scrollIntoView: true,
+                userEvent: USER_EVENTS.DELETE_CUT,
+                annotations: [codeBlockEvent.of(CONTENT_EDIT)],
+            });
+        }
     }
 
     return true;

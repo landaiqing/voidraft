@@ -31,10 +31,14 @@ export const CONFIG_KEY_MAP = {
     tabType: 'editing.tabType',
     keymapMode: 'editing.keymapMode',
     autoSaveDelay: 'editing.autoSaveDelay',
+    defaultBlockLanguage: 'editing.defaultBlockLanguage',
+    defaultBlockAutoDetect: 'editing.defaultBlockAutoDetect',
+    blockSeparatorHeight: 'editing.blockSeparatorHeight',
 
     language: 'appearance.language',
     systemTheme: 'appearance.systemTheme',
     currentTheme: 'appearance.currentTheme',
+    cursorBlinkRate: 'appearance.cursorBlinkRate',
 
     autoUpdate: 'updates.autoUpdate',
     backupBeforeUpdate: 'updates.backupBeforeUpdate',
@@ -57,13 +61,15 @@ export const CONFIG_KEY_MAP = {
 } as const;
 
 export type ConfigKey = keyof typeof CONFIG_KEY_MAP;
-export type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight';
+export type NumberConfigKey = 'fontSize' | 'tabSize' | 'lineHeight' | 'cursorBlinkRate' | 'blockSeparatorHeight';
 
 // 配置限制
 export const CONFIG_LIMITS = {
     fontSize: {min: 12, max: 28, default: 13},
     tabSize: {min: 2, max: 8, default: 4},
     lineHeight: {min: 1.0, max: 3.0, default: 1.5},
+    cursorBlinkRate: {min: 0, max: 2000, default: 1000},
+    blockSeparatorHeight: {min: 4, max: 24, default: 12},
     tabType: {values: [TabType.TabTypeSpaces, TabType.TabTypeTab], default: TabType.TabTypeSpaces}
 } as const;
 
@@ -96,12 +102,16 @@ export const DEFAULT_CONFIG: AppConfig = {
         tabSize: CONFIG_LIMITS.tabSize.default,
         tabType: CONFIG_LIMITS.tabType.default,
         keymapMode: KeyBindingType.Standard,
-        autoSaveDelay: 5000
+        autoSaveDelay: 5000,
+        defaultBlockLanguage: 'text',
+        defaultBlockAutoDetect: true,
+        blockSeparatorHeight: CONFIG_LIMITS.blockSeparatorHeight.default,
     },
     appearance: {
         language: LanguageType.LangZhCN,
         systemTheme: SystemThemeType.SystemThemeDark,
-        currentTheme: 'default-dark'
+        currentTheme: 'default-dark',
+        cursorBlinkRate: CONFIG_LIMITS.cursorBlinkRate.default,
     },
     updates: {
         version: "1.0.0",

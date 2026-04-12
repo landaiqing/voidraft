@@ -92,13 +92,19 @@ type EditingConfig struct {
 
 	// 保存选项
 	AutoSaveDelay int `json:"autoSaveDelay"` // 自动保存延迟（毫秒）
+
+	// 默认块设置
+	DefaultBlockLanguage   string `json:"defaultBlockLanguage"`   // 默认新块语言
+	DefaultBlockAutoDetect bool   `json:"defaultBlockAutoDetect"` // 默认新块自动识别
+	BlockSeparatorHeight   int    `json:"blockSeparatorHeight"`   // 块分隔符高度（像素）
 }
 
 // AppearanceConfig 外观设置配置
 type AppearanceConfig struct {
-	Language     LanguageType    `json:"language"`     // 界面语言
-	SystemTheme  SystemThemeType `json:"systemTheme"`  // 系统界面主题
-	CurrentTheme string          `json:"currentTheme"` // 当前选择的预设主题名称
+	Language        LanguageType    `json:"language"`        // 界面语言
+	SystemTheme     SystemThemeType `json:"systemTheme"`     // 系统界面主题
+	CurrentTheme    string          `json:"currentTheme"`    // 当前选择的预设主题名称
+	CursorBlinkRate int             `json:"cursorBlinkRate"` // 光标闪烁周期（毫秒）
 }
 
 // UpdatesConfig 更新设置配置
@@ -220,11 +226,16 @@ func NewDefaultAppConfig() *AppConfig {
 			KeymapMode: Standard, // 默认使用标准模式
 			// 保存选项
 			AutoSaveDelay: 2000,
+			// 默认块设置
+			DefaultBlockLanguage:   "text",
+			DefaultBlockAutoDetect: true,
+			BlockSeparatorHeight:   12,
 		},
 		Appearance: AppearanceConfig{
-			Language:     LangEnUS,
-			SystemTheme:  SystemThemeDark,
-			CurrentTheme: "default-dark", // 默认使用 default-dark 主题
+			Language:        LangEnUS,
+			SystemTheme:     SystemThemeDark,
+			CurrentTheme:    "default-dark", // 默认使用 default-dark 主题
+			CursorBlinkRate: 1000,
 		},
 		Updates: UpdatesConfig{
 			Version:            version.Version,

@@ -7,6 +7,8 @@ import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import ToggleSwitch from '../components/ToggleSwitch.vue';
 import { TabType } from '@/../bindings/voidraft/internal/models/';
+import { LANGUAGES } from '@/views/editor/extensions/codeblock/lang-parser/languages';
+import type { SupportedLanguage } from '@/views/editor/extensions/codeblock/types';
 
 const { t } = useI18n();
 const configStore = useConfigStore();
@@ -46,6 +48,11 @@ const fontWeightOptions = [
   { value: '800', label: '800' },
   { value: '900', label: '900' }
 ];
+
+const defaultBlockLanguageOptions = LANGUAGES.map(language => ({
+  value: language.token,
+  label: language.name,
+}));
 
 // 字体粗细选择
 const fontWeightModel = computed({
@@ -122,6 +129,30 @@ const handleAutoSaveDelayChange = async (event: Event) => {
   if (!isNaN(value) && value >= 1000 && value <= 30000) {
     await configStore.setAutoSaveDelay(value);
   }
+};
+
+const defaultBlockLanguageModel = computed({
+  get: () => configStore.config.editing.defaultBlockLanguage || 'text',
+  set: async (value: string) => {
+    await configStore.setDefaultBlockLanguage(value as SupportedLanguage);
+  }
+});
+
+const defaultBlockAutoDetect = computed({
+  get: () => configStore.config.editing.defaultBlockAutoDetect,
+  set: async (value: boolean) => {
+    await configStore.setDefaultBlockAutoDetect(value);
+  }
+});
+
+const increaseBlockSeparatorHeight = async () => {
+  await configStore.setBlockSeparatorHeight(configStore.config.editing.blockSeparatorHeight + 1);
+  editorStore.applyBlockSeparatorSettings();
+};
+
+const decreaseBlockSeparatorHeight = async () => {
+  await configStore.setBlockSeparatorHeight(configStore.config.editing.blockSeparatorHeight - 1);
+  editorStore.applyBlockSeparatorSettings();
 };
 
 
@@ -230,6 +261,40 @@ const handleAutoSaveDelayChange = async (event: Event) => {
           :value="configStore.config.editing.autoSaveDelay"
           @change="handleAutoSaveDelayChange"
         />
+      </SettingItem>
+    </SettingSection>
+
+    <SettingSection :title="t('settings.defaultBlockSettings')">
+      <SettingItem :title="t('settings.defaultBlockLanguage')">
+        <select class="font-family-select" v-model="defaultBlockLanguageModel">
+          <option
+            v-for="option in defaultBlockLanguageOptions"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </option>
+        </select>
+      </SettingItem>
+
+      <SettingItem :title="t('settings.defaultBlockAutoDetect')">
+        <ToggleSwitch v-model="defaultBlockAutoDetect" />
+      </SettingItem>
+
+      <SettingItem :title="t('settings.blockSeparatorHeight')">
+        <div class="number-control">
+          <button
+            @click="decreaseBlockSeparatorHeight"
+            class="control-button"
+            :disabled="configStore.config.editing.blockSeparatorHeight <= 4"
+          >-</button>
+          <span>{{ configStore.config.editing.blockSeparatorHeight }}px</span>
+          <button
+            @click="increaseBlockSeparatorHeight"
+            class="control-button"
+            :disabled="configStore.config.editing.blockSeparatorHeight >= 24"
+          >+</button>
+        </div>
       </SettingItem>
     </SettingSection>
   </div>

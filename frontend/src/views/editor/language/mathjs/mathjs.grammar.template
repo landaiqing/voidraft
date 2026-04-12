@@ -1,0 +1,41 @@
+@top Script { Element* }
+
+@skip { whitespace }
+
+Element {
+  Boolean |
+  Null |
+  Function |
+  Constant |
+  Unit |
+  Currency |
+  LineComment |
+  Number |
+  String |
+  Identifier |
+  Operator |
+  Punctuation |
+  Parens { "(" Element* ")" } |
+  Brackets { "[" Element* "]" } |
+  Braces { "{" Element* "}" }
+}
+
+@tokens {
+  @precedence { Number, Punctuation }
+  whitespace { $[ \t\n\r]+ }
+  LineComment { "#" (![\n])* }
+  String { "\"" ( "\\\\" | "\\\"" | ![\"\n\\] )* "\"" | "'" ( "\\\\" | "\\'" | ![\'\n\\] )* "'" }
+  Number { ( $[0-9]+ ("." $[0-9]+)? | "." $[0-9]+ ) ($[eE] $[+-]? $[0-9]+)? }
+  Identifier { $[A-Za-z_] $[A-Za-z0-9_]* }
+  Operator { $[+*/%^=<>!&|?\-]+ }
+  Punctuation { "," | ";" | ":" | "." }
+}
+
+@detectDelim
+
+Boolean { @specialize<Identifier, "true"> | @specialize<Identifier, "false"> }
+Null { @specialize<Identifier, "null"> }
+Function { __FUNCTIONS__ }
+Constant { __CONSTANTS__ }
+Unit { __UNITS__ }
+Currency { __CURRENCIES__ }

@@ -9,6 +9,7 @@ import {createBasicSetup} from '@/views/editor/basic/basicSetup';
 import {createThemeExtension, updateEditorTheme} from '@/views/editor/basic/themeExtension';
 import {getTabExtensions, updateTabConfig} from '@/views/editor/basic/tabExtension';
 import {createFontExtensionFromBackend, updateFontConfig} from '@/views/editor/basic/fontExtension';
+import {createCursorBlinkExtension, updateCursorBlinkRate} from '@/views/editor/basic/cursorBlinkExtension';
 import {createStatsUpdateExtension} from '@/views/editor/basic/statsExtension';
 import {createContentChangePlugin, externalDocumentUpdateAnnotation} from '@/views/editor/basic/contentChangeExtension';
 import {createWheelZoomExtension} from '@/views/editor/basic/wheelZoomExtension';
@@ -21,6 +22,8 @@ import {
     setExtensionManagerView
 } from '@/views/editor/manager';
 import createCodeBlockExtension from "@/views/editor/extensions/codeblock";
+import { applyBlockSeparatorHeightStyle, updateBlockSeparatorHeight } from '@/views/editor/extensions/codeblock';
+import {triggerCurrenciesLoaded} from '@/views/editor/extensions/codeblock/commands';
 import {LruCache} from '@/common/utils/lruCache';
 import {EDITOR_CONFIG} from '@/common/constant/editor';
 import {useEditorStateStore, type DocumentStats} from './editorStateStore';
@@ -33,6 +36,12 @@ interface EditorInstance {
     baseUpdatedAt: string;
     contentLength: number;     // 内容长度
     isDirty: boolean;
+}
+
+interface DocumentContentSnapshot {
+    content: string;
+    baseUpdatedAt: string;
+    hasCachedEditor: boolean;
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -118,8 +127,15 @@ export const useEditorStore = defineStore('editor', () => {
         // 代码块扩展
         const codeBlockExtension = createCodeBlockExtension({
             showBackground: true,
-            enableAutoDetection: true
+            enableAutoDetection: true,
+            defaultLanguage: (configStore.config.editing.defaultBlockLanguage || 'text') as any,
+            separatorHeight: configStore.config.editing.blockSeparatorHeight,
         });
+
+        // 光标闪烁扩展
+        const cursorBlinkExtension = createCursorBlinkExtension(
+            configStore.config.appearance.cursorBlinkRate
+        );
 
         // 光标位置持久化扩展
         const cursorPositionExtension = createCursorPositionExtension(docId);
@@ -140,6 +156,7 @@ export const useEditorStore = defineStore('editor', () => {
             themeExtension,
             ...tabExtensions,
             fontExtension,
+            cursorBlinkExtension,
             wheelZoomExtension,
             statsExtension,
             contentChangeExtension,
@@ -164,6 +181,7 @@ export const useEditorStore = defineStore('editor', () => {
         });
 
         const view = new EditorView({state});
+        applyBlockSeparatorHeightStyle(view, configStore.config.editing.blockSeparatorHeight);
 
         return {
             view,
@@ -232,6 +250,7 @@ export const useEditorStore = defineStore('editor', () => {
 
         try {
             applyFontSettingsToView(instance.view);
+            applyBlockSeparatorHeightStyle(instance.view, configStore.config.editing.blockSeparatorHeight);
             // 移除当前编辑器 DOM
             const currentEditor = editorCache.get(currentEditorId.value || 0);
             if (currentEditor && currentEditor.view.dom && currentEditor.view.dom.parentElement) {
@@ -374,6 +393,78 @@ export const useEditorStore = defineStore('editor', () => {
         }
     };
 
+    const getDocumentSnapshot = async (docId: number): Promise<DocumentContentSnapshot | null> => {
+        const instance = editorCache.get(docId);
+        if (instance) {
+            return {
+                content: instance.view.state.doc.toString(),
+                baseUpdatedAt: instance.baseUpdatedAt,
+                hasCachedEditor: true,
+            };
+        }
+
+        const doc = await documentStore.getDocument(docId);
+        if (!doc) {
+            return null;
+        }
+
+        return {
+            content: doc.content || '',
+            baseUpdatedAt: doc.updated_at || '',
+            hasCachedEditor: false,
+        };
+    };
+
+    const applyDocumentContent = (
+        docId: number,
+        content: string,
+        options: { selection?: number } = {}
+    ): boolean => {
+        const instance = editorCache.get(docId);
+        if (!instance) {
+            return false;
+        }
+
+        const currentContent = instance.view.state.doc.toString();
+        const selection = options.selection !== undefined
+            ? Math.max(0, Math.min(options.selection, content.length))
+            : undefined;
+
+        if (currentContent === content) {
+            if (selection !== undefined) {
+                instance.view.dispatch({
+                    selection: { anchor: selection, head: selection }
+                });
+            }
+            return true;
+        }
+
+        instance.view.dispatch({
+            changes: {
+                from: 0,
+                to: instance.view.state.doc.length,
+                insert: content
+            },
+            annotations: [externalDocumentUpdateAnnotation.of(true)],
+            ...(selection !== undefined
+                ? { selection: { anchor: selection, head: selection } }
+                : {})
+        });
+
+        instance.contentLength = content.length;
+        instance.isDirty = true;
+
+        documentStore.scheduleAutoSave(
+            docId,
+            async () => {
+                await saveEditorInstance(instance);
+            },
+            configStore.config.editing.autoSaveDelay
+        );
+
+        return true;
+    };
+
     // 获取当前内容
     const getCurrentContent = (): string => {
         if (!currentEditorId.value) return '';
@@ -467,6 +558,27 @@ export const useEditorStore = defineStore('editor', () => {
         );
     };
 
+    const applyCursorBlinkSettings = () => {
+        editorCache.values().forEach(instance => {
+            updateCursorBlinkRate(instance.view, configStore.config.appearance.cursorBlinkRate);
+        });
+    };
+
+    const applyBlockSeparatorSettings = () => {
+        editorCache.values().forEach(instance => {
+            updateBlockSeparatorHeight(instance.view, configStore.config.editing.blockSeparatorHeight);
+        });
+    };
+
+    const triggerCurrencyRefresh = () => {
+        editorCache.values().forEach(instance => {
+            triggerCurrenciesLoaded({
+                state: instance.view.state,
+                dispatch: (transaction: any) => instance.view.dispatch(transaction),
+            });
+        });
+    };
+
     const hasContainer = computed(() => containerElement.value !== null);
     const currentEditor = computed(() => {
         if (!currentEditorId.value) return null;
@@ -487,6 +599,8 @@ export const useEditorStore = defineStore('editor', () => {
         switchToEditor,
         destroyEditor,
         clearEditorCache,
+        getDocumentSnapshot,
+        applyDocumentContent,
 
         // 查询方法
         getCurrentContent,
@@ -500,6 +614,9 @@ export const useEditorStore = defineStore('editor', () => {
         applyThemeSettings,
         applyTabSettings,
         applyKeymapSettings,
+        applyCursorBlinkSettings,
+        applyBlockSeparatorSettings,
+        triggerCurrencyRefresh,
     };
 
     async function saveEditorInstance(instance: EditorInstance): Promise<DocumentSaveResult | null> {

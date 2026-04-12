@@ -10,10 +10,9 @@ import {minimap} from '../extensions/minimap';
 import {vscodeSearch} from '../extensions/vscodeSearch';
 import {createTranslatorExtension} from '../extensions/translator';
 import markdownExtensions from '../extensions/markdown';
-import {foldGutter} from "@codemirror/language";
 import {highlightActiveLineGutter, highlightWhitespace, highlightTrailingWhitespace} from "@codemirror/view";
 import createEditorContextMenu from '../extensions/contextMenu';
-import {blockLineNumbers} from '../extensions/codeblock';
+import {blockLineNumbers, createBlockFoldExtension} from '../extensions/codeblock';
 import {createHttpClientExtension} from '../extensions/httpclient';
 import {createInlineImageExtension} from '../extensions/inlineImage';
 import {createBlockImageExtension} from '../extensions/blockImage';
@@ -74,7 +73,7 @@ const EXTENSION_REGISTRY: Record<ValidExtensionName, ExtensionEntry> = {
         descriptionKey: 'extensions.search.description'
     },
     [ExtensionName.Fold]: {
-        definition: defineExtension(() => Prec.low(foldGutter())),
+        definition: defineExtension(() => Prec.low(createBlockFoldExtension())),
         displayNameKey: 'extensions.fold.name',
         descriptionKey: 'extensions.fold.description'
     },

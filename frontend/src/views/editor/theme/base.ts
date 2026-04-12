@@ -115,8 +115,7 @@ export function createBaseTheme(colors: ThemeColors): Extension {
         },
         // 代码块开始标记
         '.code-block-start': {
-            height: '12px',
-            position: 'relative',
+            height: 'var(--cm-block-separator-height, 12px)',
         },
         '.code-block-start.first': {
             height: '0px',
@@ -148,6 +147,21 @@ export function createBaseTheme(colors: ThemeColors): Extension {
         },
         '.code-blocks-math-result-copied.fade-out': {
             opacity: 0,
+        },
+        '.cm-block-fold-placeholder': {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            opacity: '0.72',
+            padding: '0 4px',
+        },
+        '.cm-block-fold-summary': {
+            fontStyle: 'italic',
+        },
+        '.cm-block-fold-created-time': {
+            marginLeft: '8px',
+            fontSize: '0.9em',
+            opacity: '0.8',
         },
     }, {dark: colors.dark});
 

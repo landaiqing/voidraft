@@ -43,6 +43,33 @@ export default {
     openInNewWindow: 'Open in New Window',
     alreadyOpenInNewWindow: 'Already open in another window',
   },
+  blockTools: {
+    moveBlock: 'Move current block',
+    foldBlock: 'Fold current block',
+    unfoldBlock: 'Unfold current block',
+    blockInfo: 'Current block info',
+    language: 'Language',
+    access: 'Access',
+    autoDetect: 'Auto detect',
+    readonly: 'Readonly',
+    writable: 'Writable',
+    enabled: 'Enabled',
+    disabled: 'Disabled',
+    createdAt: 'Created at'
+  },
+  blockMove: {
+    openDialog: 'Move current block to another document',
+    dialogTitle: 'Move Current Block',
+    searchPlaceholder: 'Search target document, or enter a new document title...',
+    createAndMove: 'Create and move to "{title}"',
+    noDocumentFound: 'No available document',
+    moveSuccess: 'Block moved',
+    moveFailed: 'Failed to move block'
+  },
+  commandPalette: {
+    placeholder: 'Type a command or shortcut...',
+    noResult: 'No matching command'
+  },
   languages: {
     'zh-CN': 'Chinese',
     'en-US': 'English'
@@ -81,6 +108,7 @@ export default {
     commands: {
       showSearch: 'Show search panel',
       hideSearch: 'Hide search panel',
+      openCommandPalette: 'Open command palette',
       searchToggleCase: 'Toggle case-sensitive matching',
       searchToggleWord: 'Toggle whole word matching',
       searchToggleRegex: 'Toggle regular expression matching',
@@ -89,6 +117,7 @@ export default {
       blockSelectAll: 'Select all in block',
       blockAddAfterCurrent: 'Add new block after current',
       blockAddAfterLast: 'Add new block at end',
+      blockAddAfterLastAndScrollDown: 'Add new block at end and scroll down',
       blockAddBeforeCurrent: 'Add new block before current',
       blockGotoPrevious: 'Go to previous block',
       blockGotoNext: 'Go to next block',
@@ -227,6 +256,12 @@ export default {
     presetTheme: 'Preset Theme',
     saveOptions: 'Save Options',
     autoSaveDelay: 'Auto Save Delay (ms)',
+    defaultBlockSettings: 'Default Block Settings',
+    defaultBlockLanguage: 'Default Block Language',
+    defaultBlockAutoDetect: 'Default Block Auto Detect',
+    blockSeparatorHeight: 'Block Separator Height',
+    cursorBlinkRate: 'Cursor Blink Rate',
+    cursorBlinkOff: 'Off',
     updateSettings: 'Update Settings',
     autoCheckUpdates: 'Automatically Check Updates',
     autoCheckUpdatesDescription: 'Check for updates when application starts',

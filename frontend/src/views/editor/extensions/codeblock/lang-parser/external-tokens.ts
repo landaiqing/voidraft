@@ -15,13 +15,9 @@ const SECOND_TOKEN_CHAR = DELIMITER_PREFIX.charCodeAt(1);
 const languageTokensMatcher = LANGUAGES.map(l => l.token).join("|");
 const escapeForRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const tokenRegEx = new RegExp(
-  `^${escapeForRegex(DELIMITER_PREFIX)}(?:${languageTokensMatcher})(?:-(?:a|r|w))*${escapeForRegex(DELIMITER_SUFFIX)}`,
-  "g",
+  `^${escapeForRegex(DELIMITER_PREFIX)}(?:${languageTokensMatcher})(?:-(?:a|r|w))*(?:;created=[^\\n;]+)?${escapeForRegex(DELIMITER_SUFFIX)}`,
 );
-const maxDelimiterLookahead = DELIMITER_PREFIX.length
-  + Math.max(...LANGUAGES.map(lang => lang.token.length))
-  + "-a-w".length
-  + DELIMITER_SUFFIX.length;
+const maxDelimiterLookahead = 256;
 
 /**
  * 代码块内容标记器
@@ -46,7 +42,6 @@ export const blockContent = new ExternalTokenizer((input) => {
         potentialDelimiter += String.fromCharCode(char);
       }
 
-      tokenRegEx.lastIndex = 0;
       if (tokenRegEx.test(potentialDelimiter)) {
         input.acceptToken(BlockContent);
         return;

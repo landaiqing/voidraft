@@ -1,9 +1,9 @@
 import {EditorSelection, type Compartment} from '@codemirror/state';
 import {EditorView, WidgetType} from '@codemirror/view';
 import i18n from '@/i18n';
-import {copyImage, deleteImageAsset} from './clipboard';
+import {copyImage} from './clipboard';
 import {inlineImageDrawManager} from './manager';
-import {parseInlineImages, removeInlineImage, setInlineImageDisplayDimensions} from './inlineImageParsing';
+import {parseInlineImages, setInlineImageDisplayDimensions} from './inlineImageParsing';
 
 const FOLDED_HEIGHT = 16;
 
@@ -99,7 +99,6 @@ export class InlineImageWidget extends WidgetType {
 
     let copyButton: HTMLButtonElement | null = null;
     let drawButton: HTMLButtonElement | null = null;
-    let deleteButton: HTMLButtonElement | null = null;
 
     if (this.interactive && !this.isFolded) {
       const buttonsContainer = document.createElement('div');
@@ -119,20 +118,10 @@ export class InlineImageWidget extends WidgetType {
       drawButton.innerHTML = `<span>${t('inlineImage.draw')}</span>`;
       buttonsContainer.appendChild(drawButton);
 
-      deleteButton = document.createElement('button');
-      deleteButton.type = 'button';
-      deleteButton.className = 'delete';
-      deleteButton.title = t('inlineImage.delete');
-      deleteButton.innerHTML = `<span>${t('inlineImage.delete')}</span>`;
-      buttonsContainer.appendChild(deleteButton);
-
       copyButton.addEventListener('mousedown', event => {
         event.preventDefault();
       });
       drawButton.addEventListener('mousedown', event => {
-        event.preventDefault();
-      });
-      deleteButton.addEventListener('mousedown', event => {
         event.preventDefault();
       });
 
@@ -169,18 +158,6 @@ export class InlineImageWidget extends WidgetType {
         const imageUrl = currentImage?.file || this.path;
         const assetRef = currentImage?.assetRef || this.assetRef || imageUrl;
         inlineImageDrawManager.show(view, this.id, assetRef, withDialogCacheBust(imageUrl));
-      });
-    }
-
-    if (deleteButton) {
-      deleteButton.addEventListener('click', async event => {
-        event.preventDefault();
-        try {
-          await deleteImageAsset(this.assetRef || this.path);
-          removeInlineImage(view, this.id);
-        } catch (error) {
-          console.error('[inlineImage] Failed to delete image:', error);
-        }
       });
     }
 

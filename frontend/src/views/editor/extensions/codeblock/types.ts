@@ -6,6 +6,7 @@ export interface Block {
         name: string;
         auto: boolean;
     };
+    createdAt?: string;
     access: BlockAccess;
     content: {
         from: number;
@@ -33,6 +34,7 @@ export interface BlockDelimiterInfo {
     language: SupportedLanguage;
     auto: boolean;
     access: BlockAccess;
+    createdAt?: string;
 }
 
 /**
@@ -108,5 +110,6 @@ export const DELIMITER_SUFFIX = '\n';
 export const AUTO_DETECT_SUFFIX = '-a';
 export const READONLY_SUFFIX = '-r';
 export const WRITABLE_SUFFIX = '-w';
+export const BLOCK_CREATED_AT_PREFIX = ';created=';
 
-export const DELIMITER_REGEX = /^(?:\n)?∞∞∞([a-zA-Z0-9_]+)((?:-(?:a|r|w))*)\n$/m;
+export const DELIMITER_REGEX = /^(?:\n)?∞∞∞([a-zA-Z0-9_]+)((?:-(?:a|r|w))*)(?:;created=([^\n;]+))?\n$/m;

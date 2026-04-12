@@ -5,7 +5,6 @@ import copyDarkIconUrl from '@/assets/icons/copy-dark.svg';
 import pencilWhiteIconUrl from '@/assets/icons/pencil-white.svg';
 import resizeHandleDarkUrl from '@/assets/icons/resize-handle-se-dark.png';
 import resizeHandleLightUrl from '@/assets/icons/resize-handle-se-light.png';
-import trashWhiteIconUrl from '@/assets/icons/trash-white.svg';
 import {parseInlineImages} from './inlineImageParsing';
 import {InlineImageWidget} from './inlineImageWidget';
 import type {ParsedInlineImage} from './types';
@@ -160,14 +159,6 @@ function createInlineImageTheme(): Extension {
     },
     '.inline-image .buttons-container button.draw': {
       backgroundImage: `url("${pencilWhiteIconUrl}")`,
-    },
-    '.inline-image .buttons-container button.delete': {
-      backgroundImage: `url("${trashWhiteIconUrl}")`,
-      padding: 'calc(3px * var(--button-scale, 1)) calc(8px * var(--button-scale, 1)) calc(3px * var(--button-scale, 1)) calc(22px * var(--button-scale, 1))',
-      backgroundColor: '#8f3d3d',
-    },
-    '.inline-image .buttons-container button.delete:hover': {
-      backgroundColor: '#7c3131',
     },
     '.inline-image.selected': {
       '--handle-color': 'var(--outline-color)',

@@ -6,21 +6,10 @@
 import { parser } from "./parser";
 import { configureNesting } from "./nested-parser";
 
-import {
-  LRLanguage,
-  LanguageSupport,
-  foldNodeProp,
-} from "@codemirror/language";
+import { LRLanguage, LanguageSupport, foldNodeProp } from "@codemirror/language";
 import { styleTags, tags as t } from "@lezer/highlight";
 
 import { json } from "@codemirror/lang-json";
-
-/**
- * 折叠节点函数
- */
-function foldNode(node: any) {
-  return { from: node.from, to: node.to - 1 };
-}
 
 /**
  * 代码块语言定义
@@ -34,7 +23,7 @@ export const CodeBlockLanguage = LRLanguage.define({
 
       foldNodeProp.add({
         BlockContent(node: any) {
-          return { from: node.from, to: node.to - 1 };
+          return { from: node.from, to: node.to };
         },
       }),
     ],

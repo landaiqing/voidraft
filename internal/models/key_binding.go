@@ -25,85 +25,87 @@ type KeyBinding struct {
 }
 
 const (
-	ShowSearch             KeyBindingName = "showSearch"             // 显示搜索
-	HideSearch             KeyBindingName = "hideSearch"             // 隐藏搜索
-	BlockSelectAll         KeyBindingName = "blockSelectAll"         // 块内选择全部
-	BlockAddAfterCurrent   KeyBindingName = "blockAddAfterCurrent"   // 在当前块后添加新块
-	BlockAddAfterLast      KeyBindingName = "blockAddAfterLast"      // 在最后添加新块
-	BlockAddBeforeCurrent  KeyBindingName = "blockAddBeforeCurrent"  // 在当前块前添加新块
-	BlockGotoPrevious      KeyBindingName = "blockGotoPrevious"      // 跳转到上一个块
-	BlockGotoNext          KeyBindingName = "blockGotoNext"          // 跳转到下一个块
-	BlockSelectPrevious    KeyBindingName = "blockSelectPrevious"    // 选择上一个块
-	BlockSelectNext        KeyBindingName = "blockSelectNext"        // 选择下一个块
-	BlockDelete            KeyBindingName = "blockDelete"            // 删除当前块
-	BlockMoveUp            KeyBindingName = "blockMoveUp"            // 向上移动当前块
-	BlockMoveDown          KeyBindingName = "blockMoveDown"          // 向下移动当前块
-	BlockDeleteLine        KeyBindingName = "blockDeleteLine"        // 删除行
-	BlockMoveLineUp        KeyBindingName = "blockMoveLineUp"        // 向上移动行
-	BlockMoveLineDown      KeyBindingName = "blockMoveLineDown"      // 向下移动行
-	BlockTransposeChars    KeyBindingName = "blockTransposeChars"    // 字符转置
-	BlockFormat            KeyBindingName = "blockFormat"            // 格式化代码块
-	BlockCopy              KeyBindingName = "blockCopy"              // 复制
-	BlockCut               KeyBindingName = "blockCut"               // 剪切
-	BlockPaste             KeyBindingName = "blockPaste"             // 粘贴
-	FoldCode               KeyBindingName = "foldCode"               // 折叠代码
-	UnfoldCode             KeyBindingName = "unfoldCode"             // 展开代码
-	FoldAll                KeyBindingName = "foldAll"                // 折叠全部
-	UnfoldAll              KeyBindingName = "unfoldAll"              // 展开全部
-	CursorSyntaxLeft       KeyBindingName = "cursorSyntaxLeft"       // 光标按语法左移
-	CursorSyntaxRight      KeyBindingName = "cursorSyntaxRight"      // 光标按语法右移
-	SelectSyntaxLeft       KeyBindingName = "selectSyntaxLeft"       // 按语法选择左侧
-	SelectSyntaxRight      KeyBindingName = "selectSyntaxRight"      // 按语法选择右侧
-	CopyLineUp             KeyBindingName = "copyLineUp"             // 向上复制行
-	CopyLineDown           KeyBindingName = "copyLineDown"           // 向下复制行
-	InsertBlankLine        KeyBindingName = "insertBlankLine"        // 插入空行
-	SelectLine             KeyBindingName = "selectLine"             // 选择行
-	SelectParentSyntax     KeyBindingName = "selectParentSyntax"     // 选择父级语法
-	SimplifySelection      KeyBindingName = "simplifySelection"      // 简化选择
-	AddCursorAbove         KeyBindingName = "addCursorAbove"         // 在上方添加光标
-	AddCursorBelow         KeyBindingName = "addCursorBelow"         // 在下方添加光标
-	CursorGroupLeft        KeyBindingName = "cursorGroupLeft"        // 光标按单词左移
-	CursorGroupRight       KeyBindingName = "cursorGroupRight"       // 光标按单词右移
-	SelectGroupLeft        KeyBindingName = "selectGroupLeft"        // 按单词选择左侧
-	SelectGroupRight       KeyBindingName = "selectGroupRight"       // 按单词选择右侧
-	DeleteToLineEnd        KeyBindingName = "deleteToLineEnd"        // 删除到行尾
-	DeleteToLineStart      KeyBindingName = "deleteToLineStart"      // 删除到行首
-	CursorLineStart        KeyBindingName = "cursorLineStart"        // 移动到行首
-	CursorLineEnd          KeyBindingName = "cursorLineEnd"          // 移动到行尾
-	SelectLineStart        KeyBindingName = "selectLineStart"        // 选择到行首
-	SelectLineEnd          KeyBindingName = "selectLineEnd"          // 选择到行尾
-	CursorDocStart         KeyBindingName = "cursorDocStart"         // 跳转到文档开头
-	CursorDocEnd           KeyBindingName = "cursorDocEnd"           // 跳转到文档结尾
-	SelectDocStart         KeyBindingName = "selectDocStart"         // 选择到文档开头
-	SelectDocEnd           KeyBindingName = "selectDocEnd"           // 选择到文档结尾
-	SelectMatchingBracket  KeyBindingName = "selectMatchingBracket"  // 选择到匹配括号
-	SplitLine              KeyBindingName = "splitLine"              // 分割行
-	CursorCharLeft         KeyBindingName = "cursorCharLeft"         // 光标左移一个字符
-	CursorCharRight        KeyBindingName = "cursorCharRight"        // 光标右移一个字符
-	CursorLineUp           KeyBindingName = "cursorLineUp"           // 光标上移一行
-	CursorLineDown         KeyBindingName = "cursorLineDown"         // 光标下移一行
-	CursorPageUp           KeyBindingName = "cursorPageUp"           // 向上翻页
-	CursorPageDown         KeyBindingName = "cursorPageDown"         // 向下翻页
-	SelectCharLeft         KeyBindingName = "selectCharLeft"         // 选择左移一个字符
-	SelectCharRight        KeyBindingName = "selectCharRight"        // 选择右移一个字符
-	SelectLineUp           KeyBindingName = "selectLineUp"           // 选择上移一行
-	SelectLineDown         KeyBindingName = "selectLineDown"         // 选择下移一行
-	IndentLess             KeyBindingName = "indentLess"             // 减少缩进
-	IndentMore             KeyBindingName = "indentMore"             // 增加缩进
-	IndentSelection        KeyBindingName = "indentSelection"        // 缩进选择
-	CursorMatchingBracket  KeyBindingName = "cursorMatchingBracket"  // 光标到匹配括号
-	ToggleComment          KeyBindingName = "toggleComment"          // 切换注释
-	ToggleBlockComment     KeyBindingName = "toggleBlockComment"     // 切换块注释
-	InsertNewlineAndIndent KeyBindingName = "insertNewlineAndIndent" // 插入新行并缩进
-	DeleteCharBackward     KeyBindingName = "deleteCharBackward"     // 向后删除字符
-	DeleteCharForward      KeyBindingName = "deleteCharForward"      // 向前删除字符
-	DeleteGroupBackward    KeyBindingName = "deleteGroupBackward"    // 向后删除组
-	DeleteGroupForward     KeyBindingName = "deleteGroupForward"     // 向前删除组
-	HistoryUndo            KeyBindingName = "historyUndo"            // 撤销
-	HistoryRedo            KeyBindingName = "historyRedo"            // 重做
-	HistoryUndoSelection   KeyBindingName = "historyUndoSelection"   // 撤销选择
-	HistoryRedoSelection   KeyBindingName = "historyRedoSelection"   // 重做选择
-	CopyBlockImage         KeyBindingName = "copyBlockImage"         // 复制块为图片
+	ShowSearch                     KeyBindingName = "showSearch"                     // 显示搜索
+	HideSearch                     KeyBindingName = "hideSearch"                     // 隐藏搜索
+	OpenCommandPalette             KeyBindingName = "openCommandPalette"             // 打开命令面板
+	BlockSelectAll                 KeyBindingName = "blockSelectAll"                 // 块内选择全部
+	BlockAddAfterCurrent           KeyBindingName = "blockAddAfterCurrent"           // 在当前块后添加新块
+	BlockAddAfterLast              KeyBindingName = "blockAddAfterLast"              // 在最后添加新块
+	BlockAddAfterLastAndScrollDown KeyBindingName = "blockAddAfterLastAndScrollDown" // 在最后添加新块并滚动到底部
+	BlockAddBeforeCurrent          KeyBindingName = "blockAddBeforeCurrent"          // 在当前块前添加新块
+	BlockGotoPrevious              KeyBindingName = "blockGotoPrevious"              // 跳转到上一个块
+	BlockGotoNext                  KeyBindingName = "blockGotoNext"                  // 跳转到下一个块
+	BlockSelectPrevious            KeyBindingName = "blockSelectPrevious"            // 选择上一个块
+	BlockSelectNext                KeyBindingName = "blockSelectNext"                // 选择下一个块
+	BlockDelete                    KeyBindingName = "blockDelete"                    // 删除当前块
+	BlockMoveUp                    KeyBindingName = "blockMoveUp"                    // 向上移动当前块
+	BlockMoveDown                  KeyBindingName = "blockMoveDown"                  // 向下移动当前块
+	BlockDeleteLine                KeyBindingName = "blockDeleteLine"                // 删除行
+	BlockMoveLineUp                KeyBindingName = "blockMoveLineUp"                // 向上移动行
+	BlockMoveLineDown              KeyBindingName = "blockMoveLineDown"              // 向下移动行
+	BlockTransposeChars            KeyBindingName = "blockTransposeChars"            // 字符转置
+	BlockFormat                    KeyBindingName = "blockFormat"                    // 格式化代码块
+	BlockCopy                      KeyBindingName = "blockCopy"                      // 复制
+	BlockCut                       KeyBindingName = "blockCut"                       // 剪切
+	BlockPaste                     KeyBindingName = "blockPaste"                     // 粘贴
+	FoldCode                       KeyBindingName = "foldCode"                       // 折叠代码
+	UnfoldCode                     KeyBindingName = "unfoldCode"                     // 展开代码
+	FoldAll                        KeyBindingName = "foldAll"                        // 折叠全部
+	UnfoldAll                      KeyBindingName = "unfoldAll"                      // 展开全部
+	CursorSyntaxLeft               KeyBindingName = "cursorSyntaxLeft"               // 光标按语法左移
+	CursorSyntaxRight              KeyBindingName = "cursorSyntaxRight"              // 光标按语法右移
+	SelectSyntaxLeft               KeyBindingName = "selectSyntaxLeft"               // 按语法选择左侧
+	SelectSyntaxRight              KeyBindingName = "selectSyntaxRight"              // 按语法选择右侧
+	CopyLineUp                     KeyBindingName = "copyLineUp"                     // 向上复制行
+	CopyLineDown                   KeyBindingName = "copyLineDown"                   // 向下复制行
+	InsertBlankLine                KeyBindingName = "insertBlankLine"                // 插入空行
+	SelectLine                     KeyBindingName = "selectLine"                     // 选择行
+	SelectParentSyntax             KeyBindingName = "selectParentSyntax"             // 选择父级语法
+	SimplifySelection              KeyBindingName = "simplifySelection"              // 简化选择
+	AddCursorAbove                 KeyBindingName = "addCursorAbove"                 // 在上方添加光标
+	AddCursorBelow                 KeyBindingName = "addCursorBelow"                 // 在下方添加光标
+	CursorGroupLeft                KeyBindingName = "cursorGroupLeft"                // 光标按单词左移
+	CursorGroupRight               KeyBindingName = "cursorGroupRight"               // 光标按单词右移
+	SelectGroupLeft                KeyBindingName = "selectGroupLeft"                // 按单词选择左侧
+	SelectGroupRight               KeyBindingName = "selectGroupRight"               // 按单词选择右侧
+	DeleteToLineEnd                KeyBindingName = "deleteToLineEnd"                // 删除到行尾
+	DeleteToLineStart              KeyBindingName = "deleteToLineStart"              // 删除到行首
+	CursorLineStart                KeyBindingName = "cursorLineStart"                // 移动到行首
+	CursorLineEnd                  KeyBindingName = "cursorLineEnd"                  // 移动到行尾
+	SelectLineStart                KeyBindingName = "selectLineStart"                // 选择到行首
+	SelectLineEnd                  KeyBindingName = "selectLineEnd"                  // 选择到行尾
+	CursorDocStart                 KeyBindingName = "cursorDocStart"                 // 跳转到文档开头
+	CursorDocEnd                   KeyBindingName = "cursorDocEnd"                   // 跳转到文档结尾
+	SelectDocStart                 KeyBindingName = "selectDocStart"                 // 选择到文档开头
+	SelectDocEnd                   KeyBindingName = "selectDocEnd"                   // 选择到文档结尾
+	SelectMatchingBracket          KeyBindingName = "selectMatchingBracket"          // 选择到匹配括号
+	SplitLine                      KeyBindingName = "splitLine"                      // 分割行
+	CursorCharLeft                 KeyBindingName = "cursorCharLeft"                 // 光标左移一个字符
+	CursorCharRight                KeyBindingName = "cursorCharRight"                // 光标右移一个字符
+	CursorLineUp                   KeyBindingName = "cursorLineUp"                   // 光标上移一行
+	CursorLineDown                 KeyBindingName = "cursorLineDown"                 // 光标下移一行
+	CursorPageUp                   KeyBindingName = "cursorPageUp"                   // 向上翻页
+	CursorPageDown                 KeyBindingName = "cursorPageDown"                 // 向下翻页
+	SelectCharLeft                 KeyBindingName = "selectCharLeft"                 // 选择左移一个字符
+	SelectCharRight                KeyBindingName = "selectCharRight"                // 选择右移一个字符
+	SelectLineUp                   KeyBindingName = "selectLineUp"                   // 选择上移一行
+	SelectLineDown                 KeyBindingName = "selectLineDown"                 // 选择下移一行
+	IndentLess                     KeyBindingName = "indentLess"                     // 减少缩进
+	IndentMore                     KeyBindingName = "indentMore"                     // 增加缩进
+	IndentSelection                KeyBindingName = "indentSelection"                // 缩进选择
+	CursorMatchingBracket          KeyBindingName = "cursorMatchingBracket"          // 光标到匹配括号
+	ToggleComment                  KeyBindingName = "toggleComment"                  // 切换注释
+	ToggleBlockComment             KeyBindingName = "toggleBlockComment"             // 切换块注释
+	InsertNewlineAndIndent         KeyBindingName = "insertNewlineAndIndent"         // 插入新行并缩进
+	DeleteCharBackward             KeyBindingName = "deleteCharBackward"             // 向后删除字符
+	DeleteCharForward              KeyBindingName = "deleteCharForward"              // 向前删除字符
+	DeleteGroupBackward            KeyBindingName = "deleteGroupBackward"            // 向后删除组
+	DeleteGroupForward             KeyBindingName = "deleteGroupForward"             // 向前删除组
+	HistoryUndo                    KeyBindingName = "historyUndo"                    // 撤销
+	HistoryRedo                    KeyBindingName = "historyRedo"                    // 重做
+	HistoryUndoSelection           KeyBindingName = "historyUndoSelection"           // 撤销选择
+	HistoryRedoSelection           KeyBindingName = "historyRedoSelection"           // 重做选择
+	CopyBlockImage                 KeyBindingName = "copyBlockImage"                 // 复制块为图片
 )
 
 const DefaultExtension = "editor"
@@ -129,6 +131,14 @@ func NewDefaultKeyBindings() []KeyBinding {
 			Enabled:        true,
 			PreventDefault: false,
 		},
+		{
+			Name:           OpenCommandPalette,
+			Type:           Standard,
+			Key:            "F1",
+			Extension:      DefaultExtension,
+			Enabled:        true,
+			PreventDefault: true,
+		},
 
 		// 块操作相关
 		{
@@ -151,6 +161,14 @@ func NewDefaultKeyBindings() []KeyBinding {
 			Name:           BlockAddAfterLast,
 			Type:           Standard,
 			Key:            "Mod-Shift-Enter",
+			Extension:      DefaultExtension,
+			Enabled:        true,
+			PreventDefault: true,
+		},
+		{
+			Name:           BlockAddAfterLastAndScrollDown,
+			Type:           Standard,
+			Key:            "Mod-Alt-Enter",
 			Extension:      DefaultExtension,
 			Enabled:        true,
 			PreventDefault: true,

@@ -214,6 +214,14 @@ export const useConfigStore = defineStore('config', () => {
         setEnableMemoryMonitor: (value: boolean) => updateConfig('enableMemoryMonitor', value),
         setKeymapMode: (value: any) => updateConfig('keymapMode', value),
         setAutoUpdate: (value: boolean) => updateConfig('autoUpdate', value),
+        setDefaultBlockLanguage: (value: string) => updateConfig('defaultBlockLanguage', value),
+        setDefaultBlockAutoDetect: (value: boolean) => updateConfig('defaultBlockAutoDetect', value),
+        setBlockSeparatorHeight: async (value: number) => {
+            await updateConfig('blockSeparatorHeight', clampValue(value, 'blockSeparatorHeight'));
+        },
+        setCursorBlinkRate: async (value: number) => {
+            await updateConfig('cursorBlinkRate', clampValue(value, 'cursorBlinkRate'));
+        },
 
         setSyncTarget: (value: SyncTarget) => updateConfig('sync_target', value),
         setEnableSync: (value: boolean) => updateConfig('sync_enabled', value),
