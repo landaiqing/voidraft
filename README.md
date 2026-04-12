@@ -16,6 +16,7 @@ voidraft is a modern developer-focused text editor that allows you to record, or
 - Block editing mode - Split content into independent code blocks, each with different language settings
 - Multi-window support - edit multiple documents at the same time
 - Support for custom themes - Custom editor themes
+- . . .
 
 ### Modern Interface
 
@@ -36,6 +37,7 @@ voidraft is a modern developer-focused text editor that allows you to record, or
   - Hyperlink support
   - Checkbox support
   - Minimap
+  - . . .
 
 ## Quick Start
 
@@ -113,17 +115,11 @@ voidraft/
 
 ### Platform Extension Plans
 
-| Platform | Status | Expected Time |
-|----------|--------|---------------|
-| macOS | Planned | Future versions |
-| Linux | Planned | Future versions |
-
-### Planned Features
-- ✅ Custom themes - Customize editor themes
-- ✅ Multi-window support - Support editing multiple documents simultaneously
-- ✅ Data synchronization - Cloud backup for documents
-- [ ] Enhanced clipboard - Monitor and manage clipboard history
-- [ ] Extension system - Support for custom plugins
+| Platform | Status | Expected Time   |
+|----------|--------|-----------------|
+| Windows  | In progress | LTS             |
+| macOS    | Planned | Future versions |
+| Linux    | Planned | Future versions |
 
 ## Acknowledgments
 
