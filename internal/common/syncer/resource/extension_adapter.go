@@ -33,7 +33,6 @@ func (a *ExtensionAdapter) Export(ctx context.Context) ([]snapshot.Record, error
 	records := make([]snapshot.Record, 0, len(extensions))
 	for _, item := range extensions {
 		values := map[string]interface{}{
-			extension.FieldUUID:      item.UUID,
 			extension.FieldCreatedAt: item.CreatedAt,
 			extension.FieldUpdatedAt: item.UpdatedAt,
 			extension.FieldName:      item.Name,
@@ -44,9 +43,10 @@ func (a *ExtensionAdapter) Export(ctx context.Context) ([]snapshot.Record, error
 			values[extension.FieldDeletedAt] = *item.DeletedAt
 		}
 
-		record, err := snapshot.NewRecord(a.Kind(), item.UUID, values, nil)
+		recordID := extensionSyncID(item.Name)
+		record, err := snapshot.NewRecord(a.Kind(), recordID, values, nil)
 		if err != nil {
-			return nil, fmt.Errorf("build extension record %s: %w", item.UUID, err)
+			return nil, fmt.Errorf("build extension record %s: %w", recordID, err)
 		}
 		records = append(records, record)
 	}
@@ -59,7 +59,8 @@ func (a *ExtensionAdapter) Apply(ctx context.Context, records []snapshot.Record)
 	applyCtx := importContext(ctx)
 
 	for _, record := range records {
-		found, err := a.client.Extension.Query().Where(extension.UUIDEQ(record.ID)).First(applyCtx)
+		name := stringValue(record, extension.FieldName)
+		found, err := a.client.Extension.Query().Where(extension.NameEQ(name)).First(applyCtx)
 		switch {
 		case ent.IsNotFound(err):
 			if err := a.create(applyCtx, record); err != nil {
@@ -82,7 +83,6 @@ func (a *ExtensionAdapter) Apply(ctx context.Context, records []snapshot.Record)
 // create 创建新的扩展记录。
 func (a *ExtensionAdapter) create(ctx context.Context, record snapshot.Record) error {
 	builder := a.client.Extension.Create().
-		SetUUID(record.ID).
 		SetName(stringValue(record, extension.FieldName)).
 		SetEnabled(boolValue(record, extension.FieldEnabled)).
 		SetConfig(mapValue(record, extension.FieldConfig)).

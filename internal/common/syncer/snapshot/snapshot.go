@@ -93,7 +93,6 @@ func newRecord(kind string, id string, values map[string]interface{}, blobs map[
 	if id == "" {
 		return Record{}, errors.New("record id is required")
 	}
-	normalizedValues["uuid"] = id
 
 	updatedAt, err := parseRequiredTime(normalizedValues["updated_at"])
 	if err != nil {

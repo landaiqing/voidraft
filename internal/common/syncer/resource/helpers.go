@@ -96,3 +96,15 @@ func recordApplyTime(record snapshot.Record) time.Time {
 	}
 	return record.UpdatedAt
 }
+
+func extensionSyncID(name string) string {
+	return name
+}
+
+func keyBindingSyncID(bindingType string, name string) string {
+	return bindingType + ":" + name
+}
+
+func themeSyncID(name string) string {
+	return name
+}

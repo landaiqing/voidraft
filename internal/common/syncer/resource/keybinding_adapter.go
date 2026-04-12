@@ -33,7 +33,6 @@ func (a *KeyBindingAdapter) Export(ctx context.Context) ([]snapshot.Record, erro
 	records := make([]snapshot.Record, 0, len(keyBindings))
 	for _, item := range keyBindings {
 		values := map[string]interface{}{
-			keybinding.FieldUUID:           item.UUID,
 			keybinding.FieldCreatedAt:      item.CreatedAt,
 			keybinding.FieldUpdatedAt:      item.UpdatedAt,
 			keybinding.FieldName:           item.Name,
@@ -51,9 +50,10 @@ func (a *KeyBindingAdapter) Export(ctx context.Context) ([]snapshot.Record, erro
 			values[keybinding.FieldDeletedAt] = *item.DeletedAt
 		}
 
-		record, err := snapshot.NewRecord(a.Kind(), item.UUID, values, nil)
+		recordID := keyBindingSyncID(item.Type, item.Name)
+		record, err := snapshot.NewRecord(a.Kind(), recordID, values, nil)
 		if err != nil {
-			return nil, fmt.Errorf("build keybinding record %s: %w", item.UUID, err)
+			return nil, fmt.Errorf("build keybinding record %s: %w", recordID, err)
 		}
 		records = append(records, record)
 	}
@@ -66,7 +66,11 @@ func (a *KeyBindingAdapter) Apply(ctx context.Context, records []snapshot.Record
 	applyCtx := importContext(ctx)
 
 	for _, record := range records {
-		found, err := a.client.KeyBinding.Query().Where(keybinding.UUIDEQ(record.ID)).First(applyCtx)
+		name := stringValue(record, keybinding.FieldName)
+		bindingType := stringValue(record, keybinding.FieldType)
+		found, err := a.client.KeyBinding.Query().
+			Where(keybinding.TypeEQ(bindingType), keybinding.NameEQ(name)).
+			First(applyCtx)
 		switch {
 		case ent.IsNotFound(err):
 			if err := a.create(applyCtx, record); err != nil {
@@ -89,7 +93,6 @@ func (a *KeyBindingAdapter) Apply(ctx context.Context, records []snapshot.Record
 // create 创建新的快捷键记录。
 func (a *KeyBindingAdapter) create(ctx context.Context, record snapshot.Record) error {
 	builder := a.client.KeyBinding.Create().
-		SetUUID(record.ID).
 		SetName(stringValue(record, keybinding.FieldName)).
 		SetType(stringValue(record, keybinding.FieldType)).
 		SetKey(stringValue(record, keybinding.FieldKey)).

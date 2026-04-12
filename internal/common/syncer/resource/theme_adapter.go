@@ -33,7 +33,6 @@ func (a *ThemeAdapter) Export(ctx context.Context) ([]snapshot.Record, error) {
 	records := make([]snapshot.Record, 0, len(themes))
 	for _, item := range themes {
 		values := map[string]interface{}{
-			theme.FieldUUID:      item.UUID,
 			theme.FieldCreatedAt: item.CreatedAt,
 			theme.FieldUpdatedAt: item.UpdatedAt,
 			theme.FieldName:      item.Name,
@@ -44,9 +43,10 @@ func (a *ThemeAdapter) Export(ctx context.Context) ([]snapshot.Record, error) {
 			values[theme.FieldDeletedAt] = *item.DeletedAt
 		}
 
-		record, err := snapshot.NewRecord(a.Kind(), item.UUID, values, nil)
+		recordID := themeSyncID(item.Name)
+		record, err := snapshot.NewRecord(a.Kind(), recordID, values, nil)
 		if err != nil {
-			return nil, fmt.Errorf("build theme record %s: %w", item.UUID, err)
+			return nil, fmt.Errorf("build theme record %s: %w", recordID, err)
 		}
 		records = append(records, record)
 	}
@@ -59,7 +59,8 @@ func (a *ThemeAdapter) Apply(ctx context.Context, records []snapshot.Record) err
 	applyCtx := importContext(ctx)
 
 	for _, record := range records {
-		found, err := a.client.Theme.Query().Where(theme.UUIDEQ(record.ID)).First(applyCtx)
+		name := stringValue(record, theme.FieldName)
+		found, err := a.client.Theme.Query().Where(theme.NameEQ(name)).First(applyCtx)
 		switch {
 		case ent.IsNotFound(err):
 			if err := a.create(applyCtx, record); err != nil {
@@ -82,7 +83,6 @@ func (a *ThemeAdapter) Apply(ctx context.Context, records []snapshot.Record) err
 // create 创建新的主题记录。
 func (a *ThemeAdapter) create(ctx context.Context, record snapshot.Record) error {
 	builder := a.client.Theme.Create().
-		SetUUID(record.ID).
 		SetName(stringValue(record, theme.FieldName)).
 		SetType(theme.Type(stringValue(record, theme.FieldType))).
 		SetColors(mapValue(record, theme.FieldColors)).
