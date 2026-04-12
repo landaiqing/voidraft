@@ -131,10 +131,10 @@ export class InlineImageWidget extends WidgetType {
     }
 
     const image = document.createElement('img');
-    image.src = this.path;
-    image.style.width = this.getWidth();
-    image.style.height = this.getHeight();
     inner.appendChild(image);
+
+    inner.appendChild(this.createMissingPlaceholder());
+    this.syncImage(image, wrap);
 
     if (copyButton) {
       copyButton.addEventListener('click', async event => {
@@ -182,9 +182,8 @@ export class InlineImageWidget extends WidgetType {
       return false;
     }
 
-    image.src = this.path;
-    image.style.width = this.getWidth();
-    image.style.height = this.getHeight();
+    this.syncImage(image, dom);
+    this.syncMissingPlaceholder(dom);
     this.syncControlScale(dom, this.getNumericWidth(), dom.querySelector('.buttons-container'));
     return true;
   }
@@ -199,9 +198,98 @@ export class InlineImageWidget extends WidgetType {
 
   private syncWrapClassName(dom: HTMLElement): void {
     const isControlsVisible = dom.classList.contains('controls-visible');
+    const isImageMissing = dom.classList.contains('image-missing');
     dom.className = this.getClassName();
     if (isControlsVisible) {
       dom.classList.add('controls-visible');
+    }
+    if (isImageMissing) {
+      dom.classList.add('image-missing');
+    }
+  }
+
+  private createMissingPlaceholder(): HTMLDivElement {
+    const placeholder = document.createElement('div');
+    placeholder.className = 'missing-placeholder';
+    placeholder.title = t('inlineImage.missing');
+
+    const content = document.createElement('div');
+    content.className = 'missing-content';
+    placeholder.appendChild(content);
+
+    const icon = document.createElement('span');
+    icon.className = 'missing-icon';
+    icon.innerHTML = `
+      <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <rect x="5" y="7" width="22" height="18" rx="2" stroke="currentColor" stroke-width="2" />
+        <circle cx="12" cy="13" r="2" fill="currentColor" />
+        <path d="M7 23L14 17L18 20L21 16L26 23" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    `;
+    content.appendChild(icon);
+
+    const text = document.createElement('span');
+    text.className = 'missing-text';
+    text.textContent = t('inlineImage.missing');
+    content.appendChild(text);
+
+    return placeholder;
+  }
+
+  private syncMissingPlaceholder(dom: HTMLElement): void {
+    const placeholder = this.ensureMissingPlaceholder(dom);
+    if (!placeholder) {
+      return;
+    }
+
+    const message = t('inlineImage.missing');
+    placeholder.title = message;
+    const text = placeholder.querySelector('.missing-text');
+    if (text instanceof HTMLElement) {
+      text.textContent = message;
+    }
+  }
+
+  private ensureMissingPlaceholder(dom: HTMLElement): HTMLElement | null {
+    const placeholder = dom.querySelector('.missing-placeholder');
+    if (placeholder instanceof HTMLElement) {
+      return placeholder;
+    }
+
+    const inner = dom.querySelector('.inner');
+    if (!(inner instanceof HTMLElement)) {
+      return null;
+    }
+
+    const nextPlaceholder = this.createMissingPlaceholder();
+    inner.appendChild(nextPlaceholder);
+    return nextPlaceholder;
+  }
+
+  private syncImage(image: HTMLImageElement, wrap: HTMLElement): void {
+    this.syncMissingPlaceholder(wrap);
+    const source = this.path;
+    image.alt = t('inlineImage.imageAlt');
+    image.style.width = this.getWidth();
+    image.style.height = this.getHeight();
+    image.onload = () => {
+      if (image.getAttribute('src') === source) {
+        wrap.classList.remove('image-missing');
+      }
+    };
+    image.onerror = () => {
+      if (image.getAttribute('src') === source) {
+        wrap.classList.add('image-missing');
+      }
+    };
+
+    if (image.getAttribute('src') !== source) {
+      wrap.classList.remove('image-missing');
+    }
+
+    image.src = source;
+    if (image.complete && image.naturalWidth === 0 && image.getAttribute('src') === source) {
+      wrap.classList.add('image-missing');
     }
   }
 

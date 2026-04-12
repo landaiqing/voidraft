@@ -464,6 +464,8 @@ export default {
         copied: '已复制',
         draw: '绘制',
         delete: '删除',
+        missing: '图片资源不存在',
+        imageAlt: '内联图片',
         drawDialog: {
             title: '图片标注',
             select: '选择',

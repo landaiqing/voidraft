@@ -462,6 +462,8 @@ export default {
     copied: 'Copied!',
     draw: 'Draw',
     delete: 'Delete',
+    missing: 'Image resource not found',
+    imageAlt: 'Inline image',
     drawDialog: {
       title: 'Image Annotation',
       select: 'Select',
