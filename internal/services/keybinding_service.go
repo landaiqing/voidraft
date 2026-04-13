@@ -253,6 +253,35 @@ func (s *KeyBindingService) GetDefaultKeyBindings() []models.KeyBinding {
 	return models.NewDefaultKeyBindings()
 }
 
+// ResetSingleKeyBinding 重置单个快捷键到默认值
+func (s *KeyBindingService) ResetSingleKeyBinding(ctx context.Context, id int) error {
+	kb, err := s.GetKeyBindingByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if kb == nil {
+		return fmt.Errorf("key binding not found: id=%d", id)
+	}
+
+	defaults := models.NewDefaultKeyBindings()
+	lookupKey := kb.Type + ":" + kb.Name
+	for _, defaultKb := range defaults {
+		if string(defaultKb.Type)+":"+string(defaultKb.Name) == lookupKey {
+			return s.db.Client.KeyBinding.UpdateOneID(kb.ID).
+				SetKey(defaultKb.Key).
+				SetMacos(defaultKb.Macos).
+				SetWindows(defaultKb.Windows).
+				SetLinux(defaultKb.Linux).
+				SetScope(defaultKb.Scope).
+				SetEnabled(defaultKb.Enabled).
+				SetPreventDefault(defaultKb.PreventDefault).
+				Exec(ctx)
+		}
+	}
+
+	return fmt.Errorf("no default found for key binding: type=%s, name=%s", kb.Type, kb.Name)
+}
+
 // ResetKeyBindings 重置所有快捷键到默认值
 func (s *KeyBindingService) ResetKeyBindings(ctx context.Context) error {
 	// 获取默认快捷键

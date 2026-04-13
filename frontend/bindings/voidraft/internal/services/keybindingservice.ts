@@ -65,6 +65,14 @@ export function ResetKeyBindings(): Promise<void> & { cancel(): void } {
 }
 
 /**
+ * ResetSingleKeyBinding 重置单个快捷键到默认值
+ */
+export function ResetSingleKeyBinding(id: number): Promise<void> & { cancel(): void } {
+    let $resultPromise = $Call.ByID(160366089, id) as any;
+    return $resultPromise;
+}
+
+/**
  * ServiceStartup 服务启动
  */
 export function ServiceStartup(options: application$0.ServiceOptions): Promise<void> & { cancel(): void } {
