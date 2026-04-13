@@ -12,7 +12,7 @@ import { useConfirm } from '@/composables/useConfirm';
 import PickColors from 'vue-pick-colors';
 import type { ThemeColors } from '@/views/editor/theme/types';
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 const configStore = useConfigStore();
 const themeStore = useThemeStore();
 const editorStore = useEditorStore();
@@ -92,10 +92,13 @@ const colorKeys = computed(() => {
 });
 
 const colorList = computed(() =>
-  colorKeys.value.map(colorKey => ({
-    key: colorKey,
-    label: colorKey
-  }))
+  colorKeys.value.map(colorKey => {
+    const i18nKey = `settings.themeColors.${colorKey}`;
+    return {
+      key: colorKey,
+      label: te(i18nKey) ? t(i18nKey) : colorKey,
+    };
+  })
 );
 
 const colorSearch = ref('');
@@ -105,7 +108,10 @@ const searchInputRef = ref<HTMLInputElement | null>(null);
 const filteredColorList = computed(() => {
   const keyword = colorSearch.value.trim().toLowerCase();
   if (!keyword) return colorList.value;
-  return colorList.value.filter(color => color.key.toLowerCase().includes(keyword));
+  return colorList.value.filter(color =>
+    color.key.toLowerCase().includes(keyword) ||
+    color.label.toLowerCase().includes(keyword)
+  );
 });
 
 const toggleSearch = async () => {

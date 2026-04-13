@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { onMounted, computed, ref, nextTick } from 'vue';
+import { onMounted, computed, ref } from 'vue';
 import SettingSection from '../components/SettingSection.vue';
 import SettingItem from '../components/SettingItem.vue';
 import { AccordionContainer, AccordionItem } from '@/components/accordion';
@@ -12,6 +12,7 @@ import { getCommandDescription } from '@/views/editor/keymap/commands';
 import { KeyBindingType } from '@/../bindings/voidraft/internal/models/models';
 import { KeyBindingService } from '@/../bindings/voidraft/internal/services';
 import { useConfirm } from '@/composables/useConfirm';
+import { useKeyRecorder } from '@/composables/useKeyRecorder';
 import toast from '@/components/toast';
 
 const { t } = useI18n();
@@ -20,26 +21,114 @@ const systemStore = useSystemStore();
 const configStore = useConfigStore();
 const editorStore = useEditorStore();
 
-interface EditingState {
-  id: number;
-}
+// Pending result after recording completes (before user confirms)
+const pendingResult = ref<{
+  bindingId: number;
+  newKey: string;
+  conflict: { description: string; id: number; rawKey: string } | null;
+} | null>(null);
 
-const editingBinding = ref<EditingState | null>(null);
-const inputKey = ref('');
+const MODIFIER_ORDER = ['Mod', 'Ctrl', 'Cmd', 'Alt', 'Shift'];
 
-// 将快捷键字符串拆分为独立的键
-const splitKeys = (keyStr: string): string[] => {
-  if (!keyStr) return [];
-  return keyStr.split(/[-+]/).filter(Boolean);
+// Unify Mod/Ctrl/Cmd into a single canonical modifier for comparison.
+// On macOS "Mod" = Cmd, on Windows/Linux "Mod" = Ctrl.
+// Data may store either form, so we collapse them to "Mod".
+const unifyModifier = (mod: string): string => {
+  if (mod === 'Ctrl' || mod === 'Cmd') return 'Mod';
+  return mod;
 };
 
-// 动态设置 ref 并自动聚焦
-const setInputRef = (el: any) => {
-  if (el && el instanceof HTMLInputElement) {
-    // 使用 nextTick 确保 DOM 完全渲染后再聚焦
-    nextTick(() => {
-      el.focus();
-    });
+const normalizeKeyForCompare = (keyStr: string): string => {
+  if (!keyStr) return '';
+  const parts = keyStr.split('-');
+  const modifiers: string[] = [];
+  const rest: string[] = [];
+  for (const p of parts) {
+    if (MODIFIER_ORDER.includes(p)) {
+      modifiers.push(unifyModifier(p));
+    } else {
+      rest.push(p.toLowerCase());
+    }
+  }
+  // Deduplicate (e.g. both Ctrl and Mod collapsed to Mod)
+  const uniqueMods = [...new Set(modifiers)];
+  uniqueMods.sort((a, b) => MODIFIER_ORDER.indexOf(a) - MODIFIER_ORDER.indexOf(b));
+  return [...uniqueMods, ...rest].join('-');
+};
+
+const checkConflict = (newKey: string, currentBindingId: number): { description: string; id: number; rawKey: string } | null => {
+  const normalizedNew = normalizeKeyForCompare(newKey);
+  const currentBinding = keyBindings.value.find(kb => kb.id === currentBindingId);
+
+  for (const kb of keyBindings.value) {
+    if (kb.id === currentBindingId) continue;
+    if (!kb.enabled) continue;
+    if (currentBinding?.originalData?.scope && kb.originalData?.scope
+      && currentBinding.originalData.scope !== kb.originalData.scope) continue;
+    
+    const normalizedExisting = normalizeKeyForCompare(kb.rawKey);
+    if (normalizedExisting && normalizedExisting === normalizedNew) {
+      return { description: kb.description, id: kb.id!, rawKey: kb.rawKey };
+    }
+  }
+  return null;
+};
+
+const { recording, isRecording, startRecording: rawStartRecording, stopRecording } = useKeyRecorder({
+  isMacOS: systemStore.isMacOS,
+  onComplete: (bindingId: number, keyString: string) => {
+    const conflict = checkConflict(keyString, bindingId);
+    pendingResult.value = { bindingId, newKey: keyString, conflict };
+  },
+  onCancel: () => {
+    pendingResult.value = null;
+  },
+});
+
+const hasPendingResult = (bindingId: number): boolean => {
+  return pendingResult.value?.bindingId === bindingId;
+};
+
+const isActive = (bindingId: number): boolean => {
+  return isRecording(bindingId) || hasPendingResult(bindingId);
+};
+
+const toggleRecording = (bindingId: number) => {
+  if (isActive(bindingId)) {
+    stopRecording();
+    pendingResult.value = null;
+  } else {
+    pendingResult.value = null;
+    rawStartRecording(bindingId);
+  }
+};
+
+const confirmSave = async () => {
+  if (!pendingResult.value) return;
+  const { bindingId, newKey } = pendingResult.value;
+  pendingResult.value = null;
+  await saveKey(bindingId, newKey);
+};
+
+const saveKey = async (bindingId: number, keyString: string) => {
+  try {
+    await keybindingStore.updateKeyBinding(bindingId, keyString);
+    await editorStore.applyKeymapSettings();
+  } catch (error) {
+    console.error('Failed to save keybinding:', error);
+    toast.error(t('keybindings.saveFailed'));
+  }
+};
+
+const resetSingleKey = async (bindingId: number) => {
+  pendingResult.value = null;
+  stopRecording();
+  try {
+    await KeyBindingService.ResetSingleKeyBinding(bindingId);
+    await keybindingStore.loadKeyBindings();
+    await editorStore.applyKeymapSettings();
+  } catch (error) {
+    console.error('Failed to reset keybinding:', error);
   }
 };
 
@@ -58,7 +147,6 @@ const updateKeymapMode = async (mode: KeyBindingType) => {
   await editorStore.applyKeymapSettings();
 };
 
-// 重置快捷键确认
 const { isConfirming: isResetConfirming, requestConfirm: requestResetConfirm } = useConfirm({
   timeout: 3000,
   onConfirm: async () => {
@@ -87,7 +175,6 @@ const getRawKey = (kb: any): string => {
     : systemStore.isWindows ? kb.windows 
     : systemStore.isLinux ? kb.linux 
     : kb.key;
-  
   return platformKey || kb.key || '';
 };
 
@@ -98,7 +185,6 @@ const getDisplayKeybinding = (kb: any): string[] => {
 
 const parseKeyString = (keyStr: string): string[] => {
   if (!keyStr) return [];
-  
   const symbolMap: Record<string, string> = {
     'Mod': systemStore.isMacOS ? '⌘' : 'Ctrl',
     'Cmd': '⌘',
@@ -112,14 +198,17 @@ const parseKeyString = (keyStr: string): string[] => {
     'ArrowLeft': '←',
     'ArrowRight': '→'
   };
-
   return keyStr
     .split(/[-+]/)
     .map(part => symbolMap[part] ?? part.charAt(0).toUpperCase() + part.slice(1))
     .filter(Boolean);
 };
 
-// 切换启用状态
+const getDisplayForPending = (bindingId: number): string[] => {
+  if (!pendingResult.value || pendingResult.value.bindingId !== bindingId) return [];
+  return parseKeyString(pendingResult.value.newKey);
+};
+
 const toggleEnabled = async (binding: any) => {
   try {
     await KeyBindingService.UpdateKeyBindingEnabled(binding.id, !binding.enabled);
@@ -130,7 +219,6 @@ const toggleEnabled = async (binding: any) => {
   }
 };
 
-// 切换 PreventDefault
 const togglePreventDefault = async (binding: any) => {
   try {
     await KeyBindingService.UpdateKeyBindingPreventDefault(binding.id, !binding.preventDefault);
@@ -140,118 +228,10 @@ const togglePreventDefault = async (binding: any) => {
     console.error('Failed to update preventDefault:', error);
   }
 };
-
-// 开始添加快捷键
-const startAddKey = (bindingId: number) => {
-  editingBinding.value = {
-    id: bindingId
-  };
-  inputKey.value = '';
-};
-
-// 取消编辑
-const cancelEdit = () => {
-  editingBinding.value = null;
-  inputKey.value = '';
-};
-
-// 验证快捷键格式
-const validateKeyFormat = (key: string): boolean => {
-  if (!key || key.trim() === '') return false;
-  
-  // 基本格式验证：允许 Mod/Ctrl/Alt/Shift + 其他键
-  const validPattern = /^(Mod|Ctrl|Alt|Shift|Cmd)(-[A-Za-z0-9\[\]\\/;',.\-=`]|-(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Enter|Tab|Backspace|Delete|Home|End|PageUp|PageDown|Space|Escape))+$/;
-  const simpleKeyPattern = /^[A-Za-z0-9]$/;
-  const specialKeyPattern = /^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Enter|Tab|Backspace|Delete|Home|End|PageUp|PageDown|Space|Escape)$/;
-  
-  return validPattern.test(key) || simpleKeyPattern.test(key) || specialKeyPattern.test(key);
-};
-
-// 检查快捷键冲突
-const checkConflict = (newKey: string, currentBindingId: number): { conflict: boolean; conflictWith?: string } => {
-  const conflictBinding = keyBindings.value.find(kb => 
-    kb.rawKey === newKey && kb.id !== currentBindingId
-  );
-  
-  if (conflictBinding) {
-    return {
-      conflict: true,
-      conflictWith: conflictBinding.description
-    };
-  }
-  
-  return { conflict: false };
-};
-
-// 添加新键到快捷键
-const addKeyPart = async () => {
-  if (!editingBinding.value || !inputKey.value.trim()) {
-    return;
-  }
-  
-  const newPart = inputKey.value.trim();
-  const binding = keyBindings.value.find(kb => kb.id === editingBinding.value!.id);
-  if (!binding) return;
-  
-  // 检查键数量限制（最多4个）
-  const currentParts = splitKeys(binding.rawKey);
-  if (currentParts.length >= 4) {
-    toast.error(t('keybindings.maxKeysReached'));
-    inputKey.value = '';
-    return;
-  }
-  
-  // 获取现有的键
-  const currentKey = binding.rawKey;
-  const newKey = currentKey ? `${currentKey}-${newPart}` : newPart;
-  
-  // 验证格式
-  if (!validateKeyFormat(newKey)) {
-    toast.error(t('keybindings.invalidFormat'));
-    inputKey.value = '';
-    return;
-  }
-  
-  // 检查冲突
-  const conflictCheck = checkConflict(newKey, editingBinding.value.id);
-  if (conflictCheck.conflict) {
-    toast.error(t('keybindings.conflict', { command: conflictCheck.conflictWith }));
-    inputKey.value = '';
-    return;
-  }
-  
-  try {
-    await keybindingStore.updateKeyBinding(editingBinding.value.id, newKey);
-    await editorStore.applyKeymapSettings();
-    inputKey.value = '';
-  } catch (error) {
-    console.error('Failed to add key part:', error);
-  }
-};
-
-// 删除快捷键的某个部分
-const removeKeyPart = async (bindingId: number, index: number) => {
-  const binding = keyBindings.value.find(kb => kb.id === bindingId);
-  if (!binding) return;
-  
-  const parts = splitKeys(binding.rawKey);
-  parts.splice(index, 1);
-  
-  const newKey = parts.join('-');
-  
-  try {
-    await keybindingStore.updateKeyBinding(bindingId, newKey);
-    await editorStore.applyKeymapSettings();
-  } catch (error) {
-    console.error('Failed to remove key part:', error);
-  }
-};
-
 </script>
 
 <template>
   <div class="settings-page">
-    <!-- 快捷键模式设置 -->
     <SettingSection :title="t('keybindings.keymapMode')">
       <SettingItem :title="t('keybindings.keymapMode')">
         <select
@@ -263,14 +243,11 @@ const removeKeyPart = async (bindingId: number, index: number) => {
             v-for="option in keymapModeOptions"
             :key="option.value"
             :value="option.value"
-          >
-            {{ option.label }}
-          </option>
+          >{{ option.label }}</option>
         </select>
       </SettingItem>
     </SettingSection>
 
-    <!-- 快捷键列表 -->
     <SettingSection :title="t('settings.keyBindings')">
       <template #title-right>
         <button 
@@ -287,7 +264,6 @@ const removeKeyPart = async (bindingId: number, index: number) => {
           :key="binding.id"
           :id="binding.id!"
         >
-          <!-- 标题插槽 -->
           <template #title>
             <div class="binding-title" :class="{ 'disabled': !binding.enabled }">
               <div class="binding-name">
@@ -295,93 +271,91 @@ const removeKeyPart = async (bindingId: number, index: number) => {
                 <span class="binding-extension">{{ binding.extension }}</span>
               </div>
               <div class="binding-keys">
-                <span 
-                  v-for="(key, index) in binding.command"
-                  :key="index"
-                  class="key-badge"
-                >
-                  {{ key }}
-                </span>
-                <span v-if="!binding.command.length" class="key-badge-empty">-</span>
+                <template v-if="binding.command.length">
+                  <kbd v-for="(key, index) in binding.command" :key="index">{{ key }}</kbd>
+                </template>
+                <span v-else class="key-empty">{{ t('keybindings.noKeybinding') }}</span>
               </div>
             </div>
           </template>
 
-          <!-- 展开内容 -->
           <div class="binding-config">
-            <!-- Enabled 配置 -->
             <div class="config-row">
               <span class="config-label">{{ t('keybindings.config.enabled') }}</span>
               <label class="switch">
-                <input 
-                  type="checkbox" 
-                  :checked="binding.enabled"
-                  @change="toggleEnabled(binding)"
-                >
+                <input type="checkbox" :checked="binding.enabled" @change="toggleEnabled(binding)">
                 <span class="slider"></span>
               </label>
             </div>
 
-            <!-- PreventDefault 配置 -->
             <div class="config-row">
               <span class="config-label">{{ t('keybindings.config.preventDefault') }}</span>
               <label class="switch">
-                <input 
-                  type="checkbox" 
-                  :checked="binding.preventDefault"
-                  @change="togglePreventDefault(binding)"
-                >
+                <input type="checkbox" :checked="binding.preventDefault" @change="togglePreventDefault(binding)">
                 <span class="slider"></span>
               </label>
             </div>
 
-            <!-- Key 配置 -->
-            <div class="config-row">
+            <div class="config-row config-row-key">
               <span class="config-label">{{ t('keybindings.config.keybinding') }}</span>
-              <div class="key-input-wrapper">
-                <div class="key-tags">
-                  <!-- 显示现有快捷键的每个部分 -->
-                  <template v-if="binding.rawKey">
-                    <span 
-                      v-for="(keyPart, index) in splitKeys(binding.rawKey)"
-                      :key="index"
-                      class="key-tag"
-                    >
-                      <span class="key-tag-text">{{ keyPart }}</span>
-                      <button 
-                        class="key-tag-remove"
-                        @click="removeKeyPart(binding.id!, index)"
-                      >×</button>
-                    </span>
+              <div class="key-editor">
+                <div 
+                  class="key-display"
+                  :class="{ 
+                    'is-recording': isRecording(binding.id!),
+                    'is-pending': hasPendingResult(binding.id!) && !isRecording(binding.id!),
+                    'has-conflict': hasPendingResult(binding.id!) && pendingResult?.conflict
+                  }"
+                  @click="toggleRecording(binding.id!)"
+                >
+                  <template v-if="isRecording(binding.id!)">
+                    <template v-if="recording?.displayParts?.length">
+                      <kbd v-for="(k, i) in recording.displayParts" :key="i">{{ k }}</kbd>
+                      <span class="recording-dot">·</span>
+                    </template>
+                    <span v-else class="recording-hint">{{ t('keybindings.waitingForKey') }}</span>
                   </template>
-                  
-                  <!-- 添加输入框 -->
-                  <template v-if="editingBinding?.id === binding.id">
-                    <input 
-                      :ref="setInputRef"
-                      v-model="inputKey"
-                      type="text"
-                      class="key-input"
-                      :placeholder="t('keybindings.keyPlaceholder')"
-                      @keydown.enter="addKeyPart"
-                      @keydown.escape="cancelEdit"
-                      @blur="cancelEdit"
-                    />
+                  <template v-else-if="hasPendingResult(binding.id!)">
+                    <kbd 
+                      v-for="(k, i) in getDisplayForPending(binding.id!)" 
+                      :key="i"
+                      :class="{ 'conflict-key': pendingResult?.conflict }"
+                    >{{ k }}</kbd>
                   </template>
-                  
-                  <!-- 添加按钮 -->
                   <template v-else>
-                    <button 
-                      class="key-tag-add"
-                      @click="startAddKey(binding.id!)"
-                    >
-                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M6 1V11M1 6H11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                      </svg>
-                    </button>
+                    <template v-if="binding.command.length">
+                      <kbd v-for="(key, index) in binding.command" :key="index">{{ key }}</kbd>
+                    </template>
+                    <span v-else class="key-placeholder">{{ t('keybindings.clickToSet') }}</span>
                   </template>
                 </div>
+                <template v-if="isActive(binding.id!)">
+                  <button 
+                    v-if="hasPendingResult(binding.id!)"
+                    class="btn-action btn-confirm"
+                    @click.stop="confirmSave"
+                    :title="t('keybindings.confirmSave')"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  </button>
+                  <button 
+                    class="btn-action btn-reset"
+                    @click.stop="resetSingleKey(binding.id!)"
+                    :title="t('keybindings.resetSingle')"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="1 4 1 10 7 10"/>
+                      <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+                    </svg>
+                  </button>
+                </template>
               </div>
+              <span 
+                v-if="hasPendingResult(binding.id!) && pendingResult?.conflict" 
+                class="conflict-text"
+              >{{ t('keybindings.conflictWith', { command: pendingResult!.conflict!.description }) }}（{{ pendingResult!.conflict!.rawKey }}）</span>
             </div>
           </div>
         </AccordionItem>
@@ -481,21 +455,29 @@ const removeKeyPart = async (bindingId: number, index: number) => {
 
 .binding-keys {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 20px;
+    padding: 0 5px;
+    background: var(--settings-input-bg);
+    border: 1px solid var(--settings-input-border);
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: inherit;
+    color: var(--settings-text);
+    box-shadow: 0 1px 0 var(--settings-input-border);
+    white-space: nowrap;
+    line-height: 1;
+  }
 }
 
-.key-badge {
-  background-color: var(--settings-input-bg);
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-size: 11px;
-  border: 1px solid var(--settings-input-border);
-  color: var(--settings-text);
-  white-space: nowrap;
-}
-
-.key-badge-empty {
+.key-empty {
   font-size: 11px;
   color: var(--text-muted);
   font-style: italic;
@@ -504,7 +486,7 @@ const removeKeyPart = async (bindingId: number, index: number) => {
 .binding-config {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
 .config-row {
@@ -512,6 +494,11 @@ const removeKeyPart = async (bindingId: number, index: number) => {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+
+  &.config-row-key {
+    position: relative;
+    padding-bottom: 0;
+  }
 }
 
 .config-label {
@@ -520,7 +507,6 @@ const removeKeyPart = async (bindingId: number, index: number) => {
   font-weight: 500;
 }
 
-// Switch 开关样式
 .switch {
   position: relative;
   display: inline-block;
@@ -571,151 +557,132 @@ const removeKeyPart = async (bindingId: number, index: number) => {
   }
 }
 
-.key-input-wrapper {
-  flex: 1;
+// Key editor - compact single row
+.key-editor {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.key-tags {
-  display: flex;
   gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-  flex: 1;
-  min-height: 28px;
 }
 
-.key-tag {
+.key-display {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  height: 28px;
+  gap: 3px;
+  height: 26px;
+  padding: 0 8px;
   background-color: var(--settings-input-bg);
   border: 1px solid var(--settings-input-border);
   border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--settings-text);
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-  
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  min-width: 60px;
+
   &:hover {
+    border-color: var(--text-muted);
+  }
+
+  &.is-recording {
     border-color: #4a9eff;
-    
-    .key-tag-remove {
-      opacity: 1;
+    box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.25);
+  }
+
+  &.is-pending {
+    border-color: #4a9eff;
+  }
+
+  &.has-conflict {
+    border-color: #e8a838;
+  }
+
+  kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 18px;
+    padding: 0 4px;
+    background: var(--settings-card-bg, #2a2a2a);
+    border: 1px solid var(--settings-input-border);
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: inherit;
+    font-weight: 500;
+    color: var(--settings-text);
+    box-shadow: 0 1px 0 var(--settings-input-border);
+    white-space: nowrap;
+    line-height: 1;
+
+    &.conflict-key {
+      border-color: #e8a838;
+      color: #e8a838;
     }
   }
 }
 
-.key-tag-text {
-  user-select: none;
+.recording-hint {
+  font-size: 11px;
+  color: #4a9eff;
+  white-space: nowrap;
 }
 
-.key-tag-remove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border: none;
-  background: none;
+.recording-dot {
+  font-size: 14px;
+  font-weight: bold;
+  color: #4a9eff;
+  animation: blink 0.8s step-end infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.key-placeholder {
+  font-size: 11px;
   color: var(--text-muted);
-  cursor: pointer;
-  font-size: 18px;
-  line-height: 1;
-  padding: 0;
-  margin: 0;
-  opacity: 0.6;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    color: #e74c3c;
-    opacity: 1;
-  }
 }
 
-.key-tag-add {
+.conflict-text {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #e8a838;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.btn-action {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
-  border: 1px dashed var(--settings-input-border);
+  border: 1px solid var(--settings-input-border);
   border-radius: 4px;
   background-color: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-  
-  &:hover {
-    border-color: #4a9eff;
-    background-color: var(--settings-input-bg);
-    color: #4a9eff;
-  }
-}
-
-.key-input {
-  padding: 4px 8px;
-  height: 28px;
-  border: 1px solid #4a9eff;
-  border-radius: 4px;
-  background-color: var(--settings-input-bg);
-  color: var(--settings-text);
-  font-size: 12px;
-  width: 60px;
-  outline: none;
-  box-sizing: border-box;
-  
-  &::placeholder {
-    color: var(--text-muted);
-    font-size: 11px;
-  }
-}
-
-.btn-mini {
-  width: 24px;
-  height: 24px;
-  min-width: 24px;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 12px;
-  transition: opacity 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: all 0.15s ease;
   padding: 0;
-  line-height: 1;
-  flex-shrink: 0;
   
   &.btn-confirm {
-    background-color: #28a745;
-    color: white;
-    
-    &:hover:not(:disabled) {
-      opacity: 0.85;
-    }
-    
-    &:disabled {
-      background-color: var(--settings-input-border);
-      cursor: not-allowed;
-      opacity: 0.5;
+    color: #4caf50;
+    border-color: #4caf50;
+
+    &:hover {
+      background-color: #4caf50;
+      color: white;
     }
   }
-  
-  &.btn-cancel {
-    background-color: #dc3545;
-    color: white;
-    
+
+  &.btn-reset {
     &:hover {
-      opacity: 0.85;
+      border-color: var(--text-muted);
+      color: var(--settings-text);
     }
   }
 }
