@@ -1,36 +1,25 @@
 import type { EditorState } from "@codemirror/state";
 import type { SearchQuery } from "@codemirror/search";
-import { getActiveNoteBlock } from "../codeblock/state";
+import { getActiveNoteBlock, blockState } from "../codeblock/state";
 
 export type SearchScope = "all" | "currentBlock";
 
 const MAX_MATCH_COUNT = 9999;
 
-export function isMatchWithinSearchScope(
-    state: EditorState,
-    from: number,
-    to: number,
-    scope: SearchScope,
-): boolean {
-    if (scope === "all") {
-        return true;
-    }
-
-    const block = getActiveNoteBlock(state);
-    if (!block) {
-        return false;
-    }
-
-    return from >= block.content.from && to <= block.content.to;
+function isWithinBlockContent(state: EditorState, from: number, to: number): boolean {
+    const blocks = state.field(blockState, false);
+    if (!blocks || blocks.length === 0) return true;
+    return blocks.some(block => from >= block.content.from && to <= block.content.to);
 }
 
 export function createSearchScopeTest(scope: SearchScope) {
-    if (scope === "all") {
-        return undefined;
-    }
-
     return (_match: string, state: EditorState, from: number, to: number) => {
-        return isMatchWithinSearchScope(state, from, to, scope);
+        if (scope === "currentBlock") {
+            const block = getActiveNoteBlock(state);
+            if (!block) return false;
+            return from >= block.content.from && to <= block.content.to;
+        }
+        return isWithinBlockContent(state, from, to);
     };
 }
 

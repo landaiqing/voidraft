@@ -128,11 +128,6 @@ const startResize = (e: MouseEvent) => {
 watch([searchText, replaceText], commit);
 
 function onViewUpdate(update: ViewUpdate) {
-    if (searchScope.value === 'currentBlock' && searchText.value && update.selectionSet) {
-        commit();
-        return;
-    }
-
     if (update.docChanged || update.selectionSet) {
         updateMatchCount();
     }
